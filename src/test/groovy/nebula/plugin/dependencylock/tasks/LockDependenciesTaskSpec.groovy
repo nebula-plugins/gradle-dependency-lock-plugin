@@ -18,7 +18,31 @@ package nebula.plugin.dependencylock.tasks
 import nebula.test.ProjectSpec
 
 class LockDependenciesTaskSpec extends ProjectSpec {
-    def 'simple lock'() {
+    final String taskName = 'lockDependencies'
 
+    def 'simple lock'() {
+        project.apply plugin: 'java'
+
+        project.repositories { mavenCentral() }
+        project.dependencies {
+            compile 'com.google.guava:guava:14.+'
+            testCompile 'junit:junit:4.+'
+        }
+
+        LockDependenciesTask task = project.tasks.create('lockTestTask', LockDependenciesTask)
+        task.dependenciesLock = new File(projectDir, 'dependencies.lock')
+        task.configurations = ['testRuntime']
+
+        when:
+        task.execute()
+
+        then:
+        String lockText = '''\
+            {
+              "com.google.guava:guava": { "locked": "14.0.1", "requested": "14.+" },
+              "junit:junit": { "locked": "4.11", "requested": "4.+" }
+            }
+        '''.stripIndent()
+        task.dependenciesLock.text == lockText
     }
 }
