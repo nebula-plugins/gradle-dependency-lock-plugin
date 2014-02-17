@@ -15,6 +15,7 @@
  */
 package nebula.plugin.dependencylock.tasks
 
+import groovy.transform.EqualsAndHashCode
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -43,13 +44,15 @@ class LockDependenciesTask extends DefaultTask {
         def confs = getConfigurationNames().collect { project.configurations.getByName(it) }
 
         confs.each { Configuration configuration ->
-            def peerNames = configuration.allDependencies.withType(ProjectDependency).collect { it.name }
+            def peers = configuration.allDependencies.withType(ProjectDependency) { new LockKey(group: it.group, artifact: it.name) }
             configuration.allDependencies.withType(ExternalDependency).each { Dependency dependency ->
-                deps["${dependency.group}:${dependency.name}"].requested = dependency.version
+                def key = new LockKey(group: dependency.group, artifact: dependency.name)
+                deps[key.toString()].requested = dependency.version
             }
             configuration.resolvedConfiguration.firstLevelModuleDependencies.each { ResolvedDependency resolved ->
-                if (!peerNames.contains(resolved.moduleName)) {
-                    deps["${resolved.moduleGroup}:${resolved.moduleName}"].locked = resolved.moduleVersion
+                def key = new LockKey(group: resolved.moduleGroup, artifact: resolved.moduleName)
+                if (!peers.contains(key)) {
+                    deps[key.toString()].locked = resolved.moduleVersion
                 }
             }
         }
@@ -62,8 +65,19 @@ class LockDependenciesTask extends DefaultTask {
         strings = strings.sort()
         getDependenciesLock().withPrintWriter { out ->
             out.println '{'
-            out.println strings.join(",${System.getProperty('line.separator')}")
+            out.println strings.join(',\n')
             out.println '}'
+        }
+    }
+
+    @EqualsAndHashCode
+    private static class LockKey {
+        String group
+        String artifact
+
+        @Override
+        String toString() {
+            "${group}:${artifact}"
         }
     }
 }
