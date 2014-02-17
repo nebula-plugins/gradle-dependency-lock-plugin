@@ -14,10 +14,14 @@ Inspired by [Bundler](http://bundler.io)
 
 ### Applying the Plugin
 
-To include add the following to your build.gradle
+To include, add the following to your build.gradle
 
     buildscript {
       repositories { jcenter() }
+
+      dependencies {
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.0'
+      }
     }
 
     apply plugin: 'gradle-dependency-lock'
@@ -41,7 +45,7 @@ Use the extension if you wish to configure.
 
 ## Lock File Format
 
-The lock file is written in a json format. The keys of the map are made up of "<group>:<artifact>".
+The lock file is written in a json format. The keys of the map are made up of "\<group\>:\<artifact\>".
 
     {
       "group0:artifact0": { "locked": "<version0>", "requested": "<requestedVersion0>" },
@@ -54,6 +58,9 @@ The lock file is written in a json format. The keys of the map are made up of "<
 
     buildscript {
       repositories { jcenter() }
+      dependencies {
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.0'
+      }
     }
 
     apply plugin: 'java'
