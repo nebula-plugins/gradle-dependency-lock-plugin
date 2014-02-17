@@ -16,6 +16,7 @@
 package nebula.plugin.dependencylock
 
 import groovy.json.JsonSlurper
+import nebula.plugin.dependencylock.tasks.LockDependenciesTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.logging.Logger
@@ -26,15 +27,21 @@ class DependencyLockPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
-        File dependenciesLock = new File(project.projectDir, 'dependencies.lock')
+        DependencyLockExtension extension = project.extensions.create('dependencyLock', DependencyLockExtension)
+        File dependenciesLock = new File(project.projectDir, extension.lockFile)
+        LockDependenciesTask lockTask = project.tasks.create('lockDependencies', LockDependenciesTask)
+        lockTask.dependenciesLock = project.file(extension.lockFile)
+        lockTask.configurations = extension.configurations
 
-        if (dependenciesLock.exists()) {
-            def locks = new JsonSlurper().parseText(dependenciesLock.text)
-            def forcedModules = locks.direct.collect { "${it.group}:${it.artifact}:${it.locked}" }
-            logger.debug(forcedModules.toString())
+        project.gradle.taskGraph.whenReady { taskGraph ->
+            if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists()) {
+                def locks = new JsonSlurper().parseText(dependenciesLock.text)
+                def forcedModules = locks.collect { "${it.key}:${it.value.locked}" }
+                logger.debug(forcedModules.toString())
 
-            project.configurations.all {
-                resolutionStrategy.forcedModules = forcedModules
+                project.configurations.all {
+                    resolutionStrategy.forcedModules = forcedModules
+                }
             }
         }
     }

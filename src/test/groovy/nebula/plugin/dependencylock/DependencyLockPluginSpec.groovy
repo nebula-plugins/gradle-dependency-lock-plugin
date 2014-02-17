@@ -16,6 +16,7 @@
 package nebula.plugin.dependencylock
 
 import nebula.test.ProjectSpec
+import org.gradle.api.Task
 
 class DependencyLockPluginSpec extends ProjectSpec {
     String pluginName = 'gradle-dependency-lock'
@@ -32,20 +33,19 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << '''\
             {
-              "direct": [
-                { "group": "com.google.guava", "artifact": "guava", "locked": "14.0", "requested": "14.+" }
-              ]
+              "com.google.guava:guava": { "locked": "14.0", "requested": "14.+" }
             }
         '''.stripIndent()
 
         project.apply plugin: 'java'
         project.repositories { mavenCentral() }
         project.dependencies {
-            compile 'com.google.guava:guava:14.+'
+            compile 'com.google.guava:guava:14.0.1'
         }
 
         when:
         project.apply plugin: pluginName
+        triggerTaskGraphWhenReady()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         then:
@@ -53,4 +53,9 @@ class DependencyLockPluginSpec extends ProjectSpec {
         guava.moduleVersion == '14.0'
     }
 
+    private void triggerTaskGraphWhenReady() {
+        Task placeholder = project.tasks.create('placeholder')
+        project.gradle.taskGraph.addTasks([placeholder])
+        project.gradle.taskGraph.execute()
+    }
 }
