@@ -15,7 +15,9 @@
  */
 package nebula.plugin.dependencylock
 
+import groovy.json.JsonException
 import nebula.test.IntegrationSpec
+import org.gradle.BuildResult
 
 class DependencyLockLauncherSpec extends IntegrationSpec {
     static final String SPECIFIC_BUILD_GRADLE = '''\
@@ -91,5 +93,21 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         new File(projectDir, 'dependencies.lock').text == GUAVA_LOCK
+    }
+
+    def 'trigger failure with bad lock file'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << '''\
+            {
+              key: {}
+            }
+        '''.stripIndent()
+        buildFile << BUILD_GRADLE
+
+        when:
+        BuildResult result = runTasksWithFailure('build')
+
+        then:
+        result.failure.message.contains('unreadable or invalid json')
     }
 }

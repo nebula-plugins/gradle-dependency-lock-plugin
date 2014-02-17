@@ -17,5 +17,5 @@ package nebula.plugin.dependencylock
 
 class DependencyLockExtension {
     String lockFile = 'dependencies.lock'
-    Set<String> configurations = ['testRuntime'] as Set
+    Set<String> configurationNames = ['testRuntime'] as Set
 }

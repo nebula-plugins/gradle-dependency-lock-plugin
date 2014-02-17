@@ -31,7 +31,7 @@ class LockDependenciesTaskSpec extends ProjectSpec {
 
         LockDependenciesTask task = project.tasks.create('lockTestTask', LockDependenciesTask)
         task.dependenciesLock = new File(projectDir, 'dependencies.lock')
-        task.configurations = ['testRuntime']
+        task.configurationNames = ['testRuntime']
 
         when:
         task.execute()

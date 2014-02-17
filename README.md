@@ -40,7 +40,7 @@ Use the extension if you wish to configure.
 
     dependencyLock {
       lockFile = 'dependencies.lock'
-      configurations = ['testRuntime']
+      configurationNames = ['testRuntime']
     }
 
 ## Lock File Format

@@ -18,6 +18,8 @@ package nebula.plugin.dependencylock.tasks
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ExternalDependency
+import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
@@ -25,7 +27,7 @@ import org.gradle.api.tasks.TaskAction
 
 class LockDependenciesTask extends DefaultTask {
     @Input
-    Set<String> configurations
+    Set<String> configurationNames
 
     @OutputFile
     File dependenciesLock
@@ -38,17 +40,15 @@ class LockDependenciesTask extends DefaultTask {
 
     private readDependenciesFromConfigurations() {
         def deps = [:].withDefault { [:] }
-        def peerProjects = project.rootProject.subprojects.collect { it.name }
-        def confs = configurations.collect { project.configurations.getByName(it) }
+        def confs = getConfigurationNames().collect { project.configurations.getByName(it) }
 
         confs.each { Configuration configuration ->
-            configuration.allDependencies.each { Dependency dependency ->
-                if (!peerProjects.contains(dependency.name)) {
-                    deps["${dependency.group}:${dependency.name}"].requested = dependency.version
-                }
+            def peerNames = configuration.allDependencies.withType(ProjectDependency).collect { it.name }
+            configuration.allDependencies.withType(ExternalDependency).each { Dependency dependency ->
+                deps["${dependency.group}:${dependency.name}"].requested = dependency.version
             }
             configuration.resolvedConfiguration.firstLevelModuleDependencies.each { ResolvedDependency resolved ->
-                if (!peerProjects.contains(resolved.moduleName)) {
+                if (!peerNames.contains(resolved.moduleName)) {
                     deps["${resolved.moduleGroup}:${resolved.moduleName}"].locked = resolved.moduleVersion
                 }
             }
@@ -60,7 +60,7 @@ class LockDependenciesTask extends DefaultTask {
     private void writeLock(deps) {
         def strings = deps.collect { k, v -> "  \"${k}\": { \"locked\": \"${v.locked}\", \"requested\": \"${v.requested}\" }"}
         strings = strings.sort()
-        dependenciesLock.withPrintWriter { out ->
+        getDependenciesLock().withPrintWriter { out ->
             out.println '{'
             out.println strings.join(",${System.getProperty('line.separator')}")
             out.println '}'

@@ -15,8 +15,10 @@
  */
 package nebula.plugin.dependencylock
 
+import groovy.json.JsonException
 import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.tasks.LockDependenciesTask
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.logging.Logger
@@ -28,14 +30,25 @@ class DependencyLockPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         DependencyLockExtension extension = project.extensions.create('dependencyLock', DependencyLockExtension)
-        File dependenciesLock = new File(project.projectDir, extension.lockFile)
+
         LockDependenciesTask lockTask = project.tasks.create('lockDependencies', LockDependenciesTask)
-        lockTask.dependenciesLock = project.file(extension.lockFile)
-        lockTask.configurations = extension.configurations
+
+        lockTask.conventionMapping.with {
+            dependenciesLock = { project.file(extension.lockFile) }
+            configurationNames = { extension.configurationNames }
+        }
 
         project.gradle.taskGraph.whenReady { taskGraph ->
+            File dependenciesLock = new File(project.projectDir, extension.lockFile)
             if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists()) {
-                def locks = new JsonSlurper().parseText(dependenciesLock.text)
+                def locks
+                try {
+                    locks = new JsonSlurper().parseText(dependenciesLock.text)
+                } catch (JsonException ex) {
+                    logger.debug('Unreadable json file: ' + dependenciesLock.text)
+                    logger.error('JSON unreadable')
+                    throw new GradleException("${extension.lockFile} is unreadable or invalid json, terminating run", ex)
+                }
                 def forcedModules = locks.collect { "${it.key}:${it.value.locked}" }
                 logger.debug(forcedModules.toString())
 
