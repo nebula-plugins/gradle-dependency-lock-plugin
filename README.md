@@ -1,6 +1,10 @@
 gradle-dependency-lock-plugin
 =============================
 
+Cloudbees Jenkins release: [![Build Status](https://netflix.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-release/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-release/)
+
+Cloudbees Jenkins snapshot: [![Build Status](https://netflix.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-snapshot/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-snapshot/)
+
 A plugin to allow people using dynamic dependency versions to lock them to specific versions.
 
 Some project teams may prefer to have their build.gradle dependencies reflect their ideal world. A latest.release for
