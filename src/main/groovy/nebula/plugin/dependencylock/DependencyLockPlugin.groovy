@@ -44,7 +44,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                 def locks
                 try {
                     locks = new JsonSlurper().parseText(dependenciesLock.text)
-                } catch (JsonException ex) {
+                } catch (ex) {
                     logger.debug('Unreadable json file: ' + dependenciesLock.text)
                     logger.error('JSON unreadable')
                     throw new GradleException("${extension.lockFile} is unreadable or invalid json, terminating run", ex)
