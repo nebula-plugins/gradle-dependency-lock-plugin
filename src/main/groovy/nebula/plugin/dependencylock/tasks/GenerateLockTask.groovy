@@ -26,7 +26,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-class LockDependenciesTask extends DefaultTask {
+class GenerateLockTask extends DefaultTask {
     @Input
     Set<String> configurationNames
 

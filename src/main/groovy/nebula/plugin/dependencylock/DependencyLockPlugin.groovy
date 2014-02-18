@@ -15,9 +15,9 @@
  */
 package nebula.plugin.dependencylock
 
-import groovy.json.JsonException
 import groovy.json.JsonSlurper
-import nebula.plugin.dependencylock.tasks.LockDependenciesTask
+import nebula.plugin.dependencylock.tasks.GenerateLockTask
+import nebula.plugin.dependencylock.tasks.SaveLockTask
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -31,12 +31,18 @@ class DependencyLockPlugin implements Plugin<Project> {
     void apply(Project project) {
         DependencyLockExtension extension = project.extensions.create('dependencyLock', DependencyLockExtension)
 
-        LockDependenciesTask lockTask = project.tasks.create('lockDependencies', LockDependenciesTask)
-
+        GenerateLockTask lockTask = project.tasks.create('generateLock', GenerateLockTask)
         lockTask.conventionMapping.with {
-            dependenciesLock = { project.file(extension.lockFile) }
+            dependenciesLock = { new File(project.buildDir, extension.lockFile) }
             configurationNames = { extension.configurationNames }
         }
+
+        SaveLockTask saveTask = project.tasks.create('saveLock', SaveLockTask)
+        saveTask.conventionMapping.with {
+            generatedLock = { lockTask.dependenciesLock }
+            outputLock = { new File(project.projectDir, extension.lockFile) }
+        }
+        saveTask.dependsOn lockTask
 
         project.gradle.taskGraph.whenReady { taskGraph ->
             File dependenciesLock = new File(project.projectDir, extension.lockFile)

@@ -15,7 +15,6 @@
  */
 package nebula.plugin.dependencylock
 
-import groovy.json.JsonException
 import nebula.test.IntegrationSpec
 import org.gradle.BuildResult
 
@@ -77,10 +76,10 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasksSuccessfully('lockDependencies')
+        runTasksSuccessfully('generateLock')
 
         then:
-        new File(projectDir, 'dependencies.lock').text == GUAVA_LOCK
+        new File(projectDir, 'build/dependencies.lock').text == GUAVA_LOCK
     }
 
     def 'update lock'() {
@@ -89,7 +88,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasksSuccessfully('lockDependencies')
+        runTasksSuccessfully('saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == GUAVA_LOCK

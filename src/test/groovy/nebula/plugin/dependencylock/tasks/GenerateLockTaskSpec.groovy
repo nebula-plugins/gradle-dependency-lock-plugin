@@ -17,8 +17,8 @@ package nebula.plugin.dependencylock.tasks
 
 import nebula.test.ProjectSpec
 
-class LockDependenciesTaskSpec extends ProjectSpec {
-    final String taskName = 'lockDependencies'
+class GenerateLockTaskSpec extends ProjectSpec {
+    final String taskName = 'generateLock'
 
     def 'simple lock'() {
         project.apply plugin: 'java'
@@ -29,9 +29,9 @@ class LockDependenciesTaskSpec extends ProjectSpec {
             testCompile 'junit:junit:4.+'
         }
 
-        LockDependenciesTask task = project.tasks.create('lockTestTask', LockDependenciesTask)
-        task.dependenciesLock = new File(projectDir, 'dependencies.lock')
-        task.configurationNames = ['testRuntime']
+        GenerateLockTask task = project.tasks.create('lockTestTask', GenerateLockTask)
+        task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
+        task.configurationNames= [ 'testRuntime' ]
 
         when:
         task.execute()
