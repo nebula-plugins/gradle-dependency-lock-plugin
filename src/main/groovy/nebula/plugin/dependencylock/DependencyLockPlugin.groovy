@@ -29,11 +29,14 @@ class DependencyLockPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
+        String overrideFileName = project.hasProperty('dependencyLock.lockFile') ? project['dependencyLock.lockFile'] : null
         DependencyLockExtension extension = project.extensions.create('dependencyLock', DependencyLockExtension)
 
         GenerateLockTask lockTask = project.tasks.create('generateLock', GenerateLockTask)
         lockTask.conventionMapping.with {
-            dependenciesLock = { new File(project.buildDir, extension.lockFile) }
+            dependenciesLock = {
+                new File(project.buildDir, overrideFileName ?: extension.lockFile)
+            }
             configurationNames = { extension.configurationNames }
         }
 
@@ -45,8 +48,10 @@ class DependencyLockPlugin implements Plugin<Project> {
         saveTask.dependsOn lockTask
 
         project.gradle.taskGraph.whenReady { taskGraph ->
-            File dependenciesLock = new File(project.projectDir, extension.lockFile)
-            if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists()) {
+            File dependenciesLock = new File(project.projectDir, overrideFileName ?: extension.lockFile)
+
+            if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists() &&
+                    !project.hasProperty('dependencyLock.ignore')) {
                 def locks
                 try {
                     locks = new JsonSlurper().parseText(dependenciesLock.text)

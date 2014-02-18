@@ -6,5 +6,6 @@
 1.9.1 / 2014-02-18
 ==================
 
-* Added task for saving lock to build direcetory, and task for copying to main directory
-* Added properties to override in different ways
+* Added task for saving lock to build directory, and task for copying to main directory
+* Property to override lock file used
+* Property to ignore lock files

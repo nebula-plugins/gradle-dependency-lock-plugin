@@ -48,6 +48,21 @@ Use the extension if you wish to configure.
       configurationNames = ['testRuntime']
     }
 
+### Properties that Effect the Plugin
+
+*dependencyLock.lockFile*
+
+Allows the user to override the configured lockFile name via the command line.
+
+    ./gradlew -PdependencyLock.lockFile=<filename> <tasks>
+
+*dependencyLock.ignore*
+
+Allows the user to ignore any present lockFile and fall back to standard gradle dependency resolution. Plugin checks for
+the existence of the property, any value will cause the fallback to standard.
+
+    ./gradlew -PdependencyLock.ignore=true <tasks>
+
 ## Lock File Format
 
 The lock file is written in a json format. The keys of the map are made up of "\<group\>:\<artifact\>". The requested
