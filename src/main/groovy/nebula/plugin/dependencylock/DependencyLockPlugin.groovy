@@ -25,7 +25,7 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 
 class DependencyLockPlugin implements Plugin<Project> {
-    Logger logger = Logging.getLogger(DependencyLockPlugin)
+    private static Logger logger = Logging.getLogger(DependencyLockPlugin)
 
     @Override
     void apply(Project project) {
@@ -52,6 +52,7 @@ class DependencyLockPlugin implements Plugin<Project> {
 
             if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists() &&
                     !project.hasProperty('dependencyLock.ignore')) {
+                logger.info("Using ${dependenciesLock.name} to lock dependencies")
                 def locks
                 try {
                     locks = new JsonSlurper().parseText(dependenciesLock.text)
