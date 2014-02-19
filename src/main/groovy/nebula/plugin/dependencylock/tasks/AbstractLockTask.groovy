@@ -15,21 +15,8 @@
  */
 package nebula.plugin.dependencylock.tasks
 
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.DefaultTask
 
-class SaveLockTask extends AbstractLockTask {
-    String description = 'Move the generated lock file into the project directory'
-
-    @InputFile
-    File generatedLock
-
-    @OutputFile
-    File outputLock
-
-    @TaskAction
-    void saveLock() {
-        getOutputLock().text = getGeneratedLock().text
-    }
+abstract class AbstractLockTask extends DefaultTask {
+    String group = 'Locking tasks'
 }
