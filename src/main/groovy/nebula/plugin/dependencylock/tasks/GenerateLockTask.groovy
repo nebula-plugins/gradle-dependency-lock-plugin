@@ -16,7 +16,6 @@
 package nebula.plugin.dependencylock.tasks
 
 import groovy.transform.EqualsAndHashCode
-import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
@@ -26,7 +25,9 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-class LockDependenciesTask extends DefaultTask {
+class GenerateLockTask extends AbstractLockTask {
+    String description = 'Create a lock file in build/<configured name>'
+
     @Input
     Set<String> configurationNames
 

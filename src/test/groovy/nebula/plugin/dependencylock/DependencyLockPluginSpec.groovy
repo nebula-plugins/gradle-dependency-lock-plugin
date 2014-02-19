@@ -30,6 +30,39 @@ class DependencyLockPluginSpec extends ProjectSpec {
     }
 
     def 'read in dependencies.lock'() {
+        stockTestSetup()
+
+        when:
+        project.apply plugin: pluginName
+        triggerTaskGraphWhenReady()
+        def resolved = project.configurations.compile.resolvedConfiguration
+
+        then:
+        def guava = resolved.firstLevelModuleDependencies.find { it.moduleName == 'guava' }
+        guava.moduleVersion == '14.0'
+    }
+
+    def 'ignore dependencies.lock'() {
+        stockTestSetup()
+        project.setProperty('dependencyLock.ignore', true)
+
+        when:
+        project.apply plugin: pluginName
+        triggerTaskGraphWhenReady()
+        def resolved = project.configurations.compile.resolvedConfiguration
+
+        then:
+        def guava = resolved.firstLevelModuleDependencies.find { it.moduleName == 'guava' }
+        guava.moduleVersion == '14.0.1'
+    }
+
+    private void triggerTaskGraphWhenReady() {
+        Task placeholder = project.tasks.create('placeholder')
+        project.gradle.taskGraph.addTasks([placeholder])
+        project.gradle.taskGraph.execute()
+    }
+
+    private void stockTestSetup() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << '''\
             {
@@ -42,20 +75,5 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.dependencies {
             compile 'com.google.guava:guava:14.0.1'
         }
-
-        when:
-        project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
-        def resolved = project.configurations.compile.resolvedConfiguration
-
-        then:
-        def guava = resolved.firstLevelModuleDependencies.find { it.moduleName == 'guava' }
-        guava.moduleVersion == '14.0'
-    }
-
-    private void triggerTaskGraphWhenReady() {
-        Task placeholder = project.tasks.create('placeholder')
-        project.gradle.taskGraph.addTasks([placeholder])
-        project.gradle.taskGraph.execute()
     }
 }

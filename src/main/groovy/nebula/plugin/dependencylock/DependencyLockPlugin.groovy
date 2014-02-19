@@ -15,9 +15,9 @@
  */
 package nebula.plugin.dependencylock
 
-import groovy.json.JsonException
 import groovy.json.JsonSlurper
-import nebula.plugin.dependencylock.tasks.LockDependenciesTask
+import nebula.plugin.dependencylock.tasks.GenerateLockTask
+import nebula.plugin.dependencylock.tasks.SaveLockTask
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -25,22 +25,34 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 
 class DependencyLockPlugin implements Plugin<Project> {
-    Logger logger = Logging.getLogger(DependencyLockPlugin)
+    private static Logger logger = Logging.getLogger(DependencyLockPlugin)
 
     @Override
     void apply(Project project) {
+        String overrideFileName = project.hasProperty('dependencyLock.lockFile') ? project['dependencyLock.lockFile'] : null
         DependencyLockExtension extension = project.extensions.create('dependencyLock', DependencyLockExtension)
 
-        LockDependenciesTask lockTask = project.tasks.create('lockDependencies', LockDependenciesTask)
-
+        GenerateLockTask lockTask = project.tasks.create('generateLock', GenerateLockTask)
         lockTask.conventionMapping.with {
-            dependenciesLock = { project.file(extension.lockFile) }
+            dependenciesLock = {
+                new File(project.buildDir, overrideFileName ?: extension.lockFile)
+            }
             configurationNames = { extension.configurationNames }
         }
 
+        SaveLockTask saveTask = project.tasks.create('saveLock', SaveLockTask)
+        saveTask.conventionMapping.with {
+            generatedLock = { lockTask.dependenciesLock }
+            outputLock = { new File(project.projectDir, extension.lockFile) }
+        }
+        saveTask.dependsOn lockTask
+
         project.gradle.taskGraph.whenReady { taskGraph ->
-            File dependenciesLock = new File(project.projectDir, extension.lockFile)
-            if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists()) {
+            File dependenciesLock = new File(project.projectDir, overrideFileName ?: extension.lockFile)
+
+            if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists() &&
+                    !project.hasProperty('dependencyLock.ignore')) {
+                logger.info("Using ${dependenciesLock.name} to lock dependencies")
                 def locks
                 try {
                     locks = new JsonSlurper().parseText(dependenciesLock.text)

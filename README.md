@@ -1,9 +1,9 @@
 gradle-dependency-lock-plugin
 =============================
 
-Cloudbees Jenkins release: [![Build Status](https://netflix.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-release/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-release/)
+Cloudbees Jenkins release: [![Build Status](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-release/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-release/)
 
-Cloudbees Jenkins snapshot: [![Build Status](https://netflix.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-snapshot/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-snapshot/)
+Cloudbees Jenkins snapshot: [![Build Status](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-snapshot/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-snapshot/)
 
 A plugin to allow people using dynamic dependency versions to lock them to specific versions.
 
@@ -24,7 +24,7 @@ To include, add the following to your build.gradle
       repositories { jcenter() }
 
       dependencies {
-        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.0'
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.1'
       }
     }
 
@@ -32,7 +32,8 @@ To include, add the following to your build.gradle
 
 ### Tasks Provided
 
-* lockDependencies -- Generate or regenerate the lock file
+* generateLock - Generate a lock file into the build directory
+* saveLock - depends on generateLock, copies generated lock into the project directory
 
 ### Extensions Provided
 
@@ -47,9 +48,26 @@ Use the extension if you wish to configure.
       configurationNames = ['testRuntime']
     }
 
+### Properties that Effect the Plugin
+
+*dependencyLock.lockFile*
+
+Allows the user to override the configured lockFile name via the command line.
+
+    ./gradlew -PdependencyLock.lockFile=<filename> <tasks>
+
+*dependencyLock.ignore*
+
+Allows the user to ignore any present lockFile and fall back to standard gradle dependency resolution. Plugin checks for
+the existence of the property, any value will cause the fallback to standard.
+
+    ./gradlew -PdependencyLock.ignore=true <tasks>
+
 ## Lock File Format
 
-The lock file is written in a json format. The keys of the map are made up of "\<group\>:\<artifact\>".
+The lock file is written in a json format. The keys of the map are made up of "\<group\>:\<artifact\>". The requested
+entry is informational to let users know what version or range of versions was initially asked for. The locked entry is
+the version of the dependency the plugin will lock to.
 
     {
       "group0:artifact0": { "locked": "<version0>", "requested": "<requestedVersion0>" },
@@ -63,7 +81,7 @@ The lock file is written in a json format. The keys of the map are made up of "\
     buildscript {
       repositories { jcenter() }
       dependencies {
-        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.0'
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.1'
       }
     }
 
