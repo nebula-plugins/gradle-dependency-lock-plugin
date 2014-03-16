@@ -1,0 +1,22 @@
+group = 'trans-dyn-dep'
+version = '1.0.0'
+
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+
+dependencies {
+    compile 'org.slf4j:slf4j-api:1.6.+'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "repo"
+        }
+    }
+}
