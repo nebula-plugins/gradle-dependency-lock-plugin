@@ -65,13 +65,12 @@ the existence of the property, any value will cause the fallback to standard.
 
 ## Lock File Format
 
-The lock file is written in a json format. The keys of the map are made up of "\<group\>:\<artifact\>". The requested
-entry is informational to let users know what version or range of versions was initially asked for. The locked entry is
-the version of the dependency the plugin will lock to.
+The lock file is written in a json format. The keys of the map are made up of "\<group\>:\<artifact\>".
+The locked entry is the version of the dependency the plugin will lock to.
 
     {
-      "group0:artifact0": { "locked": "<version0>", "requested": "<requestedVersion0>" },
-      "group1:artifact1": { "locked": "<version1>", "requested": "<requestedVersion1>" }
+      "group0:artifact0": { "locked": "<version0>" },
+      "group1:artifact1": { "locked": "<version1>" }
     }
 
 ## Example
@@ -106,6 +105,7 @@ It will output
 *dependencies.lock*
 
     {
-      "com.google.guava:guava": { "locked": "14.0.1", "requested": "14.+" },
-      "junit:junit": { "locked": "4.11", "requested": "4.+" }
+      "com.google.guava:guava": { "locked": "14.0.1" },
+      "junit:junit": { "locked": "4.11" },
+      "org.hamcrest:hamcrest-core": { "locked": "1.3" }
     }

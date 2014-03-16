@@ -4,3 +4,6 @@ build/
 .idea/
 *.iml
 *.ipr
+classes/
+
+fixture/trans-dyn-dep/build

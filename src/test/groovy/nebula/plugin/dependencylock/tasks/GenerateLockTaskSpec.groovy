@@ -15,6 +15,7 @@
  */
 package nebula.plugin.dependencylock.tasks
 
+import groovy.json.JsonSlurper
 import nebula.test.ProjectSpec
 
 class GenerateLockTaskSpec extends ProjectSpec {
@@ -37,12 +38,12 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.execute()
 
         then:
-        String lockText = '''\
+        new JsonSlurper().parseText(task.dependenciesLock.text) == new JsonSlurper().parseText('''
             {
-              "com.google.guava:guava": { "locked": "14.0.1", "requested": "14.+" },
-              "junit:junit": { "locked": "4.11", "requested": "4.+" }
+              "com.google.guava:guava": { "locked": "14.0.1" },
+              "junit:junit": { "locked": "4.11" },
+              "org.hamcrest:hamcrest-core": { "locked": "1.3" }
             }
-        '''.stripIndent()
-        task.dependenciesLock.text == lockText
+        ''')
     }
 }
