@@ -15,6 +15,7 @@
  */
 package nebula.plugin.dependencylock
 
+import groovy.json.JsonSlurper
 import nebula.test.IntegrationSpec
 import org.gradle.BuildResult
 
@@ -39,13 +40,13 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
     static final String OLD_GUAVA_LOCK = '''\
         {
-          "com.google.guava:guava": { "locked": "14.0", "requested": "14.+" }
+          "com.google.guava:guava": { "locked": "14.0" }
         }
     '''.stripIndent()
 
     static final String GUAVA_LOCK = '''\
         {
-          "com.google.guava:guava": { "locked": "14.0.1", "requested": "14.+" }
+          "com.google.guava:guava": { "locked": "14.0.1" }
         }
     '''.stripIndent()
 
@@ -98,7 +99,8 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         runTasksSuccessfully('generateLock')
 
         then:
-        new File(projectDir, 'build/dependencies.lock').text == GUAVA_LOCK
+        def depsLock = new File(projectDir, 'build/dependencies.lock')
+        new JsonSlurper().parseText(depsLock.text) == new JsonSlurper().parseText(GUAVA_LOCK)
     }
 
     def 'update lock'() {
@@ -110,7 +112,8 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         runTasksSuccessfully('saveLock')
 
         then:
-        new File(projectDir, 'dependencies.lock').text == GUAVA_LOCK
+        def depsLock = new File(projectDir, 'build/dependencies.lock')
+        new JsonSlurper().parseText(depsLock.text) == new JsonSlurper().parseText(GUAVA_LOCK)
     }
 
     def 'trigger failure with bad lock file'() {

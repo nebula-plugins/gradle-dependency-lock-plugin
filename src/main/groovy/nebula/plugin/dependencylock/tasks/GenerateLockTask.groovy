@@ -15,10 +15,8 @@
  */
 package nebula.plugin.dependencylock.tasks
 
-import groovy.transform.EqualsAndHashCode
+import groovy.json.JsonBuilder
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.Dependency
-import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.tasks.Input
@@ -41,44 +39,43 @@ class GenerateLockTask extends AbstractLockTask {
     }
 
     private readDependenciesFromConfigurations() {
-        def deps = [:].withDefault { [:] }
+        Set<LockedDependency> dependencies = []
         def confs = getConfigurationNames().collect { project.configurations.getByName(it) }
-
         confs.each { Configuration configuration ->
-            def peers = configuration.allDependencies.withType(ProjectDependency) { new LockKey(group: it.group, artifact: it.name) }
-            configuration.allDependencies.withType(ExternalDependency).each { Dependency dependency ->
-                def key = new LockKey(group: dependency.group, artifact: dependency.name)
-                deps[key.toString()].requested = dependency.version
-            }
+            Set<ProjectDependency> peers = configuration.allDependencies.withType(ProjectDependency)
             configuration.resolvedConfiguration.firstLevelModuleDependencies.each { ResolvedDependency resolved ->
-                def key = new LockKey(group: resolved.moduleGroup, artifact: resolved.moduleName)
-                if (!peers.contains(key)) {
-                    deps[key.toString()].locked = resolved.moduleVersion
-                }
+                DependencyCollector.collect(resolved, dependencies, peers)
             }
         }
 
-        return deps
+        return dependencies
     }
 
     private void writeLock(deps) {
-        def strings = deps.collect { k, v -> "  \"${k}\": { \"locked\": \"${v.locked}\", \"requested\": \"${v.requested}\" }"}
-        strings = strings.sort()
-        getDependenciesLock().withPrintWriter { out ->
-            out.println '{'
-            out.println strings.join(',\n')
-            out.println '}'
+        def builder = new JsonBuilder()
+        builder deps.sort({ "${it.moduleGroup}:${it.moduleName}" }).collectEntries { d ->
+            def key = "${d.moduleGroup}:${d.moduleName}"
+            def val = [locked: d.moduleVersion]
+            [key, val]
         }
+        getDependenciesLock().text = builder.toString()
     }
 
-    @EqualsAndHashCode
-    private static class LockKey {
-        String group
-        String artifact
+    private static class LockedDependency implements ResolvedDependency {
+        @Delegate ResolvedDependency resolved
+        boolean transitive
+    }
 
-        @Override
-        String toString() {
-            "${group}:${artifact}"
+    private static class DependencyCollector {
+        public static void collect(ResolvedDependency resolved, Set<ResolvedDependency> deps, Set<ProjectDependency> peers, boolean transitive = false) {
+            if (null == peers.find { it.group == resolved.moduleGroup && it.name == resolved.moduleName}) {
+                if (null == deps.find { it.module.id == resolved.module.id }) {
+                    deps.add([resolved: resolved, transitive: transitive] as LockedDependency)
+                }
+                resolved.getChildren().each {
+                    collect(it, deps, peers, true)
+                }
+            }
         }
     }
 }
