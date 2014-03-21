@@ -16,6 +16,7 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.test.ProjectSpec
+import org.gradle.testfixtures.ProjectBuilder
 
 class GenerateLockTaskSpec extends ProjectSpec {
     final String taskName = 'generateLock'
@@ -44,5 +45,39 @@ class GenerateLockTaskSpec extends ProjectSpec {
             }
         '''.stripIndent()
         task.dependenciesLock.text == lockText
+    }
+
+    def 'multiproject inter-project dependencies should be excluded'() {
+        def common = ProjectBuilder.builder().withName('common').withProjectDir(new File(projectDir, 'common')).withParent(project).build()
+        project.subprojects.add(common)
+        def app = ProjectBuilder.builder().withName('app').withProjectDir(new File(projectDir, 'app')).withParent(project).build()
+        project.subprojects.add(app)
+
+        project.subprojects {
+            repositories { mavenCentral() }
+        }
+
+        common.apply plugin: 'java'
+        app.apply plugin: 'java'
+        app.dependencies {
+            compile app.project(':common')
+            compile 'com.google.guava:guava:14.+'
+        }
+
+        GenerateLockTask task = app.tasks.create('lockTestTask', GenerateLockTask)
+        task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
+        task.configurationNames= [ 'testRuntime' ]
+
+        when:
+        task.execute()
+
+        then:
+        String lockText = '''\
+            {
+              "com.google.guava:guava": { "locked": "14.0.1", "requested": "14.+" }
+            }
+        '''.stripIndent()
+        task.dependenciesLock.text == lockText
+
     }
 }
