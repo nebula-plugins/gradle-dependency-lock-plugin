@@ -3,6 +3,7 @@
 
 * Fix to exclude inter-project dependencies in an multi-project build
 * Documentation updates
+* Update build to use nebula-plugin-plugin:1.9.9
 
 1.9.1 / 2014-02-18
 ==================
