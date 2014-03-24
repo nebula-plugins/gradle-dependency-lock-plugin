@@ -45,7 +45,7 @@ class GenerateLockTask extends AbstractLockTask {
         def confs = getConfigurationNames().collect { project.configurations.getByName(it) }
 
         confs.each { Configuration configuration ->
-            def peers = configuration.allDependencies.withType(ProjectDependency) { new LockKey(group: it.group, artifact: it.name) }
+            def peers = configuration.allDependencies.withType(ProjectDependency).collect { new LockKey(group: it.group, artifact: it.name) }
             configuration.allDependencies.withType(ExternalDependency).each { Dependency dependency ->
                 def key = new LockKey(group: dependency.group, artifact: dependency.name)
                 deps[key.toString()].requested = dependency.version

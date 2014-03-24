@@ -24,7 +24,7 @@ To include, add the following to your build.gradle
       repositories { jcenter() }
 
       dependencies {
-        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.1'
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.2'
       }
     }
 
@@ -37,6 +37,8 @@ To include, add the following to your build.gradle
 
 ### Extensions Provided
 
+*Properties*
+
 * lockFile - Name of the file to read/write dependency locks, defaults to 'dependencies.lock'
 * configurations - Collection of the configuration names to read, defaults to 'testRuntime'. For java projects
 testRuntime is good since it extends compile, runtime, and testCompile.
@@ -48,7 +50,7 @@ Use the extension if you wish to configure.
       configurationNames = ['testRuntime']
     }
 
-### Properties that Effect the Plugin
+### Properties that Affect the Plugin
 
 *dependencyLock.lockFile*
 
@@ -70,8 +72,8 @@ entry is informational to let users know what version or range of versions was i
 the version of the dependency the plugin will lock to.
 
     {
-      "group0:artifact0": { "locked": "<version0>", "requested": "<requestedVersion0>" },
-      "group1:artifact1": { "locked": "<version1>", "requested": "<requestedVersion1>" }
+      "<group0>:<artifact0>": { "locked": "<version0>", "requested": "<requestedVersion0>" },
+      "<group1>:<artifact1>": { "locked": "<version1>", "requested": "<requestedVersion1>" }
     }
 
 ## Example
@@ -81,7 +83,7 @@ the version of the dependency the plugin will lock to.
     buildscript {
       repositories { jcenter() }
       dependencies {
-        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.1'
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.2'
       }
     }
 
@@ -99,7 +101,7 @@ the version of the dependency the plugin will lock to.
 
 When you run
 
-    ./gradlew lockDependencies
+    ./gradlew generateLock
 
 It will output
 
@@ -108,4 +110,35 @@ It will output
     {
       "com.google.guava:guava": { "locked": "14.0.1", "requested": "14.+" },
       "junit:junit": { "locked": "4.11", "requested": "4.+" }
+    }
+
+# Possible Future Changes
+
+### Initial Cut at Locking Transitives, Output Format
+
+*dependencies.lock*
+
+    {
+        "<group>:<artifact>": { "locked": "<lockedVersion>", "requested": "<requestedVersion>" },
+        "<transitivegroup>:<transitiveartifact>": { "locked": "<transitiveLockedVersion>", "transitive" = true }
+    }
+
+If possible would like to determine from which artifact.
+
+    {
+      ...
+      "<transitivegroup>:<transitiveartifact>": { "locked": "<transitiveLockedVersion>", "transitive" = true,
+          "via": [ "<group>:<artifact>", "<group1>:<artifact1>" ]
+      }
+      ...
+    }
+
+Or
+
+    {
+      ...
+      "<transitivegroup>:<transitiveartifact>": { "locked": "<transitiveLockedVersion>", "transitive" = true,
+          "via": { "<group>:<artifact>": "<requestedVersion>", "<group1>:<artifact1>": "<requestedVersion1>" }
+      }
+      ...
     }
