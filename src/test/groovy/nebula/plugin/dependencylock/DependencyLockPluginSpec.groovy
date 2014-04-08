@@ -44,7 +44,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
     def 'ignore dependencies.lock'() {
         stockTestSetup()
-        project.setProperty('dependencyLock.ignore', true)
+        project.ext.set('dependencyLock.ignore', true)
 
         when:
         project.apply plugin: pluginName
@@ -54,6 +54,72 @@ class DependencyLockPluginSpec extends ProjectSpec {
         then:
         def guava = resolved.firstLevelModuleDependencies.find { it.moduleName == 'guava' }
         guava.moduleVersion == '14.0.1'
+    }
+
+    def 'command line file override of dependencies'() {
+        stockTestSetup()
+        def override = new File(projectDir, 'override.lock')
+        override.text = '''\
+            {
+              "com.google.guava:guava": { "locked": "16.0.1" }
+            }    
+        '''.stripIndent()
+
+        project.ext.set('dependencyLock.overrideFile', 'override.lock')
+
+        when:
+        project.apply plugin: pluginName
+        triggerTaskGraphWhenReady()
+        def resolved = project.configurations.compile.resolvedConfiguration
+
+        then:
+        def guava = resolved.firstLevelModuleDependencies.find { it.moduleName == 'guava' }
+        guava.moduleVersion == '16.0.1'
+    }
+
+    def 'command line override of a dependency'() {
+        stockTestSetup()
+
+        project.ext.set('dependencyLock.override', 'com.google.guava:guava:16.0.1')
+
+        when:
+        project.apply plugin: pluginName
+        triggerTaskGraphWhenReady()
+        def resolved = project.configurations.compile.resolvedConfiguration
+
+        then:
+        def guava = resolved.firstLevelModuleDependencies.find { it.moduleName == 'guava' }
+        guava.moduleVersion == '16.0.1'
+    }
+
+    def 'command line overrides of multiple dependencies'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << '''\
+            {
+              "com.google.guava:guava": { "locked": "14.0", "requested": "14.+" },
+              "org.apache.commons:commons-lang3": { "locked": "3.3.1", "requested": "3.+" }
+            }
+        '''.stripIndent()
+
+        project.apply plugin: 'java'
+        project.repositories { mavenCentral() }
+        project.dependencies {
+            compile 'com.google.guava:guava:14.0.1'
+            compile 'org.apache.commons:commons-lang3:3.+'
+        }
+
+        project.ext.set('dependencyLock.override', 'com.google.guava:guava:16.0.1,org.apache.commons:commons-lang3:3.2.1')
+
+        when:
+        project.apply plugin: pluginName
+        triggerTaskGraphWhenReady()
+        def resolved = project.configurations.compile.resolvedConfiguration
+
+        then:
+        def guava = resolved.firstLevelModuleDependencies.find { it.moduleName == 'guava' }
+        guava.moduleVersion == '16.0.1'
+        def commons = resolved.firstLevelModuleDependencies.find { it.moduleName == 'commons-lang3' }
+        commons.moduleVersion == '3.2.1'
     }
 
     private void triggerTaskGraphWhenReady() {

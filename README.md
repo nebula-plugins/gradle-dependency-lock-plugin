@@ -24,7 +24,7 @@ To include, add the following to your build.gradle
       repositories { jcenter() }
 
       dependencies {
-        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.2'
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.+'
       }
     }
 
@@ -65,6 +65,22 @@ the existence of the property, any value will cause the fallback to standard.
 
     ./gradlew -PdependencyLock.ignore=true <tasks>
 
+*dependencyLock.overrideFile*
+
+Allows the user to specify a file of overrides. This file should be in the lock file format specified below.
+
+    ./gradlew -PdependencyLock.overrideFile=override.lock <tasks>
+
+*dependencyLock.override*
+
+Allows the user to specify overrides to libraries on the command line. This override will be used over any from `dependencyLock.overrideFile`
+
+    ./gradlew -PdependencyLock.override=group:artifact:version <tasks>
+
+or to override multiple libraries
+
+    ./gradlew -PdependencyLock.override=group0:artifact0:version0,group1:artifact1:version1 <tasks>
+
 ## Lock File Format
 
 The lock file is written in a json format. The keys of the map are made up of "\<group\>:\<artifact\>". The requested
@@ -83,7 +99,7 @@ the version of the dependency the plugin will lock to.
     buildscript {
       repositories { jcenter() }
       dependencies {
-        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.2'
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.+'
       }
     }
 

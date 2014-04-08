@@ -26,16 +26,19 @@ import org.gradle.api.logging.Logging
 
 class DependencyLockPlugin implements Plugin<Project> {
     private static Logger logger = Logging.getLogger(DependencyLockPlugin)
+    Project project
 
     @Override
     void apply(Project project) {
-        String overrideFileName = project.hasProperty('dependencyLock.lockFile') ? project['dependencyLock.lockFile'] : null
+        this.project = project
+
+        String clLockFileName = project.hasProperty('dependencyLock.lockFile') ? project['dependencyLock.lockFile'] : null
         DependencyLockExtension extension = project.extensions.create('dependencyLock', DependencyLockExtension)
 
         GenerateLockTask lockTask = project.tasks.create('generateLock', GenerateLockTask)
         lockTask.conventionMapping.with {
             dependenciesLock = {
-                new File(project.buildDir, overrideFileName ?: extension.lockFile)
+                new File(project.buildDir, clLockFileName ?: extension.lockFile)
             }
             configurationNames = { extension.configurationNames }
         }
@@ -47,27 +50,55 @@ class DependencyLockPlugin implements Plugin<Project> {
         }
         saveTask.dependsOn lockTask
 
+        Map overrides = loadOverrides()
+
         project.gradle.taskGraph.whenReady { taskGraph ->
-            File dependenciesLock = new File(project.projectDir, overrideFileName ?: extension.lockFile)
+            File dependenciesLock = new File(project.projectDir, clLockFileName ?: extension.lockFile)
 
             if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists() &&
                     !project.hasProperty('dependencyLock.ignore')) {
                 logger.info("Using ${dependenciesLock.name} to lock dependencies")
-                def locks
-                try {
-                    locks = new JsonSlurper().parseText(dependenciesLock.text)
-                } catch (ex) {
-                    logger.debug('Unreadable json file: ' + dependenciesLock.text)
-                    logger.error('JSON unreadable')
-                    throw new GradleException("${extension.lockFile} is unreadable or invalid json, terminating run", ex)
+                def locks = loadLock(dependenciesLock)
+
+                def forcedModules = locks.collect {
+                    overrides.containsKey(it.key) ? "${it.key}:${overrides[it.key]}" : "${it.key}:${it.value.locked}"
                 }
-                def forcedModules = locks.collect { "${it.key}:${it.value.locked}" }
                 logger.debug(forcedModules.toString())
 
                 project.configurations.all {
                     resolutionStrategy.forcedModules = forcedModules
                 }
             }
+        }
+    }
+
+    private Map loadOverrides() {
+        Map overrides = [:]
+        if (project.hasProperty('dependencyLock.overrideFile')) {
+            println project['dependencyLock.overrideFile']
+            File dependenciesLock = new File(project.projectDir, project['dependencyLock.overrideFile'])
+            println dependenciesLock.path
+            loadLock(dependenciesLock).each { overrides[it.key] = it.value.locked }
+            logger.debug "Override file loaded: ${project['dependencyLock.overrideFile']}"
+        }
+        if (project.hasProperty('dependencyLock.override')) {
+            project['dependencyLock.override'].tokenize(',').each {
+                def (group, artifact, version) = it.tokenize(':')
+                overrides["${group}:${artifact}"] = version
+                logger.debug "Override added for: ${it}"
+            }
+        }
+
+        overrides
+    }
+
+    private loadLock(File lock) {
+        try {
+            return new JsonSlurper().parseText(lock.text)
+        } catch (ex) {
+            logger.debug('Unreadable json file: ' + lock.text)
+            logger.error('JSON unreadable')
+            throw new GradleException("${lock.name} is unreadable or invalid json, terminating run", ex)
         }
     }
 }
