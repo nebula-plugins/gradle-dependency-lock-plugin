@@ -1,3 +1,9 @@
+1.9.3 / 2014-04-08
+==================
+
+* add command line overrides
+* add command line file overrides
+
 1.9.2 / 2014-03-21
 ==================
 
