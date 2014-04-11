@@ -1,3 +1,8 @@
+1.9.4 / 2014-04-11
+==================
+
+* command line overrides will now affect the dependency resolution during lock generation, dependency.lock will continue to be ignored during lock generation
+
 1.9.3 / 2014-04-08
 ==================
 

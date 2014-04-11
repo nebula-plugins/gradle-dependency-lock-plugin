@@ -49,6 +49,12 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         }
     '''.stripIndent()
 
+    static final String NEW_GUAVA_LOCK = '''\
+        {
+          "com.google.guava:guava": { "locked": "16.0.1", "requested": "14.+" }
+        }
+    '''.stripIndent()
+
     def 'plugin allows normal gradle operation'() {
         buildFile << SPECIFIC_BUILD_GRADLE
 
@@ -127,5 +133,39 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         result.failure.message.contains('unreadable or invalid json')
+    }
+
+    def 'existing lock ignored while updating lock'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << NEW_GUAVA_LOCK
+        buildFile << BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('saveLock')
+
+        then:
+        new File(projectDir, 'dependencies.lock').text == GUAVA_LOCK    
+    }
+
+    def 'command line override respected while updating lock'() {
+        buildFile << BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('-PdependencyLock.override=com.google.guava:guava:16.0.1', 'saveLock')
+
+        then:
+        new File(projectDir, 'dependencies.lock').text == NEW_GUAVA_LOCK    
+    }
+
+    def 'command line override file respected while updating lock'() {
+        def testLock = new File(projectDir, 'test.lock')
+        testLock << NEW_GUAVA_LOCK
+        buildFile << BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('-PdependencyLock.overrideFile=test.lock', 'saveLock')
+
+        then:
+        new File(projectDir, 'dependencies.lock').text == NEW_GUAVA_LOCK    
     }
 }

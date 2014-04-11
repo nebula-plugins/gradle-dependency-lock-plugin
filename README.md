@@ -7,10 +7,7 @@ Cloudbees Jenkins snapshot: [![Build Status](https://netflixoss.ci.cloudbees.com
 
 A plugin to allow people using dynamic dependency versions to lock them to specific versions.
 
-Some project teams may prefer to have their build.gradle dependencies reflect their ideal world. A latest.release for
-internal dependencies. A major.+, major.minor.+, or a range \[2.0.0, 4.0.0\). Many also want to lock to specific versions
-for day to day development, having a tagged version always resolve identically, and for published versions to have
-specific dependencies.
+Some project teams may prefer to have their build.gradle dependencies reflect their ideal world. A latest.release for internal dependencies. A major.+, major.minor.+, or a range \[2.0.0, 4.0.0\). Many also want to lock to specific versions for day to day development, having a tagged version always resolve identically, and for published versions to have specific dependencies.
 
 Inspired by [Bundler](http://bundler.io)
 
@@ -31,6 +28,8 @@ To include, add the following to your build.gradle
     apply plugin: 'gradle-dependency-lock'
 
 ### Tasks Provided
+
+When the following tasks are run any existing `dependency.lock` file will be ignored. Command line overrides via `-PdependencyLock.override` or `-PdependencyLock.overrideFile` will win.
 
 * generateLock - Generate a lock file into the build directory
 * saveLock - depends on generateLock, copies generated lock into the project directory
@@ -67,7 +66,7 @@ the existence of the property, any value will cause the fallback to standard.
 
 *dependencyLock.overrideFile*
 
-Allows the user to specify a file of overrides. This file should be in the lock file format specified below.
+Allows the user to specify a file of overrides. This file should be in the lock file format specified below in the Lock File Format section.
 
     ./gradlew -PdependencyLock.overrideFile=override.lock <tasks>
 

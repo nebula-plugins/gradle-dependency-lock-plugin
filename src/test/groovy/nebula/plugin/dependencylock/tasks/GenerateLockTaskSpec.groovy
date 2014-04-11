@@ -78,6 +78,5 @@ class GenerateLockTaskSpec extends ProjectSpec {
             }
         '''.stripIndent()
         task.dependenciesLock.text == lockText
-
     }
 }
