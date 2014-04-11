@@ -68,6 +68,19 @@ class DependencyLockPlugin implements Plugin<Project> {
                 project.configurations.all {
                     resolutionStrategy.forcedModules = forcedModules
                 }
+            } else if (taskGraph.hasTask(lockTask) && !project.hasProperty('dependencyLock.ignore')) {
+                if (project.hasProperty('dependencyLock.overrideFile')) {
+                    logger.info("Using override file ${project['dependencyLock.overrideFile']} to lock dependencies")    
+                }
+                if (project.hasProperty('dependencyLock.override')) {
+                    logger.info("Using command line overrides ${project['dependencyLock.override']}")
+                }
+
+                def overrideModules = overrides.collect { "${it.key}:${it.value}" }
+
+                project.configurations.all {
+                    resolutionStrategy.forcedModules = overrideModules
+                }                        
             }
         }
     }
