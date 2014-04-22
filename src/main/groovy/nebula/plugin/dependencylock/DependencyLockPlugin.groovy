@@ -57,43 +57,57 @@ class DependencyLockPlugin implements Plugin<Project> {
 
             if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists() &&
                     !project.hasProperty('dependencyLock.ignore')) {
-                logger.info("Using ${dependenciesLock.name} to lock dependencies")
-                def locks = loadLock(dependenciesLock)
-
-                def forcedModules = locks.collect {
-                    overrides.containsKey(it.key) ? "${it.key}:${overrides[it.key]}" : "${it.key}:${it.value.locked}"
-                }
-                logger.debug(forcedModules.toString())
-
-                project.configurations.all {
-                    resolutionStrategy.forcedModules = forcedModules
-                }
+                applyLock(dependenciesLock, overrides)
             } else if (taskGraph.hasTask(lockTask) && !project.hasProperty('dependencyLock.ignore')) {
-                if (project.hasProperty('dependencyLock.overrideFile')) {
-                    logger.info("Using override file ${project['dependencyLock.overrideFile']} to lock dependencies")    
-                }
-                if (project.hasProperty('dependencyLock.override')) {
-                    logger.info("Using command line overrides ${project['dependencyLock.override']}")
-                }
-
-                def overrideModules = overrides.collect { "${it.key}:${it.value}" }
-
-                project.configurations.all {
-                    resolutionStrategy.forcedModules = overrideModules
-                }                        
+                applyOverrides(overrides)
             }
+        }
+    }
+
+    void applyOverrides(Map overrides) {
+        if (project.hasProperty('dependencyLock.overrideFile')) {
+            logger.info("Using override file ${project['dependencyLock.overrideFile']} to lock dependencies")
+        }
+        if (project.hasProperty('dependencyLock.override')) {
+            logger.info("Using command line overrides ${project['dependencyLock.override']}")
+        }
+
+        def overrideModules = overrides.collect { "${it.key}:${it.value}" }
+
+        project.configurations.all {
+            resolutionStrategy.forcedModules = overrideModules
+        }
+    }
+
+    void applyLock(File dependenciesLock, Map overrides) {
+        logger.info("Using ${dependenciesLock.name} to lock dependencies")
+        def locks = loadLock(dependenciesLock)
+
+        def forcedModules = locks.collect {
+            overrides.containsKey(it.key) ? "${it.key}:${overrides[it.key]}" : "${it.key}:${it.value.locked}"
+        }
+        logger.debug(forcedModules.toString())
+
+        project.configurations.all {
+            resolutionStrategy.forcedModules = forcedModules
         }
     }
 
     private Map loadOverrides() {
         Map overrides = [:]
+        if (project.hasProperty('dependencyLock.ignore')) {
+            return overrides
+        }
+
+        println 'hi'
+        println project.hasProperty('dependencyLock.overrideFile')
+
         if (project.hasProperty('dependencyLock.overrideFile')) {
-            println project['dependencyLock.overrideFile']
-            File dependenciesLock = new File(project.projectDir, project['dependencyLock.overrideFile'])
-            println dependenciesLock.path
+            File dependenciesLock = new File(project.rootDir, project['dependencyLock.overrideFile'])
             loadLock(dependenciesLock).each { overrides[it.key] = it.value.locked }
             logger.debug "Override file loaded: ${project['dependencyLock.overrideFile']}"
         }
+
         if (project.hasProperty('dependencyLock.override')) {
             project['dependencyLock.override'].tokenize(',').each {
                 def (group, artifact, version) = it.tokenize(':')
