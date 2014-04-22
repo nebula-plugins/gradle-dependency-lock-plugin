@@ -99,9 +99,6 @@ class DependencyLockPlugin implements Plugin<Project> {
             return overrides
         }
 
-        println 'hi'
-        println project.hasProperty('dependencyLock.overrideFile')
-
         if (project.hasProperty('dependencyLock.overrideFile')) {
             File dependenciesLock = new File(project.rootDir, project['dependencyLock.overrideFile'])
             loadLock(dependenciesLock).each { overrides[it.key] = it.value.locked }

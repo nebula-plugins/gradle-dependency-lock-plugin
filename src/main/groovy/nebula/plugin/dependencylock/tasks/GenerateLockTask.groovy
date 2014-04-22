@@ -27,11 +27,7 @@ import org.gradle.api.tasks.TaskAction
 
 class GenerateLockTask extends AbstractLockTask {
     String description = 'Create a lock file in build/<configured name>'
-
-    @Input
     Set<String> configurationNames
-
-    @OutputFile
     File dependenciesLock
 
     @TaskAction
@@ -64,6 +60,7 @@ class GenerateLockTask extends AbstractLockTask {
     private void writeLock(deps) {
         def strings = deps.collect { k, v -> "  \"${k}\": { \"locked\": \"${v.locked}\", \"requested\": \"${v.requested}\" }"}
         strings = strings.sort()
+        project.buildDir.mkdirs()
         getDependenciesLock().withPrintWriter { out ->
             out.println '{'
             out.println strings.join(',\n')
