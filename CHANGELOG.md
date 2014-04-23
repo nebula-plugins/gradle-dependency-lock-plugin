@@ -1,3 +1,10 @@
+1.9.5 / 2014-04-xx
+==================
+
+* Document if a locked dependency is at a specific version due to a command line override
+* improve multi-project support for command line overrides
+* make it so generateLock will never be up-to-date
+
 1.9.4 / 2014-04-11
 ==================
 
