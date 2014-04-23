@@ -29,6 +29,7 @@ class GenerateLockTask extends AbstractLockTask {
     String description = 'Create a lock file in build/<configured name>'
     Set<String> configurationNames
     File dependenciesLock
+    Map overrides
 
     @TaskAction
     void lock() {
@@ -54,11 +55,15 @@ class GenerateLockTask extends AbstractLockTask {
             }
         }
 
+        getOverrides().each { String key, String overrideVersion ->
+            deps[key].viaOverride = overrideVersion
+        }
+
         return deps
     }
 
     private void writeLock(deps) {
-        def strings = deps.collect { k, v -> "  \"${k}\": { \"locked\": \"${v.locked}\", \"requested\": \"${v.requested}\" }"}
+        def strings = deps.collect { String k, Map v -> stringifyLock(k, v) }
         strings = strings.sort()
         project.buildDir.mkdirs()
         getDependenciesLock().withPrintWriter { out ->
@@ -66,6 +71,16 @@ class GenerateLockTask extends AbstractLockTask {
             out.println strings.join(',\n')
             out.println '}'
         }
+    }
+
+    private static String stringifyLock(String key, Map lock) {
+        def lockLine = new StringBuilder("  \"${key}\": { \"locked\": \"${lock.locked}\", \"requested\": \"${lock.requested}\"")
+        if (lock.viaOverride) {
+            lockLine << ", \"viaOverride\": \"${lock.viaOverride}\""
+        }
+        lockLine << ' }'
+
+        return lockLine.toString()
     }
 
     @EqualsAndHashCode

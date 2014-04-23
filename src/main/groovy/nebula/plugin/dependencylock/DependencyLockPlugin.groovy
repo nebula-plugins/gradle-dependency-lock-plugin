@@ -35,22 +35,9 @@ class DependencyLockPlugin implements Plugin<Project> {
         String clLockFileName = project.hasProperty('dependencyLock.lockFile') ? project['dependencyLock.lockFile'] : null
         DependencyLockExtension extension = project.extensions.create('dependencyLock', DependencyLockExtension)
 
-        GenerateLockTask lockTask = project.tasks.create('generateLock', GenerateLockTask)
-        lockTask.conventionMapping.with {
-            dependenciesLock = {
-                new File(project.buildDir, clLockFileName ?: extension.lockFile)
-            }
-            configurationNames = { extension.configurationNames }
-        }
-
-        SaveLockTask saveTask = project.tasks.create('saveLock', SaveLockTask)
-        saveTask.conventionMapping.with {
-            generatedLock = { lockTask.dependenciesLock }
-            outputLock = { new File(project.projectDir, extension.lockFile) }
-        }
-        saveTask.dependsOn lockTask
-
         Map overrides = loadOverrides()
+        GenerateLockTask lockTask = configureLockTask(clLockFileName, extension, overrides)
+        configureSaveTask(lockTask, extension)
 
         project.gradle.taskGraph.whenReady { taskGraph ->
             File dependenciesLock = new File(project.projectDir, clLockFileName ?: extension.lockFile)
@@ -62,6 +49,35 @@ class DependencyLockPlugin implements Plugin<Project> {
                 applyOverrides(overrides)
             }
         }
+    }
+
+    private void configureSaveTask(GenerateLockTask lockTask, DependencyLockExtension extension) {
+        SaveLockTask saveTask = project.tasks.create('saveLock', SaveLockTask)
+        saveTask.conventionMapping.with {
+            generatedLock = { lockTask.dependenciesLock }
+            outputLock = { new File(project.projectDir, extension.lockFile) }
+        }
+        saveTask.dependsOn lockTask
+        saveTask.outputs.upToDateWhen {
+            if (saveTask.generatedLock.exists() && saveTask.outputLock.exists()) {
+                saveTask.generatedLock.text == saveTask.outputLock.text
+            } else {
+                false
+            }
+        }
+    }
+
+    private GenerateLockTask configureLockTask(String clLockFileName, DependencyLockExtension extension, Map overrides) {
+        GenerateLockTask lockTask = project.tasks.create('generateLock', GenerateLockTask)
+        lockTask.conventionMapping.with {
+            dependenciesLock = {
+                new File(project.buildDir, clLockFileName ?: extension.lockFile)
+            }
+            configurationNames = { extension.configurationNames }
+        }
+        lockTask.overrides = overrides
+
+        lockTask
     }
 
     void applyOverrides(Map overrides) {

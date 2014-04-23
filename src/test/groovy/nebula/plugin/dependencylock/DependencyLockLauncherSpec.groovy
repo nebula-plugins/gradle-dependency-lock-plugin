@@ -60,7 +60,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
     static final String NEW_GUAVA_LOCK = '''\
         {
-          "com.google.guava:guava": { "locked": "16.0.1", "requested": "14.+" }
+          "com.google.guava:guava": { "locked": "16.0.1", "requested": "14.+", "viaOverride": "16.0.1" }
         }
     '''.stripIndent()
 
@@ -195,5 +195,25 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         new File(projectDir, 'build/dependencies.lock').text != savedLock.text
+    }
+
+    def 'multiple runs of save lock works'() {
+        buildFile << BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('saveLock')
+
+        then:
+        def savedLock = new File(projectDir, 'dependencies.lock')
+        def firstRun = savedLock.text
+        firstRun == GUAVA_LOCK
+
+        buildFile << NEW_BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('saveLock')
+
+        then:
+        savedLock.text != firstRun
     }
 }
