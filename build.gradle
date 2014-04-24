@@ -15,37 +15,18 @@
  */
 buildscript {
     repositories { jcenter() }
-    dependencies { classpath 'com.netflix.nebula:nebula-plugin-plugin:1.9.9' }
+    dependencies { classpath 'com.netflix.nebula:nebula-plugin-plugin:1.11.+' }
 }
 
 description 'Gradle plugin to allow locking of dynamic dependency versions'
 apply plugin: 'nebula-plugin'
-apply plugin: 'nebula-sign'
 
 dependencies {
 }
 
-def pomConfig = {
-    inceptionYear '2014'
-
-    developers {
-        developer {
-            id 'rspieldenner'
-            name 'Rob Spieldenner'
-            email 'rob.spieldenner@gmail.com'
-            roles{
-                role 'Developer'
-            }
-            timezone '-8'
-        }
-    }
-}
-
-import nebula.plugin.publishing.maven.NebulaBaseMavenPublishingPlugin
-plugins.withType(NebulaBaseMavenPublishingPlugin) {
-    withMavenPublication {
-        pom.withXml {
-            asNode().children().last() + pomConfig
-        }
+contacts {
+    'rob.spieldenner@gmail.com' {
+        moniker 'Rob Spieldenner'
+        github 'rspieldenner'
     }
 }
