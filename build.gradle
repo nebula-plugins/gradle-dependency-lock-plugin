@@ -20,6 +20,7 @@ buildscript {
 
 description 'Gradle plugin to allow locking of dynamic dependency versions'
 apply plugin: 'nebula-plugin'
+apply plugin: 'idea'
 
 contacts {
     'rob.spieldenner@gmail.com' {

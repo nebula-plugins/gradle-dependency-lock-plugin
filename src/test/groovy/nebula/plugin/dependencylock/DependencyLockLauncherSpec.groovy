@@ -15,54 +15,59 @@
  */
 package nebula.plugin.dependencylock
 
+import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.test.IntegrationSpec
 import org.gradle.BuildResult
 
 class DependencyLockLauncherSpec extends IntegrationSpec {
-    static final String SPECIFIC_BUILD_GRADLE = '''\
+    static final String SPECIFIC_BUILD_GRADLE = """\
         apply plugin: 'java'
         apply plugin: 'gradle-dependency-lock'
-        repositories { mavenCentral() }
+        repositories { maven { url '${Fixture.repo}' } }
         dependencies {
-            compile 'com.google.guava:guava:14.0.1'
+            compile 'test.example:foo:1.0.1'
         }
-    '''.stripIndent()
+    """.stripIndent()
 
-    static final String BUILD_GRADLE = '''\
+    static final String BUILD_GRADLE = """\
         apply plugin: 'java'
         apply plugin: 'gradle-dependency-lock'
-        repositories { mavenCentral() }
+        repositories { maven { url '${Fixture.repo}' } }
         dependencies {
-            compile 'com.google.guava:guava:14.+'
+            compile 'test.example:foo:1.+'
         }
-    '''.stripIndent()
+    """.stripIndent()
 
-    static final String NEW_BUILD_GRADLE = '''\
+    static final String NEW_BUILD_GRADLE = """\
         apply plugin: 'java'
         apply plugin: 'gradle-dependency-lock'
-        repositories { mavenCentral() }
+        repositories { maven { url '${Fixture.repo}' } }
         dependencies {
-            compile 'com.google.guava:guava:16.+'
+            compile 'test.example:foo:2.+'
         }
-    '''.stripIndent()
+    """.stripIndent()
 
     static final String OLD_GUAVA_LOCK = '''\
         {
-          "com.google.guava:guava": { "locked": "14.0", "requested": "14.+" }
+          "test.example:foo": { "locked": "1.0.0", "requested": "1.+" }
         }
     '''.stripIndent()
 
     static final String GUAVA_LOCK = '''\
         {
-          "com.google.guava:guava": { "locked": "14.0.1", "requested": "14.+" }
+          "test.example:foo": { "locked": "1.0.1", "requested": "1.+" }
         }
     '''.stripIndent()
 
     static final String NEW_GUAVA_LOCK = '''\
         {
-          "com.google.guava:guava": { "locked": "16.0.1", "requested": "14.+", "viaOverride": "16.0.1" }
+          "test.example:foo": { "locked": "2.0.1", "requested": "1.+", "viaOverride": "2.0.1" }
         }
     '''.stripIndent()
+
+    def setupSpec() {
+        Fixture.createFixtureIfNotCreated()
+    }
 
     def 'plugin allows normal gradle operation'() {
         buildFile << SPECIFIC_BUILD_GRADLE
@@ -84,7 +89,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         runTasksSuccessfully('dependencies')
 
         then:
-        standardOutput.contains 'com.google.guava:guava:14.0.1 -> 14.0'
+        standardOutput.contains 'test.example:foo:1.0.1 -> 1.0.0'
     }
 
     def 'override lock file is applied'() {
@@ -103,7 +108,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         runTasksSuccessfully('dependencies')
 
         then:
-        standardOutput.contains 'com.google.guava:guava:14.+ -> 14.0.1'
+        standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
     }
 
     def 'create lock'() {
@@ -160,7 +165,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasksSuccessfully('-PdependencyLock.override=com.google.guava:guava:16.0.1', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.override=test.example:foo:2.0.1', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == NEW_GUAVA_LOCK    
