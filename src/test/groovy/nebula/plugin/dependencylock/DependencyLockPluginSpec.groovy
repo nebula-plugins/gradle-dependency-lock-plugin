@@ -16,7 +16,9 @@
 package nebula.plugin.dependencylock
 
 import nebula.test.ProjectSpec
+import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.testfixtures.ProjectBuilder
 
 class DependencyLockPluginSpec extends ProjectSpec {
     String pluginName = 'gradle-dependency-lock'
@@ -120,6 +122,88 @@ class DependencyLockPluginSpec extends ProjectSpec {
         guava.moduleVersion == '16.0.1'
         def commons = resolved.firstLevelModuleDependencies.find { it.moduleName == 'commons-lang3' }
         commons.moduleVersion == '3.2.1'
+    }
+
+    def 'multiproject dependencies.lock'() {
+        def (Project sub1, Project sub2) = multiProjectSetup()
+
+        when:
+        project.subprojects {
+            apply plugin: pluginName
+        }
+        triggerTaskGraphWhenReady()
+
+        then:
+        def resolved1 = sub1.configurations.compile.resolvedConfiguration
+        def guava1 = resolved1.firstLevelModuleDependencies.find { it.moduleName == 'guava' }
+        guava1.moduleVersion == '14.0'
+        def resolved2 = sub2.configurations.compile.resolvedConfiguration
+        def guava2 = resolved2.firstLevelModuleDependencies.find { it.moduleName == 'guava' }
+        guava2.moduleVersion == '16.0'
+    }
+
+    def 'multiproject overrideFile'() {
+        def (Project sub1, Project sub2) = multiProjectSetup()
+
+        def override = new File(projectDir, 'override.lock')
+        override.text = '''\
+            {
+              "com.google.guava:guava": { "locked": "16.0.1" }
+            }
+        '''.stripIndent()
+
+        project.ext.set('dependencyLock.overrideFile', 'override.lock')
+
+        when:
+        project.subprojects {
+            apply plugin: pluginName
+        }
+        triggerTaskGraphWhenReady()
+
+        then:
+        def resolved1 = sub1.configurations.compile.resolvedConfiguration
+        def guava1 = resolved1.firstLevelModuleDependencies.find { it.moduleName == 'guava' }
+        guava1.moduleVersion == '16.0.1'
+        def resolved2 = sub2.configurations.compile.resolvedConfiguration
+        def guava2 = resolved2.firstLevelModuleDependencies.find { it.moduleName == 'guava' }
+        guava2.moduleVersion == '16.0.1'
+    }
+
+    private List multiProjectSetup() {
+        def sub1Folder = new File(projectDir, 'sub1')
+        sub1Folder.mkdir()
+        def sub1 = ProjectBuilder.builder().withName('sub1').withProjectDir(sub1Folder).withParent(project).build()
+        def sub1DependenciesLock = new File(sub1Folder, 'dependencies.lock')
+        sub1DependenciesLock << '''\
+            {
+              "com.google.guava:guava": { "locked": "14.0", "requested": "14.+" }
+            }
+        '''.stripIndent()
+
+        def sub2Folder = new File(projectDir, 'sub2')
+        sub2Folder.mkdir()
+        def sub2 = ProjectBuilder.builder().withName('sub2').withProjectDir(sub2Folder).withParent(project).build()
+        def sub2DependenciesLock = new File(sub2Folder, 'dependencies.lock')
+        sub2DependenciesLock << '''\
+            {
+              "com.google.guava:guava": { "locked": "16.0", "requested": "16.+" }
+            }
+        '''.stripIndent()
+
+        project.subprojects {
+            apply plugin: 'java'
+            repositories { mavenCentral() }
+        }
+
+        sub1.dependencies {
+            compile 'com.google.guava:guava:14.+'
+        }
+
+        sub2.dependencies {
+            compile 'com.google.guava:guava:16.+'
+        }
+
+        [sub1, sub2]
     }
 
     private void triggerTaskGraphWhenReady() {

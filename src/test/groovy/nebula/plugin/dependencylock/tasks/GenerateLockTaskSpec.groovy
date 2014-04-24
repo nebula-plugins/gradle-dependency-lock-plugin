@@ -30,7 +30,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
             testCompile 'junit:junit:4.+'
         }
 
-        GenerateLockTask task = project.tasks.create('lockTestTask', GenerateLockTask)
+        GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
         task.configurationNames= [ 'testRuntime' ]
 
@@ -64,8 +64,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
             compile 'com.google.guava:guava:14.+'
         }
 
-        GenerateLockTask task = app.tasks.create('lockTestTask', GenerateLockTask)
-        task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
+        GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock = new File(app.buildDir, 'dependencies.lock')
         task.configurationNames= [ 'testRuntime' ]
 
         when:
