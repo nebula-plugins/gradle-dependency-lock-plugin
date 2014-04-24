@@ -15,19 +15,24 @@
  */
 package nebula.plugin.dependencylock.tasks
 
+import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.test.ProjectSpec
 import org.gradle.testfixtures.ProjectBuilder
 
 class GenerateLockTaskSpec extends ProjectSpec {
     final String taskName = 'generateLock'
 
+    def setupSpec() {
+        Fixture.createFixtureIfNotCreated()
+    }
+
     def 'simple lock'() {
         project.apply plugin: 'java'
 
-        project.repositories { mavenCentral() }
+        project.repositories { maven { url Fixture.repo } }
         project.dependencies {
-            compile 'com.google.guava:guava:14.+'
-            testCompile 'junit:junit:4.+'
+            compile 'test.example:foo:2.+'
+            testCompile 'test.example:baz:1.+'
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
@@ -40,8 +45,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "com.google.guava:guava": { "locked": "14.0.1", "requested": "14.+" },
-              "junit:junit": { "locked": "4.11", "requested": "4.+" }
+              "test.example:baz": { "locked": "1.1.0", "requested": "1.+" },
+              "test.example:foo": { "locked": "2.0.1", "requested": "2.+" }
             }
         '''.stripIndent()
         task.dependenciesLock.text == lockText
@@ -54,14 +59,14 @@ class GenerateLockTaskSpec extends ProjectSpec {
         project.subprojects.add(app)
 
         project.subprojects {
-            repositories { mavenCentral() }
+            repositories { maven { url Fixture.repo } }
         }
 
         common.apply plugin: 'java'
         app.apply plugin: 'java'
         app.dependencies {
             compile app.project(':common')
-            compile 'com.google.guava:guava:14.+'
+            compile 'test.example:foo:2.+'
         }
 
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
@@ -74,7 +79,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "com.google.guava:guava": { "locked": "14.0.1", "requested": "14.+" }
+              "test.example:foo": { "locked": "2.0.1", "requested": "2.+" }
             }
         '''.stripIndent()
         task.dependenciesLock.text == lockText
