@@ -40,7 +40,7 @@ class GenerateLockTask extends AbstractLockTask {
     }
 
     private readDependenciesFromConfigurations() {
-        def deps = [:].withDefault { [:] }
+        def deps = [:].withDefault { [via: [] as Set, childrenVisited: false] }
         def confs = getConfigurationNames().collect { project.configurations.getByName(it) }
 
         confs.each { Configuration configuration ->
@@ -55,7 +55,8 @@ class GenerateLockTask extends AbstractLockTask {
                     deps[key.toString()].locked = resolved.moduleVersion
                 }
                 if (getIncludeTransitives()) {
-                    resolved.children.each { handleTransitive(it, deps) }
+                    deps[key.toString()].childrenVisited = true
+                    resolved.children.each { handleTransitive(it, deps, key.toString()) }
                 }
             }
         }
@@ -67,13 +68,15 @@ class GenerateLockTask extends AbstractLockTask {
         return deps
     }
 
-    private static handleTransitive(ResolvedDependency transitive, Map deps) {
+    private static handleTransitive(ResolvedDependency transitive, Map deps, String parent) {
         def key = new LockKey(group: transitive.moduleGroup, artifact: transitive.moduleName).toString()
-        if (!deps.containsKey(key.toString())) {
+
+        if (!deps[key].childrenVisited) {
             deps[key].locked = transitive.moduleVersion
             deps[key].transitive = true
-            transitive.children.each { handleTransitive(it, deps) }
+            transitive.children.each { handleTransitive(it, deps, key) }
         }
+        deps[key].via << parent
     }
 
     private void writeLock(deps) {
@@ -97,6 +100,10 @@ class GenerateLockTask extends AbstractLockTask {
         }
         if (lock.viaOverride) {
             lockLine << ", \"viaOverride\": \"${lock.viaOverride}\""
+        }
+        if (lock.via) {
+            def transitiveFrom = lock.via.sort().collect { "\"${it}\""}.join(', ')
+            lockLine << ", \"via\": [ ${transitiveFrom} ]"
         }
         lockLine << ' }'
 
