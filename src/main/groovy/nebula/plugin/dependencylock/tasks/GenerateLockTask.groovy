@@ -20,6 +20,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
@@ -30,6 +31,7 @@ class GenerateLockTask extends AbstractLockTask {
     Set<String> configurationNames
     File dependenciesLock
     Map overrides
+    Boolean includeTransitives
 
     @TaskAction
     void lock() {
@@ -52,6 +54,9 @@ class GenerateLockTask extends AbstractLockTask {
                 if (!peers.contains(key)) {
                     deps[key.toString()].locked = resolved.moduleVersion
                 }
+                if (getIncludeTransitives()) {
+                    resolved.children.each { handleTransitive(it, deps) }
+                }
             }
         }
 
@@ -60,6 +65,15 @@ class GenerateLockTask extends AbstractLockTask {
         }
 
         return deps
+    }
+
+    private static handleTransitive(ResolvedDependency transitive, Map deps) {
+        def key = new LockKey(group: transitive.moduleGroup, artifact: transitive.moduleName).toString()
+        if (!deps.containsKey(key.toString())) {
+            deps[key].locked = transitive.moduleVersion
+            deps[key].transitive = true
+            transitive.children.each { handleTransitive(it, deps) }
+        }
     }
 
     private void writeLock(deps) {
@@ -74,7 +88,13 @@ class GenerateLockTask extends AbstractLockTask {
     }
 
     private static String stringifyLock(String key, Map lock) {
-        def lockLine = new StringBuilder("  \"${key}\": { \"locked\": \"${lock.locked}\", \"requested\": \"${lock.requested}\"")
+        def lockLine = new StringBuilder("  \"${key}\": { \"locked\": \"${lock.locked}\"")
+        if (lock.requested) {
+            lockLine << ", \"requested\": \"${lock.requested}\""
+        }
+        if (lock.transitive) {
+            lockLine << ", \"transitive\": true"
+        }
         if (lock.viaOverride) {
             lockLine << ", \"viaOverride\": \"${lock.viaOverride}\""
         }

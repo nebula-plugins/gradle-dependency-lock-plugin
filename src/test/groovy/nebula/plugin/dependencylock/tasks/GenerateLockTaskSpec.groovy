@@ -84,4 +84,30 @@ class GenerateLockTaskSpec extends ProjectSpec {
         '''.stripIndent()
         task.dependenciesLock.text == lockText
     }
+
+    def 'simple transitive lock'() {
+        project.apply plugin: 'java'
+
+        project.repositories { maven { url Fixture.repo } }
+        project.dependencies {
+            compile 'test.example:bar:1.+'
+        }
+
+        GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
+        task.configurationNames= [ 'testRuntime' ]
+        task.includeTransitives = true
+
+        when:
+        task.execute()
+
+        then:
+        String lockText = '''\
+            {
+              "test.example:bar": { "locked": "1.1.0", "requested": "1.+" },
+              "test.example:foo": { "locked": "1.0.1", "transitive": true }
+            }
+        '''.stripIndent()
+        task.dependenciesLock.text == lockText
+    }
 }

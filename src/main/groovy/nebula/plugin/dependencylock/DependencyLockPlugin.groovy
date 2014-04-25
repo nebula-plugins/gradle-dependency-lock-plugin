@@ -74,6 +74,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                 new File(project.buildDir, clLockFileName ?: extension.lockFile)
             }
             configurationNames = { extension.configurationNames }
+            includeTransitives = { extension.includeTransitives }
         }
         lockTask.overrides = overrides
 
