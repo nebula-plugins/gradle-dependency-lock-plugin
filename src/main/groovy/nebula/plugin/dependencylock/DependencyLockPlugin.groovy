@@ -68,14 +68,13 @@ class DependencyLockPlugin implements Plugin<Project> {
     }
 
     private GenerateLockTask configureLockTask(String clLockFileName, DependencyLockExtension extension, Map overrides) {
-        Boolean includeTransitives = project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives']) : null
         GenerateLockTask lockTask = project.tasks.create('generateLock', GenerateLockTask)
         lockTask.conventionMapping.with {
             dependenciesLock = {
                 new File(project.buildDir, clLockFileName ?: extension.lockFile)
             }
             configurationNames = { extension.configurationNames }
-            includeTransitives = { includeTransitives ?: extension.includeTransitives }
+            includeTransitives = { project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives']) : extension.includeTransitives }
         }
         lockTask.overrides = overrides
 
@@ -103,6 +102,8 @@ class DependencyLockPlugin implements Plugin<Project> {
         def forcedModules = locks.collect {
             overrides.containsKey(it.key) ? "${it.key}:${overrides[it.key]}" : "${it.key}:${it.value.locked}"
         }
+        def unusedOverrides = overrides.findAll { !locks.containsKey(it.key) }.collect { "${it.key}:${it.value}" }
+        forcedModules << unusedOverrides
         logger.debug(forcedModules.toString())
 
         project.configurations.all {

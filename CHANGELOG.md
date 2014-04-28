@@ -1,7 +1,8 @@
-1.9.6 / 2014-04-xx
+1.9.6 / 2014-04-28
 ==================
 
 * Allow locking of transitive dependencies
+* Fix handling of overrides not used by a subproject
 
 1.9.5 / 2014-04-24
 ==================
