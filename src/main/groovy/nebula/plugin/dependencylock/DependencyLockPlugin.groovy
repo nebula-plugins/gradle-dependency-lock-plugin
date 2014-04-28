@@ -103,6 +103,8 @@ class DependencyLockPlugin implements Plugin<Project> {
         def forcedModules = locks.collect {
             overrides.containsKey(it.key) ? "${it.key}:${overrides[it.key]}" : "${it.key}:${it.value.locked}"
         }
+        def unusedOverrides = overrides.findAll { !locks.containsKey(it.key) }.collect { "${it.key}:${it.value}" }
+        forcedModules << unusedOverrides
         logger.debug(forcedModules.toString())
 
         project.configurations.all {

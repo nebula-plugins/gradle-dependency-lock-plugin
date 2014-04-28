@@ -221,4 +221,61 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         then:
         savedLock.text != firstRun
     }
+
+    def 'multiproject properly ignores unused overrides'() {
+        def sub1 = new File(projectDir, 'sub1')
+        sub1.mkdirs()
+        def sub2 = new File(projectDir, 'sub2')
+        sub2.mkdirs()
+
+        buildFile << """\
+            subprojects {
+                apply plugin: 'java'
+                apply plugin: 'gradle-dependency-lock'
+                repositories { maven { url '${Fixture.repo}' } }
+            }
+        """.stripIndent()
+
+        settingsFile << '''
+            include 'sub1'
+            include 'sub2'
+        '''.stripIndent()
+
+        new File(sub1, 'build.gradle') << '''\
+            dependencies {
+                compile 'test.example:foo:2.+'
+            }
+        '''.stripIndent()
+
+        new File(sub2, 'build.gradle') << '''\
+            dependencies {
+                compile 'test.example:baz:1.+'
+            }
+        '''.stripIndent()
+
+        def override = new File(projectDir, 'override.lock')
+        override.text = '''\
+            {
+              "test.example:foo": { "locked": "2.0.0" },
+              "test.example:baz": { "locked": "1.0.0" }
+            }
+        '''.stripIndent()
+
+        when:
+        runTasksSuccessfully('-PdependencyLock.overrideFile=override.lock','saveLock')
+
+        then:
+        String lockText1 = '''\
+            {
+              "test.example:foo": { "locked": "2.0.0", "requested": "2.+", "viaOverride": "2.0.0" }
+            }
+        '''.stripIndent()
+        new File(sub1, 'dependencies.lock').text == lockText1
+        String lockText2 = '''\
+            {
+              "test.example:baz": { "locked": "1.0.0", "requested": "1.+", "viaOverride": "1.0.0" }
+            }
+        '''.stripIndent()
+        new File(sub2, 'dependencies.lock').text == lockText2
+    }
 }

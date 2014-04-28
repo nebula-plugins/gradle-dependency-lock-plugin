@@ -20,10 +20,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ProjectDependency
-import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.ResolvedDependency
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 class GenerateLockTask extends AbstractLockTask {
@@ -62,7 +59,9 @@ class GenerateLockTask extends AbstractLockTask {
         }
 
         getOverrides().each { String key, String overrideVersion ->
-            deps[key].viaOverride = overrideVersion
+            if (deps.containsKey(key)) {
+                deps[key].viaOverride = overrideVersion
+            }
         }
 
         return deps

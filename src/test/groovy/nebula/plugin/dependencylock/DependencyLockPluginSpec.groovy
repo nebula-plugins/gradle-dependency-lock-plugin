@@ -174,6 +174,50 @@ class DependencyLockPluginSpec extends ProjectSpec {
         foo2.moduleVersion == '2.0.1'
     }
 
+    def 'multiproject unused libraries in overrideFile'() {
+        def (Project sub1, Project sub2) = multiProjectSetup()
+        sub1.dependencies {
+            compile 'test.example:bar:1.+'
+        }
+
+        sub2.dependencies {
+            compile 'test.example:baz:1.+'
+        }
+
+        def override = new File(projectDir, 'override.lock')
+        override.text = '''\
+            {
+              "test.example:foo": { "locked": "1.0.0" },
+              "test.example:bar": { "locked": "1.0.0" },
+              "test.example:baz": { "locked": "1.0.0" }
+            }
+        '''.stripIndent()
+
+        project.ext.set('dependencyLock.overrideFile', 'override.lock')
+
+        when:
+        project.subprojects {
+            apply plugin: pluginName
+        }
+        triggerTaskGraphWhenReady()
+
+        then:
+        def resolved1 = sub1.configurations.compile.resolvedConfiguration
+        def foo1 = resolved1.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
+        foo1.moduleVersion == '1.0.0'
+        def bar1 = resolved1.firstLevelModuleDependencies.find { it.moduleName == 'bar' }
+        bar1.moduleVersion == '1.0.0'
+        def baz1 = resolved1.firstLevelModuleDependencies.find { it.moduleName == 'baz' }
+        baz1 == null
+        def resolved2 = sub2.configurations.compile.resolvedConfiguration
+        def foo2 = resolved2.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
+        foo2.moduleVersion == '1.0.0'
+        def bar2 = resolved2.firstLevelModuleDependencies.find { it.moduleName == 'bar' }
+        bar2 == null
+        def baz2 = resolved2.firstLevelModuleDependencies.find { it.moduleName == 'baz' }
+        baz2.moduleVersion == '1.0.0'
+    }
+
     private List multiProjectSetup() {
         def sub1Folder = new File(projectDir, 'sub1')
         sub1Folder.mkdir()
