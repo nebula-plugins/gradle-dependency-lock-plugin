@@ -22,6 +22,8 @@ description 'Gradle plugin to allow locking of dynamic dependency versions'
 apply plugin: 'nebula-plugin'
 apply plugin: 'idea'
 
+release.git.pushToCurrentBranch = true
+
 contacts {
     'rob.spieldenner@gmail.com' {
         moniker 'Rob Spieldenner'
