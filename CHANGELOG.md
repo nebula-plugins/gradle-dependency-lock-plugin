@@ -1,3 +1,16 @@
+1.9.6 / 2014-04-28
+==================
+
+* Allow locking of transitive dependencies
+* Fix handling of overrides not used by a subproject
+
+1.9.5 / 2014-04-24
+==================
+
+* Document if a locked dependency is at a specific version due to a command line override
+* improve multi-project support for command line overrides
+* make it so generateLock will never be up-to-date
+
 1.9.4 / 2014-04-11
 ==================
 

@@ -15,45 +15,59 @@
  */
 package nebula.plugin.dependencylock
 
+import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.test.IntegrationSpec
 import org.gradle.BuildResult
 
 class DependencyLockLauncherSpec extends IntegrationSpec {
-    static final String SPECIFIC_BUILD_GRADLE = '''\
+    static final String SPECIFIC_BUILD_GRADLE = """\
         apply plugin: 'java'
         apply plugin: 'gradle-dependency-lock'
-        repositories { mavenCentral() }
+        repositories { maven { url '${Fixture.repo}' } }
         dependencies {
-            compile 'com.google.guava:guava:14.0.1'
+            compile 'test.example:foo:1.0.1'
         }
-    '''.stripIndent()
+    """.stripIndent()
 
-    static final String BUILD_GRADLE = '''\
+    static final String BUILD_GRADLE = """\
         apply plugin: 'java'
         apply plugin: 'gradle-dependency-lock'
-        repositories { mavenCentral() }
+        repositories { maven { url '${Fixture.repo}' } }
         dependencies {
-            compile 'com.google.guava:guava:14.+'
+            compile 'test.example:foo:1.+'
         }
-    '''.stripIndent()
+    """.stripIndent()
+
+    static final String NEW_BUILD_GRADLE = """\
+        apply plugin: 'java'
+        apply plugin: 'gradle-dependency-lock'
+        repositories { maven { url '${Fixture.repo}' } }
+        dependencies {
+            compile 'test.example:foo:2.+'
+        }
+    """.stripIndent()
 
     static final String OLD_GUAVA_LOCK = '''\
         {
-          "com.google.guava:guava": { "locked": "14.0", "requested": "14.+" }
+          "test.example:foo": { "locked": "1.0.0", "requested": "1.+" }
         }
     '''.stripIndent()
 
     static final String GUAVA_LOCK = '''\
         {
-          "com.google.guava:guava": { "locked": "14.0.1", "requested": "14.+" }
+          "test.example:foo": { "locked": "1.0.1", "requested": "1.+" }
         }
     '''.stripIndent()
 
     static final String NEW_GUAVA_LOCK = '''\
         {
-          "com.google.guava:guava": { "locked": "16.0.1", "requested": "14.+" }
+          "test.example:foo": { "locked": "2.0.1", "requested": "1.+", "viaOverride": "2.0.1" }
         }
     '''.stripIndent()
+
+    def setupSpec() {
+        Fixture.createFixtureIfNotCreated()
+    }
 
     def 'plugin allows normal gradle operation'() {
         buildFile << SPECIFIC_BUILD_GRADLE
@@ -75,7 +89,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         runTasksSuccessfully('dependencies')
 
         then:
-        standardOutput.contains 'com.google.guava:guava:14.0.1 -> 14.0'
+        standardOutput.contains 'test.example:foo:1.0.1 -> 1.0.0'
     }
 
     def 'override lock file is applied'() {
@@ -94,7 +108,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         runTasksSuccessfully('dependencies')
 
         then:
-        standardOutput.contains 'com.google.guava:guava:14.+ -> 14.0.1'
+        standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
     }
 
     def 'create lock'() {
@@ -151,7 +165,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasksSuccessfully('-PdependencyLock.override=com.google.guava:guava:16.0.1', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.override=test.example:foo:2.0.1', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == NEW_GUAVA_LOCK    
@@ -167,5 +181,101 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         new File(projectDir, 'dependencies.lock').text == NEW_GUAVA_LOCK    
+    }
+
+    def 'multiple runs each generate a lock'() {
+        buildFile << BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('saveLock')
+
+        then:
+        def savedLock = new File(projectDir, 'dependencies.lock')
+        savedLock.text == GUAVA_LOCK
+
+        buildFile << NEW_BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('generateLock')
+
+        then:
+        new File(projectDir, 'build/dependencies.lock').text != savedLock.text
+    }
+
+    def 'multiple runs of save lock works'() {
+        buildFile << BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('saveLock')
+
+        then:
+        def savedLock = new File(projectDir, 'dependencies.lock')
+        def firstRun = savedLock.text
+        firstRun == GUAVA_LOCK
+
+        buildFile << NEW_BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('saveLock')
+
+        then:
+        savedLock.text != firstRun
+    }
+
+    def 'multiproject properly ignores unused overrides'() {
+        def sub1 = new File(projectDir, 'sub1')
+        sub1.mkdirs()
+        def sub2 = new File(projectDir, 'sub2')
+        sub2.mkdirs()
+
+        buildFile << """\
+            subprojects {
+                apply plugin: 'java'
+                apply plugin: 'gradle-dependency-lock'
+                repositories { maven { url '${Fixture.repo}' } }
+            }
+        """.stripIndent()
+
+        settingsFile << '''
+            include 'sub1'
+            include 'sub2'
+        '''.stripIndent()
+
+        new File(sub1, 'build.gradle') << '''\
+            dependencies {
+                compile 'test.example:foo:2.+'
+            }
+        '''.stripIndent()
+
+        new File(sub2, 'build.gradle') << '''\
+            dependencies {
+                compile 'test.example:baz:1.+'
+            }
+        '''.stripIndent()
+
+        def override = new File(projectDir, 'override.lock')
+        override.text = '''\
+            {
+              "test.example:foo": { "locked": "2.0.0" },
+              "test.example:baz": { "locked": "1.0.0" }
+            }
+        '''.stripIndent()
+
+        when:
+        runTasksSuccessfully('-PdependencyLock.overrideFile=override.lock','saveLock')
+
+        then:
+        String lockText1 = '''\
+            {
+              "test.example:foo": { "locked": "2.0.0", "requested": "2.+", "viaOverride": "2.0.0" }
+            }
+        '''.stripIndent()
+        new File(sub1, 'dependencies.lock').text == lockText1
+        String lockText2 = '''\
+            {
+              "test.example:baz": { "locked": "1.0.0", "requested": "1.+", "viaOverride": "1.0.0" }
+            }
+        '''.stripIndent()
+        new File(sub2, 'dependencies.lock').text == lockText2
     }
 }
