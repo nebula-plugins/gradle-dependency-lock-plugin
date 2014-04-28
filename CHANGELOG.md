@@ -1,4 +1,9 @@
-1.9.5 / 2014-04-xx
+1.9.6 / 2014-04-xx
+==================
+
+* Allow locking of transitive dependencies
+
+1.9.5 / 2014-04-24
 ==================
 
 * Document if a locked dependency is at a specific version due to a command line override

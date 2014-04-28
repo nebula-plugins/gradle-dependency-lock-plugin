@@ -39,14 +39,15 @@ When the following tasks are run any existing `dependency.lock` file will be ign
 *Properties*
 
 * lockFile - Name of the file to read/write dependency locks, defaults to 'dependencies.lock'
-* configurations - Collection of the configuration names to read, defaults to 'testRuntime'. For java projects
-testRuntime is good since it extends compile, runtime, and testCompile.
+* configurations - Collection of the configuration names to read, defaults to 'testRuntime'. For java projects testRuntime is good since it extends compile, runtime, and testCompile.
+* includeTransitives - Boolean if true transitvie dependencies will be included in the lock
 
 Use the extension if you wish to configure.
 
     dependencyLock {
       lockFile = 'dependencies.lock'
       configurationNames = ['testRuntime']
+      includeTransitives = false
     }
 
 ### Properties that Affect the Plugin
@@ -63,6 +64,12 @@ Allows the user to ignore any present lockFile and/or command line overrides fal
 resolution. Plugin checks for the existence of the property, any value will cause the fallback to standard.
 
     ./gradlew -PdependencyLock.ignore=true <tasks>
+
+*dependencyLock.includeTransitives*
+
+Allows the user to set if transitive dependencies should be included in the lock file.
+
+    ./gradlew -PdependencyLock.includeTransitives=true <tasks>
 
 *dependencyLock.overrideFile*
 
@@ -84,20 +91,24 @@ or to override multiple libraries
 
 ## Lock File Format
 
-The lock file is written in a json format. The keys of the map are made up of "\<group\>:\<artifact\>". The requested
-entry is informational to let users know what version or range of versions was initially asked for. The locked entry is
-the version of the dependency the plugin will lock to.
+The lock file is written in a json format. The keys of the map are made up of "\<group\>:\<artifact\>". The requested entry is informational to let users know what version or range of versions was initially asked for. The locked entry is the version of the dependency the plugin will lock to.
 
     {
       "<group0>:<artifact0>": { "locked": "<version0>", "requested": "<requestedVersion0>" },
       "<group1>:<artifact1>": { "locked": "<version1>", "requested": "<requestedVersion1>" }
     }
 
-If a dependency version selection was influenced by a command line argument we add a viaOverride field. The viaOverride
-field is informational.
+If a dependency version selection was influenced by a command line argument we add a viaOverride field. The viaOverride field is informational.
 
     {
       "<group0>:<artifact0>": { "locked": "<version0>", "requested": "<requestedVersion0>", "viaOverride": "<overrideVersion0>" }
+    }
+
+If we include transitive dependencies.
+
+    {
+      "<directgroup>:<directartifact>": { "locked": "<directversion>", "requested": "<directrequested>" },
+      "<group>:<artifact>": { "locked": "<version>", "transitive": true, "via": [ "<directgroup>:<directartifact>" ]}
     }
 
 ## Example
@@ -138,26 +149,7 @@ It will output
 
 # Possible Future Changes
 
-### Initial Cut at Locking Transitives, Output Format
-
-*dependencies.lock*
-
-    {
-        "<group>:<artifact>": { "locked": "<lockedVersion>", "requested": "<requestedVersion>" },
-        "<transitivegroup>:<transitiveartifact>": { "locked": "<transitiveLockedVersion>", "transitive" = true }
-    }
-
-If possible would like to determine from which artifact.
-
-    {
-      ...
-      "<transitivegroup>:<transitiveartifact>": { "locked": "<transitiveLockedVersion>", "transitive" = true,
-          "via": [ "<group>:<artifact>", "<group1>:<artifact1>" ]
-      }
-      ...
-    }
-
-Or
+### Determine Version Requested for Locked Transitives, Output Format
 
     {
       ...
