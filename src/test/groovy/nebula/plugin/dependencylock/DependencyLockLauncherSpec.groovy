@@ -143,7 +143,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        BuildResult result = runTasksWithFailure('build')
+        def result = runTasksWithFailure('build')
 
         then:
         result.failure.message.contains('unreadable or invalid json')
