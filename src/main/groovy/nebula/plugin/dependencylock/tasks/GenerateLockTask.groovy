@@ -73,6 +73,9 @@ class GenerateLockTask extends AbstractLockTask {
         if (!deps[key].childrenVisited) {
             deps[key].locked = transitive.moduleVersion
             deps[key].transitive = true
+            if (transitive.children.size() > 0) {
+                deps[key].childrenVisited = true
+            }
             transitive.children.each { handleTransitive(it, deps, key) }
         }
         deps[key].via << parent

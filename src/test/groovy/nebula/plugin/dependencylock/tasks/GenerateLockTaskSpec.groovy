@@ -137,6 +137,33 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.text == lockText
     }
 
+    def 'check for deeper circular dependency'() {
+        project.apply plugin: 'java'
+
+        project.repositories { maven { url Fixture.repo } }
+        project.dependencies {
+            compile 'circular:oneleveldeep:1.+'
+        }
+
+        GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
+        task.configurationNames= [ 'testRuntime' ]
+        task.includeTransitives = true
+
+        when:
+        task.execute()
+
+        then:
+        String lockText = '''\
+            {
+              "circular:a": { "locked": "1.0.0", "transitive": true, "via": [ "circular:b", "circular:oneleveldeep" ] },
+              "circular:b": { "locked": "1.0.0", "transitive": true, "via": [ "circular:a" ] },
+              "circular:oneleveldeep": { "locked": "1.0.0", "requested": "1.+" }
+            }
+        '''.stripIndent()
+        task.dependenciesLock.text == lockText
+    }
+
     def 'one level transitive test'() {
         project.apply plugin: 'java'
 
