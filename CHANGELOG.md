@@ -1,3 +1,8 @@
+1.9.7 / 2014-04-30
+==================
+
+* Fix handling of circular references in transitive dependencies
+
 1.9.6 / 2014-04-28
 ==================
 
