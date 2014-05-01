@@ -85,6 +85,44 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.text == lockText
     }
 
+    def 'multiproject inter-project dependencies should be excluded when coming in transitively'() {
+        def common = ProjectBuilder.builder().withName('common').withProjectDir(new File(projectDir, 'common')).withParent(project).build()
+        project.subprojects.add(common)
+        def lib = ProjectBuilder.builder().withName('lib').withProjectDir(new File(projectDir, 'lib')).withParent(project).build()
+        project.subprojects.add(lib)
+        def app = ProjectBuilder.builder().withName('app').withProjectDir(new File(projectDir, 'app')).withParent(project).build()
+        project.subprojects.add(app)
+
+        project.subprojects {
+            apply plugin: 'java'
+            repositories { maven { url Fixture.repo } }
+        }
+
+        lib.dependencies {
+            compile lib.project(':common')
+        }
+
+        app.dependencies {
+            compile app.project(':lib')
+        }
+
+        GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock = new File(app.buildDir, 'dependencies.lock')
+        task.configurationNames= [ 'testRuntime' ]
+        task.includeTransitives = true
+
+        when:
+        task.execute()
+
+        then:
+        String lockText = '''\
+            {
+
+            }
+        '''.stripIndent()
+        task.dependenciesLock.text == lockText
+    }
+
     def 'simple transitive lock'() {
         project.apply plugin: 'java'
 
