@@ -37,7 +37,7 @@ class GenerateLockTask extends AbstractLockTask {
     }
 
     private readDependenciesFromConfigurations() {
-        def deps = [:].withDefault { [via: [] as Set, childrenVisited: false] }
+        def deps = [:].withDefault { [transitive: [] as Set, childrenVisited: false] }
         def confs = getConfigurationNames().collect { project.configurations.getByName(it) }
 
         def peers = project.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) }
@@ -81,13 +81,12 @@ class GenerateLockTask extends AbstractLockTask {
             } else {
                 deps[key].project = true
             }
-            deps[key].transitive = true
             if (transitive.children.size() > 0) {
                 deps[key].childrenVisited = true
             }
             transitive.children.each { handleTransitive(it, deps, peers, key) }
         }
-        deps[key].via << parent
+        deps[key].transitive << parent
     }
 
     private void writeLock(deps) {
@@ -111,15 +110,12 @@ class GenerateLockTask extends AbstractLockTask {
         if (lock.requested) {
             lockLine << ", \"requested\": \"${lock.requested}\""
         }
-        if (lock.transitive) {
-            lockLine << ', "transitive": true'
-        }
         if (lock.viaOverride) {
             lockLine << ", \"viaOverride\": \"${lock.viaOverride}\""
         }
-        if (lock.via) {
-            def transitiveFrom = lock.via.sort().collect { "\"${it}\""}.join(', ')
-            lockLine << ", \"via\": [ ${transitiveFrom} ]"
+        if (lock.transitive) {
+            def transitiveFrom = lock.transitive.sort().collect { "\"${it}\""}.join(', ')
+            lockLine << ", \"transitive\": [ ${transitiveFrom} ]"
         }
         lockLine << ' }'
 
