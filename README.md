@@ -108,7 +108,23 @@ If we include transitive dependencies.
 
     {
       "<directgroup>:<directartifact>": { "locked": "<directversion>", "requested": "<directrequested>" },
-      "<group>:<artifact>": { "locked": "<version>", "transitive": true, "via": [ "<directgroup>:<directartifact>" ]}
+      "<group>:<artifact>": { "locked": "<version>", "transitive": [ "<directgroup>:<directartifact>" ]}
+    }
+
+And we document project dependencies.
+
+If you have
+
+    ...
+    dependencies {
+      compile project(':common')
+      ...
+    }
+
+The lock will have
+
+    {
+      "group:common": { "project": true }
     }
 
 ## Example
@@ -153,8 +169,6 @@ It will output
 
     {
       ...
-      "<transitivegroup>:<transitiveartifact>": { "locked": "<transitiveLockedVersion>", "transitive" = true,
-          "via": { "<group>:<artifact>": "<requestedVersion>", "<group1>:<artifact1>": "<requestedVersion1>" }
-      }
+      "<transitivegroup>:<transitiveartifact>": { "locked": "<transitiveLockedVersion>", "transitive": { "<group>:<artifact>": "<requestedVersion>", "<group1>:<artifact1>": "<requestedVersion1>" } }
       ...
     }

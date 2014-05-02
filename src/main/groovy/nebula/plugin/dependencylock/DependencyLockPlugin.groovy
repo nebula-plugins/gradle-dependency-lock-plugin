@@ -99,7 +99,8 @@ class DependencyLockPlugin implements Plugin<Project> {
     void applyLock(File dependenciesLock, Map overrides) {
         logger.info("Using ${dependenciesLock.name} to lock dependencies")
         def locks = loadLock(dependenciesLock)
-        def forcedModules = locks.collect {
+        def nonProjectLocks = locks.findAll { it.value?.locked }
+        def forcedModules = nonProjectLocks.collect {
             overrides.containsKey(it.key) ? "${it.key}:${overrides[it.key]}" : "${it.key}:${it.value.locked}"
         }
         def unusedOverrides = overrides.findAll { !locks.containsKey(it.key) }.collect { "${it.key}:${it.value}" }

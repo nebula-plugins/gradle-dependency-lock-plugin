@@ -59,11 +59,11 @@ class GenerateLockTaskSpec extends ProjectSpec {
         project.subprojects.add(app)
 
         project.subprojects {
+            apply plugin: 'java'
+            group = 'test.nebula'
             repositories { maven { url Fixture.repo } }
         }
 
-        common.apply plugin: 'java'
-        app.apply plugin: 'java'
         app.dependencies {
             compile app.project(':common')
             compile 'test.example:foo:2.+'
@@ -79,7 +79,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:foo": { "locked": "2.0.1", "requested": "2.+" }
+              "test.example:foo": { "locked": "2.0.1", "requested": "2.+" },
+              "test.nebula:common": { "project": true }
             }
         '''.stripIndent()
         task.dependenciesLock.text == lockText
@@ -95,6 +96,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         project.subprojects {
             apply plugin: 'java'
+            group = 'test.nebula'
             repositories { maven { url Fixture.repo } }
         }
 
@@ -117,7 +119,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-
+              "test.nebula:common": { "project": true, "transitive": [ "test.nebula:lib" ] },
+              "test.nebula:lib": { "project": true }
             }
         '''.stripIndent()
         task.dependenciesLock.text == lockText
@@ -143,7 +146,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         String lockText = '''\
             {
               "test.example:bar": { "locked": "1.1.0", "requested": "1.+" },
-              "test.example:foo": { "locked": "1.0.1", "transitive": true, "via": [ "test.example:bar" ] }
+              "test.example:foo": { "locked": "1.0.1", "transitive": [ "test.example:bar" ] }
             }
         '''.stripIndent()
         task.dependenciesLock.text == lockText
@@ -168,8 +171,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "circular:a": { "locked": "1.0.0", "requested": "1.+", "via": [ "circular:b" ] },
-              "circular:b": { "locked": "1.0.0", "transitive": true, "via": [ "circular:a" ] }
+              "circular:a": { "locked": "1.0.0", "requested": "1.+", "transitive": [ "circular:b" ] },
+              "circular:b": { "locked": "1.0.0", "transitive": [ "circular:a" ] }
             }
         '''.stripIndent()
         task.dependenciesLock.text == lockText
@@ -194,8 +197,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "circular:a": { "locked": "1.0.0", "transitive": true, "via": [ "circular:b", "circular:oneleveldeep" ] },
-              "circular:b": { "locked": "1.0.0", "transitive": true, "via": [ "circular:a" ] },
+              "circular:a": { "locked": "1.0.0", "transitive": [ "circular:b", "circular:oneleveldeep" ] },
+              "circular:b": { "locked": "1.0.0", "transitive": [ "circular:a" ] },
               "circular:oneleveldeep": { "locked": "1.0.0", "requested": "1.+" }
             }
         '''.stripIndent()
@@ -223,8 +226,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         String lockText = '''\
             {
               "test.example:bar": { "locked": "1.1.0", "requested": "1.+" },
-              "test.example:baz": { "locked": "1.0.0", "transitive": true, "via": [ "test.example:foobaz" ] },
-              "test.example:foo": { "locked": "1.0.1", "transitive": true, "via": [ "test.example:bar", "test.example:foobaz" ] },
+              "test.example:baz": { "locked": "1.0.0", "transitive": [ "test.example:foobaz" ] },
+              "test.example:foo": { "locked": "1.0.1", "transitive": [ "test.example:bar", "test.example:foobaz" ] },
               "test.example:foobaz": { "locked": "1.0.0", "requested": "1.+" }
             }
         '''.stripIndent()
@@ -250,10 +253,10 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:bar": { "locked": "1.0.0", "transitive": true, "via": [ "test.example:transitive" ] },
-              "test.example:baz": { "locked": "1.0.0", "transitive": true, "via": [ "test.example:foobaz" ] },
-              "test.example:foo": { "locked": "1.0.1", "transitive": true, "via": [ "test.example:bar", "test.example:foobaz" ] },
-              "test.example:foobaz": { "locked": "1.0.0", "transitive": true, "via": [ "test.example:transitive" ] },
+              "test.example:bar": { "locked": "1.0.0", "transitive": [ "test.example:transitive" ] },
+              "test.example:baz": { "locked": "1.0.0", "transitive": [ "test.example:foobaz" ] },
+              "test.example:foo": { "locked": "1.0.1", "transitive": [ "test.example:bar", "test.example:foobaz" ] },
+              "test.example:foobaz": { "locked": "1.0.0", "transitive": [ "test.example:transitive" ] },
               "test.example:transitive": { "locked": "1.0.0", "requested": "1.0.0" }
             }
         '''.stripIndent()
