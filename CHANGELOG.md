@@ -1,3 +1,8 @@
+1.9.8 / 2014-05-01
+==================
+
+* Bug fix: properly skip interproject dependencies in a multi-project build when including transitives in the lock
+
 1.9.7 / 2014-04-30
 ==================
 
