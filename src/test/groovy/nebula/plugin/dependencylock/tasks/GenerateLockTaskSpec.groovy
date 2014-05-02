@@ -59,11 +59,11 @@ class GenerateLockTaskSpec extends ProjectSpec {
         project.subprojects.add(app)
 
         project.subprojects {
+            apply plugin: 'java'
+            group = 'test.nebula'
             repositories { maven { url Fixture.repo } }
         }
 
-        common.apply plugin: 'java'
-        app.apply plugin: 'java'
         app.dependencies {
             compile app.project(':common')
             compile 'test.example:foo:2.+'
@@ -79,7 +79,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:foo": { "locked": "2.0.1", "requested": "2.+" }
+              "test.example:foo": { "locked": "2.0.1", "requested": "2.+" },
+              "test.nebula:common": { "project": true }
             }
         '''.stripIndent()
         task.dependenciesLock.text == lockText
@@ -95,6 +96,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         project.subprojects {
             apply plugin: 'java'
+            group = 'test.nebula'
             repositories { maven { url Fixture.repo } }
         }
 
@@ -117,7 +119,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-
+              "test.nebula:common": { "project": true, "transitive": true, "via": [ "test.nebula:lib" ] },
+              "test.nebula:lib": { "project": true }
             }
         '''.stripIndent()
         task.dependenciesLock.text == lockText

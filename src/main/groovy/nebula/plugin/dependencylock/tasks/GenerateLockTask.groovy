@@ -28,7 +28,7 @@ class GenerateLockTask extends AbstractLockTask {
     Set<String> configurationNames
     File dependenciesLock
     Map overrides
-    Boolean includeTransitives
+    boolean includeTransitives = false
 
     @TaskAction
     void lock() {
@@ -51,6 +51,8 @@ class GenerateLockTask extends AbstractLockTask {
                 def key = new LockKey(group: resolved.moduleGroup, artifact: resolved.moduleName)
                 if (!peers.contains(key)) {
                     deps[key].locked = resolved.moduleVersion
+                } else {
+                    deps[key].project = true
                 }
                 if (getIncludeTransitives()) {
                     deps[key].childrenVisited = true
@@ -67,8 +69,6 @@ class GenerateLockTask extends AbstractLockTask {
             }
         }
 
-        deps = deps.findAll { LockKey k, Map v -> !peers.contains(k) }
-
         return deps
     }
 
@@ -78,6 +78,8 @@ class GenerateLockTask extends AbstractLockTask {
         if (!deps[key].childrenVisited) {
             if (!peers.contains(key)) {
                 deps[key].locked = transitive.moduleVersion
+            } else {
+                deps[key].project = true
             }
             deps[key].transitive = true
             if (transitive.children.size() > 0) {
@@ -100,12 +102,17 @@ class GenerateLockTask extends AbstractLockTask {
     }
 
     private static String stringifyLock(LockKey key, Map lock) {
-        def lockLine = new StringBuilder("  \"${key}\": { \"locked\": \"${lock.locked}\"")
+        def lockLine = new StringBuilder("  \"${key}\": { ")
+        if (lock.locked) {
+            lockLine << "\"locked\": \"${lock.locked}\""
+        } else {
+            lockLine << '"project": true'
+        }
         if (lock.requested) {
             lockLine << ", \"requested\": \"${lock.requested}\""
         }
         if (lock.transitive) {
-            lockLine << ", \"transitive\": true"
+            lockLine << ', "transitive": true'
         }
         if (lock.viaOverride) {
             lockLine << ", \"viaOverride\": \"${lock.viaOverride}\""
