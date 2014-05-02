@@ -111,6 +111,22 @@ If we include transitive dependencies.
       "<group>:<artifact>": { "locked": "<version>", "transitive": true, "via": [ "<directgroup>:<directartifact>" ]}
     }
 
+And we document project dependencies.
+
+If you have
+
+    ...
+    dependencies {
+      compile project(':common')
+      ...
+    }
+
+The lock will have
+
+    {
+      "group:common": { "project": true }
+    }
+
 ## Example
 
 *build.gradle*
