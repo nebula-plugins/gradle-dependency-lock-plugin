@@ -15,7 +15,6 @@
  */
 package nebula.plugin.dependencylock
 
-import java.nio.file.Files
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.test.IntegrationSpec
 import org.ajoberstar.grgit.Grgit
@@ -58,7 +57,10 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         git.commit(message: 'initial test')
 
         def tempProject = Grgit.clone(dir: new File(projectDir, 'tempgit'), uri: "file://${gitDir.absolutePath}").close()
-        Files.move(new File(projectDir,'tempgit/.git').toPath(), new File(projectDir, '.git').toPath())
+
+        new AntBuilder().copy(todir: new File(projectDir, '.git').absolutePath) {
+            fileset(dir: new File(projectDir,'tempgit/.git').absolutePath)
+        }
 
         buildFile << DependencyLockLauncherSpec.BUILD_GRADLE
         buildFile << 'apply plugin: \'gradle-git-scm\''
@@ -80,6 +82,45 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
 
 
     def 'commitLock no-ops works on multiproject'() {
+        def sub1 = new File(projectDir, 'sub1')
+        sub1.mkdirs()
+        def sub2 = new File(projectDir, 'sub2')
+        sub2.mkdirs()
+
+        buildFile << """\
+            subprojects {
+                apply plugin: 'java'
+                apply plugin: 'gradle-dependency-lock'
+                apply plugin: 'gradle-scm'
+                repositories { maven { url '${Fixture.repo}' } }
+            }
+        """.stripIndent()
+
+        settingsFile << '''
+            include 'sub1'
+            include 'sub2'
+        '''.stripIndent()
+
+        new File(sub1, 'build.gradle') << '''\
+            dependencies {
+                compile 'test.example:foo:2.+'
+            }
+        '''.stripIndent()
+
+        new File(sub2, 'build.gradle') << '''\
+            dependencies {
+                compile 'test.example:baz:1.+'
+            }
+        '''.stripIndent()
+
+        when:
+        runTasksSuccessfully('generateLock', 'saveLock', 'commitLock')
+
+        then:
+        noExceptionThrown()
+    }
+
+    def 'git integration test for multiproject'() {
         def sub1 = new File(projectDir, 'sub1')
         sub1.mkdirs()
         def sub2 = new File(projectDir, 'sub2')
