@@ -15,8 +15,9 @@
  */
 package nebula.plugin.dependencylock
 
-class DependencyLockExtension {
-    String lockFile = 'dependencies.lock'
-    Set<String> configurationNames = ['testRuntime'] as Set
-    boolean includeTransitives = false
+class DependencyLockCommitExtension {
+    String commitMessage = 'Committing dependency lock files'
+    boolean shouldCreateTag = false
+    Closure<String> tag = { "LockCommit-${new Date().format('yyyyMMddHHmmss')}" }
+    int remoteRetries = 3
 }

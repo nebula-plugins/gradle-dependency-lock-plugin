@@ -127,7 +127,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasksSuccessfully('saveLock')
+        runTasksSuccessfully('generateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == FOO_LOCK
@@ -155,7 +155,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasksSuccessfully('saveLock')
+        runTasksSuccessfully('generateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == FOO_LOCK    
@@ -165,7 +165,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasksSuccessfully('-PdependencyLock.override=test.example:foo:2.0.1', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.override=test.example:foo:2.0.1', 'generateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK    
@@ -177,7 +177,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasksSuccessfully('-PdependencyLock.overrideFile=test.lock', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.overrideFile=test.lock', 'generateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK    
@@ -187,7 +187,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasksSuccessfully('saveLock')
+        runTasksSuccessfully('generateLock', 'saveLock')
 
         then:
         def savedLock = new File(projectDir, 'dependencies.lock')
@@ -206,7 +206,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasksSuccessfully('saveLock')
+        runTasksSuccessfully('generateLock', 'saveLock')
 
         then:
         def savedLock = new File(projectDir, 'dependencies.lock')
@@ -216,7 +216,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << NEW_BUILD_GRADLE
 
         when:
-        runTasksSuccessfully('saveLock')
+        runTasksSuccessfully('generateLock', 'saveLock')
 
         then:
         savedLock.text != firstRun
@@ -262,7 +262,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         '''.stripIndent()
 
         when:
-        runTasksSuccessfully('-PdependencyLock.overrideFile=override.lock','saveLock')
+        runTasksSuccessfully('-PdependencyLock.overrideFile=override.lock', 'generateLock', 'saveLock')
 
         then:
         String lockText1 = '''\

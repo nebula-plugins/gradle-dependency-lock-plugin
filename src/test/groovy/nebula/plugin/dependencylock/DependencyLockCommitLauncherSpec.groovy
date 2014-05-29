@@ -50,33 +50,19 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
 
     def 'commitLock git test'() {
         def gitDir = new File(projectDir, 'project')
-        gitDir.mkdirs()
-        def git = Grgit.init(dir: gitDir)
-        new File(gitDir, '.placeholder').text = ''
-        git.add(patterns: ['.placeholder'])
-        git.commit(message: 'initial test')
-
-        def tempProject = Grgit.clone(dir: new File(projectDir, 'tempgit'), uri: "file://${gitDir.absolutePath}").close()
-
-        new AntBuilder().copy(todir: new File(projectDir, '.git').absolutePath) {
-            fileset(dir: new File(projectDir,'tempgit/.git').absolutePath)
-        }
+        def git = commonGitSetup(gitDir)
 
         buildFile << DependencyLockLauncherSpec.BUILD_GRADLE
         buildFile << 'apply plugin: \'gradle-git-scm\''
 
-        def project = Grgit.open(projectDir.absolutePath)
-        project.reset(commit: 'HEAD', mode: ResetOp.Mode.SOFT)
-        project.add(patterns: ['build.gradle', 'settings.gradle'])
-        project.commit(message: 'test setup')
-        project.push()
-        project.close()
+        finishGitSetup(['build.gradle', 'settings.gradle'])
 
         when:
         runTasksSuccessfully('generateLock', 'saveLock', 'commitLock')
         git.reset(commit: 'HEAD', mode: ResetOp.Mode.HARD)
 
         then:
+        //new File(gitDir, 'dependencies.lock').exists()
         new File(gitDir, 'dependencies.lock').text == DependencyLockLauncherSpec.FOO_LOCK
     }
 
@@ -121,6 +107,9 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
     }
 
     def 'git integration test for multiproject'() {
+        def gitDir = new File(projectDir, 'project')
+        def git = commonGitSetup(gitDir)
+
         def sub1 = new File(projectDir, 'sub1')
         sub1.mkdirs()
         def sub2 = new File(projectDir, 'sub2')
@@ -130,7 +119,7 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
             subprojects {
                 apply plugin: 'java'
                 apply plugin: 'gradle-dependency-lock'
-                apply plugin: 'gradle-scm'
+                apply plugin: 'gradle-git-scm'
                 repositories { maven { url '${Fixture.repo}' } }
             }
         """.stripIndent()
@@ -152,10 +141,39 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
             }
         '''.stripIndent()
 
+        finishGitSetup(['build.gradle', 'settings.gradle', 'sub1/build.gradle', 'sub2/build.gradle'])
+
         when:
         runTasksSuccessfully('generateLock', 'saveLock', 'commitLock')
+        git.reset(commit: 'HEAD', mode: ResetOp.Mode.HARD)
 
         then:
-        noExceptionThrown()
+        new File(gitDir, 'sub1/dependencies.lock').exists()
+        new File(gitDir, 'sub2/dependencies.lock').exists()
+    }
+
+    private Grgit commonGitSetup(File gitDir) {        
+        gitDir.mkdirs()
+        def git = Grgit.init(dir: gitDir)
+        new File(gitDir, '.placeholder').text = ''
+        git.add(patterns: ['.placeholder'])
+        git.commit(message: 'initial test')
+
+        def tempProject = Grgit.clone(dir: new File(projectDir, 'tempgit'), uri: "file://${gitDir.absolutePath}").close()
+
+        new AntBuilder().copy(todir: new File(projectDir, '.git').absolutePath) {
+            fileset(dir: new File(projectDir,'tempgit/.git').absolutePath)
+        }
+
+        git
+    }
+
+    private finishGitSetup(List<String> patterns) {
+        def project = Grgit.open(projectDir.absolutePath)
+        project.reset(commit: 'HEAD', mode: ResetOp.Mode.SOFT)
+        project.add(patterns: patterns)
+        project.commit(message: 'test setup')
+        project.push()
+        project.close()
     }
 }
