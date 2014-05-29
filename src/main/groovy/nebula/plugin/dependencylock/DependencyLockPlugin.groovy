@@ -44,7 +44,7 @@ class DependencyLockPlugin implements Plugin<Project> {
         Map overrides = loadOverrides()
         GenerateLockTask lockTask = configureLockTask(clLockFileName, extension, overrides)
         SaveLockTask saveTask = configureSaveTask(lockTask, extension)
-        configureCommitTask(saveTask, extension, commitExtension)
+        configureCommitTask(clLockFileName, saveTask, extension, commitExtension)
 
         project.gradle.taskGraph.whenReady { taskGraph ->
             File dependenciesLock = new File(project.projectDir, clLockFileName ?: extension.lockFile)
@@ -58,7 +58,7 @@ class DependencyLockPlugin implements Plugin<Project> {
         }
     }
 
-    private void configureCommitTask(SaveLockTask saveTask, DependencyLockExtension lockExtension,
+    private void configureCommitTask(String clLockFileName, SaveLockTask saveTask, DependencyLockExtension lockExtension,
             DependencyLockCommitExtension commitExtension) {
         project.plugins.withType(ScmPlugin) {
             if (!project.rootProject.tasks.findByName('commitLock')) {
@@ -66,15 +66,16 @@ class DependencyLockPlugin implements Plugin<Project> {
                 commitTask.mustRunAfter(saveTask)
                 commitTask.conventionMapping.with {
                     scmFactory = { project.rootProject.scmFactory }
-                    commitMessage = { commitExtension.commitMessage }
+                    commitMessage = { project.hasProperty('commitDependencyLock.message') ? 
+                            project['commitDependencyLock.message'] : commitExtension.message }
                     patternsToCommit = {
                         def lockFiles = []
-                        def rootLock = new File(project.rootProject.projectDir, lockExtension.lockFile)
+                        def rootLock = new File(project.rootProject.projectDir, clLockFileName ?: lockExtension.lockFile)
                         if (rootLock.exists()) {
                             lockFiles << rootLock
                         }
                         project.rootProject.subprojects.each {
-                            def potentialLock = new File(it.projectDir, lockExtension.lockFile)
+                            def potentialLock = new File(it.projectDir, clLockFileName ?: lockExtension.lockFile)
                             if (potentialLock.exists()) {
                                 lockFiles << potentialLock
                             }
@@ -83,8 +84,8 @@ class DependencyLockPlugin implements Plugin<Project> {
                         logger.info(patterns.toString())
                         patterns
                     }
-                    shouldCreateTag = { commitExtension.shouldCreateTag }
-                    tag = { commitExtension.tag() }
+                    shouldCreateTag = { project.hasProperty('commitDependencyLock.tag') ?: commitExtension.shouldCreateTag }
+                    tag = { project.hasProperty('commitDependencyLock.tag') ? project['commitDependencyLock.tag'] : commitExtension.tag() }
                     remoteRetries = { commitExtension.remoteRetries }
                 }
             }

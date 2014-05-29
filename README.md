@@ -62,10 +62,10 @@ Use the extension if you wish to configure. Each project where gradle-dependency
 * tag - A 0 argument closure that returns a String. Needs to generate a unique tag name.
 * remoteRetries - Number of times to update from remote repository and retry commits.
 
-Use the following to configure. There will be only one commitDependencyLock extension attached to the rootProject in a multiproject  
+Use the following to configure. There will be only one commitDependencyLock extension attached to the rootProject in a multiproject.  
 
     commitDependencyLock {
-      commitMessage = 'Committing dependency lock files'
+      message = 'Committing dependency lock files'
       shouldCreateTag = false
       tag = { "LockCommit-${new Date().format('yyyyMMddHHmmss')}" }
       remoteRetries = 3
