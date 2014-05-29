@@ -16,8 +16,10 @@
 package nebula.plugin.dependencylock
 
 import groovy.json.JsonSlurper
+import nebula.plugin.dependencylock.tasks.CommitLockTask
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
+import nebula.plugin.scm.ScmPlugin
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -37,7 +39,8 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         Map overrides = loadOverrides()
         GenerateLockTask lockTask = configureLockTask(clLockFileName, extension, overrides)
-        configureSaveTask(lockTask, extension)
+        SaveLockTask saveTask = configureSaveTask(lockTask, extension)
+        configureCommitTask(saveTask, extension)
 
         project.gradle.taskGraph.whenReady { taskGraph ->
             File dependenciesLock = new File(project.projectDir, clLockFileName ?: extension.lockFile)
@@ -51,7 +54,25 @@ class DependencyLockPlugin implements Plugin<Project> {
         }
     }
 
-    private void configureSaveTask(GenerateLockTask lockTask, DependencyLockExtension extension) {
+    private void configureCommitTask(SaveLockTask saveTask, DependencyLockExtension extension) {
+        project.plugins.withType(ScmPlugin) {
+            if (!project.rootProject.tasks.findByName('commitLock')) {
+                CommitLockTask commitTask = project.rootProject.tasks.create('commitLock', CommitLockTask)
+                commitTask.mustRunAfter(saveTask)
+                commitTask.conventionMapping.with {
+                    scmFactory = { project.rootProject.scmFactory }
+                    branch = { extension.branch }
+                    commitMessage = { extension.commitMessage }
+                    patternsToCommit = { [extension.lockFile] }
+                    shouldCreateTag = { extension.shouldCreateTag }
+                    tag = { extension.tag() }
+                    remoteRetries = { extension.remoteRetries }
+                }
+            }
+        }
+    }
+
+    private SaveLockTask configureSaveTask(GenerateLockTask lockTask, DependencyLockExtension extension) {
         SaveLockTask saveTask = project.tasks.create('saveLock', SaveLockTask)
         saveTask.conventionMapping.with {
             generatedLock = { lockTask.dependenciesLock }
@@ -65,6 +86,8 @@ class DependencyLockPlugin implements Plugin<Project> {
                 false
             }
         }
+
+        saveTask
     }
 
     private GenerateLockTask configureLockTask(String clLockFileName, DependencyLockExtension extension, Map overrides) {

@@ -47,19 +47,19 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         }
     """.stripIndent()
 
-    static final String OLD_GUAVA_LOCK = '''\
+    static final String OLD_FOO_LOCK = '''\
         {
           "test.example:foo": { "locked": "1.0.0", "requested": "1.+" }
         }
     '''.stripIndent()
 
-    static final String GUAVA_LOCK = '''\
+    static final String FOO_LOCK = '''\
         {
           "test.example:foo": { "locked": "1.0.1", "requested": "1.+" }
         }
     '''.stripIndent()
 
-    static final String NEW_GUAVA_LOCK = '''\
+    static final String NEW_FOO_LOCK = '''\
         {
           "test.example:foo": { "locked": "2.0.1", "requested": "1.+", "viaOverride": "2.0.1" }
         }
@@ -81,7 +81,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
     def 'lock file is applied'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
-        dependenciesLock << OLD_GUAVA_LOCK
+        dependenciesLock << OLD_FOO_LOCK
 
         buildFile << SPECIFIC_BUILD_GRADLE
 
@@ -94,10 +94,10 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
     def 'override lock file is applied'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
-        dependenciesLock << OLD_GUAVA_LOCK
+        dependenciesLock << OLD_FOO_LOCK
 
         def testOverride = new File(projectDir, 'test.override')
-        testOverride << GUAVA_LOCK
+        testOverride << FOO_LOCK
 
         def gradleProperties = new File(projectDir, 'gradle.properties')
         gradleProperties << 'dependencyLock.lockFile = \'test.override\''
@@ -118,19 +118,19 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         runTasksSuccessfully('generateLock')
 
         then:
-        new File(projectDir, 'build/dependencies.lock').text == GUAVA_LOCK
+        new File(projectDir, 'build/dependencies.lock').text == FOO_LOCK
     }
 
     def 'update lock'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
-        dependenciesLock << OLD_GUAVA_LOCK
+        dependenciesLock << OLD_FOO_LOCK
         buildFile << BUILD_GRADLE
 
         when:
         runTasksSuccessfully('saveLock')
 
         then:
-        new File(projectDir, 'dependencies.lock').text == GUAVA_LOCK
+        new File(projectDir, 'dependencies.lock').text == FOO_LOCK
     }
 
     def 'trigger failure with bad lock file'() {
@@ -151,14 +151,14 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
     def 'existing lock ignored while updating lock'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
-        dependenciesLock << NEW_GUAVA_LOCK
+        dependenciesLock << NEW_FOO_LOCK
         buildFile << BUILD_GRADLE
 
         when:
         runTasksSuccessfully('saveLock')
 
         then:
-        new File(projectDir, 'dependencies.lock').text == GUAVA_LOCK    
+        new File(projectDir, 'dependencies.lock').text == FOO_LOCK    
     }
 
     def 'command line override respected while updating lock'() {
@@ -168,19 +168,19 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         runTasksSuccessfully('-PdependencyLock.override=test.example:foo:2.0.1', 'saveLock')
 
         then:
-        new File(projectDir, 'dependencies.lock').text == NEW_GUAVA_LOCK    
+        new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK    
     }
 
     def 'command line override file respected while updating lock'() {
         def testLock = new File(projectDir, 'test.lock')
-        testLock << NEW_GUAVA_LOCK
+        testLock << NEW_FOO_LOCK
         buildFile << BUILD_GRADLE
 
         when:
         runTasksSuccessfully('-PdependencyLock.overrideFile=test.lock', 'saveLock')
 
         then:
-        new File(projectDir, 'dependencies.lock').text == NEW_GUAVA_LOCK    
+        new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK    
     }
 
     def 'multiple runs each generate a lock'() {
@@ -191,7 +191,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         def savedLock = new File(projectDir, 'dependencies.lock')
-        savedLock.text == GUAVA_LOCK
+        savedLock.text == FOO_LOCK
 
         buildFile << NEW_BUILD_GRADLE
 
@@ -211,7 +211,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         then:
         def savedLock = new File(projectDir, 'dependencies.lock')
         def firstRun = savedLock.text
-        firstRun == GUAVA_LOCK
+        firstRun == FOO_LOCK
 
         buildFile << NEW_BUILD_GRADLE
 

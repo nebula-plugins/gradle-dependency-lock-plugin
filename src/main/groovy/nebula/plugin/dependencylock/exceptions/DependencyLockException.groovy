@@ -13,16 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nebula.plugin.dependencylock
+package nebula.plugin.dependencylock.exceptions
 
-class DependencyLockExtension {
-    String lockFile = 'dependencies.lock'
-    Set<String> configurationNames = ['testRuntime'] as Set
-    boolean includeTransitives = false
-    
-    String branch = 'master'
-    String commitMessage = 'Committing dependency lock files'
-    boolean shouldCreateTag = false
-    Closure<String> tag = { "LockCommit-${new Date().format('yyyyMMddHHmmss')}" }
-    int remoteRetries = 3
+class DependencyLockException extends RuntimeException {
+    DependencyLockException(String message) {
+        super(message)
+    }
 }
