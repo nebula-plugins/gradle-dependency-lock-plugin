@@ -33,8 +33,11 @@ When the following tasks are run any existing `dependency.lock` file will be ign
 
 * generateLock - Generate a lock file into the build directory
 * saveLock - depends on generateLock, copies generated lock into the project directory
+* commitLock - If a [gradle-scm-plugin](https://github.com/nebula-plugins/gradle-scm-plugin) implementation is applied. Will commit dependencies.lock to the configured SCM. Exists only on the rootProject. Assumes scm root is at the same level as the root build.gradle.
 
 ### Extensions Provided
+
+#### dependencyLock Extension
 
 *Properties*
 
@@ -42,12 +45,30 @@ When the following tasks are run any existing `dependency.lock` file will be ign
 * configurations - Collection of the configuration names to read, defaults to 'testRuntime'. For java projects testRuntime is good since it extends compile, runtime, and testCompile.
 * includeTransitives - Boolean if true transitvie dependencies will be included in the lock
 
-Use the extension if you wish to configure.
+Use the extension if you wish to configure. Each project where gradle-dependency-lock will have its own dependencyLock extension.
 
     dependencyLock {
       lockFile = 'dependencies.lock'
       configurationNames = ['testRuntime']
       includeTransitives = false
+    }
+
+#### commitDependencyLock Extension
+
+*Properties*
+
+* commitMessage - Commit message to use.
+* shouldCreateTag - Boolean to tell the commitLock to create a tag, defaults to false.
+* tag - A 0 argument closure that returns a String. Needs to generate a unique tag name.
+* remoteRetries - Number of times to update from remote repository and retry commits.
+
+Use the following to configure. There will be only one commitDependencyLock extension attached to the rootProject in a multiproject.  
+
+    commitDependencyLock {
+      message = 'Committing dependency lock files'
+      shouldCreateTag = false
+      tag = { "LockCommit-${new Date().format('yyyyMMddHHmmss')}" }
+      remoteRetries = 3
     }
 
 ### Properties that Affect the Plugin
@@ -88,6 +109,18 @@ Allows the user to specify overrides to libraries on the command line. This over
 or to override multiple libraries
 
     ./gradlew -PdependencyLock.override=group0:artifact0:version0,group1:artifact1:version1 <tasks>
+
+*commitDependencyLock.message*
+
+Allows the user to override the commit message.
+
+    ./gradlew -PcommitDependencyLock.message='commit message' <tasks> commitLock
+
+*commitDependencyLock.tag*
+
+Allows the user to specify a String for the tagname. If present commitLock will tag the commit with the given String.
+
+    ./gradlew -PcommitDependencyLock.tag=mytag <tasks> commitLock
 
 ## Lock File Format
 
