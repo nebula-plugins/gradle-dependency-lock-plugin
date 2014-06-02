@@ -99,6 +99,33 @@ class DependencyLockPluginSpec extends ProjectSpec {
         foo.moduleVersion == '2.0.1'
     }
 
+    def 'command line override of a dependency with forces in place'() {
+        stockTestSetup()
+
+        project.dependencies {
+            compile 'test.example:baz:1.+'
+        }
+
+        project.configurations.all {
+            resolutionStrategy {
+                force 'test.example:baz:1.0.0'
+            }
+        }
+
+        project.ext.set('dependencyLock.override', 'test.example:foo:2.0.1')
+
+        when:
+        project.apply plugin: pluginName
+        triggerTaskGraphWhenReady()
+        def resolved = project.configurations.compile.resolvedConfiguration
+
+        then:
+        def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
+        foo.moduleVersion == '2.0.1'
+        def baz = resolved.firstLevelModuleDependencies.find { it.moduleName == 'baz' }
+        baz.moduleVersion == '1.0.0'
+    }
+
     def 'command line overrides of multiple dependencies'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << '''\

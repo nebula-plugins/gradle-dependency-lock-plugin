@@ -132,10 +132,13 @@ class DependencyLockPlugin implements Plugin<Project> {
             logger.info("Using command line overrides ${project['dependencyLock.override']}")
         }
 
-        def overrideModules = overrides.collect { "${it.key}:${it.value}" }
+        def overrideForces = overrides.collect { "${it.key}:${it.value}" }
+        logger.debug(overrideForces.toString())
 
         project.configurations.all {
-            resolutionStrategy.forcedModules = overrideModules
+            resolutionStrategy {
+                overrideForces.each { dep -> force dep}
+            }
         }
     }
 
@@ -143,15 +146,17 @@ class DependencyLockPlugin implements Plugin<Project> {
         logger.info("Using ${dependenciesLock.name} to lock dependencies")
         def locks = loadLock(dependenciesLock)
         def nonProjectLocks = locks.findAll { it.value?.locked }
-        def forcedModules = nonProjectLocks.collect {
+        def lockForces = nonProjectLocks.collect {
             overrides.containsKey(it.key) ? "${it.key}:${overrides[it.key]}" : "${it.key}:${it.value.locked}"
         }
         def unusedOverrides = overrides.findAll { !locks.containsKey(it.key) }.collect { "${it.key}:${it.value}" }
-        forcedModules << unusedOverrides
-        logger.debug(forcedModules.toString())
+        lockForces << unusedOverrides
+        logger.debug(lockForces.toString())
 
         project.configurations.all {
-            resolutionStrategy.forcedModules = forcedModules
+            resolutionStrategy {
+                lockForces.each { dep -> force dep}
+            }
         }
     }
 
