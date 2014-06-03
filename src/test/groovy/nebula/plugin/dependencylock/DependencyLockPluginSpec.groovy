@@ -245,6 +245,56 @@ class DependencyLockPluginSpec extends ProjectSpec {
         baz2.moduleVersion == '1.0.0'
     }
 
+    def 'siblings need to lock each others dependencies'() {
+        def sub1Folder = new File(projectDir, 'sub1')
+        sub1Folder.mkdir()
+        def sub1 = ProjectBuilder.builder().withName('sub1').withProjectDir(sub1Folder).withParent(project).build()
+        def sub1DependenciesLock = new File(sub1Folder, 'dependencies.lock')
+        sub1DependenciesLock << '''\
+            {
+              "test.example:baz": { "locked": "1.0.0", "requested": "1.+" }
+            }
+        '''.stripIndent()
+
+        def sub2Folder = new File(projectDir, 'sub2')
+        sub2Folder.mkdir()
+        def sub2 = ProjectBuilder.builder().withName('sub2').withProjectDir(sub2Folder).withParent(project).build()
+        def sub2DependenciesLock = new File(sub2Folder, 'dependencies.lock')
+        sub2DependenciesLock << '''\
+            {
+              "test.example:baz": { "locked": "1.0.0", "firstLevelTransitive": [ "test.nebula:sub1" ] },
+              "test.example:foo": { "locked": "2.0.0", "requested": "2.+" },
+              "test.nebula:sub1": { "project": true, "firstLevelTransitive": [ "test.nebula:sub2" ] }
+            }
+        '''.stripIndent()
+
+        project.subprojects {
+            apply plugin: 'java'
+            group = 'test.nebula'
+            repositories { maven { url Fixture.repo } }
+        }
+
+        sub1.dependencies {
+            compile 'test.example:baz:1.+'
+        }
+
+        sub2.dependencies {
+            compile project.project(':sub1')
+            compile 'test.example:foo:2.+'
+        }
+
+        when:
+        project.subprojects {
+            apply plugin: pluginName
+        }
+        triggerTaskGraphWhenReady()
+
+        then:
+        def resolved2 = sub2.configurations.compile.resolvedConfiguration
+        def baz = resolved2.resolvedArtifacts.find { it.name == 'baz' }
+        baz.moduleVersion.id.version == '1.0.0'
+    }
+
     private List multiProjectSetup() {
         def sub1Folder = new File(projectDir, 'sub1')
         sub1Folder.mkdir()

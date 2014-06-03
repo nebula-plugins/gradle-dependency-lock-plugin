@@ -1,6 +1,7 @@
-1.9.9 / 2014-05-xx
+1.9.9 / 2014-06-xx
 ==================
 
+* Bugfix: lock first level transitives of any project(':<project>') depended on
 * Bugfix: properly respect resolutionStrategy.force 'group:artifact:version' present in build.gradle
 * Add commitLock task
 

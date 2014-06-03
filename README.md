@@ -144,6 +144,14 @@ If we include transitive dependencies.
       "<group>:<artifact>": { "locked": "<version>", "transitive": [ "<directgroup>:<directartifact>" ]}
     }
 
+If we don't include all transitive dependencies we still need to include the transitive information from the direct dependencies of other projects in our multi-project which we depend on. 
+
+    {
+      "<directgroup>:<directartifact>": { "locked": "<directversion>", "requested": "<directrequested>" },
+      "<group>:<artifact>": { "locked": "<version>", "firstLevelTransitive": [ "<mygroup>:<mypeer>" ]},
+      "<mygroup>:<mypeer>": { "project": true }
+    }
+
 And we document project dependencies.
 
 If you have
