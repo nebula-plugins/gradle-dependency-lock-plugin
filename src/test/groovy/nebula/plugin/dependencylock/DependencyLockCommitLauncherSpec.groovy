@@ -19,8 +19,8 @@ import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.test.IntegrationSpec
 import org.ajoberstar.grgit.Grgit
 import org.ajoberstar.grgit.operation.ResetOp
-import org.gradle.BuildResult
 import org.gradle.execution.TaskSelectionException
+import org.gradle.internal.exceptions.LocationAwareException
 
 class DependencyLockCommitLauncherSpec extends IntegrationSpec {
     def setupSpec() {
@@ -31,10 +31,11 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         buildFile << DependencyLockLauncherSpec.BUILD_GRADLE
 
         when:
-        BuildResult result = runTasksWithFailure('commitLock')
+        def result = runTasksWithFailure('commitLock')
 
         then:
-        result.failure instanceof TaskSelectionException
+        // We're not in the same class loader as where the exception was created, so they're not instanceof compatible
+        result.failure.cause.class.name == 'org.gradle.execution.TaskSelectionException'
     }
 
     def 'commitLock no-ops when no scm implementation is applied'() {
