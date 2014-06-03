@@ -33,8 +33,11 @@ When the following tasks are run any existing `dependency.lock` file will be ign
 
 * generateLock - Generate a lock file into the build directory
 * saveLock - depends on generateLock, copies generated lock into the project directory
+* commitLock - If a [gradle-scm-plugin](https://github.com/nebula-plugins/gradle-scm-plugin) implementation is applied. Will commit dependencies.lock to the configured SCM. Exists only on the rootProject. Assumes scm root is at the same level as the root build.gradle.
 
 ### Extensions Provided
+
+#### dependencyLock Extension
 
 *Properties*
 
@@ -42,12 +45,30 @@ When the following tasks are run any existing `dependency.lock` file will be ign
 * configurations - Collection of the configuration names to read, defaults to 'testRuntime'. For java projects testRuntime is good since it extends compile, runtime, and testCompile.
 * includeTransitives - Boolean if true transitvie dependencies will be included in the lock
 
-Use the extension if you wish to configure.
+Use the extension if you wish to configure. Each project where gradle-dependency-lock will have its own dependencyLock extension.
 
     dependencyLock {
       lockFile = 'dependencies.lock'
       configurationNames = ['testRuntime']
       includeTransitives = false
+    }
+
+#### commitDependencyLock Extension
+
+*Properties*
+
+* commitMessage - Commit message to use.
+* shouldCreateTag - Boolean to tell the commitLock to create a tag, defaults to false.
+* tag - A 0 argument closure that returns a String. Needs to generate a unique tag name.
+* remoteRetries - Number of times to update from remote repository and retry commits.
+
+Use the following to configure. There will be only one commitDependencyLock extension attached to the rootProject in a multiproject.  
+
+    commitDependencyLock {
+      message = 'Committing dependency lock files'
+      shouldCreateTag = false
+      tag = { "LockCommit-${new Date().format('yyyyMMddHHmmss')}" }
+      remoteRetries = 3
     }
 
 ### Properties that Affect the Plugin
@@ -89,6 +110,18 @@ or to override multiple libraries
 
     ./gradlew -PdependencyLock.override=group0:artifact0:version0,group1:artifact1:version1 <tasks>
 
+*commitDependencyLock.message*
+
+Allows the user to override the commit message.
+
+    ./gradlew -PcommitDependencyLock.message='commit message' <tasks> commitLock
+
+*commitDependencyLock.tag*
+
+Allows the user to specify a String for the tagname. If present commitLock will tag the commit with the given String.
+
+    ./gradlew -PcommitDependencyLock.tag=mytag <tasks> commitLock
+
 ## Lock File Format
 
 The lock file is written in a json format. The keys of the map are made up of "\<group\>:\<artifact\>". The requested entry is informational to let users know what version or range of versions was initially asked for. The locked entry is the version of the dependency the plugin will lock to.
@@ -108,7 +141,31 @@ If we include transitive dependencies.
 
     {
       "<directgroup>:<directartifact>": { "locked": "<directversion>", "requested": "<directrequested>" },
-      "<group>:<artifact>": { "locked": "<version>", "transitive": true, "via": [ "<directgroup>:<directartifact>" ]}
+      "<group>:<artifact>": { "locked": "<version>", "transitive": [ "<directgroup>:<directartifact>" ]}
+    }
+
+If we don't include all transitive dependencies we still need to include the transitive information from the direct dependencies of other projects in our multi-project which we depend on. 
+
+    {
+      "<directgroup>:<directartifact>": { "locked": "<directversion>", "requested": "<directrequested>" },
+      "<group>:<artifact>": { "locked": "<version>", "firstLevelTransitive": [ "<mygroup>:<mypeer>" ]},
+      "<mygroup>:<mypeer>": { "project": true }
+    }
+
+And we document project dependencies.
+
+If you have
+
+    ...
+    dependencies {
+      compile project(':common')
+      ...
+    }
+
+The lock will have
+
+    {
+      "group:common": { "project": true }
     }
 
 ## Example
@@ -153,8 +210,6 @@ It will output
 
     {
       ...
-      "<transitivegroup>:<transitiveartifact>": { "locked": "<transitiveLockedVersion>", "transitive" = true,
-          "via": { "<group>:<artifact>": "<requestedVersion>", "<group1>:<artifact1>": "<requestedVersion1>" }
-      }
+      "<transitivegroup>:<transitiveartifact>": { "locked": "<transitiveLockedVersion>", "transitive": { "<group>:<artifact>": "<requestedVersion>", "<group1>:<artifact1>": "<requestedVersion1>" } }
       ...
     }

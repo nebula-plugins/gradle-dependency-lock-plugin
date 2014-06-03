@@ -51,7 +51,10 @@ plugins.withType(JavaPlugin) {
 dependencies {
     compile gradleApi()
     compile localGroovy()
-    testCompile 'com.netflix.nebula:nebula-test:1.12.0'
+    compile 'com.netflix.nebula:gradle-scm-plugin:1.12.0-SNAPSHOT'
+    testCompile 'com.netflix.nebula:nebula-test:1.12.0-SNAPSHOT'
+    testCompile 'com.netflix.nebula:gradle-git-scm-plugin:1.12.0-SNAPSHOT'
+    testCompile 'org.ajoberstar:grgit:0.2.2'
 }
 
 task createWrapper(type: Wrapper) {
