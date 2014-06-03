@@ -52,7 +52,7 @@ class DependencyLockPlugin implements Plugin<Project> {
             if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists() &&
                     !project.hasProperty('dependencyLock.ignore')) {
                 applyLock(dependenciesLock, overrides)
-            } else if (taskGraph.hasTask(lockTask) && !project.hasProperty('dependencyLock.ignore')) {
+            } else if (!project.hasProperty('dependencyLock.ignore')) {
                 applyOverrides(overrides)
             }
         }
