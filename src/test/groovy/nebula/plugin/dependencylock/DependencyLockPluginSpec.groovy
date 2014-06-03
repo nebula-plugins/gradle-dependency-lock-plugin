@@ -84,6 +84,25 @@ class DependencyLockPluginSpec extends ProjectSpec {
         foo.moduleVersion == '2.0.1'
     }
 
+    def 'command line override of a dependency works with no other dependency lock features'() {
+        project.apply plugin: 'java'
+        project.repositories { maven { url Fixture.repo } }
+        project.dependencies {
+            compile 'test.example:foo:1.+'
+        }
+
+        project.ext.set('dependencyLock.override', 'test.example:foo:1.0.0')
+
+        when:
+        project.apply plugin: pluginName
+        triggerTaskGraphWhenReady()
+
+        then:
+        def resolved = project.configurations.compile.resolvedConfiguration
+        def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
+        foo.moduleVersion == '1.0.0'
+    }
+
     def 'command line override of a dependency'() {
         stockTestSetup()
 

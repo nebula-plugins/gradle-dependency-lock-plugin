@@ -1,6 +1,7 @@
 1.9.9 / 2014-06-xx
 ==================
 
+* Allow command line overrides to work if plugin is applied, not just when creating a lock or in the presence of a lock.
 * Bugfix: lock first level transitives of any project(':<project>') depended on
 * Bugfix: properly respect resolutionStrategy.force 'group:artifact:version' present in build.gradle
 * Add commitLock task
