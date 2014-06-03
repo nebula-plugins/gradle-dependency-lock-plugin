@@ -1,4 +1,4 @@
-1.9.9 / 2014-06-xx
+1.9.9 / 2014-06-03
 ==================
 
 * Allow command line overrides to work if plugin is applied, not just when creating a lock or in the presence of a lock.
