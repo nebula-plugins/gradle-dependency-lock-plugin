@@ -51,7 +51,7 @@ plugins.withType(JavaPlugin) {
 dependencies {
     compile gradleApi()
     compile localGroovy()
-    testCompile 'com.netflix.nebula:nebula-test:1.11.0'
+    testCompile 'com.netflix.nebula:nebula-test:1.11.0-SNAPSHOT'
 }
 
 task createWrapper(type: Wrapper) {
