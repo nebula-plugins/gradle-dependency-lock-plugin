@@ -58,5 +58,5 @@ dependencies {
 }
 
 task createWrapper(type: Wrapper) {
-    gradleVersion = '1.12-rc-2'
+    gradleVersion = '1.12'
 }
