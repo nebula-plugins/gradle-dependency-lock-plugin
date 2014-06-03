@@ -59,11 +59,11 @@ class GenerateLockTaskSpec extends ProjectSpec {
         project.subprojects.add(app)
 
         project.subprojects {
+            apply plugin: 'java'
+            group = 'test.nebula'
             repositories { maven { url Fixture.repo } }
         }
 
-        common.apply plugin: 'java'
-        app.apply plugin: 'java'
         app.dependencies {
             compile app.project(':common')
             compile 'test.example:foo:2.+'
@@ -79,7 +79,95 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:foo": { "locked": "2.0.1", "requested": "2.+" }
+              "test.example:foo": { "locked": "2.0.1", "requested": "2.+" },
+              "test.nebula:common": { "project": true }
+            }
+        '''.stripIndent()
+        task.dependenciesLock.text == lockText
+    }
+
+    def 'multiproject inter-project dependencies should be excluded when coming in transitively'() {
+        def common = ProjectBuilder.builder().withName('common').withProjectDir(new File(projectDir, 'common')).withParent(project).build()
+        project.subprojects.add(common)
+        def lib = ProjectBuilder.builder().withName('lib').withProjectDir(new File(projectDir, 'lib')).withParent(project).build()
+        project.subprojects.add(lib)
+        def app = ProjectBuilder.builder().withName('app').withProjectDir(new File(projectDir, 'app')).withParent(project).build()
+        project.subprojects.add(app)
+
+        project.subprojects {
+            apply plugin: 'java'
+            group = 'test.nebula'
+            repositories { maven { url Fixture.repo } }
+        }
+
+        lib.dependencies {
+            compile lib.project(':common')
+        }
+
+        app.dependencies {
+            compile app.project(':lib')
+        }
+
+        GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock = new File(app.buildDir, 'dependencies.lock')
+        task.configurationNames= [ 'testRuntime' ]
+        task.includeTransitives = true
+
+        when:
+        task.execute()
+
+        then:
+        String lockText = '''\
+            {
+              "test.nebula:common": { "project": true, "transitive": [ "test.nebula:lib" ] },
+              "test.nebula:lib": { "project": true }
+            }
+        '''.stripIndent()
+        task.dependenciesLock.text == lockText
+    }
+
+    def 'multiproject inter-project dependencies should lock first levels'() {
+        def common = ProjectBuilder.builder().withName('common').withProjectDir(new File(projectDir, 'common')).withParent(project).build()
+        project.subprojects.add(common)
+        def lib = ProjectBuilder.builder().withName('lib').withProjectDir(new File(projectDir, 'lib')).withParent(project).build()
+        project.subprojects.add(lib)
+        def app = ProjectBuilder.builder().withName('app').withProjectDir(new File(projectDir, 'app')).withParent(project).build()
+        project.subprojects.add(app)
+
+        project.subprojects {
+            apply plugin: 'java'
+            group = 'test.nebula'
+            repositories { maven { url Fixture.repo } }
+        }
+
+        common.dependencies {
+            compile 'test.example:foo:2.+'
+            compile 'test.example:baz:2.+'
+        }
+
+        lib.dependencies {
+            compile lib.project(':common')
+            compile 'test.example:baz:1.+'
+        }
+
+        app.dependencies {
+            compile app.project(':lib')
+        }
+
+        GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock = new File(app.buildDir, 'dependencies.lock')
+        task.configurationNames= [ 'testRuntime' ]
+
+        when:
+        task.execute()
+
+        then:
+        String lockText = '''\
+            {
+              "test.example:baz": { "locked": "2.0.0", "firstLevelTransitive": [ "test.nebula:common", "test.nebula:lib" ] },
+              "test.example:foo": { "locked": "2.0.1", "firstLevelTransitive": [ "test.nebula:common" ] },
+              "test.nebula:common": { "project": true, "firstLevelTransitive": [ "test.nebula:lib" ] },
+              "test.nebula:lib": { "project": true }
             }
         '''.stripIndent()
         task.dependenciesLock.text == lockText
@@ -105,7 +193,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         String lockText = '''\
             {
               "test.example:bar": { "locked": "1.1.0", "requested": "1.+" },
-              "test.example:foo": { "locked": "1.0.1", "transitive": true, "via": [ "test.example:bar" ] }
+              "test.example:foo": { "locked": "1.0.1", "transitive": [ "test.example:bar" ] }
             }
         '''.stripIndent()
         task.dependenciesLock.text == lockText
@@ -130,8 +218,35 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "circular:a": { "locked": "1.0.0", "requested": "1.+", "via": [ "circular:b" ] },
-              "circular:b": { "locked": "1.0.0", "transitive": true, "via": [ "circular:a" ] }
+              "circular:a": { "locked": "1.0.0", "requested": "1.+", "transitive": [ "circular:b" ] },
+              "circular:b": { "locked": "1.0.0", "transitive": [ "circular:a" ] }
+            }
+        '''.stripIndent()
+        task.dependenciesLock.text == lockText
+    }
+
+    def 'check for deeper circular dependency'() {
+        project.apply plugin: 'java'
+
+        project.repositories { maven { url Fixture.repo } }
+        project.dependencies {
+            compile 'circular:oneleveldeep:1.+'
+        }
+
+        GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
+        task.configurationNames= [ 'testRuntime' ]
+        task.includeTransitives = true
+
+        when:
+        task.execute()
+
+        then:
+        String lockText = '''\
+            {
+              "circular:a": { "locked": "1.0.0", "transitive": [ "circular:b", "circular:oneleveldeep" ] },
+              "circular:b": { "locked": "1.0.0", "transitive": [ "circular:a" ] },
+              "circular:oneleveldeep": { "locked": "1.0.0", "requested": "1.+" }
             }
         '''.stripIndent()
         task.dependenciesLock.text == lockText
@@ -158,8 +273,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         String lockText = '''\
             {
               "test.example:bar": { "locked": "1.1.0", "requested": "1.+" },
-              "test.example:baz": { "locked": "1.0.0", "transitive": true, "via": [ "test.example:foobaz" ] },
-              "test.example:foo": { "locked": "1.0.1", "transitive": true, "via": [ "test.example:bar", "test.example:foobaz" ] },
+              "test.example:baz": { "locked": "1.0.0", "transitive": [ "test.example:foobaz" ] },
+              "test.example:foo": { "locked": "1.0.1", "transitive": [ "test.example:bar", "test.example:foobaz" ] },
               "test.example:foobaz": { "locked": "1.0.0", "requested": "1.+" }
             }
         '''.stripIndent()
@@ -185,10 +300,10 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:bar": { "locked": "1.0.0", "transitive": true, "via": [ "test.example:transitive" ] },
-              "test.example:baz": { "locked": "1.0.0", "transitive": true, "via": [ "test.example:foobaz" ] },
-              "test.example:foo": { "locked": "1.0.1", "transitive": true, "via": [ "test.example:bar", "test.example:foobaz" ] },
-              "test.example:foobaz": { "locked": "1.0.0", "transitive": true, "via": [ "test.example:transitive" ] },
+              "test.example:bar": { "locked": "1.0.0", "transitive": [ "test.example:transitive" ] },
+              "test.example:baz": { "locked": "1.0.0", "transitive": [ "test.example:foobaz" ] },
+              "test.example:foo": { "locked": "1.0.1", "transitive": [ "test.example:bar", "test.example:foobaz" ] },
+              "test.example:foobaz": { "locked": "1.0.0", "transitive": [ "test.example:transitive" ] },
               "test.example:transitive": { "locked": "1.0.0", "requested": "1.0.0" }
             }
         '''.stripIndent()

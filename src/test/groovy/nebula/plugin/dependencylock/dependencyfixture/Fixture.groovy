@@ -37,7 +37,8 @@ class Fixture {
           'test.example:foobaz:1.0.0 -> test.example:foo:1.0.1|test.example:baz:1.0.0',
           'test.example:transitive:1.0.0 -> test.example:bar:1.0.0|test.example:foobaz:1.0.0',
           'circular:a:1.0.0 -> circular:b:1.0.0',
-          'circular:b:1.0.0 -> circular:a:1.0.0'
+          'circular:b:1.0.0 -> circular:a:1.0.0',
+          'circular:oneleveldeep:1.0.0 -> circular:a:1.0.0'
         ]
 
         def generator = new GradleDependencyGenerator(new DependencyGraph(myGraph))
