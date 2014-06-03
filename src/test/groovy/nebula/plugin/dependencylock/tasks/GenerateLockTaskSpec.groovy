@@ -126,6 +126,53 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.text == lockText
     }
 
+    def 'multiproject inter-project dependencies should lock first levels'() {
+        def common = ProjectBuilder.builder().withName('common').withProjectDir(new File(projectDir, 'common')).withParent(project).build()
+        project.subprojects.add(common)
+        def lib = ProjectBuilder.builder().withName('lib').withProjectDir(new File(projectDir, 'lib')).withParent(project).build()
+        project.subprojects.add(lib)
+        def app = ProjectBuilder.builder().withName('app').withProjectDir(new File(projectDir, 'app')).withParent(project).build()
+        project.subprojects.add(app)
+
+        project.subprojects {
+            apply plugin: 'java'
+            group = 'test.nebula'
+            repositories { maven { url Fixture.repo } }
+        }
+
+        common.dependencies {
+            compile 'test.example:foo:2.+'
+            compile 'test.example:baz:2.+'
+        }
+
+        lib.dependencies {
+            compile lib.project(':common')
+            compile 'test.example:baz:1.+'
+        }
+
+        app.dependencies {
+            compile app.project(':lib')
+        }
+
+        GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock = new File(app.buildDir, 'dependencies.lock')
+        task.configurationNames= [ 'testRuntime' ]
+
+        when:
+        task.execute()
+
+        then:
+        String lockText = '''\
+            {
+              "test.example:baz": { "locked": "2.0.0", "firstLevelTransitive": [ "test.nebula:common", "test.nebula:lib" ] },
+              "test.example:foo": { "locked": "2.0.1", "firstLevelTransitive": [ "test.nebula:common" ] },
+              "test.nebula:common": { "project": true, "firstLevelTransitive": [ "test.nebula:lib" ] },
+              "test.nebula:lib": { "project": true }
+            }
+        '''.stripIndent()
+        task.dependenciesLock.text == lockText
+    }
+
     def 'simple transitive lock'() {
         project.apply plugin: 'java'
 

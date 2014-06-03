@@ -37,7 +37,7 @@ class GenerateLockTask extends AbstractLockTask {
     }
 
     private readDependenciesFromConfigurations() {
-        def deps = [:].withDefault { [transitive: [] as Set, childrenVisited: false] }
+        def deps = [:].withDefault { [transitive: [] as Set, firstLevelTransitive: [] as Set, childrenVisited: false] }
         def confs = getConfigurationNames().collect { project.configurations.getByName(it) }
 
         def peers = project.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) }
@@ -53,6 +53,9 @@ class GenerateLockTask extends AbstractLockTask {
                     deps[key].locked = resolved.moduleVersion
                 } else {
                     deps[key].project = true
+                    if (!getIncludeTransitives()) {
+                        handleSiblingTransitives(resolved, deps, peers)
+                    }
                 }
                 if (getIncludeTransitives()) {
                     deps[key].childrenVisited = true
@@ -70,6 +73,22 @@ class GenerateLockTask extends AbstractLockTask {
         }
 
         return deps
+    }
+
+    private static handleSiblingTransitives(ResolvedDependency sibling, Map deps, List peers) {
+        def parent = new LockKey(group: sibling.moduleGroup, artifact: sibling.moduleName)
+        sibling.children.each { ResolvedDependency dependency ->
+            def key = new LockKey(group: dependency.moduleGroup, artifact: dependency.moduleName)
+            deps[key].firstLevelTransitive << parent
+            if (peers.contains(key) && !deps[key].childrenVisited) {
+                if (dependency.children.size() > 0) {
+                    deps[key].childrenVisited = true
+                    handleSiblingTransitives(dependency, deps, peers)
+                }
+            } else {
+                deps[key].locked = dependency.moduleVersion
+            }
+        }
     }
 
     private static handleTransitive(ResolvedDependency transitive, Map deps, List peers, LockKey parent) {
@@ -116,6 +135,10 @@ class GenerateLockTask extends AbstractLockTask {
         if (lock.transitive) {
             def transitiveFrom = lock.transitive.sort().collect { "\"${it}\""}.join(', ')
             lockLine << ", \"transitive\": [ ${transitiveFrom} ]"
+        }
+        if (lock.firstLevelTransitive) {
+            def transitiveFrom = lock.firstLevelTransitive.sort().collect { "\"${it}\""}.join(', ')
+            lockLine << ", \"firstLevelTransitive\": [ ${transitiveFrom} ]"
         }
         lockLine << ' }'
 

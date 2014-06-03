@@ -144,6 +144,14 @@ If we include transitive dependencies.
       "<group>:<artifact>": { "locked": "<version>", "transitive": [ "<directgroup>:<directartifact>" ]}
     }
 
+If we don't include transitive dependencies, but to get consistent resolves we have to lock firstLevelTransitives of other projects in a multi-project.
+
+    {
+      "<directgroup>:<directartifact>": { "locked": "<directversion>", "requested": "<directrequested>" },
+      "<group>:<artifact>": { "locked": "<version>", "firstLevelTransitive": [ "<mygroup>:<myartifact>" ]},
+      "<mygroup>:<myartifact>": { "project": true }
+    }
+
 And we document project dependencies.
 
 If you have
