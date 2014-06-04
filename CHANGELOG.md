@@ -1,3 +1,9 @@
+1.9.10 / 2014-06-04
+===================
+
+* Fix to commitLock tag
+* Add -PdependencyLock.useGeneratedLock flag
+
 1.9.9 / 2014-06-03
 ==================
 
