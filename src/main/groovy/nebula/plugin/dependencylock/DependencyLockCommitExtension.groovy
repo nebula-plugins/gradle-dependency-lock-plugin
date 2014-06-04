@@ -18,6 +18,6 @@ package nebula.plugin.dependencylock
 class DependencyLockCommitExtension {
     String message = 'Committing dependency lock files'
     boolean shouldCreateTag = false
-    Closure<String> tag = { "LockCommit-${new Date().format('yyyyMMddHHmmss')}" }
+    Closure<String> tag = { "LockCommit-${new Date().format('yyyyMMddHHmmss')}".toString() }
     int remoteRetries = 3
 }

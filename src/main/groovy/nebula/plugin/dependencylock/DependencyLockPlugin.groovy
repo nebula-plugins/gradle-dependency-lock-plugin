@@ -43,6 +43,10 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         Map overrides = loadOverrides()
         GenerateLockTask lockTask = configureLockTask(clLockFileName, extension, overrides)
+        if (project.hasProperty('dependencyLock.useGeneratedLock')) {
+            clLockFileName = lockTask.getDependenciesLock().path
+            logger.lifecycle(clLockFileName)
+        }
         SaveLockTask saveTask = configureSaveTask(lockTask, extension)
         configureCommitTask(clLockFileName, saveTask, extension, commitExtension)
 
@@ -85,7 +89,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                         patterns
                     }
                     shouldCreateTag = { project.hasProperty('commitDependencyLock.tag') ?: commitExtension.shouldCreateTag }
-                    tag = { project.hasProperty('commitDependencyLock.tag') ? project['commitDependencyLock.tag'] : commitExtension.tag() }
+                    tag = { project.hasProperty('commitDependencyLock.tag') ? project['commitDependencyLock.tag'] : commitExtension.tag.call() }
                     remoteRetries = { commitExtension.remoteRetries }
                 }
             }
