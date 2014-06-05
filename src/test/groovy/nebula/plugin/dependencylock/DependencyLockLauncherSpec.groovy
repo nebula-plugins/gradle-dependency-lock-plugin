@@ -133,6 +133,30 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'dependencies.lock').text == FOO_LOCK
     }
 
+    def 'run with generated lock'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << OLD_FOO_LOCK
+        buildFile << BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('generateLock')
+
+        then:
+        new File(projectDir, 'build/dependencies.lock').text == FOO_LOCK
+
+        when:
+        runTasksSuccessfully('dependencies')
+
+        then:
+        standardOutput.contains 'test.example:foo:1.+ -> 1.0.0'
+
+        when:
+        runTasksSuccessfully('-PdependencyLock.useGeneratedLock=true', 'dependencies')
+
+        then:
+        standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
+    }
+
     def 'trigger failure with bad lock file'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << '''\

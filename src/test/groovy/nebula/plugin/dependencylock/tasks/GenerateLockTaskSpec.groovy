@@ -173,6 +173,61 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.text == lockText
     }
 
+    def 'multiproject inter-project dependencies no locked'() {
+        def model = ProjectBuilder.builder().withName('model').withProjectDir(new File(projectDir, 'model')).withParent(project).build()
+        project.subprojects.add(model)
+        def common = ProjectBuilder.builder().withName('common').withProjectDir(new File(projectDir, 'common')).withParent(project).build()
+        project.subprojects.add(common)
+        def lib = ProjectBuilder.builder().withName('lib').withProjectDir(new File(projectDir, 'lib')).withParent(project).build()
+        project.subprojects.add(lib)
+        def app = ProjectBuilder.builder().withName('app').withProjectDir(new File(projectDir, 'app')).withParent(project).build()
+        project.subprojects.add(app)
+
+        project.subprojects {
+            apply plugin: 'java'
+            group = 'test.nebula'
+            version = '42.0.0'
+            repositories { maven { url Fixture.repo } }
+        }
+
+        model.dependencies {
+            compile 'test.example:foo:2.+'
+        }
+
+        common.dependencies {
+            compile common.project(':model')
+        }
+
+        lib.dependencies {
+            compile lib.project(':model')
+            compile lib.project(':common')
+        }
+
+        app.dependencies {
+            compile app.project(':model')
+            compile app.project(':common')
+            compile app.project(':lib')
+        }
+
+        GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock = new File(app.buildDir, 'dependencies.lock')
+        task.configurationNames= [ 'testRuntime' ]
+
+        when:
+        task.execute()
+
+        then:
+        String lockText = '''\
+            {
+              "test.example:foo": { "locked": "2.0.1", "firstLevelTransitive": [ "test.nebula:model" ] },
+              "test.nebula:common": { "project": true, "firstLevelTransitive": [ "test.nebula:lib" ] },
+              "test.nebula:lib": { "project": true },
+              "test.nebula:model": { "project": true, "firstLevelTransitive": [ "test.nebula:common", "test.nebula:lib" ] }
+            }
+        '''.stripIndent()
+        task.dependenciesLock.text == lockText
+    }
+
     def 'simple transitive lock'() {
         project.apply plugin: 'java'
 
