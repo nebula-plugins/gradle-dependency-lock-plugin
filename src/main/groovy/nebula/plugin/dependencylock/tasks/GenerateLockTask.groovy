@@ -80,8 +80,10 @@ class GenerateLockTask extends AbstractLockTask {
         sibling.children.each { ResolvedDependency dependency ->
             def key = new LockKey(group: dependency.moduleGroup, artifact: dependency.moduleName)
             deps[key].firstLevelTransitive << parent
-            if (peers.contains(key) && !deps[key].childrenVisited) {
-                if (dependency.children.size() > 0) {
+            
+            if (peers.contains(key)) {
+                deps[key].project = true
+                if ((dependency.children.size() > 0) && !deps[key].childrenVisited) {
                     deps[key].childrenVisited = true
                     handleSiblingTransitives(dependency, deps, peers)
                 }

@@ -1,3 +1,8 @@
+1.9.11 / 2014-06-05
+===================
+
+* Fix first level transitive calculation, makes sure project dependencies do not have locked versions
+
 1.9.10 / 2014-06-04
 ===================
 
