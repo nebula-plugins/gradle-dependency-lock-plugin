@@ -22,7 +22,6 @@ import nebula.plugin.scm.providers.ScmProvider
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.TaskExecutionException
 
-
 class CommitLockTask extends AbstractLockTask {
     String description = 'Commit the lock files if an gradle-scm-plugin implementation is applied'
     ScmFactory scmFactory

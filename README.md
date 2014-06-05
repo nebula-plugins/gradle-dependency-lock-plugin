@@ -29,11 +29,29 @@ To include, add the following to your build.gradle
 
 ### Tasks Provided
 
-When the following tasks are run any existing `dependency.lock` file will be ignored. Command line overrides via `-PdependencyLock.override` or `-PdependencyLock.overrideFile` will win.
+Command line overrides via `-PdependencyLock.override` or `-PdependencyLock.overrideFile` will apply.
 
-* generateLock - Generate a lock file into the build directory
-* saveLock - depends on generateLock, copies generated lock into the project directory
+* generateLock - Generate a lock file into the build directory, any existing `dependency.lock` file will be ignored
+* saveLock - copies generated lock into the project directory
 * commitLock - If a [gradle-scm-plugin](https://github.com/nebula-plugins/gradle-scm-plugin) implementation is applied. Will commit dependencies.lock to the configured SCM. Exists only on the rootProject. Assumes scm root is at the same level as the root build.gradle.
+
+#### Common Command Line Overrides
+
+Revert to normal gradle behavior even with plugin applied.
+
+    ./gradlew -PdependencyLock.ignore=true <tasks>
+
+### Common Workflows
+
+1. `./gradlew generateLock saveLock`
+2. `./gradlew test`
+3. if 2 passes `./gradlew commitLock`
+
+or
+
+1. `./gradlew generateLock`
+2. `./gradlew -PdependencyLock.useGeneratedLock=true test`
+3. `./gradlew saveLock commitLock`
 
 ### Extensions Provided
 
@@ -91,6 +109,12 @@ resolution. Plugin checks for the existence of the property, any value will caus
 Allows the user to set if transitive dependencies should be included in the lock file.
 
     ./gradlew -PdependencyLock.includeTransitives=true <tasks>
+
+*dependencyLock.useGeneratedLock*
+
+Use generated lock files in the build directory instead of the locks in the project directories.
+
+    ./gradlew -PdependencyLock.useGeneratedLock=true <task>
 
 *dependencyLock.overrideFile*
 
@@ -193,7 +217,7 @@ The lock will have
 
 When you run
 
-    ./gradlew generateLock
+    ./gradlew generateLock saveLock
 
 It will output
 
