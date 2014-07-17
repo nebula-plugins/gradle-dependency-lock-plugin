@@ -18,5 +18,5 @@ package nebula.plugin.dependencylock.tasks
 import org.gradle.api.DefaultTask
 
 abstract class AbstractLockTask extends DefaultTask {
-    String group = 'Locking tasks'
+    String group = 'Locking'
 }
