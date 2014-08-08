@@ -75,7 +75,7 @@ class GenerateLockTask extends AbstractLockTask {
         return deps
     }
 
-    private static handleSiblingTransitives(ResolvedDependency sibling, Map deps, List peers) {
+    void handleSiblingTransitives(ResolvedDependency sibling, Map deps, List peers) {
         def parent = new LockKey(group: sibling.moduleGroup, artifact: sibling.moduleName)
         sibling.children.each { ResolvedDependency dependency ->
             def key = new LockKey(group: dependency.moduleGroup, artifact: dependency.moduleName)
@@ -93,7 +93,7 @@ class GenerateLockTask extends AbstractLockTask {
         }
     }
 
-    private static handleTransitive(ResolvedDependency transitive, Map deps, List peers, LockKey parent) {
+    void handleTransitive(ResolvedDependency transitive, Map deps, List peers, LockKey parent) {
         def key = new LockKey(group: transitive.moduleGroup, artifact: transitive.moduleName)
 
         if (!deps[key].childrenVisited) {
@@ -121,7 +121,7 @@ class GenerateLockTask extends AbstractLockTask {
         }
     }
 
-    private static String stringifyLock(LockKey key, Map lock) {
+    String stringifyLock(LockKey key, Map lock) {
         def lockLine = new StringBuilder("  \"${key}\": { ")
         if (lock.locked) {
             lockLine << "\"locked\": \"${lock.locked}\""
