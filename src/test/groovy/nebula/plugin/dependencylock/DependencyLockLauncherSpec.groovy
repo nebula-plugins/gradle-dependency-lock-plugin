@@ -20,6 +20,10 @@ import nebula.test.IntegrationSpec
 import org.gradle.BuildResult
 
 class DependencyLockLauncherSpec extends IntegrationSpec {
+    def setup() {
+        fork = true
+    }
+
     static final String SPECIFIC_BUILD_GRADLE = """\
         apply plugin: 'java'
         apply plugin: 'gradle-dependency-lock'

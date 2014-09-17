@@ -1,6 +1,6 @@
 {
-  "com.netflix.nebula:gradle-git-scm-plugin": { "locked": "1.12.1", "requested": "1.12.+" },
-  "com.netflix.nebula:gradle-scm-plugin": { "locked": "1.12.1", "requested": "1.12.+" },
-  "com.netflix.nebula:nebula-test": { "locked": "1.12.0", "requested": "1.12.+" },
+  "com.netflix.nebula:gradle-git-scm-plugin": { "locked": "2.0.0", "requested": "2.0.+" },
+  "com.netflix.nebula:gradle-scm-plugin": { "locked": "2.0.0", "requested": "2.0.+" },
+  "com.netflix.nebula:nebula-test": { "locked": "2.0.0", "requested": "2.0.+" },
   "org.ajoberstar:grgit": { "locked": "0.2.3", "requested": "0.+" }
 }

@@ -15,7 +15,7 @@
  */
 buildscript {
     repositories { jcenter() }
-    dependencies { classpath 'com.netflix.nebula:nebula-plugin-plugin:1.12.+' }
+    dependencies { classpath 'com.netflix.nebula:nebula-plugin-plugin:2.0.+' }
 }
 
 description 'Gradle plugin to allow locking of dynamic dependency versions'

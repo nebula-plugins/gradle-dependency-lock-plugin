@@ -23,6 +23,10 @@ import org.gradle.execution.TaskSelectionException
 import org.gradle.internal.exceptions.LocationAwareException
 
 class DependencyLockCommitLauncherSpec extends IntegrationSpec {
+    def setup() {
+        fork = true
+    }
+
     def setupSpec() {
         Fixture.createFixtureIfNotCreated()
     }
