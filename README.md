@@ -1,9 +1,9 @@
 gradle-dependency-lock-plugin
 =============================
 
-Cloudbees Jenkins release: [![Build Status](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-1.9-release/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-1.9-release/)
+Cloudbees Jenkins release: [![Build Status](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.0-release/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.0-release/)
 
-Cloudbees Jenkins snapshot: [![Build Status](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-1.9-snapshot/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-1.9-snapshot/)
+Cloudbees Jenkins snapshot: [![Build Status](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.0-snapshot/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.0-snapshot/)
 
 A plugin to allow people using dynamic dependency versions to lock them to specific versions.
 
@@ -21,7 +21,7 @@ To include, add the following to your build.gradle
       repositories { jcenter() }
 
       dependencies {
-        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.+'
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:2.0.+'
       }
     }
 
@@ -61,6 +61,7 @@ or
 
 * lockFile - Name of the file to read/write dependency locks, defaults to 'dependencies.lock'
 * configurations - Collection of the configuration names to read, defaults to 'testRuntime'. For java projects testRuntime is good since it extends compile, runtime, and testCompile.
+* skippedDependencies - The dependencies to not include in the lock. Uses a comma separated list with pattern `'<group>:<artifact>'`
 * includeTransitives - Boolean if true transitvie dependencies will be included in the lock
 
 Use the extension if you wish to configure. Each project where gradle-dependency-lock will have its own dependencyLock extension.
@@ -68,6 +69,7 @@ Use the extension if you wish to configure. Each project where gradle-dependency
     dependencyLock {
       lockFile = 'dependencies.lock'
       configurationNames = ['testRuntime']
+      skippedDependencies = []
       includeTransitives = false
     }
 

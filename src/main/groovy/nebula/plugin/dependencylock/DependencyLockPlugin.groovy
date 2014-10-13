@@ -121,6 +121,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                 new File(project.buildDir, clLockFileName ?: extension.lockFile)
             }
             configurationNames = { extension.configurationNames }
+            skippedDependencies = { extension.skippedDependencies }
             includeTransitives = { project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives']) : extension.includeTransitives }
         }
         lockTask.overrides = overrides
