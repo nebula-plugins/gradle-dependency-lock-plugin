@@ -121,6 +121,33 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'build/dependencies.lock').text == FOO_LOCK
     }
 
+    def 'create lock with skipped dependencies'() {
+        buildFile << """\
+            apply plugin: 'java'
+            apply plugin: 'gradle-dependency-lock'
+            repositories { maven { url '${Fixture.repo}' } }
+            dependencyLock {
+                skippedDependencies = [ 'test.example:foo' ]
+            }
+            dependencies {
+                compile 'test.example:foo:2.+'
+                compile 'test.example:baz:1.+'
+            }
+        """.stripIndent()
+
+        def lockWithSkips = '''\
+            {
+              "test.example:baz": { "locked": "1.1.0", "requested": "1.+" }
+            }
+        '''.stripIndent()
+
+        when:
+        runTasksSuccessfully('generateLock')
+
+        then:
+        new File(projectDir, 'build/dependencies.lock').text == lockWithSkips
+    }
+
     def 'update lock'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << OLD_FOO_LOCK
