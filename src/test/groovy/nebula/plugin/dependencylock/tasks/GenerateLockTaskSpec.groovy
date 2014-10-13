@@ -37,7 +37,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
-        task.configurationNames= [ 'testRuntime' ]
+        task.configurationNames = [ 'testRuntime' ]
 
         when:
         task.execute()
@@ -49,6 +49,33 @@ class GenerateLockTaskSpec extends ProjectSpec {
               "test.example:foo": { "locked": "2.0.1", "requested": "2.+" }
             }
         '''.stripIndent()
+        task.dependenciesLock.text == lockText
+    }
+
+    def 'skip dependencies via transitives when configured'() {
+        project.apply plugin: 'java'
+        project.repositories { maven { url Fixture.repo } }
+        project.dependencies {
+            compile 'test.example:foobaz:1.+'
+        }
+
+        GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
+        task.configurationNames = [ 'testRuntime' ]
+        task.skippedDependencies = [ 'test.example:foo' ]
+        task.includeTransitives = true
+
+        String lockText = '''\
+            {
+              "test.example:baz": { "locked": "1.0.0", "transitive": [ "test.example:foobaz" ] },
+              "test.example:foobaz": { "locked": "1.0.0", "requested": "1.+" }
+            }
+        '''.stripIndent()
+
+        when:
+        task.execute()
+
+        then:
         task.dependenciesLock.text == lockText
     }
 

@@ -26,6 +26,7 @@ import org.gradle.api.tasks.TaskAction
 class GenerateLockTask extends AbstractLockTask {
     String description = 'Create a lock file in build/<configured name>'
     Set<String> configurationNames
+    Set<String> skippedDependencies = []
     File dependenciesLock
     Map overrides
     boolean includeTransitives = false
@@ -111,7 +112,8 @@ class GenerateLockTask extends AbstractLockTask {
     }
 
     private void writeLock(deps) {
-        def strings = deps.collect { LockKey k, Map v -> stringifyLock(k, v) }
+        def strings = deps.findAll { !getSkippedDependencies().contains(it.key.toString()) }
+                .collect { LockKey k, Map v -> stringifyLock(k, v) }
         strings = strings.sort()
         project.buildDir.mkdirs()
         getDependenciesLock().withPrintWriter { out ->
