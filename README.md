@@ -61,6 +61,7 @@ or
 
 * lockFile - Name of the file to read/write dependency locks, defaults to 'dependencies.lock'
 * configurations - Collection of the configuration names to read, defaults to 'testRuntime'. For java projects testRuntime is good since it extends compile, runtime, and testCompile.
+* skippedDependencies - The dependencies to not include in the lock. Uses a comma separated list with pattern `'<group>:<artifact>'`
 * includeTransitives - Boolean if true transitvie dependencies will be included in the lock
 
 Use the extension if you wish to configure. Each project where gradle-dependency-lock will have its own dependencyLock extension.
@@ -68,6 +69,7 @@ Use the extension if you wish to configure. Each project where gradle-dependency
     dependencyLock {
       lockFile = 'dependencies.lock'
       configurationNames = ['testRuntime']
+      skippedDependencies = []
       includeTransitives = false
     }
 

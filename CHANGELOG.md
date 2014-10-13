@@ -1,3 +1,8 @@
+1.12.2 / 2014-10-13
+===================
+
+* Add configuration to allow skipping certain dependencies from the lock
+
 1.12.1 / 2014-06-11
 ===================
 
