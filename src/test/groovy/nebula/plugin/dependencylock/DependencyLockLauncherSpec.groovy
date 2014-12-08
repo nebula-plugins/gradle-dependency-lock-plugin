@@ -86,10 +86,10 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        runTasksSuccessfully('dependencies')
+        def result = runTasksSuccessfully('dependencies')
 
         then:
-        standardOutput.contains 'test.example:foo:1.0.1 -> 1.0.0'
+        result.standardOutput.contains 'test.example:foo:1.0.1 -> 1.0.0'
     }
 
     def 'override lock file is applied'() {
@@ -105,10 +105,10 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasksSuccessfully('dependencies')
+        def result = runTasksSuccessfully('dependencies')
 
         then:
-        standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
+        result.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
     }
 
     def 'create lock'() {
@@ -172,16 +172,16 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'build/dependencies.lock').text == FOO_LOCK
 
         when:
-        runTasksSuccessfully('dependencies')
+        def result0 = runTasksSuccessfully('dependencies')
 
         then:
-        standardOutput.contains 'test.example:foo:1.+ -> 1.0.0'
+        result0.standardOutput.contains 'test.example:foo:1.+ -> 1.0.0'
 
         when:
-        runTasksSuccessfully('-PdependencyLock.useGeneratedLock=true', 'dependencies')
+        def result1 = runTasksSuccessfully('-PdependencyLock.useGeneratedLock=true', 'dependencies')
 
         then:
-        standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
+        result1.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
     }
 
     def 'trigger failure with bad lock file'() {
