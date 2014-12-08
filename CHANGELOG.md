@@ -1,3 +1,8 @@
+1.12.3 / 2014-12-08
+===================
+
+* Set cacheDynamicVersion to 0 when generating lock
+
 1.12.2 / 2014-10-13
 ===================
 

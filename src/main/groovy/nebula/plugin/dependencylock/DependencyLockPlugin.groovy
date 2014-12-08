@@ -53,6 +53,14 @@ class DependencyLockPlugin implements Plugin<Project> {
         project.gradle.taskGraph.whenReady { taskGraph ->
             File dependenciesLock = new File(project.projectDir, clLockFileName ?: extension.lockFile)
 
+            if (taskGraph.hasTask(lockTask)) {
+                project.configurations.all {
+                    resolutionStrategy {
+                        cacheDynamicVersionsFor 0, 'seconds'
+                    }
+                }
+            }
+
             if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists() &&
                     !project.hasProperty('dependencyLock.ignore')) {
                 applyLock(dependenciesLock, overrides)
