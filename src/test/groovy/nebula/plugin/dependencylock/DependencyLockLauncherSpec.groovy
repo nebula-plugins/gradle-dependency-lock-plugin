@@ -234,6 +234,16 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK    
     }
 
+    def 'command line overrideFile fails if file is non existent'() {
+        buildFile << BUILD_GRADLE
+
+        when:
+        def result = runTasksWithFailure('-PdependencyLock.overrideFile=test.lock', 'generateLock')
+
+        then:
+        result.failure != null
+    }
+
     def 'multiple runs each generate a lock'() {
         buildFile << BUILD_GRADLE
 
