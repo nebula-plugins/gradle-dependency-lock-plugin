@@ -62,9 +62,9 @@ class DependencyLockPlugin implements Plugin<Project> {
             }
 
             if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists() &&
-                    !project.hasProperty('dependencyLock.ignore')) {
+                    !shouldIgnoreDependencyLock()) {
                 applyLock(dependenciesLock, overrides)
-            } else if (!project.hasProperty('dependencyLock.ignore')) {
+            } else if (!shouldIgnoreDependencyLock()) {
                 applyOverrides(overrides)
             }
         }
@@ -173,9 +173,19 @@ class DependencyLockPlugin implements Plugin<Project> {
         }
     }
 
+    boolean shouldIgnoreDependencyLock() {
+        if (project.hasProperty('dependencyLock.ignore')) {
+            def prop = project.property('dependencyLock.ignore')
+
+            (prop instanceof String) ? prop.toBoolean() : prop.asBoolean()
+        } else {
+            false
+        }
+    }
+
     private Map loadOverrides() {
         Map overrides = [:]
-        if (project.hasProperty('dependencyLock.ignore')) {
+        if (shouldIgnoreDependencyLock()) {
             return overrides
         }
 
