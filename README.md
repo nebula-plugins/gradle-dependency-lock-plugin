@@ -11,6 +11,12 @@ Some project teams may prefer to have their build.gradle dependencies reflect th
 
 Inspired by [Bundler](http://bundler.io)
 
+## Deprecation Warning
+
+We are deprecating the old plugin name `gradle-dependency-lock`/`nebula.gradle-dependency-lock` in favor of `dependency-lock`/`nebula.dependency-lock`.
+
+The old usage will be removed sometime after March next year. Until being switched we will print a `logger.warn` level message indicating its deprecation.
+
 ## Usage
 
 ### Applying the Plugin
