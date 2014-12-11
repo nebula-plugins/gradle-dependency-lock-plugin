@@ -50,8 +50,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         foo.moduleVersion == '1.0.0'
     }
 
-    @Unroll
-    def 'read in dependencies.lock ignore dependencyLock.ignore if it is not truthy - #ignore : #version'() {
+    def 'read in dependencies.lock ignore dependencyLock.ignore if it is not truthy'() {
         stockTestSetup()
         project.ext.set('dependencyLock.ignore', ignore)
         project.apply plugin: pluginName
