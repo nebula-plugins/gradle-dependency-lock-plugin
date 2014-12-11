@@ -2,6 +2,8 @@
 ===================
 
 * Set cacheDynamicVersion to 0 when generating lock
+* Documentation improvements
+* Deprecated plugin name gradle-dependency-lock in favor of dependency-lock
 
 1.12.2 / 2014-10-13
 ===================

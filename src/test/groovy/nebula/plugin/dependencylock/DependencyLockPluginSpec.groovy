@@ -22,7 +22,7 @@ import org.gradle.api.Task
 import org.gradle.testfixtures.ProjectBuilder
 
 class DependencyLockPluginSpec extends ProjectSpec {
-    String pluginName = 'gradle-dependency-lock'
+    String pluginName = 'dependency-lock'
 
     def setupSpec() {
         Fixture.createFixtureIfNotCreated()

@@ -21,11 +21,11 @@ To include, add the following to your build.gradle
       repositories { jcenter() }
 
       dependencies {
-        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.9.+'
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.12.+'
       }
     }
 
-    apply plugin: 'gradle-dependency-lock'
+    apply plugin: 'dependency-lock'
 
 ### Tasks Provided
 
