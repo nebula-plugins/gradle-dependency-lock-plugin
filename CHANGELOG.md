@@ -1,3 +1,8 @@
+2.0.2 / 2014-12-12
+==================
+
+* Merge in 1.12.3
+
 2.0.1 / 2014-10-13
 ==================
 
@@ -7,6 +12,14 @@
 ==================
 
 * Initial release using gradle 2.0
+
+1.12.3 / 2014-12-11
+===================
+
+* Set cacheDynamicVersion to 0 when generating lock
+* Documentation improvements
+* Deprecated plugin name gradle-dependency-lock in favor of dependency-lock
+* Changed dependencyLock.ignore respect the value set on it instead of simple existence
 
 1.12.2 / 2014-10-13
 ===================
