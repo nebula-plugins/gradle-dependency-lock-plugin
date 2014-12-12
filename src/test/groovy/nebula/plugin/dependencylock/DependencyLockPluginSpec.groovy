@@ -20,9 +20,10 @@ import nebula.test.ProjectSpec
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.testfixtures.ProjectBuilder
+import spock.lang.Unroll
 
 class DependencyLockPluginSpec extends ProjectSpec {
-    String pluginName = 'gradle-dependency-lock'
+    String pluginName = 'dependency-lock'
 
     def setupSpec() {
         Fixture.createFixtureIfNotCreated()
@@ -47,6 +48,27 @@ class DependencyLockPluginSpec extends ProjectSpec {
         then:
         def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
         foo.moduleVersion == '1.0.0'
+    }
+
+    def 'read in dependencies.lock ignore dependencyLock.ignore if it is not truthy'() {
+        stockTestSetup()
+        project.ext.set('dependencyLock.ignore', ignore)
+        project.apply plugin: pluginName
+        triggerTaskGraphWhenReady()
+        def resolved = project.configurations.compile.resolvedConfiguration
+
+        expect:
+        def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
+        foo.moduleVersion == version
+
+        where:
+        ignore  || version
+        false   || '1.0.0'
+        'false' || '1.0.0'
+        'foo'   || '1.0.0'
+        0       || '1.0.0'
+        'true'  || '1.0.1'
+        1       || '1.0.1'
     }
 
     def 'ignore dependencies.lock'() {

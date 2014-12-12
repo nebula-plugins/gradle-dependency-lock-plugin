@@ -53,10 +53,18 @@ class DependencyLockPlugin implements Plugin<Project> {
         project.gradle.taskGraph.whenReady { taskGraph ->
             File dependenciesLock = new File(project.projectDir, clLockFileName ?: extension.lockFile)
 
+            if (taskGraph.hasTask(lockTask)) {
+                project.configurations.all {
+                    resolutionStrategy {
+                        cacheDynamicVersionsFor 0, 'seconds'
+                    }
+                }
+            }
+
             if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists() &&
-                    !project.hasProperty('dependencyLock.ignore')) {
+                    !shouldIgnoreDependencyLock()) {
                 applyLock(dependenciesLock, overrides)
-            } else if (!project.hasProperty('dependencyLock.ignore')) {
+            } else if (!shouldIgnoreDependencyLock()) {
                 applyOverrides(overrides)
             }
         }
@@ -165,9 +173,19 @@ class DependencyLockPlugin implements Plugin<Project> {
         }
     }
 
+    boolean shouldIgnoreDependencyLock() {
+        if (project.hasProperty('dependencyLock.ignore')) {
+            def prop = project.property('dependencyLock.ignore')
+
+            (prop instanceof String) ? prop.toBoolean() : prop.asBoolean()
+        } else {
+            false
+        }
+    }
+
     private Map loadOverrides() {
         Map overrides = [:]
-        if (project.hasProperty('dependencyLock.ignore')) {
+        if (shouldIgnoreDependencyLock()) {
             return overrides
         }
 
