@@ -41,23 +41,37 @@ class GenerateLockTask extends AbstractLockTask {
         def deps = [:].withDefault { [transitive: [] as Set, firstLevelTransitive: [] as Set, childrenVisited: false] }
         def confs = getConfigurationNames().collect { project.configurations.getByName(it) }
 
+        // Peers are all the projects in the build to which this plugin is applied.
         def peers = project.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) }
 
         confs.each { Configuration configuration ->
+            // Capture the version of each dependency as requested in the build script for reference.
             configuration.allDependencies.withType(ExternalDependency).each { Dependency dependency ->
                 def key = new LockKey(group: dependency.group, artifact: dependency.name)
                 deps[key].requested = dependency.version
             }
+
+            // Lock the version of each dependency specified in the build script as resolved by Gradle.
             configuration.resolvedConfiguration.firstLevelModuleDependencies.each { ResolvedDependency resolved ->
                 def key = new LockKey(group: resolved.moduleGroup, artifact: resolved.moduleName)
+
+                // If this dependency does not exist in our list of peers, it is a standard dependency. Otherwise, it is
+                // a project dependency.
                 if (!peers.contains(key)) {
                     deps[key].locked = resolved.moduleVersion
                 } else {
+                    // Project dependencies don't have a version so they must be treated differently. Record the project
+                    // as an explicit dependency, but do not lock it to a version.
                     deps[key].project = true
+
+                    // If we don't include transitive dependencies, then we must lock the first-level "transitive"
+                    // dependencies of each project dependency.
                     if (!getIncludeTransitives()) {
                         handleSiblingTransitives(resolved, deps, peers)
                     }
                 }
+
+                // If requested, lock all the transitive dependencies of the declared top-level dependencies.
                 if (getIncludeTransitives()) {
                     deps[key].childrenVisited = true
                     resolved.children.each { handleTransitive(it, deps, peers, key) }
@@ -65,6 +79,8 @@ class GenerateLockTask extends AbstractLockTask {
             }
         }
 
+        // Add all the overrides to the locked dependencies and record whether a specified override modified a
+        // preexisting dependency.
         getOverrides().each { String k, String overrideVersion ->
             def tokens = k.tokenize(':')
             LockKey key = new LockKey(group: tokens[0], artifact: tokens[1] )
@@ -80,10 +96,17 @@ class GenerateLockTask extends AbstractLockTask {
         def parent = new LockKey(group: sibling.moduleGroup, artifact: sibling.moduleName)
         sibling.children.each { ResolvedDependency dependency ->
             def key = new LockKey(group: dependency.moduleGroup, artifact: dependency.moduleName)
+
+            // Record the project[s] from which this dependency originated.
             deps[key].firstLevelTransitive << parent
-            
+
+            // Lock the transitive dependencies of each project dependency, recursively.
             if (peers.contains(key)) {
                 deps[key].project = true
+
+                // Multiple configurations may specify dependencies on the same project, and multiple projects might
+                // also be dependent on the same project. We only need to record the top-level transitive dependencies
+                // once for each project. Flag a project as visited as soon as we encounter it.
                 if ((dependency.children.size() > 0) && !deps[key].childrenVisited) {
                     deps[key].childrenVisited = true
                     handleSiblingTransitives(dependency, deps, peers)
@@ -97,7 +120,11 @@ class GenerateLockTask extends AbstractLockTask {
     void handleTransitive(ResolvedDependency transitive, Map deps, List peers, LockKey parent) {
         def key = new LockKey(group: transitive.moduleGroup, artifact: transitive.moduleName)
 
+        // Multiple dependencies may share any subset of their transitive dependencies. Each dependency only needs to be
+        // visited once so flag it once we visit it.
         if (!deps[key].childrenVisited) {
+
+            // Lock each dependency and its children, recursively. Don't forget transitive project dependencies.
             if (!peers.contains(key)) {
                 deps[key].locked = transitive.moduleVersion
             } else {
@@ -108,6 +135,8 @@ class GenerateLockTask extends AbstractLockTask {
             }
             transitive.children.each { handleTransitive(it, deps, peers, key) }
         }
+
+        // Record the dependencies from which this artifact originated transitively.
         deps[key].transitive << parent
     }
 

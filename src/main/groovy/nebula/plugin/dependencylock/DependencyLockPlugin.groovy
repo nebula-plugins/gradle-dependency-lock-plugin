@@ -158,14 +158,22 @@ class DependencyLockPlugin implements Plugin<Project> {
     void applyLock(File dependenciesLock, Map overrides) {
         logger.info("Using ${dependenciesLock.name} to lock dependencies")
         def locks = loadLock(dependenciesLock)
+
+        // Non-project locks are the top-level dependencies, and possibly transitive thereof, of this project which are
+        // locked by the lock file. There may also be dependencies on other projects. These are not captured here.
         def nonProjectLocks = locks.findAll { it.value?.locked }
+
+        // Override locks from the file with any of the user specified manual overrides.
         def lockForces = nonProjectLocks.collect {
             overrides.containsKey(it.key) ? "${it.key}:${overrides[it.key]}" : "${it.key}:${it.value.locked}"
         }
+
+        // If the user specifies an override that does not exist in the lock file, force that dependency anyway.
         def unusedOverrides = overrides.findAll { !locks.containsKey(it.key) }.collect { "${it.key}:${it.value}" }
         lockForces << unusedOverrides
         logger.debug(lockForces.toString())
 
+        // Pretty nice after all that work (:
         project.configurations.all {
             resolutionStrategy {
                 lockForces.each { dep -> force dep}
@@ -184,17 +192,20 @@ class DependencyLockPlugin implements Plugin<Project> {
     }
 
     private Map loadOverrides() {
+        // Overrides are dependencies that trump the lock file.
         Map overrides = [:]
         if (shouldIgnoreDependencyLock()) {
             return overrides
         }
 
+        // Load overrides from a file if the user has specified one via a property.
         if (project.hasProperty('dependencyLock.overrideFile')) {
             File dependenciesLock = new File(project.rootDir, project['dependencyLock.overrideFile'])
             loadLock(dependenciesLock).each { overrides[it.key] = it.value.locked }
             logger.debug "Override file loaded: ${project['dependencyLock.overrideFile']}"
         }
 
+        // Allow the user to specify overrides via a property as well.
         if (project.hasProperty('dependencyLock.override')) {
             project['dependencyLock.override'].tokenize(',').each {
                 def (group, artifact, version) = it.tokenize(':')
