@@ -19,12 +19,12 @@ import groovy.transform.EqualsAndHashCode
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
-import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.tasks.TaskAction
 
 class GenerateLockTask extends AbstractLockTask {
     String description = 'Create a lock file in build/<configured name>'
+    Closure filter = { group, name, version -> true }
     Set<String> configurationNames
     Set<String> skippedDependencies = []
     File dependenciesLock
@@ -41,18 +41,27 @@ class GenerateLockTask extends AbstractLockTask {
         def deps = [:].withDefault { [transitive: [] as Set, firstLevelTransitive: [] as Set, childrenVisited: false] }
         def confs = getConfigurationNames().collect { project.configurations.getByName(it) }
 
-        // Peers are all the projects in the build to which this plugin is applied.
+        // Peers are all the projects in the build to which this plugin has been applied.
         def peers = project.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) }
 
         confs.each { Configuration configuration ->
+
             // Capture the version of each dependency as requested in the build script for reference.
-            configuration.allDependencies.withType(ExternalDependency).each { Dependency dependency ->
+            def externalDependencies = configuration.allDependencies.withType(ExternalDependency)
+            def filteredExternalDependencies = externalDependencies.findAll { Dependency dependency ->
+                filter(dependency.group, dependency.name, dependency.version)
+            }
+            filteredExternalDependencies.each { Dependency dependency ->
                 def key = new LockKey(group: dependency.group, artifact: dependency.name)
                 deps[key].requested = dependency.version
             }
 
             // Lock the version of each dependency specified in the build script as resolved by Gradle.
-            configuration.resolvedConfiguration.firstLevelModuleDependencies.each { ResolvedDependency resolved ->
+            def resolvedDependencies = configuration.resolvedConfiguration.firstLevelModuleDependencies
+            def filteredResolvedDependencies = resolvedDependencies.findAll { ResolvedDependency resolved ->
+                filter(resolved.moduleGroup, resolved.moduleName, resolved.moduleVersion)
+            }
+            filteredResolvedDependencies.each { ResolvedDependency resolved ->
                 def key = new LockKey(group: resolved.moduleGroup, artifact: resolved.moduleName)
 
                 // If this dependency does not exist in our list of peers, it is a standard dependency. Otherwise, it is

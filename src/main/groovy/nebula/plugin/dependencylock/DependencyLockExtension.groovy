@@ -18,6 +18,7 @@ package nebula.plugin.dependencylock
 class DependencyLockExtension {
     String lockFile = 'dependencies.lock'
     Set<String> configurationNames = ['testRuntime'] as Set
+    Closure dependencyFilter = { String group, String name, String version -> true }
     Set<String> skippedDependencies = [] as Set
     boolean includeTransitives = false
 }

@@ -391,4 +391,34 @@ class GenerateLockTaskSpec extends ProjectSpec {
         '''.stripIndent()
         task.dependenciesLock.text == lockText
     }
+
+    def 'filter is applied'() {
+        project.apply plugin: 'java'
+
+        project.repositories { maven { url Fixture.repo } }
+        project.dependencies {
+            compile 'test.example:foo:2.+'
+            testCompile 'test.example:baz:1.+'
+        }
+
+        GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
+        task.configurationNames = [ 'testRuntime' ]
+        task.filter = filter as Closure
+
+        when:
+        task.execute()
+
+        then:
+        task.dependenciesLock.text == lockText
+
+        where:
+        filter                                            || lockText
+        { group, artifact, version -> false }             || '{\n\n}\n'
+        { group, artifact, version -> artifact == 'foo' } || '''\
+            {
+              "test.example:foo": { "locked": "2.0.1", "requested": "2.+" }
+            }
+        '''.stripIndent()
+    }
 }
