@@ -46,10 +46,8 @@ class Fixture {
     }
 
     static createFixtureIfNotCreated() {
-        synchronized(created) {
-            if (!created.getAndSet(true)) {
-                createFixture()
-            }
+        if (!created.getAndSet(true)) {
+            createFixture()
         }
     }
 }
