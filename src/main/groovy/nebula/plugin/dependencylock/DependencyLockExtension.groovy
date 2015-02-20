@@ -19,6 +19,7 @@ class DependencyLockExtension {
     String lockFile = 'dependencies.lock'
     Set<String> configurationNames = ['testRuntime'] as Set
     Closure dependencyFilter = { String group, String name, String version -> true }
+    Set<String> updateDependencies = [] as Set
     Set<String> skippedDependencies = [] as Set
     boolean includeTransitives = false
 }

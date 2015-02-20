@@ -15,7 +15,6 @@
  */
 package nebula.plugin.dependencylock.tasks
 
-import groovy.transform.EqualsAndHashCode
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
@@ -23,7 +22,7 @@ import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.tasks.TaskAction
 
 class GenerateLockTask extends AbstractLockTask {
-    String description = 'Create a lock file in build/<configured name>'
+    String description = 'Create a lock file in build/<specified name>'
     Closure filter = { group, name, version -> true }
     Set<String> configurationNames
     Set<String> skippedDependencies = []
@@ -51,7 +50,7 @@ class GenerateLockTask extends AbstractLockTask {
             def filteredExternalDependencies = externalDependencies.findAll { Dependency dependency ->
                 filter(dependency.group, dependency.name, dependency.version)
             }
-            filteredExternalDependencies.each { Dependency dependency ->
+            filteredExternalDependencies.each { ExternalDependency dependency ->
                 def key = new LockKey(group: dependency.group, artifact: dependency.name)
                 deps[key].requested = dependency.version
             }
@@ -149,7 +148,7 @@ class GenerateLockTask extends AbstractLockTask {
         deps[key].transitive << parent
     }
 
-    private void writeLock(deps) {
+    void writeLock(deps) {
         def strings = deps.findAll { !getSkippedDependencies().contains(it.key.toString()) }
                 .collect { LockKey k, Map v -> stringifyLock(k, v) }
         strings = strings.sort()
@@ -185,16 +184,5 @@ class GenerateLockTask extends AbstractLockTask {
         lockLine << ' }'
 
         return lockLine.toString()
-    }
-
-    @EqualsAndHashCode
-    private static class LockKey {
-        String group
-        String artifact
-
-        @Override
-        String toString() {
-            "${group}:${artifact}"
-        }
     }
 }
