@@ -197,7 +197,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def result = runTasksWithFailure('build')
 
         then:
-        result.failure.message.contains('unreadable or invalid json')
+        result.failure.cause.cause.message.contains('unreadable or invalid json')
     }
 
     def 'existing lock ignored while updating lock'() {

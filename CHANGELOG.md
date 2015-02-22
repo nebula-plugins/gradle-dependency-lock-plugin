@@ -1,3 +1,8 @@
+1.12.4 / 2015-02-??
+===================
+
+* Modify plugin so the lock is used by IDEs which skip taskGraph.whenReady
+
 1.12.3 / 2014-12-11
 ===================
 
