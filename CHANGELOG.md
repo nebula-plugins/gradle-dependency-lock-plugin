@@ -2,6 +2,7 @@
 ===================
 
 * Modify plugin so the lock is used by IDEs which skip taskGraph.whenReady
+* Plugin can now be applied to a rootProject in a multiproject without configuration
 
 1.12.3 / 2014-12-11
 ===================

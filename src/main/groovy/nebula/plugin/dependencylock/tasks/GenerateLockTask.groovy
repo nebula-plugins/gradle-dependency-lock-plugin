@@ -25,6 +25,7 @@ import org.gradle.api.tasks.TaskAction
 
 class GenerateLockTask extends AbstractLockTask {
     String description = 'Create a lock file in build/<configured name>'
+    Collection<Configuration> configurations = []
     Set<String> configurationNames
     Set<String> skippedDependencies = []
     File dependenciesLock
@@ -33,14 +34,13 @@ class GenerateLockTask extends AbstractLockTask {
 
     @TaskAction
     void lock() {
-        def dependencyMap = readDependenciesFromConfigurations()
+        Collection<Configuration> confs = getConfigurations() ?: getConfigurationNames().collect { project.configurations.getByName(it) }
+        def dependencyMap = readDependenciesFromConfigurations(confs)
         writeLock(dependencyMap)
     }
 
-    private readDependenciesFromConfigurations() {
+    private readDependenciesFromConfigurations(Collection<Configuration> confs) {
         def deps = [:].withDefault { [transitive: [] as Set, firstLevelTransitive: [] as Set, childrenVisited: false] }
-        def confs = getConfigurationNames().collect { project.configurations.getByName(it) }
-
         def peers = project.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) }
 
         confs.each { Configuration configuration ->
@@ -137,11 +137,11 @@ class GenerateLockTask extends AbstractLockTask {
             lockLine << ", \"viaOverride\": \"${lock.viaOverride}\""
         }
         if (lock.transitive) {
-            def transitiveFrom = lock.transitive.sort().collect { "\"${it}\""}.join(', ')
+            def transitiveFrom = lock.transitive.collect { "\"${it}\""}.sort().join(', ')
             lockLine << ", \"transitive\": [ ${transitiveFrom} ]"
         }
         if (lock.firstLevelTransitive) {
-            def transitiveFrom = lock.firstLevelTransitive.sort().collect { "\"${it}\""}.join(', ')
+            def transitiveFrom = lock.firstLevelTransitive.collect { "\"${it}\""}.sort().join(', ')
             lockLine << ", \"firstLevelTransitive\": [ ${transitiveFrom} ]"
         }
         lockLine << ' }'

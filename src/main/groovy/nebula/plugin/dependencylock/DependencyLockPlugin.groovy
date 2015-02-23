@@ -24,6 +24,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 
@@ -37,6 +38,7 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         String clLockFileName = project.hasProperty('dependencyLock.lockFile') ? project['dependencyLock.lockFile'] : null
         DependencyLockExtension extension = project.extensions.create('dependencyLock', DependencyLockExtension)
+        extension.configurationNames = project.configurations.all*.name
         DependencyLockCommitExtension commitExtension = project.rootProject.extensions.findByType(DependencyLockCommitExtension)
         if (!commitExtension) {
             commitExtension = project.rootProject.extensions.create('commitDependencyLock', DependencyLockCommitExtension)
@@ -49,6 +51,14 @@ class DependencyLockPlugin implements Plugin<Project> {
             logger.lifecycle(clLockFileName)
         }
         SaveLockTask saveTask = configureSaveTask(lockTask, extension)
+
+        // configure global lock only on rootProject
+        String globalLockFileName = project.hasProperty('dependencyLock.globalLockFile') ? project['dependencyLock.globalLockFile'] : null
+        if (project == project.rootProject) {
+            GenerateLockTask globalLock = configureGlobalLockTask(globalLockFileName, extension, overrides)
+            SaveLockTask globalSave = configureGlobalSaveTask(globalLock, extension)
+        }
+
         configureCommitTask(clLockFileName, saveTask, extension, commitExtension)
 
         Map<String, Set<?>> buildForces = [:]
@@ -58,7 +68,13 @@ class DependencyLockPlugin implements Plugin<Project> {
                 buildForces[conf.name] = conf.resolutionStrategy.forcedModules.clone()
             }
 
-            File dependenciesLock = new File(project.projectDir, clLockFileName ?: extension.lockFile)
+            File dependenciesLock
+            File globalLock = new File(project.rootProject.projectDir, globalLockFileName ?: extension.globalLockFile)
+            if (globalLock.exists()) {
+                dependenciesLock = globalLock
+            } else {
+                dependenciesLock = new File(project.projectDir, clLockFileName ?: extension.lockFile)
+            }
 
             if (dependenciesLock.exists() && !shouldIgnoreDependencyLock()) {
                 applyLock(dependenciesLock, overrides)
@@ -85,7 +101,7 @@ class DependencyLockPlugin implements Plugin<Project> {
     }
 
     private void configureCommitTask(String clLockFileName, SaveLockTask saveTask, DependencyLockExtension lockExtension,
-            DependencyLockCommitExtension commitExtension) {
+            DependencyLockCommitExtension commitExtension, SaveLockTask globalSaveTask = null) {
         project.plugins.withType(ScmPlugin) {
             if (!project.rootProject.tasks.findByName('commitLock')) {
                 CommitLockTask commitTask = project.rootProject.tasks.create('commitLock', CommitLockTask)
@@ -99,6 +115,9 @@ class DependencyLockPlugin implements Plugin<Project> {
                         def rootLock = new File(project.rootProject.projectDir, clLockFileName ?: lockExtension.lockFile)
                         if (rootLock.exists()) {
                             lockFiles << rootLock
+                        }
+                        if (globalSaveTask) {
+                            lockFiles << globalSaveTask.outputLock
                         }
                         project.rootProject.subprojects.each {
                             def potentialLock = new File(it.projectDir, clLockFileName ?: lockExtension.lockFile)
@@ -124,6 +143,12 @@ class DependencyLockPlugin implements Plugin<Project> {
             generatedLock = { lockTask.dependenciesLock }
             outputLock = { new File(project.projectDir, extension.lockFile) }
         }
+        configureCommonSaveTask(saveTask, lockTask)
+
+        saveTask
+    }
+
+    private void configureCommonSaveTask(SaveLockTask saveTask, GenerateLockTask lockTask) {
         saveTask.mustRunAfter lockTask
         saveTask.outputs.upToDateWhen {
             if (saveTask.generatedLock.exists() && saveTask.outputLock.exists()) {
@@ -132,23 +157,60 @@ class DependencyLockPlugin implements Plugin<Project> {
                 false
             }
         }
-
-        saveTask
     }
 
-    private GenerateLockTask configureLockTask(String clLockFileName, DependencyLockExtension extension, Map overrides) {
+    private SaveLockTask configureGlobalSaveTask(GenerateLockTask globalLockTask, DependencyLockExtension extension) {
+        SaveLockTask globalSaveTask = project.tasks.create('saveGlobalLock', SaveLockTask)
+        globalSaveTask.conventionMapping.with {
+            generatedLock = { globalLockTask.dependenciesLock }
+            outputLock = { new File(project.projectDir, extension.globalLockFile) }
+        }
+        configureCommonSaveTask(globalSaveTask, globalLockTask)
+
+        globalSaveTask
+    }
+
+    private GenerateLockTask configureLockTask(String clLockFileName, DependencyLockExtension extension, Map overrideMap) {
         GenerateLockTask lockTask = project.tasks.create('generateLock', GenerateLockTask)
+        setupLockConventionMapping(lockTask, extension, overrideMap)
         lockTask.conventionMapping.with {
             dependenciesLock = {
                 new File(project.buildDir, clLockFileName ?: extension.lockFile)
             }
             configurationNames = { extension.configurationNames }
-            skippedDependencies = { extension.skippedDependencies }
-            includeTransitives = { project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives']) : extension.includeTransitives }
         }
-        lockTask.overrides = overrides
 
         lockTask
+    }
+
+    private void setupLockConventionMapping(GenerateLockTask task, DependencyLockExtension extension, Map overrideMap) {
+        task.conventionMapping.with {
+            skippedDependencies = { extension.skippedDependencies }
+            includeTransitives = { project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives']) : extension.includeTransitives }
+            overrides = { overrideMap }
+        }
+    }
+
+    private GenerateLockTask configureGlobalLockTask(String globalLockFileName, DependencyLockExtension extension, Map overrides) {
+        GenerateLockTask globalLockTask = project.tasks.create('generateGlobalLock', GenerateLockTask)
+        setupLockConventionMapping(globalLockTask, extension, overrides)
+        globalLockTask.doFirst {
+            project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
+        }
+        globalLockTask.conventionMapping.with {
+            dependenciesLock = {
+                new File(project.buildDir, globalLockFileName ?: extension.globalLockFile)
+            }
+            configurations = {
+                def subprojects = project.subprojects.collect { project.dependencies.create(it) }
+                def subprojectsArray = subprojects.toArray(new Dependency[subprojects.size()])
+                def conf = project.configurations.detachedConfiguration(subprojectsArray)
+
+                [conf]
+            }
+        }
+
+        globalLockTask
     }
 
     void applyOverrides(Map overrides) {
