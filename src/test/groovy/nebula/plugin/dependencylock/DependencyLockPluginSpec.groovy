@@ -42,7 +42,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         then:
@@ -54,7 +54,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         stockTestSetup()
         project.ext.set('dependencyLock.ignore', ignore)
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         expect:
@@ -77,7 +77,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         then:
@@ -98,7 +98,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         then:
@@ -117,7 +117,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
 
         then:
         def resolved = project.configurations.compile.resolvedConfiguration
@@ -132,7 +132,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         then:
@@ -157,7 +157,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         then:
@@ -187,7 +187,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         then:
@@ -204,7 +204,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.subprojects {
             apply plugin: pluginName
         }
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
 
         then:
         def resolved1 = sub1.configurations.compile.resolvedConfiguration
@@ -231,7 +231,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.subprojects {
             apply plugin: pluginName
         }
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
 
         then:
         def resolved1 = sub1.configurations.compile.resolvedConfiguration
@@ -267,7 +267,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.subprojects {
             apply plugin: pluginName
         }
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
 
         then:
         def resolved1 = sub1.configurations.compile.resolvedConfiguration
@@ -328,7 +328,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.subprojects {
             apply plugin: pluginName
         }
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
 
         then:
         def resolved2 = sub2.configurations.compile.resolvedConfiguration
@@ -373,10 +373,11 @@ class DependencyLockPluginSpec extends ProjectSpec {
         [sub1, sub2]
     }
 
-    private void triggerTaskGraphWhenReady() {
-        Task placeholder = project.tasks.create('placeholder')
-        project.gradle.taskGraph.addTasks([placeholder])
-        project.gradle.taskGraph.execute()
+    private void triggerAfterEvaluate() {
+        project.evaluate()
+        project.subprojects.each {
+            it.evaluate()
+        }
     }
 
     private void stockTestSetup() {

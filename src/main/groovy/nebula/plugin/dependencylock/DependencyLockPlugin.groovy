@@ -23,6 +23,7 @@ import nebula.plugin.scm.ScmPlugin
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 
@@ -50,22 +51,35 @@ class DependencyLockPlugin implements Plugin<Project> {
         SaveLockTask saveTask = configureSaveTask(lockTask, extension)
         configureCommitTask(clLockFileName, saveTask, extension, commitExtension)
 
-        project.gradle.taskGraph.whenReady { taskGraph ->
+        Map<String, Set<?>> buildForces = [:]
+
+        project.afterEvaluate {
+            project.configurations.each { Configuration conf ->
+                buildForces[conf.name] = conf.resolutionStrategy.forcedModules.clone()
+            }
+
             File dependenciesLock = new File(project.projectDir, clLockFileName ?: extension.lockFile)
 
+            if (dependenciesLock.exists() && !shouldIgnoreDependencyLock()) {
+                applyLock(dependenciesLock, overrides)
+            } else if (!shouldIgnoreDependencyLock()) {
+                applyOverrides(overrides)
+            }
+        }
+
+        project.gradle.taskGraph.whenReady { taskGraph ->
             if (taskGraph.hasTask(lockTask)) {
                 project.configurations.all {
                     resolutionStrategy {
                         cacheDynamicVersionsFor 0, 'seconds'
                     }
                 }
-            }
-
-            if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists() &&
-                    !shouldIgnoreDependencyLock()) {
-                applyLock(dependenciesLock, overrides)
-            } else if (!shouldIgnoreDependencyLock()) {
-                applyOverrides(overrides)
+                buildForces.each { String name, Set<?> forces ->
+                    project.configurations.findByName(name).resolutionStrategy.forcedModules = forces
+                }
+                if (!shouldIgnoreDependencyLock()) {
+                    applyOverrides(overrides)
+                }
             }
         }
     }
