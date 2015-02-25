@@ -19,6 +19,7 @@ import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.tasks.CommitLockTask
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
+import nebula.plugin.dependencylock.tasks.UpdateLockTask
 import nebula.plugin.scm.ScmPlugin
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -42,18 +43,29 @@ class DependencyLockPlugin implements Plugin<Project> {
         }
 
         Map overrides = loadOverrides()
-        GenerateLockTask lockTask = configureLockTask(clLockFileName, extension, overrides)
+
+        GenerateLockTask genLockTask = project.tasks.create('generateLock', GenerateLockTask)
+        configureLockTask(genLockTask, clLockFileName, extension, overrides)
         if (project.hasProperty('dependencyLock.useGeneratedLock')) {
-            clLockFileName = lockTask.getDependenciesLock().path
+            clLockFileName = genLockTask.getDependenciesLock().path
             logger.lifecycle(clLockFileName)
         }
-        SaveLockTask saveTask = configureSaveTask(lockTask, extension)
+
+        UpdateLockTask updateLockTask = project.tasks.create('updateLock', UpdateLockTask)
+        configureLockTask(updateLockTask, clLockFileName, extension, overrides)
+        configureUpdateTask(updateLockTask, extension)
+
+        SaveLockTask saveTask = configureSaveTask(clLockFileName, extension)
+        saveTask.mustRunAfter genLockTask, updateLockTask
+
         configureCommitTask(clLockFileName, saveTask, extension, commitExtension)
 
         project.gradle.taskGraph.whenReady { taskGraph ->
             File dependenciesLock = new File(project.projectDir, clLockFileName ?: extension.lockFile)
 
-            if (taskGraph.hasTask(lockTask)) {
+            def hasLockingTask = taskGraph.hasTask(genLockTask) || taskGraph.hasTask(updateLockTask)
+
+            if (hasLockingTask) {
                 project.configurations.all {
                     resolutionStrategy {
                         cacheDynamicVersionsFor 0, 'seconds'
@@ -61,8 +73,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                 }
             }
 
-            if (!taskGraph.hasTask(lockTask) && dependenciesLock.exists() &&
-                    !shouldIgnoreDependencyLock()) {
+            if (!hasLockingTask && dependenciesLock.exists() && !shouldIgnoreDependencyLock()) {
                 applyLock(dependenciesLock, overrides)
             } else if (!shouldIgnoreDependencyLock()) {
                 applyOverrides(overrides)
@@ -104,13 +115,12 @@ class DependencyLockPlugin implements Plugin<Project> {
         }
     }
 
-    private SaveLockTask configureSaveTask(GenerateLockTask lockTask, DependencyLockExtension extension) {
+    private SaveLockTask configureSaveTask(String clLockFileName, DependencyLockExtension extension) {
         SaveLockTask saveTask = project.tasks.create('saveLock', SaveLockTask)
         saveTask.conventionMapping.with {
-            generatedLock = { lockTask.dependenciesLock }
+            generatedLock = { new File(project.buildDir, clLockFileName ?: extension.lockFile) }
             outputLock = { new File(project.projectDir, extension.lockFile) }
         }
-        saveTask.mustRunAfter lockTask
         saveTask.outputs.upToDateWhen {
             if (saveTask.generatedLock.exists() && saveTask.outputLock.exists()) {
                 saveTask.generatedLock.text == saveTask.outputLock.text
@@ -122,17 +132,25 @@ class DependencyLockPlugin implements Plugin<Project> {
         saveTask
     }
 
-    private GenerateLockTask configureLockTask(String clLockFileName, DependencyLockExtension extension, Map overrides) {
-        GenerateLockTask lockTask = project.tasks.create('generateLock', GenerateLockTask)
+    private GenerateLockTask configureLockTask(GenerateLockTask lockTask, String clLockFileName, DependencyLockExtension extension, Map overrides) {
         lockTask.conventionMapping.with {
             dependenciesLock = {
                 new File(project.buildDir, clLockFileName ?: extension.lockFile)
             }
             configurationNames = { extension.configurationNames }
+            filter = { extension.dependencyFilter }
             skippedDependencies = { extension.skippedDependencies }
             includeTransitives = { project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives']) : extension.includeTransitives }
         }
         lockTask.overrides = overrides
+
+        lockTask
+    }
+
+    private configureUpdateTask(UpdateLockTask lockTask, DependencyLockExtension extension) {
+        // You can't read a property at the same time you define the convention mapping ∞
+        def updatesFromOption = lockTask.dependencies
+        lockTask.conventionMapping.dependencies = { updatesFromOption ?: extension.updateDependencies }
 
         lockTask
     }
@@ -158,14 +176,22 @@ class DependencyLockPlugin implements Plugin<Project> {
     void applyLock(File dependenciesLock, Map overrides) {
         logger.info("Using ${dependenciesLock.name} to lock dependencies")
         def locks = loadLock(dependenciesLock)
+
+        // Non-project locks are the top-level dependencies, and possibly transitive thereof, of this project which are
+        // locked by the lock file. There may also be dependencies on other projects. These are not captured here.
         def nonProjectLocks = locks.findAll { it.value?.locked }
+
+        // Override locks from the file with any of the user specified manual overrides.
         def lockForces = nonProjectLocks.collect {
             overrides.containsKey(it.key) ? "${it.key}:${overrides[it.key]}" : "${it.key}:${it.value.locked}"
         }
+
+        // If the user specifies an override that does not exist in the lock file, force that dependency anyway.
         def unusedOverrides = overrides.findAll { !locks.containsKey(it.key) }.collect { "${it.key}:${it.value}" }
         lockForces << unusedOverrides
         logger.debug(lockForces.toString())
 
+        // Pretty nice after all that work (:
         project.configurations.all {
             resolutionStrategy {
                 lockForces.each { dep -> force dep}
@@ -184,17 +210,20 @@ class DependencyLockPlugin implements Plugin<Project> {
     }
 
     private Map loadOverrides() {
+        // Overrides are dependencies that trump the lock file.
         Map overrides = [:]
         if (shouldIgnoreDependencyLock()) {
             return overrides
         }
 
+        // Load overrides from a file if the user has specified one via a property.
         if (project.hasProperty('dependencyLock.overrideFile')) {
             File dependenciesLock = new File(project.rootDir, project['dependencyLock.overrideFile'])
             loadLock(dependenciesLock).each { overrides[it.key] = it.value.locked }
             logger.debug "Override file loaded: ${project['dependencyLock.overrideFile']}"
         }
 
+        // Allow the user to specify overrides via a property as well.
         if (project.hasProperty('dependencyLock.override')) {
             project['dependencyLock.override'].tokenize(',').each {
                 def (group, artifact, version) = it.tokenize(':')
