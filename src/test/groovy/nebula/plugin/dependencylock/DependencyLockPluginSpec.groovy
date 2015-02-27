@@ -336,6 +336,28 @@ class DependencyLockPluginSpec extends ProjectSpec {
         baz.moduleVersion.id.version == '1.0.0'
     }
 
+    def 'use global lock'() {
+        def (Project sub1, Project sub2) = multiProjectSetup()
+        new File(projectDir, 'global.lock').text = '''\
+            {
+              "test.example:foo": { "locked": "1.0.1", "requested": "1.+" }
+            }
+        '''.stripIndent()
+
+        project.allprojects {
+            apply plugin: DependencyLockPlugin
+        }
+
+        when:
+        triggerAfterEvaluate()
+
+        then:
+        def foo1 = sub1.configurations.compile.resolvedConfiguration.resolvedArtifacts.find { it.name == 'foo'}
+        def foo2 = sub2.configurations.compile.resolvedConfiguration.resolvedArtifacts.find { it.name == 'foo'}
+        foo1.moduleVersion.id.version == '1.0.1'
+        foo2.moduleVersion.id.version == '1.0.1'
+    }
+
     private List multiProjectSetup() {
         def sub1Folder = new File(projectDir, 'sub1')
         sub1Folder.mkdir()
