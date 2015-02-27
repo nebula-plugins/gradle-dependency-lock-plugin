@@ -39,13 +39,17 @@ Command line overrides via `-PdependencyLock.override` or `-PdependencyLock.over
 
 * generateLock - Generate a lock file into the build directory, any existing `dependency.lock` file will be ignored
 * saveLock - copies generated lock into the project directory
+* deleteLock - Delete the existing lock files
 * generateGlobalLock - Generate a lock file into the build directory representing the global dependencies of the entire multiproject. Any existing `dependency.lock` or `global.lock` will be ignored.
 * saveGlobalLock - Copies the generated globalLock into the project directory
+* deleteGlobalLock - Delete the `global.lock` file
 * commitLock - If a [gradle-scm-plugin](https://github.com/nebula-plugins/gradle-scm-plugin) implementation is applied. Will commit dependencies.lock to the configured SCM. Exists only on the rootProject. Assumes scm root is at the same level as the root build.gradle.
 
 ### Notes About Global vs Project Locks
 
-* If a `global.lock` is found it will be used, ignoring all `dependencies.lock` files
+* If a `global.lock` is found it will be used, ignoring all `dependencies.lock` files.
+* `saveLock` will fail if you have a `global.lock` -- You should run `deleteGlobalLock`
+* `saveGlobalLock` will fail if you have any `dependencies.lock` files -- You should run `deleteLock`
 
 #### Common Command Line Overrides
 

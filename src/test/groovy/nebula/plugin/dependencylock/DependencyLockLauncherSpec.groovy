@@ -292,7 +292,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << """\
             subprojects {
                 apply plugin: 'java'
-                apply plugin: 'gradle-dependency-lock'
+                apply plugin: 'dependency-lock'
                 repositories { maven { url '${Fixture.repo}' } }
             }
         """.stripIndent()
@@ -402,6 +402,98 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
     }
 
     def 'save global lock in multiproject'() {
+        setupCommonMultiproject()
+
+        when:
+        runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock')
+
+        then:
+        String globalLockText = '''\
+            {
+              "test.example:foo": { "locked": "2.0.0", "transitive": [ "test:sub1", "test:sub2" ] },
+              "test:sub1": { "project": true },
+              "test:sub2": { "project": true }
+            }
+        '''.stripIndent()
+        new File(projectDir, 'global.lock').text == globalLockText
+    }
+
+    def 'locks are correct when applying to all projects'() {
+        setupCommonMultiproject()
+
+        when:
+        runTasksSuccessfully('generateLock', 'saveLock')
+
+        then:
+        String lockText = '''\
+            {
+
+            }
+        '''.stripIndent()
+        new File(projectDir, 'dependencies.lock').text == lockText
+        String lockText1 = '''\
+            {
+              "test.example:foo": { "locked": "2.0.0", "requested": "2.0.0" }
+            }
+        '''.stripIndent()
+        new File(projectDir, 'sub1/dependencies.lock').text == lockText1
+        String lockText2 = '''\
+            {
+              "test.example:foo": { "locked": "1.0.1", "requested": "1.+" }
+            }
+        '''.stripIndent()
+        new File(projectDir, 'sub2/dependencies.lock').text == lockText2
+    }
+
+    def 'throw exception when saving global lock, if individual locks are present'() {
+        setupCommonMultiproject()
+        runTasksSuccessfully('generateLock', 'saveLock')
+        runTasksSuccessfully('generateGlobalLock')
+
+        when:
+        def result = runTasksWithFailure('saveGlobalLock')
+
+        then:
+        result.failure != null
+    }
+
+    def 'throw exception when saving lock, if global locks are present'() {
+        setupCommonMultiproject()
+        runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock')
+        runTasksSuccessfully('generateLock')
+
+        when:
+        def result = runTasksWithFailure('saveLock')
+
+        then:
+        result.failure != null
+    }
+
+    def 'delete global lock'() {
+        setupCommonMultiproject()
+        runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock')
+
+        when:
+        runTasksSuccessfully('deleteGlobalLock')
+
+        then:
+        !(new File(projectDir, 'global.lock').exists())
+    }
+
+    def 'delete locks'() {
+        setupCommonMultiproject()
+        runTasksSuccessfully('generateLock', 'saveLock')
+
+        when:
+        runTasksSuccessfully('deleteLock')
+
+        then:
+        !(new File(projectDir, 'dependencies.lock').exists())
+        !(new File(projectDir, 'sub1/dependencies.lock').exists())
+        !(new File(projectDir, 'sub2/dependencies.lock').exists())
+    }
+
+    private void setupCommonMultiproject() {
         addSubproject('sub1', """\
             dependencies {
                 compile 'test.example:foo:2.0.0'
@@ -426,18 +518,5 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 includeTransitives = true
             }
         """.stripIndent()
-
-        when:
-        runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock')
-
-        then:
-        String globalLockText = '''\
-            {
-              "test.example:foo": { "locked": "2.0.0", "transitive": [ "test:sub1", "test:sub2" ] },
-              "test:sub1": { "project": true },
-              "test:sub2": { "project": true }
-            }
-        '''.stripIndent()
-        new File(projectDir, 'global.lock').text == globalLockText
     }
 }

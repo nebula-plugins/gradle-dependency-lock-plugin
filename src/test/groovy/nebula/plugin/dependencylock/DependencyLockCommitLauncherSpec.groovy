@@ -153,6 +153,52 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         new File(gitDir, 'sub2/dependencies.lock').exists()
     }
 
+    def 'git integration test for global lock on multiproject'() {
+        def gitDir = new File(projectDir, 'project')
+        def git = commonGitSetup(gitDir)
+
+        def sub1 = new File(projectDir, 'sub1')
+        sub1.mkdirs()
+        def sub2 = new File(projectDir, 'sub2')
+        sub2.mkdirs()
+
+        buildFile << """\
+            apply plugin: 'nebula.dependency-lock'
+            subprojects {
+                apply plugin: 'java'
+                apply plugin: 'nebula.dependency-lock'
+                apply plugin: 'gradle-git-scm'
+                repositories { maven { url '${Fixture.repo}' } }
+            }
+        """.stripIndent()
+
+        settingsFile << '''
+            include 'sub1'
+            include 'sub2'
+        '''.stripIndent()
+
+        new File(sub1, 'build.gradle') << '''\
+            dependencies {
+                compile 'test.example:foo:2.+'
+            }
+        '''.stripIndent()
+
+        new File(sub2, 'build.gradle') << '''\
+            dependencies {
+                compile 'test.example:baz:1.+'
+            }
+        '''.stripIndent()
+
+        finishGitSetup(['build.gradle', 'settings.gradle', 'sub1/build.gradle', 'sub2/build.gradle'])
+
+        when:
+        runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock', 'commitLock', '--info')
+        git.reset(commit: 'HEAD', mode: ResetOp.Mode.HARD)
+
+        then:
+        new File(gitDir, 'global.lock').exists()
+    }
+
     private Grgit commonGitSetup(File gitDir) {        
         gitDir.mkdirs()
         def git = Grgit.init(dir: gitDir)
