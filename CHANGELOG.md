@@ -1,8 +1,10 @@
-1.12.4 / 2015-02-??
+1.12.4 / 2015-02-27
 ===================
 
 * Modify plugin so the lock is used by IDEs which skip taskGraph.whenReady
 * Plugin can now be applied to a rootProject in a multiproject without configuration
+* Added deleteLock and deleteGlobalLock takss
+* Added globalLock so multiprojects can have a unified version of all transitive dependencies (useful in IDE)
 
 1.12.3 / 2014-12-11
 ===================
