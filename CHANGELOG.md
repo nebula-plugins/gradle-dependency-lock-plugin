@@ -1,5 +1,11 @@
-2.2.0 / 2015-1-30
-===================
+2.2.1 / 2015-02-03
+==================
+
+* Ability to update subset of dependencies with updateLock or updateGlobalLock
+* merged in 1.12.4 changes
+
+2.2.0 / 2015-01-30
+==================
 
 * Move to gradle 2.2.1
 
@@ -17,6 +23,14 @@
 ==================
 
 * Initial release using gradle 2.0
+
+1.12.4 / 2015-02-27
+===================
+
+* Modify plugin so the lock is used by IDEs which skip taskGraph.whenReady
+* Plugin can now be applied to a rootProject in a multiproject without configuration
+* Added deleteLock and deleteGlobalLock takss
+* Added globalLock so multiprojects can have a unified version of all transitive dependencies (useful in IDE)
 
 1.12.3 / 2014-12-11
 ===================
