@@ -39,5 +39,5 @@ dependencies {
         exclude group: 'org.codehaus.groovy'
     }
     testCompile 'com.netflix.nebula:gradle-git-scm-plugin:2.2.+'
-    testCompile 'org.ajoberstar:grgit:0.+'
+    testCompile 'org.ajoberstar:grgit:0.2.+'
 }

@@ -1,9 +1,9 @@
 gradle-dependency-lock-plugin
 =============================
 
-Cloudbees Jenkins release: [![Build Status](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.0-release/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.0-release/)
+Cloudbees Jenkins release: [![Build Status](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.2-release/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.2-release/)
 
-Cloudbees Jenkins snapshot: [![Build Status](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.0-snapshot/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.0-snapshot/)
+Cloudbees Jenkins snapshot: [![Build Status](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.2-snapshot/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.2-snapshot/)
 
 A plugin to allow people using dynamic dependency versions to lock them to specific versions.
 
@@ -23,15 +23,23 @@ The old usage will be removed sometime after March next year. Until being switch
 
 To include, add the following to your build.gradle
 
+If newer than gradle 2.1 you may use
+
+    plugins {
+      id 'nebula.dependency-lock' version '2.2.1'
+    }
+
+*or*
+
     buildscript {
       repositories { jcenter() }
 
       dependencies {
-        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:2.0.+'
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:2.2.+'
       }
     }
 
-    apply plugin: 'dependency-lock' // or 'nebula.dependency-lock'
+    apply plugin: 'nebula.dependency-lock' // or 'dependency-lock'
 
 ### Tasks Provided
 
@@ -40,7 +48,18 @@ Command line overrides via `-PdependencyLock.override` or `-PdependencyLock.over
 * generateLock - Generate a lock file into the build directory. Any existing `dependency.lock` file will be ignored.
 * updateLock - Update dependencies from the lock file into the build directory. By default, this task does the same thing as the `generateLock` task. This task also exposes an option `--dependencies` allowing the user to specify a comma-separated list, in the format `<group>:<artifact>`, of dependencies to update.
 * saveLock - Copy the generated lock into the project directory.
+* deleteLock - Delete the existing lock files
+* generateGlobalLock - Generate a lock file into the build directory representing the global dependencies of the entire multiproject. Any existing `dependency.lock` or `global.lock` will be ignored.
+* updateGlobalLock - Update dependencies from the lock file into the build directory. By default, this task does the same thing as the `generateGlobalLock` task. This task also exposes an option `--dependencies` allowing the user to specify a comma-separated list, in the format `<group>:<artifact>`, of dependencies to update.
+* saveGlobalLock - Copies the generated globalLock into the project directory
+* deleteGlobalLock - Delete the `global.lock` file
 * commitLock - If a [gradle-scm-plugin](https://github.com/nebula-plugins/gradle-scm-plugin) implementation is applied. Will commit dependencies.lock to the configured SCM. Exists only on the rootProject. Assumes scm root is at the same level as the root build.gradle.
+
+### Notes About Global vs Project Locks
+
+* If a `global.lock` is found it will be used, ignoring all `dependencies.lock` files.
+* `saveLock` will fail if you have a `global.lock` -- You should run `deleteGlobalLock`
+* `saveGlobalLock` will fail if you have any `dependencies.lock` files -- You should run `deleteLock`
 
 #### Common Command Line Overrides
 
@@ -84,7 +103,8 @@ Use the extension if you wish to configure. Each project where gradle-dependency
 
     dependencyLock {
       lockFile = 'dependencies.lock'
-      configurationNames = ['testRuntime']
+      globalLockFile = 'global.lock'
+      configurationNames = configurations.all*.name
       dependencyFilter = { String group, String name, String version -> true }
       updateDependencies = []
       skippedDependencies = []
@@ -116,6 +136,12 @@ Use the following to configure. There will be only one commitDependencyLock exte
 Allows the user to override the configured lockFile name via the command line. It will expect to find these files in the project directories.
 
     ./gradlew -PdependencyLock.lockFile=<filename> <tasks>
+
+*dependencyLock.globalLockFile*
+
+Allows the user to override the configured globalLockFile name via the command line. It will expect to find this file in the root project directory (where the settings.gradle lives)
+
+    ./gradlew -PdependencyLock.globalLockFile=<filename> <tasks>
 
 *dependencyLock.ignore*
 

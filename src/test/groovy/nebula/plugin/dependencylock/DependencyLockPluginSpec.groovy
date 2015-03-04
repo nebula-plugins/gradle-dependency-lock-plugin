@@ -42,7 +42,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         then:
@@ -54,7 +54,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         stockTestSetup()
         project.ext.set('dependencyLock.ignore', ignore)
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         expect:
@@ -77,7 +77,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         then:
@@ -98,7 +98,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         then:
@@ -117,7 +117,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
 
         then:
         def resolved = project.configurations.compile.resolvedConfiguration
@@ -132,7 +132,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         then:
@@ -157,7 +157,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         then:
@@ -187,7 +187,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
         def resolved = project.configurations.compile.resolvedConfiguration
 
         then:
@@ -204,7 +204,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.subprojects {
             apply plugin: pluginName
         }
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
 
         then:
         def resolved1 = sub1.configurations.compile.resolvedConfiguration
@@ -231,7 +231,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.subprojects {
             apply plugin: pluginName
         }
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
 
         then:
         def resolved1 = sub1.configurations.compile.resolvedConfiguration
@@ -267,7 +267,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.subprojects {
             apply plugin: pluginName
         }
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
 
         then:
         def resolved1 = sub1.configurations.compile.resolvedConfiguration
@@ -328,12 +328,34 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.subprojects {
             apply plugin: pluginName
         }
-        triggerTaskGraphWhenReady()
+        triggerAfterEvaluate()
 
         then:
         def resolved2 = sub2.configurations.compile.resolvedConfiguration
         def baz = resolved2.resolvedArtifacts.find { it.name == 'baz' }
         baz.moduleVersion.id.version == '1.0.0'
+    }
+
+    def 'use global lock'() {
+        def (Project sub1, Project sub2) = multiProjectSetup()
+        new File(projectDir, 'global.lock').text = '''\
+            {
+              "test.example:foo": { "locked": "1.0.1", "requested": "1.+" }
+            }
+        '''.stripIndent()
+
+        project.allprojects {
+            apply plugin: DependencyLockPlugin
+        }
+
+        when:
+        triggerAfterEvaluate()
+
+        then:
+        def foo1 = sub1.configurations.compile.resolvedConfiguration.resolvedArtifacts.find { it.name == 'foo'}
+        def foo2 = sub2.configurations.compile.resolvedConfiguration.resolvedArtifacts.find { it.name == 'foo'}
+        foo1.moduleVersion.id.version == '1.0.1'
+        foo2.moduleVersion.id.version == '1.0.1'
     }
 
     private List multiProjectSetup() {
@@ -373,10 +395,11 @@ class DependencyLockPluginSpec extends ProjectSpec {
         [sub1, sub2]
     }
 
-    private void triggerTaskGraphWhenReady() {
-        Task placeholder = project.tasks.create('placeholder')
-        project.gradle.taskGraph.addTasks([placeholder])
-        project.gradle.taskGraph.execute()
+    private void triggerAfterEvaluate() {
+        project.evaluate()
+        project.subprojects.each {
+            it.evaluate()
+        }
     }
 
     private void stockTestSetup() {
