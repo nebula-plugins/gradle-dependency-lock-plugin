@@ -1,3 +1,8 @@
+1.12.5 / 2015-03-09
+===================
+
+* Regression moving to configurations.all*.name, dependency locking behaving oddly switching back to defaulting to testRuntime
+
 1.12.4 / 2015-02-27
 ===================
 

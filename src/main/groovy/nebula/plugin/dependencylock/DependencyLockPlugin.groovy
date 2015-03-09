@@ -27,6 +27,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
+import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.tasks.Delete
 
 class DependencyLockPlugin implements Plugin<Project> {
@@ -70,8 +71,8 @@ class DependencyLockPlugin implements Plugin<Project> {
         Map<String, Set<?>> buildForces = [:]
 
         project.afterEvaluate {
-            if (!extension.configurationNames) {
-                extension.configurationNames = project.configurations.all*.name
+            if (project.plugins.hasPlugin(JavaBasePlugin) && extension.configurationNames.empty) {
+                extension.configurationNames << 'testRuntime'
             }
             project.configurations.each { Configuration conf ->
                 buildForces[conf.name] = conf.resolutionStrategy.forcedModules.clone()
