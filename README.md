@@ -81,11 +81,12 @@ or
 * includeTransitives - This field is a boolean. Defaults to false. False will only lock direct dependencies. True will lock the entire transitive graph.
 
 Use the extension if you wish to configure. Each project where gradle-dependency-lock will have its own dependencyLock extension.
+The following values are the defaults. If they work for you, you can skip configuring the plugin.
 
     dependencyLock {
       lockFile = 'dependencies.lock'
       globalLockFile = 'global.lock'
-      configurationNames = configurations.all*.name
+      configurationNames = ['testRuntime']
       skippedDependencies = []
       includeTransitives = false
     }
