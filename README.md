@@ -26,7 +26,7 @@ To include, add the following to your build.gradle
 If newer than gradle 2.1 you may use
 
     plugins {
-      id 'nebula.dependency-lock' version '2.2.1'
+      id 'nebula.dependency-lock' version '2.2.2'
     }
 
 *or*
@@ -35,7 +35,7 @@ If newer than gradle 2.1 you may use
       repositories { jcenter() }
 
       dependencies {
-        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:2.2.+'
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:2.2.2'
       }
     }
 
@@ -100,11 +100,12 @@ Update lock (the lock must still be saved/committed):
 * includeTransitives - This field is a boolean. Defaults to false. False will only lock direct dependencies. True will lock the entire transitive graph.
 
 Use the extension if you wish to configure. Each project where gradle-dependency-lock is applied will have its own dependencyLock extension.
+The following values are the defaults. If they work for you, you can skip configuring the plugin.
 
     dependencyLock {
       lockFile = 'dependencies.lock'
       globalLockFile = 'global.lock'
-      configurationNames = configurations.all*.name
+      configurationNames = ['testRuntime']
       dependencyFilter = { String group, String name, String version -> true }
       updateDependencies = []
       skippedDependencies = []
@@ -275,6 +276,23 @@ It will output
     }
 
 # Possible Future Changes
+
+### Locking dependencies per configuration
+
+    {
+      "compile": {
+        // existing format
+      },
+      "testCompile": {
+        // existing format
+      }
+    }
+
+*or*
+
+    {
+      "<group>:<artifacts>:<version>": { "transitive": /* same */,  "confs": ["compile", "testCompile"] }
+    }
 
 ### Determine Version Requested for Locked Transitives, Output Format
 
