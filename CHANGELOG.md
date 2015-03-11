@@ -1,4 +1,9 @@
-2.2.1 / 2015-02-03
+2.2.2 / 2015-03-11
+==================
+
+* Merge in fix from 1.12.5
+
+2.2.1 / 2015-03-03
 ==================
 
 * Ability to update subset of dependencies with updateLock or updateGlobalLock
@@ -28,7 +33,6 @@
 ===================
 
 * Regression moving to configurations.all*.name, dependency locking behaving oddly switching back to defaulting to testRuntime
-
 
 1.12.4 / 2015-02-27
 ===================
