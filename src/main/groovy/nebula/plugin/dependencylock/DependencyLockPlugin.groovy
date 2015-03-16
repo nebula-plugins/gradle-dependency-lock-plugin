@@ -307,13 +307,16 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         // If the user specifies an override that does not exist in the lock file, force that dependency anyway.
         def unusedOverrides = overrides.findAll { !locks.containsKey(it.key) }.collect { "${it.key}:${it.value}" }
-        lockForces << unusedOverrides
-        logger.debug(lockForces.toString())
+        lockForces.addAll(unusedOverrides)
+        logger.debug('lockForces: {}', lockForces)
+
+        // Create the dependencies explicitly to avoid doing that implicitly for every configuration
+        lockForces = lockForces.collect { dep -> project.dependencies.create(dep) }
 
         // Pretty nice after all that work (:
         project.configurations.all {
             resolutionStrategy {
-                lockForces.each { dep -> force dep}
+                lockForces.each { dep -> force dep }
             }
         }
     }
