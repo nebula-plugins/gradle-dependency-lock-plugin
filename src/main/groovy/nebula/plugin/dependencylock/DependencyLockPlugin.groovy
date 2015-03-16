@@ -316,7 +316,7 @@ class DependencyLockPlugin implements Plugin<Project> {
         // Pretty nice after all that work (:
         project.configurations.all {
             resolutionStrategy {
-                lockForces.each { dep -> force dep }
+                force lockForces.toArray()
             }
         }
     }
