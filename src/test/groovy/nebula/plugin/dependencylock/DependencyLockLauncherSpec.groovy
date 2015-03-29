@@ -385,6 +385,11 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             dependencyLock {
                 includeTransitives = true
             }
+            configurations.all {
+                resolutionStrategy {
+                    force 'test.example:foo:2.0.1'
+                }
+            }
         """.stripIndent()
 
         when:
@@ -395,7 +400,57 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             {
               "test.example:bar": { "locked": "1.1.0", "transitive": [ "test.example:transitive", "test:sub1" ] },
               "test.example:baz": { "locked": "1.0.0", "transitive": [ "test.example:foobaz" ] },
-              "test.example:foo": { "locked": "2.0.0", "transitive": [ "test.example:bar", "test.example:foobaz", "test:sub1" ] },
+              "test.example:foo": { "locked": "2.0.1", "transitive": [ "test.example:bar", "test.example:foobaz", "test:sub1" ] },
+              "test.example:foobaz": { "locked": "1.0.0", "transitive": [ "test.example:transitive" ] },
+              "test.example:transitive": { "locked": "1.0.0", "transitive": [ "test:sub2" ] },
+              "test:sub1": { "project": true },
+              "test:sub2": { "project": true }
+            }
+        '''.stripIndent()
+        new File(projectDir, 'build/global.lock').text == globalLockText
+    }
+
+    def 'create global lock in multiproject with force in subproject'() {
+        addSubproject('sub1', """\
+            dependencies {
+                compile 'test.example:bar:1.1.0'
+                compile 'test.example:foo:2.0.0'
+            }
+        """.stripIndent())
+        addSubproject('sub2', """\
+            dependencies {
+                compile 'test.example:transitive:1.+'
+            }
+            configurations.all {
+                resolutionStrategy {
+                    force 'test.example:foo:2.0.1'
+                }
+            }
+        """.stripIndent())
+
+        buildFile << """\
+            allprojects {
+                ${applyPlugin(DependencyLockPlugin)}
+                group = 'test'
+            }
+            subprojects {
+                apply plugin: 'java'
+                repositories { maven { url '${Fixture.repo}' } }
+            }
+            dependencyLock {
+                includeTransitives = true
+            }
+        """.stripIndent()
+
+        when:
+        runTasksSuccessfully('generateGlobalLock')
+
+        then:
+        String globalLockText = '''\
+            {
+              "test.example:bar": { "locked": "1.1.0", "transitive": [ "test.example:transitive", "test:sub1" ] },
+              "test.example:baz": { "locked": "1.0.0", "transitive": [ "test.example:foobaz" ] },
+              "test.example:foo": { "locked": "2.0.1", "transitive": [ "test.example:bar", "test.example:foobaz", "test:sub1" ] },
               "test.example:foobaz": { "locked": "1.0.0", "transitive": [ "test.example:transitive" ] },
               "test.example:transitive": { "locked": "1.0.0", "transitive": [ "test:sub2" ] },
               "test:sub1": { "project": true },
