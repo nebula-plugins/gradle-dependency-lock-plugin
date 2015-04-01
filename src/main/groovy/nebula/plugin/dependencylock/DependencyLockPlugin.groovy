@@ -246,6 +246,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                 def subprojects = project.subprojects.collect { project.dependencies.create(it) }
                 def subprojectsArray = subprojects.toArray(new Dependency[subprojects.size()])
                 def conf = project.configurations.detachedConfiguration(subprojectsArray)
+                project.allprojects.each { it.configurations.add(conf) }
 
                 [conf]
             }
