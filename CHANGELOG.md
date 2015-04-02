@@ -1,3 +1,9 @@
+2.2.3 / 2015-04-02
+==================
+
+* Add in fix to take account of forces and resolution strategies when creating a global lock
+* Performance improvements
+
 2.2.2 / 2015-03-11
 ==================
 
