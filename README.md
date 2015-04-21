@@ -259,7 +259,7 @@ The lock will have
 
     dependencies {
       compile 'com.google.guava:guava:14.+'
-      testCompile 'junit:junit:4.+
+      testCompile 'junit:junit:4.+'
     }
 
 When you run
