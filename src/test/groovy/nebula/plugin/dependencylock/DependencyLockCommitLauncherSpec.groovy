@@ -167,10 +167,10 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         sub2.mkdirs()
 
         buildFile << """\
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'gradle-dependency-lock'
             subprojects {
                 apply plugin: 'java'
-                apply plugin: 'nebula.dependency-lock'
+                apply plugin: 'gradle-dependency-lock'
                 apply plugin: 'gradle-git-scm'
                 repositories { maven { url '${Fixture.repo}' } }
             }

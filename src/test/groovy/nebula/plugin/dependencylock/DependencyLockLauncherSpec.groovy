@@ -17,7 +17,6 @@ package nebula.plugin.dependencylock
 
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.test.IntegrationSpec
-import org.gradle.BuildResult
 
 class DependencyLockLauncherSpec extends IntegrationSpec {
     def setup() {
