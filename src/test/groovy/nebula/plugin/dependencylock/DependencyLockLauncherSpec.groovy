@@ -460,6 +460,46 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'build/global.lock').text == globalLockText
     }
 
+    def 'create global lock in multiproject with subproject depending on top-level'() {
+        addSubproject('sub1', """\
+            dependencies {
+                compile project(':')
+            }
+        """.stripIndent())
+        addSubproject('sub2', """\
+            dependencies {
+                compile project(':sub1')
+            }
+        """.stripIndent())
+
+        buildFile << """\
+            allprojects {
+                ${applyPlugin(DependencyLockPlugin)}
+                group = 'test'
+            }
+            allprojects {
+                apply plugin: 'java'
+                repositories { maven { url '${Fixture.repo}' } }
+            }
+            dependencyLock {
+                includeTransitives = true
+            }
+        """.stripIndent()
+
+        when:
+        runTasksSuccessfully('generateGlobalLock')
+
+        then:
+        String globalLockText = """\
+            {
+              "test:${moduleName}": { "project": true, "transitive": [ "test:sub1" ] },
+              "test:sub1": { "project": true, "transitive": [ "test:sub2" ] },
+              "test:sub2": { "project": true }
+            }
+        """.stripIndent()
+        new File(projectDir, 'build/global.lock').text == globalLockText
+    }
+
     def 'save global lock in multiproject'() {
         setupCommonMultiproject()
 
