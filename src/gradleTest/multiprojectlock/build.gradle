@@ -1,0 +1,28 @@
+buildscript {
+    repositories { jcenter() }
+    dependencies {
+        classpath ':gradle-dependency-lock-plugin:%%VERSION%%'
+        classpath 'com.netflix.nebula:gradle-scm-plugin:2.2.0'
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    repositories {
+        jcenter()
+    }
+}
+allprojects {
+    apply plugin: 'nebula.dependency-lock'
+}
+task runGradleTest(dependsOn: ['generateLock', ':sub0:generateLock', ':sub1:generateLock', 'saveLock',
+        ':sub0:saveLock', ':sub1:saveLock']) {
+    doLast {
+        if (!file('sub0/dependencies.lock').exists()) {
+            throw new RuntimeException('sub0 lock file not created')
+        }
+        if (!file('sub1/dependencies.lock').exists()) {
+            throw new RuntimeException('sub1 lock file not created')
+        }
+    }
+}
