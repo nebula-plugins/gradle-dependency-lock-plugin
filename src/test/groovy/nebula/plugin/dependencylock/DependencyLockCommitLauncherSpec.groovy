@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Netflix, Inc.
+ * Copyright 2014-2015 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,7 +81,7 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         buildFile << """\
             subprojects {
                 apply plugin: 'java'
-                apply plugin: 'gradle-dependency-lock'
+                apply plugin: 'nebula.dependency-lock'
                 apply plugin: 'gradle-scm'
                 repositories { maven { url '${Fixture.repo}' } }
             }
@@ -123,7 +123,7 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         buildFile << """\
             subprojects {
                 apply plugin: 'java'
-                apply plugin: 'gradle-dependency-lock'
+                apply plugin: 'nebula.dependency-lock'
                 apply plugin: 'gradle-git-scm'
                 repositories { maven { url '${Fixture.repo}' } }
             }
@@ -167,10 +167,10 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         sub2.mkdirs()
 
         buildFile << """\
-            apply plugin: 'gradle-dependency-lock'
+            apply plugin: 'nebula.dependency-lock'
             subprojects {
                 apply plugin: 'java'
-                apply plugin: 'gradle-dependency-lock'
+                apply plugin: 'nebula.dependency-lock'
                 apply plugin: 'gradle-git-scm'
                 repositories { maven { url '${Fixture.repo}' } }
             }
