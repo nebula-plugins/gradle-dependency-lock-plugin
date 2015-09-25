@@ -192,6 +192,13 @@ Allows the user to override the commit message.
 Allows the user to specify a String for the tagname. If present commitLock will tag the commit with the given String.
 
     ./gradlew -PcommitDependencyLock.tag=mytag <tasks> commitLock
+    
+*dependencyLock.lockAtConfigurationPhase*
+
+Allows the user to apply the lock to the dependency configuration resolution strategies at configuration time. This may
+be required if the user's project resolves configurations explicitly at configuration time meaning that the dependency
+locking will not be applied since, by default, it runs at the execution phase. This option allows the locking to be 
+enforced at configuration time.
 
 ## Lock File Format
 

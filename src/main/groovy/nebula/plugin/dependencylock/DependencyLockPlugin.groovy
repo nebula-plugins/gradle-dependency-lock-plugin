@@ -82,7 +82,7 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         Map<String, Set<?>> buildForces = [:]
 
-        project.afterEvaluate {
+        def applyLockToResolutionStrategy = {
             if (project.plugins.hasPlugin(JavaBasePlugin) && extension.configurationNames.empty) {
                 extension.configurationNames << 'testRuntime'
             }
@@ -103,6 +103,14 @@ class DependencyLockPlugin implements Plugin<Project> {
             } else if (!shouldIgnoreDependencyLock()) {
                 applyOverrides(overrides)
             }
+        }
+
+        if (project.hasProperty('dependencyLock.lockAtConfigurationPhase')) {
+            logger.info("Applying dependency lock at the configuration phase")
+            applyLockToResolutionStrategy()
+        } else {
+            logger.info("Applying dependency lock at the execution phase")
+            project.afterEvaluate applyLockToResolutionStrategy
         }
 
         project.gradle.taskGraph.whenReady { taskGraph ->
