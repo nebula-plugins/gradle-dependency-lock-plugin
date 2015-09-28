@@ -200,6 +200,8 @@ be required if the user's project resolves configurations explicitly at configur
 locking will not be applied since, by default, it runs at the execution phase. This option allows the locking to be 
 enforced at configuration time.
 
+    ./gradlew -PdependencyLock.lockAtConfigurationPhase=true <tasks>
+
 ## Lock File Format
 
 The lock file is written in a json format. The keys of the map are made up of "\<group\>:\<artifact\>". The requested entry is informational to let users know what version or range of versions was initially asked for. The locked entry is the version of the dependency the plugin will lock to.
