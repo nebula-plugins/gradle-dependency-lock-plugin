@@ -1,0 +1,27 @@
+buildscript {
+    repositories { jcenter() }
+    dependencies {
+        classpath ':gradle-dependency-lock-plugin:%%VERSION%%'
+        classpath 'com.netflix.nebula:gradle-scm-plugin:2.2.0'
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'nebula.dependency-lock'
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile 'com.google.guava:guava:18.+'
+    testCompile 'junit:junit:4.+'
+}
+
+task runGradleTest(dependsOn: ['generateLock', 'saveLock']) {
+    doLast {
+        if (!file('dependencies.lock').exists()) {
+            throw new RuntimeException('did not create lock')
+        }
+    }
+}

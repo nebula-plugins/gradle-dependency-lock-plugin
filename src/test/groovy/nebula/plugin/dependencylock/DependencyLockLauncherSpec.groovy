@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Netflix, Inc.
+ * Copyright 2014-2015 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package nebula.plugin.dependencylock
 
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.test.IntegrationSpec
-import org.gradle.BuildResult
 
 class DependencyLockLauncherSpec extends IntegrationSpec {
     def setup() {
@@ -26,7 +25,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
     static final String SPECIFIC_BUILD_GRADLE = """\
         apply plugin: 'java'
-        apply plugin: 'gradle-dependency-lock'
+        apply plugin: 'nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             compile 'test.example:foo:1.0.1'
@@ -35,7 +34,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
     static final String BUILD_GRADLE = """\
         apply plugin: 'java'
-        apply plugin: 'gradle-dependency-lock'
+        apply plugin: 'nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             compile 'test.example:foo:1.+'
@@ -44,7 +43,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
     static final String NEW_BUILD_GRADLE = """\
         apply plugin: 'java'
-        apply plugin: 'gradle-dependency-lock'
+        apply plugin: 'nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             compile 'test.example:foo:2.+'
@@ -128,7 +127,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
     def 'create lock with skipped dependencies'() {
         buildFile << """\
             apply plugin: 'java'
-            apply plugin: 'gradle-dependency-lock'
+            apply plugin: 'nebula.dependency-lock'
             repositories { maven { url '${Fixture.repo}' } }
             dependencyLock {
                 skippedDependencies = [ 'test.example:foo' ]
@@ -296,7 +295,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << """\
             subprojects {
                 apply plugin: 'java'
-                apply plugin: 'dependency-lock'
+                apply plugin: 'nebula.dependency-lock'
                 repositories { maven { url '${Fixture.repo}' } }
             }
         """.stripIndent()
@@ -455,6 +454,46 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
               "test.example:transitive": { "locked": "1.0.0", "transitive": [ "test:sub2" ] },
               "test:sub1": { "project": true },
               "test:sub2": { "project": true }
+            }
+        '''.stripIndent()
+        new File(projectDir, 'build/global.lock').text == globalLockText
+    }
+
+    def 'uses chosen subproject configurations when creating global lock in multiproject'() {
+        addSubproject('sub1', """\
+            configurations {
+                special
+            }
+            dependencies {
+                compile 'test.example:bar:1.1.0'
+                special 'test.example:foo:2.0.0'
+            }
+            dependencyLock.configurationNames = ['testRuntime', 'special']
+        """.stripIndent())
+
+        buildFile << """\
+            allprojects {
+                ${applyPlugin(DependencyLockPlugin)}
+                group = 'test'
+            }
+            subprojects {
+                apply plugin: 'java'
+                repositories { maven { url '${Fixture.repo}' } }
+            }
+            dependencyLock {
+                includeTransitives = true
+            }
+        """.stripIndent()
+
+        when:
+        runTasksSuccessfully('generateGlobalLock')
+
+        then:
+        String globalLockText = '''\
+            {
+              "test.example:bar": { "locked": "1.1.0", "transitive": [ "test:sub1" ] },
+              "test.example:foo": { "locked": "2.0.0", "transitive": [ "test.example:bar", "test:sub1" ] },
+              "test:sub1": { "project": true }
             }
         '''.stripIndent()
         new File(projectDir, 'build/global.lock').text == globalLockText

@@ -1,3 +1,11 @@
+3.0.0 / 2015-08-25
+==================
+
+* Switch to gradle 2.6
+* BREAKING CHANGE: delete old plugin nebula.gradle-dependency-lock
+* Add compatibility testing
+* Switch to new publishing and CI
+
 2.2.3 / 2015-04-02
 ==================
 

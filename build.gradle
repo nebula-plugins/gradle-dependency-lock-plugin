@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Netflix, Inc.
+ * Copyright 2014-2015 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,30 @@
  */
 buildscript {
     repositories { jcenter() }
-    dependencies { classpath 'com.netflix.nebula:nebula-plugin-plugin:2.0.+' }
+    dependencies {
+        classpath 'com.netflix.nebula:nebula-plugin-plugin:3.1.1'
+    }
+}
+
+plugins {
+    id 'groovy'
+    id 'idea'
+    id 'jacoco'
+    id 'nebula.maven-publishing' version '3.0.2'
+    id 'nebula.javadoc-jar' version '3.0.2'
+    id 'nebula.source-jar' version '3.0.2'
+    id 'nebula.apache-license-pom' version '3.0.2'
+    id 'nebula.info' version '2.2.4'
+    id 'nebula.contacts' version '2.2.0'
+    id 'com.gradle.plugin-publish' version '0.9.1'
+    id 'com.github.kt3k.coveralls' version '2.4.0'
+    id "org.ysb33r.gradletest" version "0.5.4"
 }
 
 description 'Gradle plugin to allow locking of dynamic dependency versions'
-apply plugin: 'nebula-plugin'
-apply plugin: 'idea'
+apply plugin: 'nebula.plugin-plugin'
 
-release {
-    git.pushToCurrentBranch = true
-}
+group = 'com.netflix.nebula'
 
 contacts {
     'rob.spieldenner@gmail.com' {
@@ -33,11 +47,56 @@ contacts {
     }
 }
 
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+repositories {
+    jcenter()
+}
+
 dependencies {
-    compile 'com.netflix.nebula:gradle-scm-plugin:2.2.+'
-    testCompile('com.netflix.nebula:nebula-test:2.2.+') {
+    compile localGroovy()
+    compile gradleApi()
+    compile 'com.netflix.nebula:gradle-scm-plugin:2.2.0'
+    testCompile('com.netflix.nebula:nebula-test:3.0.0') {
         exclude group: 'org.codehaus.groovy'
     }
-    testCompile 'com.netflix.nebula:gradle-git-scm-plugin:2.2.+'
-    testCompile 'org.ajoberstar:grgit:0.2.+'
+    testCompile 'com.netflix.nebula:gradle-git-scm-plugin:2.2.0'
+    testCompile 'org.ajoberstar:grgit:1.3.0'
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled = true // coveralls plugin depends on xml format report
+        html.enabled = true
+    }
+}
+
+pluginBundle {
+    website = 'https://github.com/nebula-plugins/gradle-dependency-lock-plugin'
+    vcsUrl = 'https://github.com/nebula-plugins/gradle-dependency-lock-plugin.git'
+    description = 'Plugin to lock dynamic dependencies'
+
+    plugins {
+        dependencyLock {
+            id = 'nebula.dependency-lock'
+            displayName = 'Nebula Dependency Lock plugin'
+            description = 'Plugin to lock dynamic dependencies'
+            tags = ['nebula', 'dependencies', 'lock']
+        }
+    }
+
+    mavenCoordinates {
+        groupId = 'com.netflix.nebula'
+        artifactId = 'gradle-dependency-lock-plugin'
+    }
+}
+
+gradleTest {
+    versions '2.2.1', '2.3', '2.4', '2.5', '2.6'
+}
+
+gradleTest.dependsOn(jar)
+gradleTest.doFirst {
+    project.version = project.version.toString()
 }

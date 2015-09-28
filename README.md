@@ -1,9 +1,10 @@
 gradle-dependency-lock-plugin
 =============================
 
-Cloudbees Jenkins release: [![Build Status](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.2-release/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.2-release/)
-
-Cloudbees Jenkins snapshot: [![Build Status](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.2-snapshot/badge/icon)](https://netflixoss.ci.cloudbees.com/job/nebula-plugins/job/gradle-dependency-lock-plugin-2.2-snapshot/)
+[![Build Status](https://travis-ci.org/nebula-plugins/gradle-dependency-lock-plugin.svg?branch=master)](https://travis-ci.org/nebula-plugins/gradle-dependency-lock-plugin)
+[![Coverage Status](https://coveralls.io/repos/nebula-plugins/gradle-dependency-lock-plugin/badge.svg?branch=master&service=github)](https://coveralls.io/github/nebula-plugins/gradle-dependency-lock-plugin?branch=master)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/nebula-plugins/gradle-dependency-lock-plugin?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Apache 2.0](https://img.shields.io/github/license/nebula-plugins/gradle-dependency-lock-plugin.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
 A plugin to allow people using dynamic dependency versions to lock them to specific versions.
 
@@ -13,9 +14,7 @@ Inspired by [Bundler](http://bundler.io)
 
 ## Deprecation Warning
 
-We are deprecating the old plugin name `gradle-dependency-lock`/`nebula.gradle-dependency-lock` in favor of `dependency-lock`/`nebula.dependency-lock`.
-
-The old usage will be removed sometime after March next year. Until being switched we will print a `logger.warn` level message indicating its deprecation.
+The old plugin name `gradle-dependency-lock`/`nebula.gradle-dependency-lock` has been deleted in favor of `dependency-lock`/`nebula.dependency-lock`.
 
 ## Usage
 
@@ -26,7 +25,7 @@ To include, add the following to your build.gradle
 If newer than gradle 2.1 you may use
 
     plugins {
-      id 'nebula.dependency-lock' version '2.2.3'
+      id 'nebula.dependency-lock' version '3.0.0'
     }
 
 *or*
@@ -35,11 +34,11 @@ If newer than gradle 2.1 you may use
       repositories { jcenter() }
 
       dependencies {
-        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:2.2.3'
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:3.0.0'
       }
     }
 
-    apply plugin: 'nebula.dependency-lock' // or 'dependency-lock'
+    apply plugin: 'nebula.dependency-lock'
 
 ### Tasks Provided
 
@@ -268,7 +267,7 @@ The lock will have
 
     dependencies {
       compile 'com.google.guava:guava:14.+'
-      testCompile 'junit:junit:4.+
+      testCompile 'junit:junit:4.+'
     }
 
 When you run
@@ -310,3 +309,34 @@ It will output
       "<transitivegroup>:<transitiveartifact>": { "locked": "<transitiveLockedVersion>", "transitive": { "<group>:<artifact>": "<requestedVersion>", "<group1>:<artifact1>": "<requestedVersion1>" } }
       ...
     }
+
+Gradle Compatibility Tested
+---------------------------
+
+Built with Oracle JDK7
+Tested with Oracle JDK8
+
+| Gradle Version | Works |
+| :------------: | :---: |
+| 2.2.1          | yes   |
+| 2.3            | yes   |
+| 2.4            | yes   |
+| 2.5            | yes   |
+| 2.6            | yes   |
+
+LICENSE
+=======
+
+Copyright 2014-2015 Netflix, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+<http://www.apache.org/licenses/LICENSE-2.0>
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.

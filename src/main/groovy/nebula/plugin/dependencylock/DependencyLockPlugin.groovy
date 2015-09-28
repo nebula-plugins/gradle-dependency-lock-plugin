@@ -26,6 +26,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.JavaBasePlugin
@@ -87,7 +88,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                 extension.configurationNames << 'testRuntime'
             }
             project.configurations.each { Configuration conf ->
-                buildForces[conf.name] = conf.resolutionStrategy.forcedModules.clone()
+                buildForces[conf.name] = Collections.unmodifiableSet(new HashSet<ModuleVersionSelector>(conf.resolutionStrategy.forcedModules))
             }
 
             File dependenciesLock
@@ -251,7 +252,16 @@ class DependencyLockPlugin implements Plugin<Project> {
                 new File(project.buildDir, globalLockFileName ?: extension.globalLockFile)
             }
             configurations = {
-                def subprojects = project.subprojects.collect { project.dependencies.create(it) }
+                def subprojects = project.subprojects.collect { subproject ->
+                    def ext = subproject.getExtensions().findByType(DependencyLockExtension)
+                    if (ext != null) {
+                        ext.configurationNames.collect { subconf ->
+                            project.dependencies.create(project.dependencies.project(path: subproject.path, configuration: subconf))
+                        }
+                    } else {
+                        [project.dependencies.create(subproject)]
+                    }
+                }.flatten()
                 def subprojectsArray = subprojects.toArray(new Dependency[subprojects.size()])
                 def conf = project.configurations.detachedConfiguration(subprojectsArray)
                 project.allprojects.each { it.configurations.add(conf) }

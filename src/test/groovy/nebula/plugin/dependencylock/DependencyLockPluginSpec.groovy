@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Netflix, Inc.
+ * Copyright 2014-2015 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Unroll
 
 class DependencyLockPluginSpec extends ProjectSpec {
-    String pluginName = 'dependency-lock'
+    String pluginName = 'nebula.dependency-lock'
 
     def setupSpec() {
         Fixture.createFixtureIfNotCreated()
