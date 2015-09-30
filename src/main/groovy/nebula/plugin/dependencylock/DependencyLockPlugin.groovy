@@ -106,7 +106,8 @@ class DependencyLockPlugin implements Plugin<Project> {
             }
         }
 
-        if (project.hasProperty('dependencyLock.lockAtConfigurationPhase')) {
+        def lockAtConfigurationPhase = project.hasProperty('dependencyLock.lockAtConfigurationPhase') ? Boolean.parseBoolean(project.hasProperty('dependencyLock.lockAtConfigurationPhase')) : extension.lockAtConfigurationPhase
+        if (lockAtConfigurationPhase) {
             logger.info("Applying dependency lock at the configuration phase")
             applyLockToResolutionStrategy()
         } else {

@@ -109,6 +109,7 @@ The following values are the defaults. If they work for you, you can skip config
       updateDependencies = []
       skippedDependencies = []
       includeTransitives = false
+      lockAtConfigurationPhase = false
     }
 
 #### commitDependencyLock Extension
