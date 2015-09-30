@@ -53,7 +53,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
     // Same as 'read in dependencies.lock' except we don't call triggerAfterEvaluate
     def 'read in dependencies.lock at configuration time'() {
         stockTestSetup()
-        project.ext.set('dependencyLock.lockAtConfigurationPhase', true)
+        project.ext.set('dependencyLock.lockAtConfigurationPhase', "true")
 
         when:
         project.apply plugin: pluginName
