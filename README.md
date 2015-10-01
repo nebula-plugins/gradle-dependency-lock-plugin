@@ -195,10 +195,9 @@ Allows the user to specify a String for the tagname. If present commitLock will 
     
 *dependencyLock.lockAtConfigurationPhase*
 
-Allows the user to apply the lock to the dependency configuration resolution strategies at configuration time. This may
-be required if the user's project resolves configurations explicitly at configuration time meaning that the dependency
-locking will not be applied since, by default, it runs at the execution phase. This option allows the locking to be 
-enforced at configuration time.
+Allows the user to apply the lock to the dependency configuration prior to the task execution phase. Using terminology
+from the [Gradle build lifecycle documentation](https://docs.gradle.org/current/userguide/build_lifecycle.html) the
+locking is applied at *Configuration* phase rather than *Execution* phase.
 
     ./gradlew -PdependencyLock.lockAtConfigurationPhase=true <tasks>
 
