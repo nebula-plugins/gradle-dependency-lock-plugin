@@ -258,7 +258,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                 def conf = project.configurations.detachedConfiguration(subprojectsArray)
                 project.allprojects.each { it.configurations.add(conf) }
 
-                [conf]
+                [conf] + extension.configurationNames.collect { project.configurations.getByName(it) }
             }
         }
 
