@@ -23,4 +23,5 @@ class DependencyLockExtension {
     Set<String> updateDependencies = [] as Set
     Set<String> skippedDependencies = [] as Set
     boolean includeTransitives = false
+    boolean lockAtConfigurationPhase = false
 }

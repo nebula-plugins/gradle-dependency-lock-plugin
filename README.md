@@ -109,6 +109,7 @@ The following values are the defaults. If they work for you, you can skip config
       updateDependencies = []
       skippedDependencies = []
       includeTransitives = false
+      lockAtConfigurationPhase = false
     }
 
 #### commitDependencyLock Extension
@@ -191,6 +192,14 @@ Allows the user to override the commit message.
 Allows the user to specify a String for the tagname. If present commitLock will tag the commit with the given String.
 
     ./gradlew -PcommitDependencyLock.tag=mytag <tasks> commitLock
+    
+*dependencyLock.lockAtConfigurationPhase*
+
+Allows the user to apply the lock to the dependency configuration prior to the task execution phase. Using terminology
+from the [Gradle build lifecycle documentation](https://docs.gradle.org/current/userguide/build_lifecycle.html) the
+locking is applied at *Configuration* phase rather than *Execution* phase.
+
+    ./gradlew -PdependencyLock.lockAtConfigurationPhase=true <tasks>
 
 ## Lock File Format
 

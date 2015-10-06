@@ -50,6 +50,20 @@ class DependencyLockPluginSpec extends ProjectSpec {
         foo.moduleVersion == '1.0.0'
     }
 
+    // Same as 'read in dependencies.lock' except we don't call triggerAfterEvaluate
+    def 'read in dependencies.lock at configuration time'() {
+        stockTestSetup()
+        project.ext.set('dependencyLock.lockAtConfigurationPhase', "true")
+
+        when:
+        project.apply plugin: pluginName
+        def resolved = project.configurations.compile.resolvedConfiguration
+
+        then:
+        def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
+        foo.moduleVersion == '1.0.0'
+    }
+
     def 'read in dependencies.lock ignore dependencyLock.ignore if it is not truthy'() {
         stockTestSetup()
         project.ext.set('dependencyLock.ignore', ignore)
