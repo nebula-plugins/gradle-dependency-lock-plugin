@@ -359,6 +359,16 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         noExceptionThrown()
     }
 
+    def 'create global lock in singleproject'() {
+        buildFile << BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('generateGlobalLock')
+
+        then:
+        new File(projectDir, 'build/global.lock').text == FOO_LOCK
+    }
+
     def 'create global lock in multiproject'() {
         addSubproject('sub1', """\
             dependencies {

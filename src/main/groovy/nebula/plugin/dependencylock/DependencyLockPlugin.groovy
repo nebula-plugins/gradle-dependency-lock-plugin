@@ -32,6 +32,8 @@ import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.tasks.Delete
 
+import static nebula.plugin.dependencylock.tasks.GenerateLockTask.getConfigurationsFromConfigurationNames
+
 class DependencyLockPlugin implements Plugin<Project> {
     private static Logger logger = Logging.getLogger(DependencyLockPlugin)
     Project project
@@ -258,7 +260,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                 def conf = project.configurations.detachedConfiguration(subprojectsArray)
                 project.allprojects.each { it.configurations.add(conf) }
 
-                [conf]
+                [conf] + getConfigurationsFromConfigurationNames(project, extension.configurationNames)
             }
         }
 

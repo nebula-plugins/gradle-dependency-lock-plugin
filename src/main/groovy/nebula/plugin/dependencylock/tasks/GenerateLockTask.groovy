@@ -15,6 +15,7 @@
  */
 package nebula.plugin.dependencylock.tasks
 
+import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
@@ -33,9 +34,13 @@ class GenerateLockTask extends AbstractLockTask {
 
     @TaskAction
     void lock() {
-        Collection<Configuration> confs = getConfigurations() ?: getConfigurationNames().collect { project.configurations.getByName(it) }
+        Collection<Configuration> confs = getConfigurations() ?: getConfigurationsFromConfigurationNames(project, getConfigurationNames())
         def dependencyMap = readDependenciesFromConfigurations(confs)
         writeLock(dependencyMap)
+    }
+
+    public static Collection<Configuration> getConfigurationsFromConfigurationNames(Project project, Set<String> configurationNames) {
+        configurationNames.collect { project.configurations.getByName(it) }
     }
 
     private readDependenciesFromConfigurations(Collection<Configuration> confs) {
