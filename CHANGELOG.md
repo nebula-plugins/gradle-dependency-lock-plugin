@@ -1,3 +1,9 @@
+3.1.0 / 2015-10-06
+==================
+
+* Fix for global lock tasks so they work with a non multi-project build
+* Additional flag for people who want the lock to be applied earlier
+
 3.0.0 / 2015-08-25
 ==================
 
