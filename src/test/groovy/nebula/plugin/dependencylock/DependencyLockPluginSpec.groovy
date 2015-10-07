@@ -51,7 +51,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
     }
 
     // Same as 'read in dependencies.lock' except we don't call triggerAfterEvaluate
-    def 'read in dependencies.lock at outside afterEvaluate block'() {
+    def 'read in dependencies.lock outside an afterEvaluate block'() {
         stockTestSetup()
         project.ext.set('dependencyLock.lockAfterEvaluating', "false")
 

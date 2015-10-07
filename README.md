@@ -195,10 +195,10 @@ Allows the user to specify a String for the tagname. If present commitLock will 
     
 *dependencyLock.lockAfterEvaluating*
 
-By default this option is true meaning that the locking will be applied in a `afterEvaluate` block. In certain circumstances
-it can be advantageous to apply the lock outside of an `afterEvaluate` block; for example this can happen for projects
-that explicitly trigger dependency configuration resolution via the `resolvedConfiguration()` prior to when the lock would normally
-be applied in an `afterEvaluate` block.
+By default this option is true meaning that the locking will be applied in an `afterEvaluate` block. In certain circumstances
+it can be advantageous to apply the lock outside of an `afterEvaluate` block; for example projects that explicitly trigger 
+dependency configuration resolution via the `resolvedConfiguration()` method prior to when the lock would normally be 
+applied in an `afterEvaluate` block.
 
     ./gradlew -PdependencyLock.lockAfterEvaluating=false <tasks>
 
