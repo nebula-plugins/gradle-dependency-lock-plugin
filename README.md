@@ -109,7 +109,7 @@ The following values are the defaults. If they work for you, you can skip config
       updateDependencies = []
       skippedDependencies = []
       includeTransitives = false
-      lockAtConfigurationPhase = false
+      lockAfterEvaluating = true
     }
 
 #### commitDependencyLock Extension
@@ -193,13 +193,14 @@ Allows the user to specify a String for the tagname. If present commitLock will 
 
     ./gradlew -PcommitDependencyLock.tag=mytag <tasks> commitLock
     
-*dependencyLock.lockAtConfigurationPhase*
+*dependencyLock.lockAfterEvaluating*
 
-Allows the user to apply the lock to the dependency configuration prior to the task execution phase. Using terminology
-from the [Gradle build lifecycle documentation](https://docs.gradle.org/current/userguide/build_lifecycle.html) the
-locking is applied at *Configuration* phase rather than *Execution* phase.
+By default this option is true meaning that the locking will be applied in a `afterEvaluate` block. In certain circumstances
+it can be advantageous to apply the lock outside of an `afterEvaluate` block; for example this can happen for projects
+that explicitly trigger dependency configuration resolution via the `resolvedConfiguration()` prior to when the lock would normally
+be applied in an `afterEvaluate` block.
 
-    ./gradlew -PdependencyLock.lockAtConfigurationPhase=true <tasks>
+    ./gradlew -PdependencyLock.lockAfterEvaluating=false <tasks>
 
 ## Lock File Format
 

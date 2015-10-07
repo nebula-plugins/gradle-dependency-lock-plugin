@@ -108,13 +108,13 @@ class DependencyLockPlugin implements Plugin<Project> {
             }
         }
 
-        def lockAtConfigurationPhase = project.hasProperty('dependencyLock.lockAtConfigurationPhase') ? Boolean.parseBoolean(project['dependencyLock.lockAtConfigurationPhase']) : extension.lockAtConfigurationPhase
-        if (lockAtConfigurationPhase) {
-            logger.info("Applying dependency lock at the configuration phase")
-            applyLockToResolutionStrategy()
-        } else {
-            logger.info("Applying dependency lock at the execution phase")
+        def lockAfterEvaluating = project.hasProperty('dependencyLock.lockAfterEvaluating') ? Boolean.parseBoolean(project['dependencyLock.lockAfterEvaluating']) : extension.lockAfterEvaluating
+        if (lockAfterEvaluating) {
+            logger.info("Applying dependency lock in afterEvaluate block")
             project.afterEvaluate applyLockToResolutionStrategy
+        } else {
+            logger.info("Applying dependency lock as is (outside afterEvaluate block)")
+            applyLockToResolutionStrategy()
         }
 
         project.gradle.taskGraph.whenReady { taskGraph ->
