@@ -18,9 +18,7 @@ package nebula.plugin.dependencylock
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.test.ProjectSpec
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.testfixtures.ProjectBuilder
-import spock.lang.Unroll
 
 class DependencyLockPluginSpec extends ProjectSpec {
     String pluginName = 'nebula.dependency-lock'
@@ -35,6 +33,27 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         then:
         noExceptionThrown()
+    }
+
+    def 'ensure multiple configuration lock works'() {
+        project.apply plugin: 'java'
+        project.repositories { maven { url Fixture.repo } }
+        project.dependencies {
+            compile 'test.example:foo:1.0.0'
+            testCompile 'test.example:foo:1.0.1'
+        }
+
+        when:
+        project.apply plugin: pluginName
+        triggerAfterEvaluate()
+
+        then:
+        def findFoo = { String confName ->
+            project.configurations[confName].resolvedConfiguration.firstLevelModuleDependencies.find { it.moduleName == 'foo'}
+        }
+
+        findFoo('compile').moduleVersion == '1.0.0'
+        findFoo('testCompile').moduleVersion == '1.0.1'
     }
 
     def 'read in dependencies.lock'() {
@@ -104,7 +123,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def override = new File(projectDir, 'override.lock')
         override.text = '''\
             {
-              "test.example:foo": { "locked": "2.0.1" }
+              "test.example:foo": "2.0.1"
             }    
         '''.stripIndent()
 
@@ -185,8 +204,16 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << '''\
             {
-              "test.example:foo": { "locked": "1.0.0", "requested": "1.+" },
-              "test.example:baz": { "locked": "2.0.0", "requested": "2.+" }
+                "compile": {
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.+"
+                    },
+                    "test.example:baz": {
+                        "locked": "2.0.0",
+                        "requested": "2.+"
+                    }
+                }
             }
         '''.stripIndent()
 
@@ -235,7 +262,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def override = new File(projectDir, 'override.lock')
         override.text = '''\
             {
-              "test.example:foo": { "locked": "2.0.1" }
+              "test.example:foo": "2.0.1"
             }
         '''.stripIndent()
 
@@ -269,9 +296,9 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def override = new File(projectDir, 'override.lock')
         override.text = '''\
             {
-              "test.example:foo": { "locked": "1.0.0" },
-              "test.example:bar": { "locked": "1.0.0" },
-              "test.example:baz": { "locked": "1.0.0" }
+              "test.example:foo": "1.0.0",
+              "test.example:bar": "1.0.0",
+              "test.example:baz": "1.0.0"
             }
         '''.stripIndent()
 
@@ -307,7 +334,12 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def sub1DependenciesLock = new File(sub1Folder, 'dependencies.lock')
         sub1DependenciesLock << '''\
             {
-              "test.example:baz": { "locked": "1.0.0", "requested": "1.+" }
+                "compile": {
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "requested": "1.+"
+                    }
+                }
             }
         '''.stripIndent()
 
@@ -317,9 +349,20 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def sub2DependenciesLock = new File(sub2Folder, 'dependencies.lock')
         sub2DependenciesLock << '''\
             {
-              "test.example:baz": { "locked": "1.0.0", "firstLevelTransitive": [ "test.nebula:sub1" ] },
-              "test.example:foo": { "locked": "2.0.0", "requested": "2.+" },
-              "test.nebula:sub1": { "project": true, "firstLevelTransitive": [ "test.nebula:sub2" ] }
+                "compile": {
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "firstLevelTransitive": [ "test.nebula:sub1" ]
+                    },
+                    "test.example:foo": {
+                        "locked": "2.0.0",
+                        "requested": "2.+",
+                    },
+                    "test.nebula:sub1": {
+                        "project": true,
+                        "firstLevelTransitive": [ "test.nebula:sub2" ]
+                    }
+                }
             }
         '''.stripIndent()
 
@@ -354,7 +397,12 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def (Project sub1, Project sub2) = multiProjectSetup()
         new File(projectDir, 'global.lock').text = '''\
             {
-              "test.example:foo": { "locked": "1.0.1", "requested": "1.+" }
+                "compile": {
+                    "test.example:foo": {
+                        "locked": "1.0.1",
+                        "requested": "1.+"
+                    }
+                }
             }
         '''.stripIndent()
 
@@ -379,7 +427,12 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def sub1DependenciesLock = new File(sub1Folder, 'dependencies.lock')
         sub1DependenciesLock << '''\
             {
-              "test.example:foo": { "locked": "1.0.0", "requested": "1.+" }
+                "compile": {
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.+"
+                    }
+                }
             }
         '''.stripIndent()
 
@@ -389,7 +442,12 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def sub2DependenciesLock = new File(sub2Folder, 'dependencies.lock')
         sub2DependenciesLock << '''\
             {
-              "test.example:foo": { "locked": "2.0.0", "requested": "2.+" }
+                "compile": {
+                    "test.example:foo": {
+                        "locked": "2.0.0",
+                        "requested": "2.+"
+                    }
+                }
             }
         '''.stripIndent()
 
@@ -420,7 +478,18 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << '''\
             {
-              "test.example:foo": { "locked": "1.0.0", "requested": "1.+" }
+                "compile": {
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.+"
+                    }
+                },
+                "default": {
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.+"
+                    }
+                }
             }
         '''.stripIndent()
 

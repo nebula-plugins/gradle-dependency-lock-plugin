@@ -45,10 +45,17 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:baz": { "locked": "1.1.0", "requested": "1.+" },
-              "test.example:foo": { "locked": "2.0.1", "requested": "2.+" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:baz": {
+                        "locked": "1.1.0",
+                        "requested": "1.+"
+                    },
+                    "test.example:foo": {
+                        "locked": "2.0.1",
+                        "requested": "2.+"
+                    }
+                }
+            }'''.stripIndent()
         task.dependenciesLock.text == lockText
     }
 
@@ -67,10 +74,19 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         String lockText = '''\
             {
-              "test.example:baz": { "locked": "1.0.0", "transitive": [ "test.example:foobaz" ] },
-              "test.example:foobaz": { "locked": "1.0.0", "requested": "1.+" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:foobaz": {
+                        "locked": "1.0.0",
+                        "requested": "1.+"
+                    },
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:foobaz"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
 
         when:
         task.execute()
@@ -106,10 +122,16 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:foo": { "locked": "2.0.1", "requested": "2.+" },
-              "test.nebula:common": { "project": true }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:foo": {
+                        "locked": "2.0.1",
+                        "requested": "2.+"
+                    },
+                    "test.nebula:common": {
+                        "project": true
+                    }
+                }
+            }'''.stripIndent()
         task.dependenciesLock.text == lockText
     }
 
@@ -146,10 +168,18 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.nebula:common": { "project": true, "transitive": [ "test.nebula:lib" ] },
-              "test.nebula:lib": { "project": true }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.nebula:lib": {
+                        "project": true
+                    },
+                    "test.nebula:common": {
+                        "project": true,
+                        "transitive": [
+                            "test.nebula:lib"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
         task.dependenciesLock.text == lockText
     }
 
@@ -191,12 +221,31 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:baz": { "locked": "2.0.0", "firstLevelTransitive": [ "test.nebula:common", "test.nebula:lib" ] },
-              "test.example:foo": { "locked": "2.0.1", "firstLevelTransitive": [ "test.nebula:common" ] },
-              "test.nebula:common": { "project": true, "firstLevelTransitive": [ "test.nebula:lib" ] },
-              "test.nebula:lib": { "project": true }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.nebula:lib": {
+                        "project": true
+                    },
+                    "test.nebula:common": {
+                        "project": true,
+                        "firstLevelTransitive": [
+                            "test.nebula:lib"
+                        ]
+                    },
+                    "test.example:foo": {
+                        "locked": "2.0.1",
+                        "firstLevelTransitive": [
+                            "test.nebula:common"
+                        ]
+                    },
+                    "test.example:baz": {
+                        "locked": "2.0.0",
+                        "firstLevelTransitive": [
+                            "test.nebula:common",
+                            "test.nebula:lib"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
         task.dependenciesLock.text == lockText
     }
 
@@ -246,12 +295,31 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:foo": { "locked": "2.0.1", "firstLevelTransitive": [ "test.nebula:model" ] },
-              "test.nebula:common": { "project": true, "firstLevelTransitive": [ "test.nebula:lib" ] },
-              "test.nebula:lib": { "project": true },
-              "test.nebula:model": { "project": true, "firstLevelTransitive": [ "test.nebula:common", "test.nebula:lib" ] }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.nebula:model": {
+                        "project": true,
+                        "firstLevelTransitive": [
+                            "test.nebula:common",
+                            "test.nebula:lib"
+                        ]
+                    },
+                    "test.example:foo": {
+                        "locked": "2.0.1",
+                        "firstLevelTransitive": [
+                            "test.nebula:model"
+                        ]
+                    },
+                    "test.nebula:common": {
+                        "project": true,
+                        "firstLevelTransitive": [
+                            "test.nebula:lib"
+                        ]
+                    },
+                    "test.nebula:lib": {
+                        "project": true
+                    }
+                }
+            }'''.stripIndent()
         task.dependenciesLock.text == lockText
     }
 
@@ -274,10 +342,19 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:bar": { "locked": "1.1.0", "requested": "1.+" },
-              "test.example:foo": { "locked": "1.0.1", "transitive": [ "test.example:bar" ] }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:bar": {
+                        "locked": "1.1.0",
+                        "requested": "1.+"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.1",
+                        "transitive": [
+                            "test.example:bar"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
         task.dependenciesLock.text == lockText
     }
 
@@ -300,10 +377,22 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "circular:a": { "locked": "1.0.0", "requested": "1.+", "transitive": [ "circular:b" ] },
-              "circular:b": { "locked": "1.0.0", "transitive": [ "circular:a" ] }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "circular:a": {
+                        "locked": "1.0.0",
+                        "requested": "1.+",
+                        "transitive": [
+                            "circular:b"
+                        ]
+                    },
+                    "circular:b": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "circular:a"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
         task.dependenciesLock.text == lockText
     }
 
@@ -326,11 +415,26 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "circular:a": { "locked": "1.0.0", "transitive": [ "circular:b", "circular:oneleveldeep" ] },
-              "circular:b": { "locked": "1.0.0", "transitive": [ "circular:a" ] },
-              "circular:oneleveldeep": { "locked": "1.0.0", "requested": "1.+" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "circular:oneleveldeep": {
+                        "locked": "1.0.0",
+                        "requested": "1.+"
+                    },
+                    "circular:a": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "circular:b",
+                            "circular:oneleveldeep"
+                        ]
+                    },
+                    "circular:b": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "circular:a"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
         task.dependenciesLock.text == lockText
     }
 
@@ -354,12 +458,30 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:bar": { "locked": "1.1.0", "requested": "1.+" },
-              "test.example:baz": { "locked": "1.0.0", "transitive": [ "test.example:foobaz" ] },
-              "test.example:foo": { "locked": "1.0.1", "transitive": [ "test.example:bar", "test.example:foobaz" ] },
-              "test.example:foobaz": { "locked": "1.0.0", "requested": "1.+" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:bar": {
+                        "locked": "1.1.0",
+                        "requested": "1.+"
+                    },
+                    "test.example:foobaz": {
+                        "locked": "1.0.0",
+                        "requested": "1.+"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.1",
+                        "transitive": [
+                            "test.example:bar",
+                            "test.example:foobaz"
+                        ]
+                    },
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:foobaz"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
         task.dependenciesLock.text == lockText
     }
 
@@ -382,13 +504,38 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:bar": { "locked": "1.0.0", "transitive": [ "test.example:transitive" ] },
-              "test.example:baz": { "locked": "1.0.0", "transitive": [ "test.example:foobaz" ] },
-              "test.example:foo": { "locked": "1.0.1", "transitive": [ "test.example:bar", "test.example:foobaz" ] },
-              "test.example:foobaz": { "locked": "1.0.0", "transitive": [ "test.example:transitive" ] },
-              "test.example:transitive": { "locked": "1.0.0", "requested": "1.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:transitive": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:bar": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:transitive"
+                        ]
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.1",
+                        "transitive": [
+                            "test.example:bar",
+                            "test.example:foobaz"
+                        ]
+                    },
+                    "test.example:foobaz": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:transitive"
+                        ]
+                    },
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:foobaz"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
         task.dependenciesLock.text == lockText
     }
 
@@ -414,11 +561,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         where:
         filter                                            || lockText
-        { group, artifact, version -> false }             || '{\n\n}\n'
+        { group, artifact, version -> false }             || '{\n    \n}'
         { group, artifact, version -> artifact == 'foo' } || '''\
             {
-              "test.example:foo": { "locked": "2.0.1", "requested": "2.+" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:foo": {
+                        "locked": "2.0.1",
+                        "requested": "2.+"
+                    }
+                }
+            }'''.stripIndent()
     }
 }

@@ -165,7 +165,7 @@ Use generated lock files in the build directory instead of the locks in the proj
 
 *dependencyLock.overrideFile*
 
-Allows the user to specify a file of overrides. This file should be in the lock file format specified below in the Lock
+Allows the user to specify a file of overrides. This file should be formatted as specified in the 
 File Format section. These will override the locked values in the dependencies.lock file. They will be respected when
 running generateLock. This file is expected at the top level project.
 
@@ -205,32 +205,41 @@ project property to false as follows:
 
 ## Lock File Format
 
-The lock file is written in a json format. The keys of the map are made up of "\<group\>:\<artifact\>". The requested entry is informational to let users know what version or range of versions was initially asked for. The locked entry is the version of the dependency the plugin will lock to.
+The lock file is written in a Json format. The keys of the map are made up of "\<group\>:\<artifact\>". The requested entry is informational to let users know what version or range of versions was initially asked for. The locked entry is the version of the dependency the plugin will lock to.
 
     {
-      "<group0>:<artifact0>": { "locked": "<version0>", "requested": "<requestedVersion0>" },
-      "<group1>:<artifact1>": { "locked": "<version1>", "requested": "<requestedVersion1>" }
+        "configuration0": {
+            "<group0>:<artifact0>": { "locked": "<version0>", "requested": "<requestedVersion0>" },
+            "<group1>:<artifact1>": { "locked": "<version1>", "requested": "<requestedVersion1>" }      
+        }
     }
 
 If a dependency version selection was influenced by a command line argument we add a viaOverride field. The viaOverride field is informational.
 
     {
-      "<group0>:<artifact0>": { "locked": "<version0>", "requested": "<requestedVersion0>", "viaOverride": "<overrideVersion0>" }
+        "configuration0": {
+            "<group0>:<artifact0>": { "locked": "<version0>", "requested": "<requestedVersion0>", "viaOverride": "<overrideVersion0>" }
+        }
+      
     }
 
 If we include transitive dependencies.
 
     {
-      "<directgroup>:<directartifact>": { "locked": "<directversion>", "requested": "<directrequested>" },
-      "<group>:<artifact>": { "locked": "<version>", "transitive": [ "<directgroup>:<directartifact>" ]}
+        "configuration0": {
+            "<directgroup>:<directartifact>": { "locked": "<directversion>", "requested": "<directrequested>" },
+            "<group>:<artifact>": { "locked": "<version>", "transitive": [ "<directgroup>:<directartifact>" ]}
+        }
     }
 
 If we don't include all transitive dependencies we still need to include the transitive information from the direct dependencies of other projects in our multi-project which we depend on. 
 
     {
-      "<directgroup>:<directartifact>": { "locked": "<directversion>", "requested": "<directrequested>" },
-      "<group>:<artifact>": { "locked": "<version>", "firstLevelTransitive": [ "<mygroup>:<mypeer>" ]},
-      "<mygroup>:<mypeer>": { "project": true }
+        "configuration0": {
+            "<directgroup>:<directartifact>": { "locked": "<directversion>", "requested": "<directrequested>" },
+            "<group>:<artifact>": { "locked": "<version>", "firstLevelTransitive": [ "<mygroup>:<mypeer>" ]},
+            "<mygroup>:<mypeer>": { "project": true }        
+        }
     }
 
 And we document project dependencies.
@@ -248,30 +257,47 @@ The lock will have
     {
       "group:common": { "project": true }
     }
+    
+    
+## Override File Format
+
+Override files are simple Json constructs with keys representing groupId:artifactId and values for requested versions.  
+
+    {
+      "<group0>:<artifact0>": "version0",
+      "<group1>:<artifact1>": "version1" 
+    }
+
 
 ## Example
 
 *build.gradle*
 
     buildscript {
-      repositories { jcenter() }
-      dependencies {
-        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:1.12.+'
-      }
+        repositories {
+            mavenLocal()
+            jcenter()
+        }
+    
+        dependencies {
+            classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:3.2.+'
+        }
     }
-
+    
     apply plugin: 'java'
-    apply plugin: 'dependency-lock'
-
+    apply plugin: 'nebula.dependency-lock'
+    
     repositories {
-      mavenCentral()
+        mavenLocal()
+        jcenter()
     }
-
+    
     dependencies {
-      compile 'com.google.guava:guava:14.+'
-      testCompile 'junit:junit:4.+'
+        compile 'com.google.guava:guava:14.+'
+        testCompile 'junit:junit:4.+'
     }
 
+    
 When you run
 
     ./gradlew generateLock saveLock
@@ -281,28 +307,47 @@ It will output
 *dependencies.lock*
 
     {
-      "com.google.guava:guava": { "locked": "14.0.1", "requested": "14.+" },
-      "junit:junit": { "locked": "4.11", "requested": "4.+" }
-    }
+       "compile": {
+           "com.google.guava:guava": {
+               "locked": "14.0.1",
+               "requested": "14.+"
+           }
+       },
+       "default": {
+           "com.google.guava:guava": {
+               "locked": "14.0.1",
+               "requested": "14.+"
+           }
+       },
+       "runtime": {
+           "com.google.guava:guava": {
+               "locked": "14.0.1",
+               "requested": "14.+"
+           }
+       },
+       "testCompile": {
+           "junit:junit": {
+               "locked": "4.12",
+               "requested": "4.+"
+           },
+           "com.google.guava:guava": {
+               "locked": "14.0.1",
+               "requested": "14.+"
+           }
+       },
+       "testRuntime": {
+           "junit:junit": {
+               "locked": "4.12",
+               "requested": "4.+"
+           },
+           "com.google.guava:guava": {
+               "locked": "14.0.1",
+               "requested": "14.+"
+           }
+       }
+   }
 
 # Possible Future Changes
-
-### Locking dependencies per configuration
-
-    {
-      "compile": {
-        // existing format
-      },
-      "testCompile": {
-        // existing format
-      }
-    }
-
-*or*
-
-    {
-      "<group>:<artifacts>:<version>": { "transitive": /* same */,  "confs": ["compile", "testCompile"] }
-    }
 
 ### Determine Version Requested for Locked Transitives, Output Format
 

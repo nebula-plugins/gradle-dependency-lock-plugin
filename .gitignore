@@ -1,6 +1,7 @@
 build/
 .gradle/
 gradle.properties
+.java-version
 
 out/
 .idea/

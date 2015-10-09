@@ -29,7 +29,6 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.tasks.Delete
 
 import static nebula.plugin.dependencylock.tasks.GenerateLockTask.getConfigurationsFromConfigurationNames
@@ -86,8 +85,8 @@ class DependencyLockPlugin implements Plugin<Project> {
         Map<String, Set<?>> buildForces = [:]
 
         def applyLockToResolutionStrategy = {
-            if (project.plugins.hasPlugin(JavaBasePlugin) && extension.configurationNames.empty) {
-                extension.configurationNames << 'testRuntime'
+            if (extension.configurationNames.empty) {
+                extension.configurationNames = project.configurations.collect { it.name }
             }
             project.configurations.each { Configuration conf ->
                 buildForces[conf.name] = Collections.unmodifiableSet(new HashSet<ModuleVersionSelector>(conf.resolutionStrategy.forcedModules))
@@ -137,7 +136,7 @@ class DependencyLockPlugin implements Plugin<Project> {
     }
 
     private void configureCommitTask(String clLockFileName, String globalLockFileName, SaveLockTask saveTask, DependencyLockExtension lockExtension,
-            DependencyLockCommitExtension commitExtension, SaveLockTask globalSaveTask = null) {
+                                     DependencyLockCommitExtension commitExtension, SaveLockTask globalSaveTask = null) {
         project.plugins.withType(ScmPlugin) {
             if (!project.rootProject.tasks.findByName('commitLock')) {
                 CommitLockTask commitTask = project.rootProject.tasks.create('commitLock', CommitLockTask)
@@ -147,8 +146,10 @@ class DependencyLockPlugin implements Plugin<Project> {
                 }
                 commitTask.conventionMapping.with {
                     scmFactory = { project.rootProject.scmFactory }
-                    commitMessage = { project.hasProperty('commitDependencyLock.message') ? 
-                            project['commitDependencyLock.message'] : commitExtension.message }
+                    commitMessage = {
+                        project.hasProperty('commitDependencyLock.message') ?
+                                project['commitDependencyLock.message'] : commitExtension.message
+                    }
                     patternsToCommit = {
                         def lockFiles = []
                         def rootLock = new File(project.rootProject.projectDir, clLockFileName ?: lockExtension.lockFile)
@@ -165,12 +166,18 @@ class DependencyLockPlugin implements Plugin<Project> {
                                 lockFiles << potentialLock
                             }
                         }
-                        def patterns = lockFiles.collect { project.rootProject.projectDir.toURI().relativize(it.toURI()).path }
+                        def patterns = lockFiles.collect {
+                            project.rootProject.projectDir.toURI().relativize(it.toURI()).path
+                        }
                         logger.info(patterns.toString())
                         patterns
                     }
-                    shouldCreateTag = { project.hasProperty('commitDependencyLock.tag') ?: commitExtension.shouldCreateTag }
-                    tag = { project.hasProperty('commitDependencyLock.tag') ? project['commitDependencyLock.tag'] : commitExtension.tag.call() }
+                    shouldCreateTag = {
+                        project.hasProperty('commitDependencyLock.tag') ?: commitExtension.shouldCreateTag
+                    }
+                    tag = {
+                        project.hasProperty('commitDependencyLock.tag') ? project['commitDependencyLock.tag'] : commitExtension.tag.call()
+                    }
                     remoteRetries = { commitExtension.remoteRetries }
                 }
             }
@@ -239,7 +246,9 @@ class DependencyLockPlugin implements Plugin<Project> {
     private void setupLockConventionMapping(GenerateLockTask task, DependencyLockExtension extension, Map overrideMap) {
         task.conventionMapping.with {
             skippedDependencies = { extension.skippedDependencies }
-            includeTransitives = { project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives']) : extension.includeTransitives }
+            includeTransitives = {
+                project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives']) : extension.includeTransitives
+            }
             filter = { extension.dependencyFilter }
             overrides = { overrideMap }
         }
@@ -309,7 +318,7 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         project.configurations.all {
             resolutionStrategy {
-                overrideForces.each { dep -> force dep}
+                overrideForces.each { dep -> force dep }
             }
         }
     }
@@ -318,29 +327,32 @@ class DependencyLockPlugin implements Plugin<Project> {
         logger.info("Using ${dependenciesLock.name} to lock dependencies")
         def locks = loadLock(dependenciesLock)
 
-        // Non-project locks are the top-level dependencies, and possibly transitive thereof, of this project which are
-        // locked by the lock file. There may also be dependencies on other projects. These are not captured here.
-        def nonProjectLocks = locks.findAll { it.value?.locked }
+        project.configurations.all({ Configuration conf ->
+            def deps = locks[conf.name]
+            if (deps) {
+                // Non-project locks are the top-level dependencies, and possibly transitive thereof, of this project which are
+                // locked by the lock file. There may also be dependencies on other projects. These are not captured here.
+                def nonProjectLocks = deps.findAll { it.value?.locked }
 
-        // Override locks from the file with any of the user specified manual overrides.
-        def lockForces = nonProjectLocks.collect {
-            overrides.containsKey(it.key) ? "${it.key}:${overrides[it.key]}" : "${it.key}:${it.value.locked}"
-        }
+                // Override locks from the file with any of the user specified manual overrides.
+                def lockForces = nonProjectLocks.collect {
+                    overrides.containsKey(it.key) ? "${it.key}:${overrides[it.key]}" : "${it.key}:${it.value.locked}"
+                }
 
-        // If the user specifies an override that does not exist in the lock file, force that dependency anyway.
-        def unusedOverrides = overrides.findAll { !locks.containsKey(it.key) }.collect { "${it.key}:${it.value}" }
-        lockForces.addAll(unusedOverrides)
-        logger.debug('lockForces: {}', lockForces)
+                // If the user specifies an override that does not exist in the lock file, force that dependency anyway.
+                def unusedOverrides = overrides.findAll { !locks.containsKey(it.key) }.collect {
+                    "${it.key}:${it.value}"
+                }
+                lockForces.addAll(unusedOverrides)
+                logger.debug('lockForces: {}', lockForces)
 
-        // Create the dependencies explicitly to avoid doing that implicitly for every configuration
-        lockForces = lockForces.collect { dep -> project.dependencies.create(dep) }
-
-        // Pretty nice after all that work (:
-        project.configurations.all {
-            resolutionStrategy {
-                force lockForces.toArray()
+                // Create the dependencies explicitly to avoid doing that implicitly for every configuration
+                lockForces = lockForces.collect { dep -> project.dependencies.create(dep) }
+                resolutionStrategy {
+                    force lockForces.toArray()
+                }
             }
-        }
+        })
     }
 
     boolean shouldIgnoreDependencyLock() {
@@ -363,7 +375,7 @@ class DependencyLockPlugin implements Plugin<Project> {
         // Load overrides from a file if the user has specified one via a property.
         if (project.hasProperty('dependencyLock.overrideFile')) {
             File dependenciesLock = new File(project.rootDir, project['dependencyLock.overrideFile'])
-            loadLock(dependenciesLock).each { overrides[it.key] = it.value.locked }
+            loadLock(dependenciesLock).each { overrides[it.key] = it.value }
             logger.debug "Override file loaded: ${project['dependencyLock.overrideFile']}"
         }
 

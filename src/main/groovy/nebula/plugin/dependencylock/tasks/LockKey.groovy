@@ -24,9 +24,10 @@ import groovy.transform.EqualsAndHashCode
 class LockKey {
     String group
     String artifact
+    String configuration
 
     @Override
     String toString() {
-        "${group}:${artifact}"
+        "[$configuration] ${group}:${artifact}"
     }
 }
