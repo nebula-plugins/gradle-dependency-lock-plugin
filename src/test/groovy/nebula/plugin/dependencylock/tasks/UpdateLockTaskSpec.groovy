@@ -34,10 +34,17 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(project.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "test.example:baz": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foo": { "locked": "1.0.0", "requested": "1.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    }
+                }
+            }'''.stripIndent()
 
         when:
         task.execute()
@@ -45,9 +52,13 @@ class UpdateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:foo": { "locked": "2.0.0", "requested": "2.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:foo": {
+                        "locked": "2.0.0",
+                        "requested": "2.0.0"
+                    }
+                }
+            }'''.stripIndent()
 
         task.dependenciesLock.text == lockText
     }
@@ -64,10 +75,17 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(project.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "test.example:foo": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:bar": { "locked": "1.0.0", "requested": "1.0.0" },
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:bar": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    }
+                }
+            }'''.stripIndent()
 
         when:
         task.execute()
@@ -79,16 +97,33 @@ class UpdateLockTaskSpec extends ProjectSpec {
         useTransitive || lockText
         false         || '''\
             {
-              "test.example:bar": { "locked": "1.1.0", "requested": "1.1.0" },
-              "test.example:foo": { "locked": "1.0.1", "requested": "1.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:bar": {
+                        "locked": "1.1.0",
+                        "requested": "1.1.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.1",
+                        "requested": "1.0.0"
+                    }
+                }
+            }'''.stripIndent()
         true          || '''\
             {
-              "test.example:bar": { "locked": "1.1.0", "requested": "1.1.0" },
-              "test.example:foo": { "locked": "1.0.1", "requested": "1.0.0", "transitive": [ "test.example:bar" ] }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:bar": {
+                        "locked": "1.1.0",
+                        "requested": "1.1.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.1",
+                        "requested": "1.0.0",
+                        "transitive": [
+                            "test.example:bar"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
     }
 
     def 'by default the filter is respected'() {
@@ -105,10 +140,17 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(project.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "test.example:baz": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foo": { "locked": "1.0.0", "requested": "1.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    }
+                }
+            }'''.stripIndent()
 
         when:
         task.execute()
@@ -116,10 +158,17 @@ class UpdateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:baz": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foo": { "locked": "2.0.0", "requested": "2.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "2.0.0",
+                        "requested": "2.0.0"
+                    }
+                }
+            }'''.stripIndent()
 
         task.dependenciesLock.text == lockText
     }
@@ -135,10 +184,18 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(project.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "test.example:bar": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foo": { "locked": "test.example:foo:1.0.0", "transitive": ["test.example:bar"] }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:bar": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0",
+                        "transitive": [ "test.example:bar" ]
+                    }
+                }
+            }'''.stripIndent()
 
         when:
         task.execute()
@@ -146,10 +203,19 @@ class UpdateLockTaskSpec extends ProjectSpec {
         then:
         def lockText = lockFile.text = '''\
             {
-              "test.example:bar": { "locked": "1.1.0", "requested": "1.1.0" },
-              "test.example:foo": { "locked": "1.0.1", "transitive": [ "test.example:bar" ] }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:bar": {
+                        "locked": "1.1.0",
+                        "requested": "1.1.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.1",
+                        "transitive": [
+                            "test.example:bar"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
 
         task.dependenciesLock.text == lockText
     }
@@ -167,9 +233,20 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(project.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "test.example:bar": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:baz": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foo": { "locked": "1.0.0", "requested": "1.0.0" }
+                "testRuntime": {
+                    "test.example:bar": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    }
+                }
             }
         '''.stripIndent()
 
@@ -183,18 +260,38 @@ class UpdateLockTaskSpec extends ProjectSpec {
         dependencies                                || lockText
         [ 'test.example:foo' ]                      || '''\
             {
-              "test.example:bar": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:baz": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foo": { "locked": "2.0.0", "requested": "2.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:bar": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "2.0.0",
+                        "requested": "2.0.0"
+                    }
+                }
+            }'''.stripIndent()
         [ 'test.example:foo', 'test.example:baz' ]  || '''\
             {
-              "test.example:bar": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:baz": { "locked": "2.0.0", "requested": "2.0.0" },
-              "test.example:foo": { "locked": "2.0.0", "requested": "2.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:bar": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:baz": {
+                        "locked": "2.0.0",
+                        "requested": "2.0.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "2.0.0",
+                        "requested": "2.0.0"
+                    }
+                }
+            }'''.stripIndent()
     }
 
     def 'when dependencies are specified, the filter is ignored' () {
@@ -211,10 +308,17 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(project.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "test.example:baz": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foo": { "locked": "1.0.0", "requested": "1.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    }
+                }
+            }'''.stripIndent()
 
         task.dependencies = [ 'test.example:foo' ]
 
@@ -224,10 +328,17 @@ class UpdateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:baz": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foo": { "locked": "2.0.0", "requested": "2.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "2.0.0",
+                        "requested": "2.0.0"
+                    }
+                }
+            }'''.stripIndent()
 
         task.dependenciesLock.text == lockText
     }
@@ -260,10 +371,17 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(project.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "test.example:foo": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foobaz": { "locked": "1.0.0", "requested": "1.0.0" },
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foobaz": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    }
+                }
+            }'''.stripIndent()
 
         when:
         task.execute()
@@ -271,10 +389,17 @@ class UpdateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:foo": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foobaz": { "locked": "1.0.0", "requested": "1.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foobaz": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    }
+                }
+            }'''.stripIndent()
 
         task.dependenciesLock.text == lockText
     }
@@ -292,10 +417,17 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(project.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "test.example:foo": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foobaz": { "locked": "1.0.0", "requested": "1.0.0" },
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foobaz": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    }
+                }
+            }'''.stripIndent()
 
         when:
         task.execute()
@@ -303,10 +435,17 @@ class UpdateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:foo": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foobaz": { "locked": "1.0.0", "requested": "1.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foobaz": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    }
+                }
+            }'''.stripIndent()
 
         task.dependenciesLock.text == lockText
     }
@@ -327,11 +466,21 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(project.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "test.example:baz": { "locked": "1.0.0", "transitive": [ "test.example:foobaz" ] },
-              "test.example:foo": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foobaz": { "locked": "1.0.0", "requested": "1.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "transitive": [ "test.example:foobaz" ]
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foobaz": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    }
+                }
+            }'''.stripIndent()
 
         when:
         task.execute()
@@ -339,11 +488,25 @@ class UpdateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:baz": { "locked": "1.0.0", "transitive": [ "test.example:foobaz" ] },
-              "test.example:foo": { "locked": "2.0.0", "transitive": [ "test.example:foobaz" ] },
-              "test.example:foobaz": { "locked": "1.0.0", "requested": "1.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:foobaz"
+                        ]
+                    },
+                    "test.example:foo": {
+                        "locked": "2.0.0",
+                        "transitive": [
+                            "test.example:foobaz"
+                        ]
+                    },
+                    "test.example:foobaz": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    }
+                }
+            }'''.stripIndent()
 
         task.dependenciesLock.text == lockText
     }
@@ -362,10 +525,22 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(project.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "circular:a": { "locked": "1.0.0", "requested": "1.+", "transitive": [ "circular:b" ] },
-              "circular:b": { "locked": "1.0.0", "transitive": [ "circular:a" ] }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "circular:a": {
+                        "locked": "1.0.0",
+                        "requested": "1.+",
+                        "transitive": [
+                            "circular:b"
+                        ]
+                    },
+                    "circular:b": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "circular:a"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
 
         when:
         task.execute()
@@ -373,10 +548,22 @@ class UpdateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "circular:a": { "locked": "1.0.0", "requested": "1.+", "transitive": [ "circular:b" ] },
-              "circular:b": { "locked": "1.0.0", "transitive": [ "circular:a" ] }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "circular:a": {
+                        "locked": "1.0.0",
+                        "requested": "1.+",
+                        "transitive": [
+                            "circular:b"
+                        ]
+                    },
+                    "circular:b": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "circular:a"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
 
         task.dependenciesLock.text == lockText
     }
@@ -395,11 +582,26 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(project.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "circular:a": { "locked": "1.0.0", "transitive": [ "circular:b", "circular:oneleveldeep" ] },
-              "circular:b": { "locked": "1.0.0", "transitive": [ "circular:a" ] },
-              "circular:oneleveldeep": { "locked": "1.0.0", "requested": "1.+" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "circular:a": {
+                        "locked": "1.0.0",
+                        "requested": "1.+",
+                        "transitive": [
+                            "circular:b", "circular:oneleveldeep"
+                        ]
+                    },
+                    "circular:b": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "circular:a"
+                        ]
+                    },
+                    "circular:oneleveldeep": {
+                        "locked": "1.0.0",
+                        "requested": "1.0+"
+                    }
+                }
+            }'''.stripIndent()
 
         when:
         task.execute()
@@ -407,11 +609,26 @@ class UpdateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "circular:a": { "locked": "1.0.0", "transitive": [ "circular:b", "circular:oneleveldeep" ] },
-              "circular:b": { "locked": "1.0.0", "transitive": [ "circular:a" ] },
-              "circular:oneleveldeep": { "locked": "1.0.0", "requested": "1.+" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "circular:a": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "circular:b",
+                            "circular:oneleveldeep"
+                        ]
+                    },
+                    "circular:oneleveldeep": {
+                        "locked": "1.0.0",
+                        "requested": "1.+"
+                    },
+                    "circular:b": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "circular:a"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
 
         task.dependenciesLock.text == lockText
     }
@@ -445,11 +662,20 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(app.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "test.example:azz": { "locked": "-42.0", "requested": "0.24-" },
-              "test.example:foo": { "locked": "1.0.1", "requested": "1.0.+" },
-              "test.nebula:common": { "project": true }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "com.example:azz": {
+                        "locked": "-42.0",
+                        "requested": "0.24-"
+                    },
+                    "com.example:foo": {
+                        "locked": "1.0.1",
+                        "requested": "1.0+"
+                    },
+                    "test.nebula:common": {
+                        "project": true
+                    }
+                }
+            }'''.stripIndent()
 
         when:
         task.execute()
@@ -457,11 +683,22 @@ class UpdateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:baz": { "locked": "2.0.0", "firstLevelTransitive": [ "test.nebula:common" ] },
-              "test.example:foo": { "locked": "2.0.1", "requested": "2.+" },
-              "test.nebula:common": { "project": true }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.nebula:common": {
+                        "project": true
+                    },
+                    "test.example:foo": {
+                        "locked": "2.0.1",
+                        "requested": "2.+"
+                    },
+                    "test.example:baz": {
+                        "locked": "2.0.0",
+                        "firstLevelTransitive": [
+                            "test.nebula:common"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
 
         task.dependenciesLock.text == lockText
     }
@@ -496,12 +733,27 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(app.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "test.example:azz": { "locked": "-42.0", "requested": "0.24-" },
-              "test.example:baz": { "locked": "1.0.0", "firstLevelTransitive": [ "test.nebula:common" ] },
-              "test.example:foo": { "locked": "1.0.1", "requested": "2.+" },
-              "test.nebula:common": { "project": true }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:azz": {
+                        "locked": "-42.0",
+                        "requested": "0.24-"
+                    },
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "firstLevelTransitive": [
+                            "test.nebula:common"
+                        ]
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.1",
+                        "requested": "2.+"
+                    },
+                    "test.nebula:common": {
+                        "project": true
+                    }
+
+                }
+            }'''.stripIndent()
 
         when:
         task.execute()
@@ -509,11 +761,22 @@ class UpdateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:baz": { "locked": "2.0.0", "firstLevelTransitive": [ "test.nebula:common" ] },
-              "test.example:foo": { "locked": "1.0.1", "requested": "2.+" },
-              "test.nebula:common": { "project": true }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:baz": {
+                        "locked": "2.0.0",
+                        "firstLevelTransitive": [
+                            "test.nebula:common"
+                        ]
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.1",
+                        "requested": "2.+"
+                    },
+                    "test.nebula:common": {
+                        "project": true
+                    }
+                }
+            }'''.stripIndent()
 
         task.dependenciesLock.text == lockText
     }
@@ -545,10 +808,17 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(project.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "test.example:bar": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foo": { "locked": "1.0.0", "requested": "1.0.0" }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:bar": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                }
+            }'''.stripIndent()
 
         when:
         task.execute()
@@ -556,11 +826,22 @@ class UpdateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:bar": { "locked": "1.0.0", "requested": "1.0.0" },
-              "test.example:foo": { "locked": "2.0.0", "firstLevelTransitive": [ "test.nebula:app" ] },
-              "test.nebula:app": { "project": true }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:bar": {
+                        "locked": "1.0.0",
+                        "requested": "1.0.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "2.0.0",
+                        "firstLevelTransitive": [
+                            "test.nebula:app"
+                        ]
+                    },
+                    "test.nebula:app": {
+                        "project": true
+                    }
+                }
+            }'''.stripIndent()
 
         task.dependenciesLock.text == lockText
     }
@@ -602,13 +883,31 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockFile = new File(app.projectDir, 'dependencies.lock')
         lockFile.text = '''\
             {
-              "test.example:azz": { "locked": "-42.0", "firstLevelTransitive": [ "test.nebula:lib" ] },
-              "test.example:baz": { "locked": "1.0.0", "firstLevelTransitive": [ "test.nebula:common", "test.nebula:lib" ] },
-              "test.example:foo": { "locked": "1.0.0", "firstLevelTransitive": [ "test.nebula:common" ] },
-              "test.nebula:common": { "project": true, "firstLevelTransitive": [ "test.nebula:lib" ] },
-              "test.nebula:lib": { "project": true }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:azz": {
+                        "locked": "-42.0",
+                        "firstLevelTransitive": [
+                            "test.nebula:lib"
+                        ]
+                    },
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "firstLevelTransitive": [
+                            "test.nebula:common",
+                            "test.nebula:lib"
+                        ]
+                    },
+                    "test.nebula:common": {
+                        "project": true,
+                            "firstLevelTransitive": [
+                            "test.nebula:lib"
+                        ]
+                    },
+                    "test.nebula:lib": {
+                        "project": true
+                    }
+                }
+            }'''.stripIndent()
 
         when:
         task.execute()
@@ -616,12 +915,31 @@ class UpdateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-              "test.example:baz": { "locked": "2.0.0", "firstLevelTransitive": [ "test.nebula:common", "test.nebula:lib" ] },
-              "test.example:foo": { "locked": "2.0.1", "firstLevelTransitive": [ "test.nebula:common" ] },
-              "test.nebula:common": { "project": true, "firstLevelTransitive": [ "test.nebula:lib" ] },
-              "test.nebula:lib": { "project": true }
-            }
-        '''.stripIndent()
+                "testRuntime": {
+                    "test.example:baz": {
+                        "locked": "2.0.0",
+                        "firstLevelTransitive": [
+                            "test.nebula:common",
+                            "test.nebula:lib"
+                        ]
+                    },
+                    "test.nebula:common": {
+                        "project": true,
+                        "firstLevelTransitive": [
+                            "test.nebula:lib"
+                        ]
+                    },
+                    "test.nebula:lib": {
+                        "project": true
+                    },
+                    "test.example:foo": {
+                        "locked": "2.0.1",
+                        "firstLevelTransitive": [
+                            "test.nebula:common"
+                        ]
+                    }
+                }
+            }'''.stripIndent()
 
         task.dependenciesLock.text == lockText
     }

@@ -16,13 +16,11 @@
 package nebula.plugin.dependencylock.tasks
 
 import groovy.json.JsonSlurper
-import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.GradleException
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.internal.tasks.options.Option
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-
-import java.lang.Override
-import org.gradle.api.GradleException
-import org.gradle.api.internal.tasks.options.Option
 
 /**
  * The update task is a generate task, it simply reads in the old locked dependencies and then overwrites the desired
@@ -61,36 +59,31 @@ class UpdateLockTask extends GenerateLockTask {
     void writeLock(updated) {
         File currentLock = new File(project.projectDir, dependenciesLock.name)
         def locked = loadLock(currentLock)
-        def pruned = pruneDeps(locked)
+        // pruneDeps calculates all dependencies in current build file and cleans the irrelevant ones from the locked file
+        def pruned = prune(locked)
         super.writeLock(pruned + (updated as Map))
     }
 
-    private pruneDeps(locked) {
-        Set keys = []
+    private prune(locked) {
         Set visited = []
+        List stack = []
 
-        // Visit all nodes in a list of dependency trees once and record the lock key.
-        Closure addKeysFrom
-        addKeysFrom = { Set<ResolvedDependency> nodes ->
-            keys += nodes.collect { ResolvedDependency dep ->
-                visited += dep
-                new LockKey(group: dep.moduleGroup, artifact: dep.moduleName)
+        project.configurations.each({ Configuration config ->
+            def deps = config.resolvedConfiguration.firstLevelModuleDependencies.flatten()
+            stack.addAll(deps)
+            while (stack.size() > 0) {
+                def resolvedDep = stack.pop()
+                def lockKey = new LockKey(group: resolvedDep.moduleGroup, artifact: resolvedDep.moduleName, configuration: config.name)
+                if (!visited.contains(lockKey)) {
+                    visited.add(lockKey)
+                    stack.addAll(resolvedDep.children)
+                }
             }
-            Set unvisited = nodes*.children.flatten() - visited
-            if (unvisited.size() > 0) {
-                addKeysFrom.trampoline(unvisited)
-            }  // bounce..
-        }.trampoline()
+        })
 
-        // Recursively generate keys for the entire dependency tree.
-        Set dependencies = project.configurations*.resolvedConfiguration.firstLevelModuleDependencies.flatten()
-        addKeysFrom(dependencies)
-
-        // Prune dependencies from the lock file that are not needed by dependencies in the current build script.
-        locked.findAll {
-            keys.contains(it.key)
-        }
+        return locked.findAll { visited.contains(it.key) }
     }
+
 
     private static loadLock(File lock) {
         def json
@@ -105,9 +98,11 @@ class UpdateLockTask extends GenerateLockTask {
         def lockKeyMap = [:].withDefault {
             [transitive: [] as Set, firstLevelTransitive: [] as Set, childrenVisited: false]
         }
-        json.each { key, value ->
-            def (group, artifact) = key.tokenize(':')
-            lockKeyMap.put(new LockKey(group: group, artifact: artifact), value)
+        json.each { configuration, depMap ->
+            depMap.each { key, value ->
+                def (group, artifact) = key.tokenize(':')
+                lockKeyMap.put(new LockKey(group: group, artifact: artifact, configuration: configuration), value)
+            }
         }
         lockKeyMap
     }

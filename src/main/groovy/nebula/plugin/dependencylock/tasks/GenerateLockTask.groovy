@@ -15,6 +15,7 @@
  */
 package nebula.plugin.dependencylock.tasks
 
+import groovy.json.JsonOutput
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -56,7 +57,7 @@ class GenerateLockTask extends AbstractLockTask {
                 filter(dependency.group, dependency.name, dependency.version)
             }
             filteredExternalDependencies.each { ExternalDependency dependency ->
-                def key = new LockKey(group: dependency.group, artifact: dependency.name)
+                def key = new LockKey(group: dependency.group, artifact: dependency.name, configuration: configuration.name)
                 deps[key].requested = dependency.version
             }
 
@@ -65,12 +66,13 @@ class GenerateLockTask extends AbstractLockTask {
             def filteredResolvedDependencies = resolvedDependencies.findAll { ResolvedDependency resolved ->
                 filter(resolved.moduleGroup, resolved.moduleName, resolved.moduleVersion)
             }
+
             filteredResolvedDependencies.each { ResolvedDependency resolved ->
-                def key = new LockKey(group: resolved.moduleGroup, artifact: resolved.moduleName)
+                def key = new LockKey(group: resolved.moduleGroup, artifact: resolved.moduleName, configuration: configuration.name)
 
                 // If this dependency does not exist in our list of peers, it is a standard dependency. Otherwise, it is
                 // a project dependency.
-                if (!peers.contains(key)) {
+                if (!isKeyInPeerList(key, peers)) {
                     deps[key].locked = resolved.moduleVersion
                 } else {
                     // Project dependencies don't have a version so they must be treated differently. Record the project
@@ -80,14 +82,14 @@ class GenerateLockTask extends AbstractLockTask {
                     // If we don't include transitive dependencies, then we must lock the first-level "transitive"
                     // dependencies of each project dependency.
                     if (!getIncludeTransitives()) {
-                        handleSiblingTransitives(resolved, deps, peers)
+                        handleSiblingTransitives(resolved, configuration.name, deps, peers)
                     }
                 }
 
                 // If requested, lock all the transitive dependencies of the declared top-level dependencies.
                 if (getIncludeTransitives()) {
                     deps[key].childrenVisited = true
-                    resolved.children.each { handleTransitive(it, deps, peers, key) }
+                    resolved.children.each { handleTransitive(it, configuration.name, deps, peers, key) }
                 }
             }
         }
@@ -95,26 +97,27 @@ class GenerateLockTask extends AbstractLockTask {
         // Add all the overrides to the locked dependencies and record whether a specified override modified a
         // preexisting dependency.
         getOverrides().each { String k, String overrideVersion ->
-            def tokens = k.tokenize(':')
-            LockKey key = new LockKey(group: tokens[0], artifact: tokens[1] )
-            if (deps.containsKey(key)) {
-                deps[key].viaOverride = overrideVersion
+            def (overrideGroup, overrideArtifact) = k.tokenize(':')
+            deps.each { depLockKey, depValue ->
+                if (depLockKey.group == overrideGroup && depLockKey.artifact == overrideArtifact) {
+                    depValue.viaOverride = overrideVersion
+                }
             }
         }
 
         return deps
     }
 
-    void handleSiblingTransitives(ResolvedDependency sibling, Map deps, List peers) {
-        def parent = new LockKey(group: sibling.moduleGroup, artifact: sibling.moduleName)
+    void handleSiblingTransitives(ResolvedDependency sibling, String configName, Map deps, List peers) {
+        def parent = new LockKey(group: sibling.moduleGroup, artifact: sibling.moduleName, configuration: sibling.configuration)
         sibling.children.each { ResolvedDependency dependency ->
-            def key = new LockKey(group: dependency.moduleGroup, artifact: dependency.moduleName)
+            def key = new LockKey(group: dependency.moduleGroup, artifact: dependency.moduleName, configuration: configName)
 
             // Record the project[s] from which this dependency originated.
             deps[key].firstLevelTransitive << parent
 
             // Lock the transitive dependencies of each project dependency, recursively.
-            if (peers.contains(key)) {
+            if (isKeyInPeerList(key, peers)) {
                 deps[key].project = true
 
                 // Multiple configurations may specify dependencies on the same project, and multiple projects might
@@ -122,7 +125,7 @@ class GenerateLockTask extends AbstractLockTask {
                 // once for each project. Flag a project as visited as soon as we encounter it.
                 if ((dependency.children.size() > 0) && !deps[key].childrenVisited) {
                     deps[key].childrenVisited = true
-                    handleSiblingTransitives(dependency, deps, peers)
+                    handleSiblingTransitives(dependency, configName, deps, peers)
                 }
             } else {
                 deps[key].locked = dependency.moduleVersion
@@ -130,15 +133,15 @@ class GenerateLockTask extends AbstractLockTask {
         }
     }
 
-    void handleTransitive(ResolvedDependency transitive, Map deps, List peers, LockKey parent) {
-        def key = new LockKey(group: transitive.moduleGroup, artifact: transitive.moduleName)
+    void handleTransitive(ResolvedDependency transitive, String configName, Map deps, List peers, LockKey parent) {
+        def key = new LockKey(group: transitive.moduleGroup, artifact: transitive.moduleName, configuration: configName)
 
         // Multiple dependencies may share any subset of their transitive dependencies. Each dependency only needs to be
         // visited once so flag it once we visit it.
         if (!deps[key].childrenVisited) {
 
             // Lock each dependency and its children, recursively. Don't forget transitive project dependencies.
-            if (!peers.contains(key)) {
+            if (!isKeyInPeerList(key, peers)) {
                 deps[key].locked = transitive.moduleVersion
             } else {
                 deps[key].project = true
@@ -146,48 +149,66 @@ class GenerateLockTask extends AbstractLockTask {
             if (transitive.children.size() > 0) {
                 deps[key].childrenVisited = true
             }
-            transitive.children.each { handleTransitive(it, deps, peers, key) }
+            transitive.children.each { handleTransitive(it, configName, deps, peers, key) }
         }
 
         // Record the dependencies from which this artifact originated transitively.
         deps[key].transitive << parent
     }
 
-    void writeLock(deps) {
-        def strings = deps.findAll { !getSkippedDependencies().contains(it.key.toString()) }
-                .collect { LockKey k, Map v -> stringifyLock(k, v) }
-        strings = strings.sort()
-        project.buildDir.mkdirs()
-        getDependenciesLock().withPrintWriter { out ->
-            out.println '{'
-            out.println strings.join(',\n')
-            out.println '}'
+    def isKeyInPeerList(LockKey lockKey, List peers) {
+        return peers.any {
+            it.group == lockKey.group && it.artifact == lockKey.artifact
         }
     }
 
-    String stringifyLock(LockKey key, Map lock) {
-        def lockLine = new StringBuilder("  \"${key}\": { ")
-        if (lock.locked) {
-            lockLine << "\"locked\": \"${lock.locked}\""
-        } else {
-            lockLine << '"project": true'
-        }
-        if (lock.requested) {
-            lockLine << ", \"requested\": \"${lock.requested}\""
-        }
-        if (lock.viaOverride) {
-            lockLine << ", \"viaOverride\": \"${lock.viaOverride}\""
-        }
-        if (lock.transitive) {
-            def transitiveFrom = lock.transitive.collect { "\"${it}\""}.sort().join(', ')
-            lockLine << ", \"transitive\": [ ${transitiveFrom} ]"
-        }
-        if (lock.firstLevelTransitive) {
-            def transitiveFrom = lock.firstLevelTransitive.collect { "\"${it}\""}.sort().join(', ')
-            lockLine << ", \"firstLevelTransitive\": [ ${transitiveFrom} ]"
-        }
-        lockLine << ' }'
+    void writeLock(deps) {
 
-        return lockLine.toString()
+        // The result map maps configuration -> map of group:artifact -> map of dep properties -> values. The result
+        // would then be transformed into Json. For example:
+        // {
+        //    "runtime": {
+        //       "test.example:foo": { locked: "2.0.0", "transitive: ["test:sub1", "test:sub2"] }
+        //       "test:sub1": { "project: true" }
+        //       "test:sub2": { "project: true" }
+        //    }
+        //    "default": {
+        //       "test.example:foo": { locked: "2.0.0", "transitive: ["test:sub1", "test:sub2"] }
+        //       "test:sub1": { "project: true" }
+        //       "test:sub2": { "project: true" }
+        //    }
+        // }
+
+        def result = [:].withDefault { [:].withDefault { [:] } }
+
+        def filteredSkippedDeps = deps.findAll {
+            LockKey k, v -> !getSkippedDependencies().contains("${k.group}:${k.artifact}" as String)
+        }
+
+        filteredSkippedDeps.each { key, lock ->
+            def depMap = result[key.configuration]["${key.group}:${key.artifact}"]
+            if (lock.locked) {
+                depMap['locked'] = lock.locked
+            } else {
+                depMap['project'] = true
+            }
+            if (lock.requested) {
+                depMap['requested'] = lock.requested
+            }
+            if (lock.viaOverride) {
+                depMap['viaOverride'] = lock.viaOverride
+            }
+            if (lock.transitive) {
+                def transitiveFrom = lock.transitive.collect { "${it.group}:${it.artifact}" }.sort()
+                depMap['transitive'] = transitiveFrom
+            }
+            if (lock.firstLevelTransitive) {
+                def transitiveFrom = lock.firstLevelTransitive.collect { "${it.group}:${it.artifact}" }.sort()
+                depMap['firstLevelTransitive'] = transitiveFrom
+            }
+        }
+
+        project.buildDir.mkdirs()
+        getDependenciesLock().text = JsonOutput.prettyPrint(JsonOutput.toJson(result))
     }
 }
