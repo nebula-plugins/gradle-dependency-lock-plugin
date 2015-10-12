@@ -25,7 +25,7 @@ To include, add the following to your build.gradle
 If newer than gradle 2.1 you may use
 
     plugins {
-      id 'nebula.dependency-lock' version '3.1.0'
+      id 'nebula.dependency-lock' version '4.0.0'
     }
 
 *or*
@@ -34,7 +34,7 @@ If newer than gradle 2.1 you may use
       repositories { jcenter() }
 
       dependencies {
-        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:3.1.0'
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:4.0.0'
       }
     }
 
@@ -370,6 +370,7 @@ Tested with Oracle JDK8
 | 2.4            | yes   |
 | 2.5            | yes   |
 | 2.6            | yes   |
+| 2.7            | yes   |
 
 LICENSE
 =======

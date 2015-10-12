@@ -1,3 +1,10 @@
+4.0.0 / 2015-10-12
+==================
+
+* lock file format was changed to configuration -> deps -> dep values
+* override file simplified
+* also changed behavior to include all project configs if none specified
+
 3.1.0 / 2015-10-06
 ==================
 
