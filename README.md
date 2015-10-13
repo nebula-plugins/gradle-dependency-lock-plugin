@@ -280,7 +280,7 @@ Override files are simple Json constructs with keys representing groupId:artifac
         }
     
         dependencies {
-            classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:3.2.+'
+            classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:4.+'
         }
     }
     
