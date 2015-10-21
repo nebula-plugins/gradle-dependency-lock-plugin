@@ -118,13 +118,13 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         project.gradle.taskGraph.whenReady { taskGraph ->
             def hasLockingTask = taskGraph.hasTask(genLockTask) || taskGraph.hasTask(updateLockTask)
-
             if (hasLockingTask) {
-                project.configurations.all {
+                project.configurations.all ( {
                     resolutionStrategy {
                         cacheDynamicVersionsFor 0, 'seconds'
+                        cacheChangingModulesFor 0, 'seconds'
                     }
-                }
+                } )
                 buildForces.each { String name, Set<?> forces ->
                     project.configurations.findByName(name).resolutionStrategy.forcedModules = forces
                 }
