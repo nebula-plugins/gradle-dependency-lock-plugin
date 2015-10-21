@@ -37,7 +37,6 @@ plugins {
 apply from: 'https://raw.githubusercontent.com/nebula-plugins/nebula-core/fc54bacf5087f3b3f160f2bd7f7df7eaa3bf881d/common.gradle'
 
 description 'Gradle plugin to allow locking of dynamic dependency versions'
-apply plugin: 'nebula.plugin-plugin'
 
 group = 'com.netflix.nebula'
 
