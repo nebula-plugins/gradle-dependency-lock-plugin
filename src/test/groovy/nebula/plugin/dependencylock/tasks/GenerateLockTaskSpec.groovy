@@ -223,23 +223,23 @@ class GenerateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntime": {
                     "test.example:baz": {
-                        "locked": "2.0.0",
                         "firstLevelTransitive": [
                             "test.nebula:common",
                             "test.nebula:lib"
-                        ]
+                        ],
+                        "locked": "2.0.0"
                     },
                     "test.example:foo": {
-                        "locked": "2.0.1",
                         "firstLevelTransitive": [
                             "test.nebula:common"
-                        ]
+                        ],
+                        "locked": "2.0.1"
                     },
                     "test.nebula:common": {
-                        "project": true,
                         "firstLevelTransitive": [
                             "test.nebula:lib"
-                        ]
+                        ],
+                        "project": true
                     },
                     "test.nebula:lib": {
                         "project": true
@@ -297,26 +297,26 @@ class GenerateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntime": {
                     "test.example:foo": {
-                        "locked": "2.0.1",
                         "firstLevelTransitive": [
                             "test.nebula:model"
-                        ]
+                        ],
+                        "locked": "2.0.1"
                     },
                     "test.nebula:common": {
-                        "project": true,
                         "firstLevelTransitive": [
                             "test.nebula:lib"
-                        ]
+                        ],
+                        "project": true
                     },
                     "test.nebula:lib": {
                         "project": true
                     },
                     "test.nebula:model": {
-                        "project": true,
                         "firstLevelTransitive": [
                             "test.nebula:common",
                             "test.nebula:lib"
-                        ]
+                        ],
+                        "project": true
                     }
                 }
             }'''.stripIndent()

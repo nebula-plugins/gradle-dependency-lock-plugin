@@ -220,7 +220,7 @@ class UpdateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.text == lockText
     }
 
-    def 'specifying a set of dependencies restricts the dependencies updated'(dependencies, lockText) {
+    def 'specifying a set of dependencies restricts the dependencies updated'(Set dependencies, String lockText) {
         project.dependencies {
             compile 'test.example:baz:2.0.0'
             compile 'test.example:foo:2.0.0'
@@ -686,10 +686,10 @@ class UpdateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntime": {
                     "test.example:baz": {
-                        "locked": "2.0.0",
                         "firstLevelTransitive": [
                             "test.nebula:common"
-                        ]
+                        ],
+                        "locked": "2.0.0"
                     },
                     "test.example:foo": {
                         "locked": "2.0.1",
@@ -764,10 +764,10 @@ class UpdateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntime": {
                     "test.example:baz": {
-                        "locked": "2.0.0",
                         "firstLevelTransitive": [
                             "test.nebula:common"
-                        ]
+                        ],
+                        "locked": "2.0.0"
                     },
                     "test.example:foo": {
                         "locked": "1.0.1",
@@ -833,10 +833,10 @@ class UpdateLockTaskSpec extends ProjectSpec {
                         "requested": "1.0.0"
                     },
                     "test.example:foo": {
-                        "locked": "2.0.0",
                         "firstLevelTransitive": [
                             "test.nebula:app"
-                        ]
+                        ],
+                        "locked": "2.0.0"
                     },
                     "test.nebula:app": {
                         "project": true
@@ -886,23 +886,23 @@ class UpdateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntime": {
                     "test.example:azz": {
-                        "locked": "-42.0",
                         "firstLevelTransitive": [
                             "test.nebula:lib"
-                        ]
+                        ],
+                        "locked": "-42.0"
                     },
                     "test.example:baz": {
-                        "locked": "1.0.0",
                         "firstLevelTransitive": [
                             "test.nebula:common",
                             "test.nebula:lib"
-                        ]
+                        ],
+                        "locked": "1.0.0"
                     },
                     "test.nebula:common": {
-                        "project": true,
-                            "firstLevelTransitive": [
+                        "firstLevelTransitive": [
                             "test.nebula:lib"
-                        ]
+                        ],
+                        "project": true
                     },
                     "test.nebula:lib": {
                         "project": true
@@ -918,23 +918,23 @@ class UpdateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntime": {
                     "test.example:baz": {
-                        "locked": "2.0.0",
                         "firstLevelTransitive": [
                             "test.nebula:common",
                             "test.nebula:lib"
-                        ]
+                        ],
+                        "locked": "2.0.0"
                     },
                     "test.example:foo": {
-                        "locked": "2.0.1",
                         "firstLevelTransitive": [
                             "test.nebula:common"
-                        ]
+                        ],
+                        "locked": "2.0.1"
                     },
                     "test.nebula:common": {
-                        "project": true,
                         "firstLevelTransitive": [
                             "test.nebula:lib"
-                        ]
+                        ],
+                        "project": true
                     },
                     "test.nebula:lib": {
                         "project": true
