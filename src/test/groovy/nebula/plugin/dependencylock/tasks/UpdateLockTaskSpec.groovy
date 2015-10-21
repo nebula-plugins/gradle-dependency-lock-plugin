@@ -587,7 +587,8 @@ class UpdateLockTaskSpec extends ProjectSpec {
                         "locked": "1.0.0",
                         "requested": "1.+",
                         "transitive": [
-                            "circular:b", "circular:oneleveldeep"
+                            "circular:b",
+                            "circular:oneleveldeep"
                         ]
                     },
                     "circular:b": {
@@ -617,15 +618,15 @@ class UpdateLockTaskSpec extends ProjectSpec {
                             "circular:oneleveldeep"
                         ]
                     },
-                    "circular:oneleveldeep": {
-                        "locked": "1.0.0",
-                        "requested": "1.+"
-                    },
                     "circular:b": {
                         "locked": "1.0.0",
                         "transitive": [
                             "circular:a"
                         ]
+                    },
+                    "circular:oneleveldeep": {
+                        "locked": "1.0.0",
+                        "requested": "1.+"
                     }
                 }
             }'''.stripIndent()
@@ -667,12 +668,12 @@ class UpdateLockTaskSpec extends ProjectSpec {
                         "locked": "-42.0",
                         "requested": "0.24-"
                     },
+                    "test.nebula:common": {
+                        "project": true
+                    },
                     "com.example:foo": {
                         "locked": "1.0.1",
                         "requested": "1.0+"
-                    },
-                    "test.nebula:common": {
-                        "project": true
                     }
                 }
             }'''.stripIndent()
@@ -684,18 +685,18 @@ class UpdateLockTaskSpec extends ProjectSpec {
         String lockText = '''\
             {
                 "testRuntime": {
-                    "test.nebula:common": {
-                        "project": true
-                    },
-                    "test.example:foo": {
-                        "locked": "2.0.1",
-                        "requested": "2.+"
-                    },
                     "test.example:baz": {
                         "locked": "2.0.0",
                         "firstLevelTransitive": [
                             "test.nebula:common"
                         ]
+                    },
+                    "test.example:foo": {
+                        "locked": "2.0.1",
+                        "requested": "2.+"
+                    },
+                    "test.nebula:common": {
+                        "project": true
                     }
                 }
             }'''.stripIndent()
@@ -923,6 +924,12 @@ class UpdateLockTaskSpec extends ProjectSpec {
                             "test.nebula:lib"
                         ]
                     },
+                    "test.example:foo": {
+                        "locked": "2.0.1",
+                        "firstLevelTransitive": [
+                            "test.nebula:common"
+                        ]
+                    },
                     "test.nebula:common": {
                         "project": true,
                         "firstLevelTransitive": [
@@ -931,12 +938,6 @@ class UpdateLockTaskSpec extends ProjectSpec {
                     },
                     "test.nebula:lib": {
                         "project": true
-                    },
-                    "test.example:foo": {
-                        "locked": "2.0.1",
-                        "firstLevelTransitive": [
-                            "test.nebula:common"
-                        ]
                     }
                 }
             }'''.stripIndent()

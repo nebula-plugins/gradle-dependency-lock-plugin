@@ -179,7 +179,7 @@ class GenerateLockTask extends AbstractLockTask {
         //    }
         // }
 
-        def result = [:].withDefault { [:].withDefault { [:] } }
+        def result = [:].withDefault { new TreeMap().withDefault { [:] } }
 
         def filteredSkippedDeps = deps.findAll {
             LockKey k, v -> !getSkippedDependencies().contains("${k.group}:${k.artifact}" as String)

@@ -578,14 +578,17 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         String globalLockText = '''\
             {
                 "_global_": {
-                    "test:sub1": {
-                        "project": true
-                    },
                     "test.example:bar": {
                         "locked": "1.1.0",
                         "transitive": [
                             "test.example:transitive",
                             "test:sub1"
+                        ]
+                    },
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:foobaz"
                         ]
                     },
                     "test.example:foo": {
@@ -596,8 +599,11 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                             "test:sub1"
                         ]
                     },
-                    "test:sub2": {
-                        "project": true
+                    "test.example:foobaz": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:transitive"
+                        ]
                     },
                     "test.example:transitive": {
                         "locked": "1.0.0",
@@ -605,17 +611,11 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                             "test:sub2"
                         ]
                     },
-                    "test.example:foobaz": {
-                        "locked": "1.0.0",
-                        "transitive": [
-                            "test.example:transitive"
-                        ]
+                    "test:sub1": {
+                        "project": true
                     },
-                    "test.example:baz": {
-                        "locked": "1.0.0",
-                        "transitive": [
-                            "test.example:foobaz"
-                        ]
+                    "test:sub2": {
+                        "project": true
                     }
                 }
             }'''.stripIndent()
@@ -661,14 +661,17 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         String globalLockText = '''\
             {
                 "_global_": {
-                    "test:sub1": {
-                        "project": true
-                    },
                     "test.example:bar": {
                         "locked": "1.1.0",
                         "transitive": [
                             "test.example:transitive",
                             "test:sub1"
+                        ]
+                    },
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:foobaz"
                         ]
                     },
                     "test.example:foo": {
@@ -679,8 +682,11 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                             "test:sub1"
                         ]
                     },
-                    "test:sub2": {
-                        "project": true
+                    "test.example:foobaz": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:transitive"
+                        ]
                     },
                     "test.example:transitive": {
                         "locked": "1.0.0",
@@ -688,17 +694,11 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                             "test:sub2"
                         ]
                     },
-                    "test.example:foobaz": {
-                        "locked": "1.0.0",
-                        "transitive": [
-                            "test.example:transitive"
-                        ]
+                    "test:sub1": {
+                        "project": true
                     },
-                    "test.example:baz": {
-                        "locked": "1.0.0",
-                        "transitive": [
-                            "test.example:foobaz"
-                        ]
+                    "test:sub2": {
+                        "project": true
                     }
                 }
             }'''.stripIndent()
@@ -739,9 +739,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         String globalLockText = '''\
             {
                 "_global_": {
-                    "test:sub1": {
-                        "project": true
-                    },
                     "test.example:bar": {
                         "locked": "1.1.0",
                         "transitive": [
@@ -754,6 +751,9 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                             "test.example:bar",
                             "test:sub1"
                         ]
+                    },
+                    "test:sub1": {
+                        "project": true
                     }
                 }
             }'''.stripIndent()
@@ -771,15 +771,15 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         String globalLockText = '''\
             {
                 "_global_": {
-                    "test:sub1": {
-                        "project": true
-                    },
                     "test.example:foo": {
                         "locked": "2.0.0",
                         "transitive": [
                             "test:sub1",
                             "test:sub2"
                         ]
+                    },
+                    "test:sub1": {
+                        "project": true
                     },
                     "test:sub2": {
                         "project": true
