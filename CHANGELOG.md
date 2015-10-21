@@ -1,3 +1,10 @@
+4.1.0 / 2015-10-21
+==================
+
+* Disabled caching of snapshot artifacts for locking task
+* Ordered configurations, artifacts and fields
+* Fixed global lock so configuration name is _global_ instead of detachedConfiguration<n>
+
 4.0.0 / 2015-10-12
 ==================
 
