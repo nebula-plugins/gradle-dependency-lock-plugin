@@ -577,7 +577,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         println s.standardOutput
         String globalLockText = '''\
             {
-                "detachedConfiguration1": {
+                "_global_": {
                     "test:sub1": {
                         "project": true
                     },
@@ -660,7 +660,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         then:
         String globalLockText = '''\
             {
-                "detachedConfiguration1": {
+                "_global_": {
                     "test:sub1": {
                         "project": true
                     },
@@ -738,7 +738,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         println s.standardOutput
         String globalLockText = '''\
             {
-                "detachedConfiguration1": {
+                "_global_": {
                     "test:sub1": {
                         "project": true
                     },
@@ -770,7 +770,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         // Should this be an empty result? Check OneNote
         String globalLockText = '''\
             {
-                "detachedConfiguration1": {
+                "_global_": {
                     "test:sub1": {
                         "project": true
                     },

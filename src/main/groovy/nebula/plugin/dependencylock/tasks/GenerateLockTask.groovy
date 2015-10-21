@@ -186,7 +186,8 @@ class GenerateLockTask extends AbstractLockTask {
         }
 
         filteredSkippedDeps.each { key, lock ->
-            def depMap = result[key.configuration]["${key.group}:${key.artifact}"]
+            def configuration = key.configuration.startsWith('detachedConfiguration') ? '_global_' : key.configuration
+            def depMap = result[configuration]["${key.group}:${key.artifact}"]
             if (lock.locked) {
                 depMap['locked'] = lock.locked
             } else {
