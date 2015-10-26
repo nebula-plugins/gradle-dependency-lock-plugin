@@ -327,8 +327,13 @@ class DependencyLockPlugin implements Plugin<Project> {
         logger.info("Using ${dependenciesLock.name} to lock dependencies")
         def locks = loadLock(dependenciesLock)
 
+        def isDeprecatedFormat = locks.every { it.key ==~ /[^:]+:.+/ } // in the old format, all first level props were groupId:artifactId
+        if (isDeprecatedFormat) {
+            logger.warn("${dependenciesLock.name} is using a deprecated lock format. Support for this format may be removed in future versions.")
+        }
+
         project.configurations.all({ Configuration conf ->
-            def deps = locks[conf.name]
+            def deps = isDeprecatedFormat ? locks : locks[conf.name] // in the old format, locks were applied to all configurations
             if (deps) {
                 // Non-project locks are the top-level dependencies, and possibly transitive thereof, of this project which are
                 // locked by the lock file. There may also be dependencies on other projects. These are not captured here.
@@ -375,7 +380,12 @@ class DependencyLockPlugin implements Plugin<Project> {
         // Load overrides from a file if the user has specified one via a property.
         if (project.hasProperty('dependencyLock.overrideFile')) {
             File dependenciesLock = new File(project.rootDir, project['dependencyLock.overrideFile'])
-            loadLock(dependenciesLock).each { overrides[it.key] = it.value }
+            def lockOverride = loadLock(dependenciesLock)
+            def isDeprecatedFormat = lockOverride.any { it.value.getClass() != String && it.value.locked } // the old lock override files specified the version to override under the "locked" property
+            if (isDeprecatedFormat) {
+                logger.warn("The override file ${dependenciesLock.name} is using a deprecated format. Support for this format may be removed in future versions.")
+            }
+            lockOverride.each { overrides[it.key] = isDeprecatedFormat ? it.value.locked : it.value }
             logger.debug "Override file loaded: ${project['dependencyLock.overrideFile']}"
         }
 
@@ -388,7 +398,7 @@ class DependencyLockPlugin implements Plugin<Project> {
             }
         }
 
-        overrides
+        return overrides
     }
 
     private loadLock(File lock) {

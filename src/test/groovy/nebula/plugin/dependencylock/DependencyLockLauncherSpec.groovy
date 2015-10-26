@@ -15,6 +15,7 @@
  */
 package nebula.plugin.dependencylock
 
+import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.test.IntegrationSpec
 
@@ -58,6 +59,12 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                     "requested": "1.+"
                 }
             }
+        }
+    '''.stripIndent()
+
+    static final String DEPRECATED_LOCK_FORMAT = '''\
+        {
+           "test.example:foo": { "locked": "1.0.0", "requested": "1.+" }
         }
     '''.stripIndent()
 
@@ -187,6 +194,26 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         result.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
     }
 
+    def 'deprecated lock file is applied correctly and emits warning'() {
+        def lockOverride = new File(projectDir, 'test.lock')
+        lockOverride << DEPRECATED_LOCK_FORMAT
+
+        buildFile << BUILD_GRADLE
+
+        when:
+        def s = runTasksSuccessfully('-PdependencyLock.overrideFile=test.lock', 'generateLock', 'saveLock')
+
+        then:
+        def outputDepLock = new JsonSlurper().parse(new File(projectDir, 'dependencies.lock'))
+
+        // ensure all test.example:foo deps have been overridden to 1.0.0
+        outputDepLock.each { conf, depMap ->
+            depMap['test.example:foo'].viaOverride == '1.0.0'
+        }
+
+        s.standardOutput.contains('is using a deprecated format')
+    }
+
     def 'create lock'() {
         buildFile << BUILD_GRADLE
 
@@ -274,6 +301,31 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         new File(projectDir, 'build/dependencies.lock').text == FOO_LOCK
+
+        when:
+        def result0 = runTasksSuccessfully('dependencies')
+
+        then:
+        result0.standardOutput.contains 'test.example:foo:1.+ -> 1.0.0'
+
+        when:
+        def result1 = runTasksSuccessfully('-PdependencyLock.useGeneratedLock=true', 'dependencies')
+
+        then:
+        result1.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
+    }
+
+    def 'generateLock with with deprecated format is successful and emits warning'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << DEPRECATED_LOCK_FORMAT
+        buildFile << BUILD_GRADLE
+
+        when:
+        def output = runTasksSuccessfully('generateLock')
+
+        then:
+        new File(projectDir, 'build/dependencies.lock').text == FOO_LOCK
+        output.standardOutput.contains('is using a deprecated lock format')
 
         when:
         def result0 = runTasksSuccessfully('dependencies')
