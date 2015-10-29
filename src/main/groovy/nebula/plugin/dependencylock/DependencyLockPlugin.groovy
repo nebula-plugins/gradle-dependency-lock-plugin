@@ -16,17 +16,13 @@
 package nebula.plugin.dependencylock
 
 import groovy.json.JsonSlurper
-import nebula.plugin.dependencylock.tasks.CommitLockTask
-import nebula.plugin.dependencylock.tasks.GenerateLockTask
-import nebula.plugin.dependencylock.tasks.SaveLockTask
-import nebula.plugin.dependencylock.tasks.UpdateLockTask
+import nebula.plugin.dependencylock.tasks.*
 import nebula.plugin.scm.ScmPlugin
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
-import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
@@ -61,6 +57,9 @@ class DependencyLockPlugin implements Plugin<Project> {
         configureLockTask(updateLockTask, clLockFileName, extension, overrides)
         configureUpdateTask(updateLockTask, extension)
 
+        //DiffLockTask diffLockTask = project.tasks.create('diffLock', DiffLockTask)
+        //configureDiffTask(diffLockTask, genLockTask, clLockFileName)
+
         SaveLockTask saveTask = configureSaveTask(clLockFileName, genLockTask, updateLockTask, extension)
         createDeleteLock(saveTask)
 
@@ -82,14 +81,9 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         configureCommitTask(clLockFileName, globalLockFileName, saveTask, extension, commitExtension, globalSave)
 
-        Map<String, Set<?>> buildForces = [:]
-
         def applyLockToResolutionStrategy = {
             if (extension.configurationNames.empty) {
                 extension.configurationNames = project.configurations.collect { it.name }
-            }
-            project.configurations.each { Configuration conf ->
-                buildForces[conf.name] = Collections.unmodifiableSet(new HashSet<ModuleVersionSelector>(conf.resolutionStrategy.forcedModules))
             }
 
             File dependenciesLock
@@ -100,7 +94,9 @@ class DependencyLockPlugin implements Plugin<Project> {
                 dependenciesLock = new File(project.projectDir, clLockFileName ?: extension.lockFile)
             }
 
-            if (dependenciesLock.exists() && !shouldIgnoreDependencyLock()) {
+            def taskNames = project.gradle.startParameter.taskNames
+            if (dependenciesLock.exists() && !shouldIgnoreDependencyLock() && !taskNames.contains(genLockTask.name) &&
+                    !taskNames.contains(updateLockTask.name)) {
                 applyLock(dependenciesLock, overrides)
             } else if (!shouldIgnoreDependencyLock()) {
                 applyOverrides(overrides)
@@ -119,14 +115,11 @@ class DependencyLockPlugin implements Plugin<Project> {
         project.gradle.taskGraph.whenReady { taskGraph ->
             def hasLockingTask = taskGraph.hasTask(genLockTask) || taskGraph.hasTask(updateLockTask)
             if (hasLockingTask) {
-                project.configurations.all ( {
+                project.configurations.all {
                     resolutionStrategy {
                         cacheDynamicVersionsFor 0, 'seconds'
                         cacheChangingModulesFor 0, 'seconds'
                     }
-                } )
-                buildForces.each { String name, Set<?> forces ->
-                    project.configurations.findByName(name).resolutionStrategy.forcedModules = forces
                 }
                 if (!shouldIgnoreDependencyLock()) {
                     applyOverrides(overrides)
@@ -304,6 +297,15 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         lockTask
     }
+
+    /*private configureDiffTask(DiffLockTask diffLockTask, GenerateLockTask generateLockTask, String lockFileName, DependencyLockExtension extension) {
+        diffLockTask.conventionMapping.with {
+            existingLock = { new File(project.projectDir, lockFileName ?: extension.lockFile) }
+        }
+
+        diffLockTask.newLock = generateLockTask.dependenciesLock
+        diffLockTask.output = project.file('build/reports/dependencylock/lockdiff.txt')
+    }*/
 
     void applyOverrides(Map overrides) {
         if (project.hasProperty('dependencyLock.overrideFile')) {
