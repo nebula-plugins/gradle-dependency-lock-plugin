@@ -18,6 +18,7 @@ package nebula.plugin.dependencylock
 import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.test.IntegrationSpec
+import spock.lang.Ignore
 
 class DependencyLockLauncherSpec extends IntegrationSpec {
     def setup() {
@@ -67,6 +68,40 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
            "test.example:foo": { "locked": "1.0.0", "requested": "1.+" }
         }
     '''.stripIndent()
+
+    static final String PRE_DIFF_FOO_LOCK = '''\
+        {
+            "compile": {
+                "test.example:foo": {
+                    "locked": "1.0.0",
+                    "requested": "1.+"
+                }
+            },
+            "default": {
+                "test.example:foo": {
+                    "locked": "1.0.0",
+                    "requested": "1.+"
+                }
+            },
+            "runtime": {
+                "test.example:foo": {
+                    "locked": "1.0.0",
+                    "requested": "1.+"
+                }
+            },
+            "testCompile": {
+                "test.example:foo": {
+                    "locked": "1.0.0",
+                    "requested": "1.+"
+                }
+            },
+            "testRuntime": {
+                "test.example:foo": {
+                    "locked": "1.0.0",
+                    "requested": "1.+"
+                }
+            }
+        }'''.stripIndent()
 
     static final String FOO_LOCK = '''\
         {
@@ -315,7 +350,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         result1.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
     }
 
-    def 'generateLock with with deprecated format is successful and emits warning'() {
+    def 'generateLock with deprecated format existing causes no issues'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << DEPRECATED_LOCK_FORMAT
         buildFile << BUILD_GRADLE
@@ -325,7 +360,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         new File(projectDir, 'build/dependencies.lock').text == FOO_LOCK
-        output.standardOutput.contains('is using a deprecated lock format')
 
         when:
         def result0 = runTasksSuccessfully('dependencies')
@@ -973,6 +1007,33 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         !(new File(projectDir, 'sub1/dependencies.lock').exists())
         !(new File(projectDir, 'sub2/dependencies.lock').exists())
     }
+
+    @Ignore
+    def 'diff the generated lock with the existing lock '() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << PRE_DIFF_FOO_LOCK
+
+        buildFile << BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('generateLock', 'diffLock')
+
+        then:
+        def diff = new File(projectDir, 'build/reports/dependencylock/lockdiff.txt')
+        diff.text == '''\
+          compile
+            test.example:foo:1.0.0 -> 1.0.1
+          runtime
+            test.example:foo:1.0.0 -> 1.0.1
+          testCompile
+            test.example:foo:1.0.0 -> 1.0.1
+          testRuntime
+            test.example:foo:1.0.0 -> 1.0.1
+        '''.stripIndent()
+    }
+
+    /*test.example:new:1.0.0 (added)
+            test.example:removed:1.0.0 (removed)*/
 
     private void setupCommonMultiproject() {
         addSubproject('sub1', """\

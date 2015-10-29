@@ -1,3 +1,8 @@
+4.1.1 / 2015-10-29
+==================
+
+* Change how we go about not applying locks when generating locks
+
 4.1.0 / 2015-10-21
 ==================
 
