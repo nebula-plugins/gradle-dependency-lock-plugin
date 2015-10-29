@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 package nebula.plugin.dependencylock
-
 import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.tasks.CommitLockTask
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
@@ -24,7 +23,6 @@ import nebula.plugin.scm.ScmPlugin
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -80,14 +78,9 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         configureCommitTask(clLockFileName, globalLockFileName, saveTask, extension, commitExtension, globalSave)
 
-        Map<String, Set<?>> buildForces = [:]
-
         project.afterEvaluate {
             if (project.plugins.hasPlugin(JavaBasePlugin) && extension.configurationNames.empty) {
                 extension.configurationNames << 'testRuntime'
-            }
-            project.configurations.each { Configuration conf ->
-                buildForces[conf.name] = conf.resolutionStrategy.forcedModules.clone()
             }
 
             File dependenciesLock
@@ -97,8 +90,9 @@ class DependencyLockPlugin implements Plugin<Project> {
             } else {
                 dependenciesLock = new File(project.projectDir, clLockFileName ?: extension.lockFile)
             }
-
-            if (dependenciesLock.exists() && !shouldIgnoreDependencyLock()) {
+            def taskNames = project.gradle.startParameter.taskNames
+            if (dependenciesLock.exists() && !shouldIgnoreDependencyLock() && !taskNames.contains(genLockTask.name) &&
+                    !taskNames.contains(updateLockTask.name)) {
                 applyLock(dependenciesLock, overrides)
             } else if (!shouldIgnoreDependencyLock()) {
                 applyOverrides(overrides)
@@ -113,9 +107,6 @@ class DependencyLockPlugin implements Plugin<Project> {
                     resolutionStrategy {
                         cacheDynamicVersionsFor 0, 'seconds'
                     }
-                }
-                buildForces.each { String name, Set<?> forces ->
-                    project.configurations.findByName(name).resolutionStrategy.forcedModules = forces
                 }
                 if (!shouldIgnoreDependencyLock()) {
                     applyOverrides(overrides)

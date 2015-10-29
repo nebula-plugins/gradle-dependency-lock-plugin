@@ -1,3 +1,8 @@
+2.2.4 / 2015-10-29
+==================
+
+* Change how locking is applied when generateLock or updateLock is present
+
 2.2.3 / 2015-04-02
 ==================
 
