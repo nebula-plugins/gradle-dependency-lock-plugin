@@ -1,3 +1,8 @@
+4.1.2 / 2015-11-19
+==================
+
+* Fixed problem with application of existing global lock
+
 4.1.1 / 2015-10-29
 ==================
 
