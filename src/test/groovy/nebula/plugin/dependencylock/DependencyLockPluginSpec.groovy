@@ -397,7 +397,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def (Project sub1, Project sub2) = multiProjectSetup()
         new File(projectDir, 'global.lock').text = '''\
             {
-                "compile": {
+                "_global_": {
                     "test.example:foo": {
                         "locked": "1.0.1",
                         "requested": "1.+"
@@ -407,7 +407,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         '''.stripIndent()
 
         project.allprojects {
-            apply plugin: DependencyLockPlugin
+            apply plugin: 'nebula.dependency-lock'
         }
 
         when:

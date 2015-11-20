@@ -16,7 +16,10 @@
 package nebula.plugin.dependencylock
 
 import groovy.json.JsonSlurper
-import nebula.plugin.dependencylock.tasks.*
+import nebula.plugin.dependencylock.tasks.CommitLockTask
+import nebula.plugin.dependencylock.tasks.GenerateLockTask
+import nebula.plugin.dependencylock.tasks.SaveLockTask
+import nebula.plugin.dependencylock.tasks.UpdateLockTask
 import nebula.plugin.scm.ScmPlugin
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -30,6 +33,8 @@ import org.gradle.api.tasks.Delete
 import static nebula.plugin.dependencylock.tasks.GenerateLockTask.getConfigurationsFromConfigurationNames
 
 class DependencyLockPlugin implements Plugin<Project> {
+    public static final String GLOBAL_LOCK_CONFIG = '_global_'
+
     private static Logger logger = Logging.getLogger(DependencyLockPlugin)
     Project project
 
@@ -219,7 +224,7 @@ class DependencyLockPlugin implements Plugin<Project> {
         globalSaveTask.doFirst {
             project.subprojects.each { Project sub ->
                 SaveLockTask save = sub.tasks.findByName('saveLock')
-                if (save.outputLock?.exists()) {
+                if (save && save.outputLock?.exists()) {
                     throw new GradleException('Cannot save global lock, one or more individual locks are in place, run deleteLock task')
                 }
             }
@@ -344,7 +349,9 @@ class DependencyLockPlugin implements Plugin<Project> {
         }
 
         project.configurations.all({ Configuration conf ->
-            def deps = isDeprecatedFormat ? locks : locks[conf.name] // in the old format, locks were applied to all configurations
+            // In the old format of the lock file, there was only one locked setting. In that case, apply it on all configurations.
+            // In the new format, apply _global_ to all configurations or use the config name
+            def deps = isDeprecatedFormat ? locks : locks[GLOBAL_LOCK_CONFIG] ?: locks[conf.name]
             if (deps) {
                 // Non-project locks are the top-level dependencies, and possibly transitive thereof, of this project which are
                 // locked by the lock file. There may also be dependencies on other projects. These are not captured here.
@@ -359,6 +366,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                 def unusedOverrides = overrides.findAll { !locks.containsKey(it.key) }.collect {
                     "${it.key}:${it.value}"
                 }
+
                 lockForces.addAll(unusedOverrides)
                 logger.debug('lockForces: {}', lockForces)
 

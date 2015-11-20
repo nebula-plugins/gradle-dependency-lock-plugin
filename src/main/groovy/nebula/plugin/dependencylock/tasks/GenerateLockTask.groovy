@@ -23,6 +23,8 @@ import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.tasks.TaskAction
 
+import static nebula.plugin.dependencylock.DependencyLockPlugin.*
+
 class GenerateLockTask extends AbstractLockTask {
     String description = 'Create a lock file in build/<configured name>'
     Collection<Configuration> configurations = []
@@ -186,7 +188,7 @@ class GenerateLockTask extends AbstractLockTask {
         }
 
         filteredSkippedDeps.each { key, lock ->
-            def configuration = key.configuration.startsWith('detachedConfiguration') ? '_global_' : key.configuration
+            def configuration = key.configuration.startsWith('detachedConfiguration') ? GLOBAL_LOCK_CONFIG : key.configuration
             def depMap = result[configuration]["${key.group}:${key.artifact}"]
             if (lock.locked) {
                 depMap['locked'] = lock.locked
