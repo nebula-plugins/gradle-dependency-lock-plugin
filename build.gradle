@@ -34,7 +34,7 @@ plugins {
     id 'org.ysb33r.gradletest' version '0.5.4'
 }
 
-apply from: 'https://raw.githubusercontent.com/nebula-plugins/nebula-core/f187498b01c752d139f33fd5b54871d04623c838/common.gradle'
+apply from: 'https://raw.githubusercontent.com/nebula-plugins/nebula-core/b676bbc026d0053494b5439ba8ef147c16adabba/common.gradle'
 
 description 'Gradle plugin to allow locking of dynamic dependency versions'
 
