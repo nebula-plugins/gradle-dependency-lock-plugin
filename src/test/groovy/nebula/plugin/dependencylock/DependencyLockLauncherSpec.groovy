@@ -19,6 +19,7 @@ import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.test.IntegrationSpec
 import spock.lang.Ignore
+import spock.lang.Issue
 
 class DependencyLockLauncherSpec extends IntegrationSpec {
     def setup() {
@@ -208,6 +209,36 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         then:
         println result.standardOutput
         result.standardOutput.contains 'test.example:foo:1.0.1 -> 1.0.0'
+    }
+
+    @Issue('#79')
+    def 'lock file is not applied while generating lock with abbreviated task name'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << OLD_FOO_LOCK
+
+        buildFile << SPECIFIC_BUILD_GRADLE
+
+        when:
+        def result = runTasksSuccessfully('gL', 'dependencies')
+
+        then:
+        println result.standardOutput
+        !result.standardOutput.contains('test.example:foo:1.0.1 -> 1.0.0')
+    }
+
+    @Issue('#79')
+    def 'lock file is not applied while generating lock with qualified task name'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << OLD_FOO_LOCK
+
+        buildFile << SPECIFIC_BUILD_GRADLE
+
+        when:
+        def result = runTasksSuccessfully(':generateLock', 'dependencies')
+
+        then:
+        println result.standardOutput
+        !result.standardOutput.contains('test.example:foo:1.0.1 -> 1.0.0')
     }
 
     def 'override lock file is applied'() {
