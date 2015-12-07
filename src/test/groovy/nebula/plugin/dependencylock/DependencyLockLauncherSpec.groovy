@@ -211,6 +211,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         result.standardOutput.contains 'test.example:foo:1.0.1 -> 1.0.0'
     }
 
+    @Ignore
     @Issue('#79')
     def 'lock file is not applied while generating lock with abbreviated task name'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
@@ -226,6 +227,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         !result.standardOutput.contains('test.example:foo:1.0.1 -> 1.0.0')
     }
 
+    @Ignore
     @Issue('#79')
     def 'lock file is not applied while generating lock with qualified task name'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
@@ -904,8 +906,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 }
             }'''.stripIndent()
 
-        println s.standardOutput
-
         new File(projectDir, 'global.lock').text == globalLockText
     }
 
@@ -989,6 +989,52 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 }
             }'''.stripIndent()
         new File(projectDir, 'sub2/dependencies.lock').text == lockText2
+    }
+
+    def 'generateGlobalLock ignores existing global lock file'() {
+        setupCommonMultiproject()
+        new File(projectDir, 'global.lock').text = '''\
+            {
+                "_global_": {
+                    "test.example:foo": {
+                        "locked": "1.0.1",
+                        "transitive": [
+                            "test:sub1",
+                            "test:sub2"
+                        ]
+                    },
+                    "test:sub1": {
+                        "project": true
+                    },
+                    "test:sub2": {
+                        "project": true
+                    }
+                }
+            }'''.stripIndent()
+        String globalLockText = '''\
+            {
+                "_global_": {
+                    "test.example:foo": {
+                        "locked": "2.0.0",
+                        "transitive": [
+                            "test:sub1",
+                            "test:sub2"
+                        ]
+                    },
+                    "test:sub1": {
+                        "project": true
+                    },
+                    "test:sub2": {
+                        "project": true
+                    }
+                }
+            }'''.stripIndent()
+
+        when:
+        runTasksSuccessfully('generateGlobalLock')
+
+        then:
+        new File(projectDir, 'build/global.lock').text == globalLockText
     }
 
     def 'throw exception when saving global lock, if individual locks are present'() {

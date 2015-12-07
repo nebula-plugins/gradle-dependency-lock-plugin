@@ -1,3 +1,8 @@
+4.1.3 / 2015-12-07
+==================
+
+* Fix for plugin not ignoring existing globalLock when generating a new one
+
 4.1.2 / 2015-11-19
 ==================
 

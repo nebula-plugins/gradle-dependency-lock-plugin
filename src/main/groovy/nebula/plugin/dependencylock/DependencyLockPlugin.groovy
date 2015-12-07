@@ -36,6 +36,8 @@ class DependencyLockPlugin implements Plugin<Project> {
     public static final String GLOBAL_LOCK_CONFIG = '_global_'
 
     private static Logger logger = Logging.getLogger(DependencyLockPlugin)
+    public static final String GENERATE_GLOBAL_LOCK_TASK_NAME = 'generateGlobalLock'
+    public static final String UPDATE_GLOBAL_LOCK_TASK_NAME = 'updateGlobalLock'
     Project project
 
     @Override
@@ -74,12 +76,12 @@ class DependencyLockPlugin implements Plugin<Project> {
         GenerateLockTask globalLockTask
         UpdateLockTask globalUpdateLock
         if (project == project.rootProject) {
-            globalLockTask = project.tasks.create('generateGlobalLock', GenerateLockTask)
+            globalLockTask = project.tasks.create(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateLockTask)
             if (project.hasProperty('dependencyLock.useGeneratedGlobalLock')) {
                 globalLockFileName = globalLockTask.getDependenciesLock().path
             }
             configureGlobalLockTask(globalLockTask, globalLockFileName, extension, overrides)
-            globalUpdateLock = project.tasks.create('updateGlobalLock', UpdateLockTask)
+            globalUpdateLock = project.tasks.create(UPDATE_GLOBAL_LOCK_TASK_NAME, UpdateLockTask)
             configureGlobalLockTask(globalUpdateLock, globalLockFileName, extension, overrides)
             configureUpdateTask(globalUpdateLock, extension)
             globalSave = configureGlobalSaveTask(globalLockFileName, globalLockTask, globalUpdateLock, extension)
@@ -103,11 +105,7 @@ class DependencyLockPlugin implements Plugin<Project> {
 
             def taskNames = project.gradle.startParameter.taskNames
 
-            boolean hasGlobalLockTask = false
-            if (project == project.rootProject) {
-                hasGlobalLockTask = taskNames.contains(globalLockTask.name) || taskNames.contains(globalUpdateLock.name)
-
-            }
+            boolean hasGlobalLockTask = taskNames.contains(GENERATE_GLOBAL_LOCK_TASK_NAME) || taskNames.contains(UPDATE_GLOBAL_LOCK_TASK_NAME)
 
             if (dependenciesLock.exists() && !shouldIgnoreDependencyLock() && !taskNames.contains(genLockTask.name) &&
                     !taskNames.contains(updateLockTask.name) && !hasGlobalLockTask) {
