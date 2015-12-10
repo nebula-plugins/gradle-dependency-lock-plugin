@@ -1,3 +1,9 @@
+4.1.3 / 2015-12-10
+==================
+
+* BUGFIX: Fix for plugin not ignoring existing globalLock when generating a new one
+* BUGFIX: Properly detect tasks when they are shortened or fully qualified to a specific project
+
 4.1.2 / 2015-11-19
 ==================
 

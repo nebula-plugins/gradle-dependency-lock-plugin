@@ -29,6 +29,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
+import org.gradle.util.NameMatcher
 
 import static nebula.plugin.dependencylock.tasks.GenerateLockTask.getConfigurationsFromConfigurationNames
 
@@ -36,6 +37,10 @@ class DependencyLockPlugin implements Plugin<Project> {
     public static final String GLOBAL_LOCK_CONFIG = '_global_'
 
     private static Logger logger = Logging.getLogger(DependencyLockPlugin)
+    public static final String GENERATE_GLOBAL_LOCK_TASK_NAME = 'generateGlobalLock'
+    public static final String UPDATE_GLOBAL_LOCK_TASK_NAME = 'updateGlobalLock'
+    public static final String GENERATE_LOCK_TASK_NAME = 'generateLock'
+    public static final String UPDATE_LOCK_TASK_NAME = 'updateLock'
     Project project
 
     @Override
@@ -51,14 +56,13 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         Map overrides = loadOverrides()
 
-        GenerateLockTask genLockTask = project.tasks.create('generateLock', GenerateLockTask)
+        GenerateLockTask genLockTask = project.tasks.create(GENERATE_LOCK_TASK_NAME, GenerateLockTask)
         configureLockTask(genLockTask, clLockFileName, extension, overrides)
         if (project.hasProperty('dependencyLock.useGeneratedLock')) {
             clLockFileName = genLockTask.getDependenciesLock().path
-            logger.lifecycle(clLockFileName)
         }
 
-        UpdateLockTask updateLockTask = project.tasks.create('updateLock', UpdateLockTask)
+        UpdateLockTask updateLockTask = project.tasks.create(UPDATE_LOCK_TASK_NAME, UpdateLockTask)
         configureLockTask(updateLockTask, clLockFileName, extension, overrides)
         configureUpdateTask(updateLockTask, extension)
 
@@ -74,12 +78,12 @@ class DependencyLockPlugin implements Plugin<Project> {
         GenerateLockTask globalLockTask
         UpdateLockTask globalUpdateLock
         if (project == project.rootProject) {
-            globalLockTask = project.tasks.create('generateGlobalLock', GenerateLockTask)
+            globalLockTask = project.tasks.create(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateLockTask)
             if (project.hasProperty('dependencyLock.useGeneratedGlobalLock')) {
                 globalLockFileName = globalLockTask.getDependenciesLock().path
             }
             configureGlobalLockTask(globalLockTask, globalLockFileName, extension, overrides)
-            globalUpdateLock = project.tasks.create('updateGlobalLock', UpdateLockTask)
+            globalUpdateLock = project.tasks.create(UPDATE_GLOBAL_LOCK_TASK_NAME, UpdateLockTask)
             configureGlobalLockTask(globalUpdateLock, globalLockFileName, extension, overrides)
             configureUpdateTask(globalUpdateLock, extension)
             globalSave = configureGlobalSaveTask(globalLockFileName, globalLockTask, globalUpdateLock, extension)
@@ -88,46 +92,17 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         configureCommitTask(clLockFileName, globalLockFileName, saveTask, extension, commitExtension, globalSave)
 
-        def applyLockToResolutionStrategy = {
-            if (extension.configurationNames.empty) {
-                extension.configurationNames = project.configurations.collect { it.name }
-            }
-
-            File dependenciesLock
-            File globalLock = new File(project.rootProject.projectDir, globalLockFileName ?: extension.globalLockFile)
-            if (globalLock.exists()) {
-                dependenciesLock = globalLock
-            } else {
-                dependenciesLock = new File(project.projectDir, clLockFileName ?: extension.lockFile)
-            }
-
-            def taskNames = project.gradle.startParameter.taskNames
-
-            boolean hasGlobalLockTask = false
-            if (project == project.rootProject) {
-                hasGlobalLockTask = taskNames.contains(globalLockTask.name) || taskNames.contains(globalUpdateLock.name)
-
-            }
-
-            if (dependenciesLock.exists() && !shouldIgnoreDependencyLock() && !taskNames.contains(genLockTask.name) &&
-                    !taskNames.contains(updateLockTask.name) && !hasGlobalLockTask) {
-                applyLock(dependenciesLock, overrides)
-            } else if (!shouldIgnoreDependencyLock()) {
-                applyOverrides(overrides)
-            }
-        }
-
         def lockAfterEvaluating = project.hasProperty('dependencyLock.lockAfterEvaluating') ? Boolean.parseBoolean(project['dependencyLock.lockAfterEvaluating']) : extension.lockAfterEvaluating
         if (lockAfterEvaluating) {
-            logger.info("Applying dependency lock in afterEvaluate block")
-            project.afterEvaluate applyLockToResolutionStrategy
+            logger.info('Applying dependency lock in afterEvaluate block')
+            project.afterEvaluate { applyLockToResolutionStrategy(extension, overrides, globalLockFileName, clLockFileName) }
         } else {
-            logger.info("Applying dependency lock as is (outside afterEvaluate block)")
-            applyLockToResolutionStrategy()
+            logger.info('Applying dependency lock as is (outside afterEvaluate block)')
+            applyLockToResolutionStrategy(extension, overrides, globalLockFileName, clLockFileName)
         }
 
         project.gradle.taskGraph.whenReady { taskGraph ->
-            def hasLockingTask = taskGraph.hasTask(genLockTask) || taskGraph.hasTask(updateLockTask)
+            def hasLockingTask = taskGraph.hasTask(genLockTask) || taskGraph.hasTask(updateLockTask) || ((project == project.rootProject) && (taskGraph.hasTask(globalLockTask) || taskGraph.hasTask(globalUpdateLock)))
             if (hasLockingTask) {
                 project.configurations.all {
                     resolutionStrategy {
@@ -139,6 +114,52 @@ class DependencyLockPlugin implements Plugin<Project> {
                     applyOverrides(overrides)
                 }
             }
+        }
+    }
+
+    private void applyLockToResolutionStrategy(DependencyLockExtension extension, Map overrides, String globalLockFileName, String clLockFileName) {
+        if (extension.configurationNames.empty) {
+            extension.configurationNames = project.configurations.collect { it.name }
+        }
+
+        File dependenciesLock
+        File globalLock = new File(project.rootProject.projectDir, globalLockFileName ?: extension.globalLockFile)
+        if (globalLock.exists()) {
+            dependenciesLock = globalLock
+        } else {
+            dependenciesLock = new File(project.projectDir, clLockFileName ?: extension.lockFile)
+        }
+
+        def taskNames = project.gradle.startParameter.taskNames
+
+        if (dependenciesLock.exists() && !shouldIgnoreDependencyLock() && !hasGenerationTask(taskNames)) {
+            applyLock(dependenciesLock, overrides)
+        } else if (!shouldIgnoreDependencyLock()) {
+            applyOverrides(overrides)
+        }
+    }
+
+    private boolean hasGenerationTask(Collection<String> cliTasks) {
+        def matcher = new NameMatcher()
+        def found = cliTasks.find { cliTaskName ->
+            def tokens = cliTaskName.split(':')
+            def taskName = tokens.last()
+            def generatesPresent = matcher.find(taskName, [GENERATE_LOCK_TASK_NAME, GENERATE_GLOBAL_LOCK_TASK_NAME,
+                    UPDATE_LOCK_TASK_NAME, UPDATE_GLOBAL_LOCK_TASK_NAME])
+
+            generatesPresent && taskRunOnThisProject(tokens)
+        }
+
+        found != null
+    }
+
+    private boolean taskRunOnThisProject(String[] tokens) {
+        if (tokens.size() == 1) { // task run globally
+            return true
+        } else if (tokens.size() == 2 && tokens[0] == '') { // running fully qualified on root project
+            return project == project.rootProject
+        } else { // the task is being run on a specific project
+            return project.name == tokens[-2]
         }
     }
 

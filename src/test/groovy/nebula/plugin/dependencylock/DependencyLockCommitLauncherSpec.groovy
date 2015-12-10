@@ -19,8 +19,6 @@ import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.test.IntegrationSpec
 import org.ajoberstar.grgit.Grgit
 import org.ajoberstar.grgit.operation.ResetOp
-import org.gradle.execution.TaskSelectionException
-import org.gradle.internal.exceptions.LocationAwareException
 
 class DependencyLockCommitLauncherSpec extends IntegrationSpec {
     def setup() {
