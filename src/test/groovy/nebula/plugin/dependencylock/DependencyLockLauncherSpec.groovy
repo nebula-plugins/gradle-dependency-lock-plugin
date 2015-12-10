@@ -207,11 +207,9 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def result = runTasksSuccessfully('dependencies')
 
         then:
-        println result.standardOutput
         result.standardOutput.contains 'test.example:foo:1.0.1 -> 1.0.0'
     }
 
-    @Ignore
     @Issue('#79')
     def 'lock file is not applied while generating lock with abbreviated task name'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
@@ -227,7 +225,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         !result.standardOutput.contains('test.example:foo:1.0.1 -> 1.0.0')
     }
 
-    @Ignore
     @Issue('#79')
     def 'lock file is not applied while generating lock with qualified task name'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
@@ -241,6 +238,77 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         then:
         println result.standardOutput
         !result.standardOutput.contains('test.example:foo:1.0.1 -> 1.0.0')
+    }
+
+    @Issue('#79')
+    def 'lock file is applied on subprojects not being locked while generating lock with qualified task name'() {
+        setupCommonMultiproject()
+        new File(projectDir, 'sub1/dependencies.lock').text = PRE_DIFF_FOO_LOCK
+        new File(projectDir, 'sub2/dependencies.lock').text = PRE_DIFF_FOO_LOCK
+
+        when:
+        def result = runTasksSuccessfully('sub1:generateLock', ':sub2:dependencies')
+
+        then:
+        println result.standardOutput
+        result.standardOutput.contains('test.example:foo:1.+ -> 1.0.0')
+    }
+
+    @Issue('#79')
+    def 'lock file ignored in multiproject on specific project with no leading :'() {
+        setupCommonMultiproject()
+        new File(projectDir, 'sub1/dependencies.lock').text = PRE_DIFF_FOO_LOCK
+        new File(projectDir, 'sub2/dependencies.lock').text = PRE_DIFF_FOO_LOCK
+
+        when:
+        def result = runTasksSuccessfully('sub1:generateLock', 'sub1:dependencies')
+
+        then:
+        !result.standardOutput.contains('test.example:foo:2.0.0 -> 1.0.0')
+    }
+
+    @Issue('#79')
+    def 'lock file ignored in nested multiproject when generating locks'() {
+        def middleDir = addSubproject('middle')
+        def sub0Dir = new File(middleDir, 'sub0')
+        sub0Dir.mkdirs()
+        new File(sub0Dir, 'build.gradle').text = """\
+            apply plugin: 'java'
+            dependencies {
+                compile 'test.example:foo:2.0.0'
+            }
+        """.stripIndent()
+        new File(sub0Dir, 'dependencies.lock').text = PRE_DIFF_FOO_LOCK
+        def sub1Dir = new File(middleDir, 'sub1')
+        sub1Dir.mkdirs()
+        new File(sub1Dir, 'build.gradle').text = """\
+            apply plugin: 'java'
+            dependencies {
+                compile 'test.example:foo:1.+'
+            }
+        """.stripIndent()
+
+        buildFile << """\
+            allprojects {
+                ${applyPlugin(DependencyLockPlugin)}
+                group = 'test'
+            }
+            subprojects {
+                repositories { maven { url '${Fixture.repo}' } }
+            }
+        """.stripIndent()
+
+        settingsFile << '''\
+            include ':middle:sub0'
+            include ':middle:sub1'
+        '''.stripIndent()
+
+        when:
+        def result = runTasksSuccessfully(':middle:sub0:generateLock', ':middle:sub0:dependencies')
+
+        then:
+        println result.standardOutput
+        !result.standardOutput.contains('test.example:foo:2.0.0 -> 1.0.0')
     }
 
     def 'override lock file is applied'() {
@@ -1031,9 +1099,10 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             }'''.stripIndent()
 
         when:
-        runTasksSuccessfully('generateGlobalLock')
+        def r = runTasksSuccessfully('generateGlobalLock')
 
         then:
+        println r.standardOutput
         new File(projectDir, 'build/global.lock').text == globalLockText
     }
 
