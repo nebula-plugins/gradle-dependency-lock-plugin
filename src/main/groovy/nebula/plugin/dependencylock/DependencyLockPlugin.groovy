@@ -60,7 +60,6 @@ class DependencyLockPlugin implements Plugin<Project> {
         configureLockTask(genLockTask, clLockFileName, extension, overrides)
         if (project.hasProperty('dependencyLock.useGeneratedLock')) {
             clLockFileName = genLockTask.getDependenciesLock().path
-            logger.lifecycle(clLockFileName)
         }
 
         UpdateLockTask updateLockTask = project.tasks.create(UPDATE_LOCK_TASK_NAME, UpdateLockTask)

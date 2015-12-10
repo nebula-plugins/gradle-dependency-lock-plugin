@@ -221,7 +221,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def result = runTasksSuccessfully('gL', 'dependencies')
 
         then:
-        println result.standardOutput
         !result.standardOutput.contains('test.example:foo:1.0.1 -> 1.0.0')
     }
 
@@ -236,7 +235,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def result = runTasksSuccessfully(':generateLock', 'dependencies')
 
         then:
-        println result.standardOutput
         !result.standardOutput.contains('test.example:foo:1.0.1 -> 1.0.0')
     }
 
@@ -250,7 +248,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def result = runTasksSuccessfully('sub1:generateLock', ':sub2:dependencies')
 
         then:
-        println result.standardOutput
         result.standardOutput.contains('test.example:foo:1.+ -> 1.0.0')
     }
 
@@ -307,7 +304,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def result = runTasksSuccessfully(':middle:sub0:generateLock', ':middle:sub0:dependencies')
 
         then:
-        println result.standardOutput
         !result.standardOutput.contains('test.example:foo:2.0.0 -> 1.0.0')
     }
 
@@ -522,7 +518,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def s = runTasksSuccessfully('-PdependencyLock.overrideFile=test.lock', 'generateLock', 'saveLock')
 
         then:
-        println s.standardOutput
         new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
     }
 
@@ -618,7 +613,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def aa = runTasksSuccessfully('-PdependencyLock.overrideFile=override.lock', 'generateLock', 'saveLock')
 
         then:
-        println aa.standardOutput
         String lockText1 = '''\
             {
                 "compile": {
@@ -761,7 +755,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def s = runTasksSuccessfully('generateGlobalLock')
 
         then:
-        println s.standardOutput
         String globalLockText = '''\
             {
                 "_global_": {
@@ -922,7 +915,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def s = runTasksSuccessfully('generateGlobalLock')
 
         then:
-        println s.standardOutput
         String globalLockText = '''\
             {
                 "_global_": {
@@ -1102,7 +1094,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def r = runTasksSuccessfully('generateGlobalLock')
 
         then:
-        println r.standardOutput
         new File(projectDir, 'build/global.lock').text == globalLockText
     }
 
