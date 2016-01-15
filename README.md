@@ -12,6 +12,18 @@ Some project teams may prefer to have their build.gradle dependencies reflect th
 
 Inspired by [Bundler](http://bundler.io)
 
+### General Use Pattern
+
+1. Daily locking of dynamic dependencies
+    a. Run a daily job to lock your dependencies. Every day before you show up to work you can have an automated system to pull in the latest dependencies and run your tests. If they pass, your team has a stable dependency graph for the day. If they fail you can have a subset of the team deal with the dependency issues while the rest keep with what they're were doing using yesterday's dependency lock.
+    b. Occasionally (and optionally) run `updateLock` to try out a single new dependency.
+2. Lock on release
+    a. When you're ready to cut that shiny new version of your software create a lock of your dependencies. You'll be able to recreate the exact state of your dependency graph if you ever need to reproduce a build.
+3. Deal with IDE issues
+    a. Create a global lock with `generateGlobalLock` `saveGlobalLock`.
+    b. Watch as you no longer have to deal with one subproject depend on an old version and mess up another's dependency graph
+    c. Stop WAR deployments from copying 2 different versions of a dependency into the directory.
+
 ## Deprecation Warning
 
 The old plugin name `gradle-dependency-lock`/`nebula.gradle-dependency-lock` has been deleted in favor of `dependency-lock`/`nebula.dependency-lock`.
@@ -25,7 +37,7 @@ To include, add the following to your build.gradle
 If newer than gradle 2.1 you may use
 
     plugins {
-      id 'nebula.dependency-lock' version '4.1.3'
+      id 'nebula.dependency-lock' version '4.2.0'
     }
 
 *or*
@@ -34,7 +46,7 @@ If newer than gradle 2.1 you may use
       repositories { jcenter() }
 
       dependencies {
-        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:4.1.3'
+        classpath 'com.netflix.nebula:gradle-dependency-lock-plugin:4.2.0'
       }
     }
 
@@ -45,11 +57,11 @@ If newer than gradle 2.1 you may use
 Command line overrides via `-PdependencyLock.override` or `-PdependencyLock.overrideFile` will apply.
 
 * generateLock - Generate a lock file into the build directory. Any existing `dependency.lock` file will be ignored.
-* updateLock - Update dependencies from the lock file into the build directory. By default, this task does the same thing as the `generateLock` task. This task also exposes an option `--dependencies` allowing the user to specify a comma-separated list, in the format `<group>:<artifact>`, of dependencies to update.
+* updateLock - Update dependencies from the lock file into the build directory. By default, this task does the same thing as the `generateLock` task. If updateDependencies is specified in the extension or `-PdependencyLock.updateDependencies` on the command line we will keep direct dependencies not in the list locked and allow conflict resolution on everything else.
 * saveLock - Copy the generated lock into the project directory.
 * deleteLock - Delete the existing lock files
 * generateGlobalLock - Generate a lock file into the build directory representing the global dependencies of the entire multiproject. Any existing `dependency.lock` or `global.lock` will be ignored.
-* updateGlobalLock - Update dependencies from the lock file into the build directory. By default, this task does the same thing as the `generateGlobalLock` task. This task also exposes an option `--dependencies` allowing the user to specify a comma-separated list, in the format `<group>:<artifact>`, of dependencies to update.
+* updateGlobalLock - Update dependencies from the lock file into the build directory. By default, this task does the same thing as the `generateGlobalLock` task. 
 * saveGlobalLock - Copies the generated globalLock into the project directory
 * deleteGlobalLock - Delete the `global.lock` file
 * commitLock - If a [gradle-scm-plugin](https://github.com/nebula-plugins/gradle-scm-plugin) implementation is applied. Will commit dependencies.lock to the configured SCM. Exists only on the rootProject. Assumes scm root is at the same level as the root build.gradle.
@@ -82,7 +94,7 @@ or
 
 Update lock (the lock must still be saved/committed):
 
-* `./gradlew updateLock --dependencies com.example:foo,com.example:bar`
+* `./gradlew updateLock -PdependencyLock.updateDependencies com.example:foo,com.example:bar`
 
 
 ### Extensions Provided
@@ -130,6 +142,8 @@ Use the following to configure. There will be only one commitDependencyLock exte
     }
 
 ### Properties that Affect the Plugin
+
+In general use of properties should be minimal, usually you want to create a custom task that wires your options.
 
 *dependencyLock.lockFile*
 
@@ -179,6 +193,10 @@ Allows the user to specify overrides to libraries on the command line. This over
 or to override multiple libraries
 
     ./gradlew -PdependencyLock.override=group0:artifact0:version0,group1:artifact1:version1 <tasks>
+    
+*dependencyLock.updateDependencies*
+
+Allows user to list the dependencies that will be used by updateLock or updateGlobalLock
 
 *commitDependencyLock.message*
 
@@ -371,11 +389,13 @@ Tested with Oracle JDK8
 | 2.6            | yes   |
 | 2.7            | yes   |
 | 2.8            | yes   |
+| 2.9            | yes   |
+| 2.10           | yes   |
 
 LICENSE
 =======
 
-Copyright 2014-2015 Netflix, Inc.
+Copyright 2014-2016 Netflix, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

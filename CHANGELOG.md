@@ -1,3 +1,8 @@
+4.2.0 / 2016-01-14
+==================
+
+* Rewrite updateLock task so it updates the given dependencies and all of its transitives, keeping other direct dependencies locked
+
 4.1.3 / 2015-12-10
 ==================
 

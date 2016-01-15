@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Netflix, Inc.
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ class GenerateLockTask extends AbstractLockTask {
         configurationNames.collect { project.configurations.getByName(it) }
     }
 
-    private readDependenciesFromConfigurations(Collection<Configuration> confs) {
+    Map readDependenciesFromConfigurations(Collection<Configuration> confs) {
         def deps = [:].withDefault { [transitive: [] as Set, firstLevelTransitive: [] as Set, childrenVisited: false] }
 
         // Peers are all the projects in the build to which this plugin has been applied.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Netflix, Inc.
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,8 @@ class Fixture {
           'test.example:baz:1.0.0',
           'test.example:baz:1.1.0',
           'test.example:baz:2.0.0',
+          'test.example:qux:1.0.0 -> test.example:foo:1.0.1',
+          'test.example:qux:2.0.0 -> test.example:foo:2.0.1',
           'test.example:foobaz:1.0.0 -> test.example:foo:1.0.1|test.example:baz:1.0.0',
           'test.example:transitive:1.0.0 -> test.example:bar:1.0.0|test.example:foobaz:1.0.0',
           'circular:a:1.0.0 -> circular:b:1.0.0',
