@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Netflix, Inc.
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,9 @@ class DependencyLockPlugin implements Plugin<Project> {
     public static final String UPDATE_LOCK_TASK_NAME = 'updateLock'
     Project project
 
+    UpdateLockTask updateLockTask
+    UpdateLockTask globalUpdateLock
+
     @Override
     void apply(Project project) {
         this.project = project
@@ -62,9 +65,8 @@ class DependencyLockPlugin implements Plugin<Project> {
             clLockFileName = genLockTask.getDependenciesLock().path
         }
 
-        UpdateLockTask updateLockTask = project.tasks.create(UPDATE_LOCK_TASK_NAME, UpdateLockTask)
+        updateLockTask = project.tasks.create(UPDATE_LOCK_TASK_NAME, UpdateLockTask)
         configureLockTask(updateLockTask, clLockFileName, extension, overrides)
-        configureUpdateTask(updateLockTask, extension)
 
         //DiffLockTask diffLockTask = project.tasks.create('diffLock', DiffLockTask)
         //configureDiffTask(diffLockTask, genLockTask, clLockFileName)
@@ -76,7 +78,6 @@ class DependencyLockPlugin implements Plugin<Project> {
         SaveLockTask globalSave
         String globalLockFileName = project.hasProperty('dependencyLock.globalLockFile') ? project['dependencyLock.globalLockFile'] : null
         GenerateLockTask globalLockTask
-        UpdateLockTask globalUpdateLock
         if (project == project.rootProject) {
             globalLockTask = project.tasks.create(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateLockTask)
             if (project.hasProperty('dependencyLock.useGeneratedGlobalLock')) {
@@ -85,7 +86,6 @@ class DependencyLockPlugin implements Plugin<Project> {
             configureGlobalLockTask(globalLockTask, globalLockFileName, extension, overrides)
             globalUpdateLock = project.tasks.create(UPDATE_GLOBAL_LOCK_TASK_NAME, UpdateLockTask)
             configureGlobalLockTask(globalUpdateLock, globalLockFileName, extension, overrides)
-            configureUpdateTask(globalUpdateLock, extension)
             globalSave = configureGlobalSaveTask(globalLockFileName, globalLockTask, globalUpdateLock, extension)
             createDeleteGlobalLock(globalSave)
         }
@@ -134,23 +134,38 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         if (dependenciesLock.exists() && !shouldIgnoreDependencyLock() && !hasGenerationTask(taskNames)) {
             applyLock(dependenciesLock, overrides)
+        } else if (dependenciesLock.exists() && !shouldIgnoreDependencyLock() && hasUpdateTask(taskNames)) {
+            def updates = project.hasProperty('dependencyLock.updateDependencies') ? parseUpdates(project.property('dependencyLock.updateDependencies')) : extension.updateDependencies
+            applyLock(dependenciesLock, overrides, updates)
         } else if (!shouldIgnoreDependencyLock()) {
             applyOverrides(overrides)
         }
     }
 
     private boolean hasGenerationTask(Collection<String> cliTasks) {
+        def taskNames = [GENERATE_LOCK_TASK_NAME, GENERATE_GLOBAL_LOCK_TASK_NAME,
+                         UPDATE_LOCK_TASK_NAME, UPDATE_GLOBAL_LOCK_TASK_NAME]
+
+        hasTask(cliTasks, taskNames)
+    }
+
+    private boolean hasTask(Collection<String> cliTasks, Collection<String> taskNames) {
         def matcher = new NameMatcher()
         def found = cliTasks.find { cliTaskName ->
             def tokens = cliTaskName.split(':')
             def taskName = tokens.last()
-            def generatesPresent = matcher.find(taskName, [GENERATE_LOCK_TASK_NAME, GENERATE_GLOBAL_LOCK_TASK_NAME,
-                    UPDATE_LOCK_TASK_NAME, UPDATE_GLOBAL_LOCK_TASK_NAME])
+            def generatesPresent = matcher.find(taskName, taskNames)
 
             generatesPresent && taskRunOnThisProject(tokens)
         }
 
+
         found != null
+    }
+
+    private boolean hasUpdateTask(Collection<String> cliTasks) {
+        def taskNames = [UPDATE_LOCK_TASK_NAME, UPDATE_GLOBAL_LOCK_TASK_NAME]
+        hasTask(cliTasks, taskNames)
     }
 
     private boolean taskRunOnThisProject(String[] tokens) {
@@ -161,6 +176,10 @@ class DependencyLockPlugin implements Plugin<Project> {
         } else { // the task is being run on a specific project
             return project.name == tokens[-2]
         }
+    }
+
+    private Set<String> parseUpdates(String updates) {
+        updates.tokenize(',') as Set
     }
 
     private void configureCommitTask(String clLockFileName, String globalLockFileName, SaveLockTask saveTask, DependencyLockExtension lockExtension,
@@ -325,14 +344,6 @@ class DependencyLockPlugin implements Plugin<Project> {
         }
     }
 
-    private configureUpdateTask(UpdateLockTask lockTask, DependencyLockExtension extension) {
-        // You can't read a property at the same time you define the convention mapping ∞
-        def updatesFromOption = lockTask.dependencies
-        lockTask.conventionMapping.dependencies = { updatesFromOption ?: extension.updateDependencies }
-
-        lockTask
-    }
-
     /*private configureDiffTask(DiffLockTask diffLockTask, GenerateLockTask generateLockTask, String lockFileName, DependencyLockExtension extension) {
         diffLockTask.conventionMapping.with {
             existingLock = { new File(project.projectDir, lockFileName ?: extension.lockFile) }
@@ -360,9 +371,13 @@ class DependencyLockPlugin implements Plugin<Project> {
         }
     }
 
-    void applyLock(File dependenciesLock, Map overrides) {
+    void applyLock(File dependenciesLock, Map overrides, Collection<String> updates = []) {
         logger.info("Using ${dependenciesLock.name} to lock dependencies")
         def locks = loadLock(dependenciesLock)
+
+        if (updates) {
+            locks = locks.collectEntries { configurationName, deps -> [(configurationName): deps.findAll { coord, info -> (info.transitive == null) && !updates.contains(coord) }]}
+        }
 
         def isDeprecatedFormat = locks.every { it.key ==~ /[^:]+:.+/ } // in the old format, all first level props were groupId:artifactId
         if (isDeprecatedFormat) {

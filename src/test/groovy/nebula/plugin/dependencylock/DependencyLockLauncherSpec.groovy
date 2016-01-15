@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2015 Netflix, Inc.
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package nebula.plugin.dependencylock
 
 import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
+import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.IntegrationSpec
 import spock.lang.Ignore
 import spock.lang.Issue
@@ -221,6 +222,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def result = runTasksSuccessfully('gL', 'dependencies')
 
         then:
+
         !result.standardOutput.contains('test.example:foo:1.0.1 -> 1.0.0')
     }
 
@@ -1143,6 +1145,68 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         !(new File(projectDir, 'dependencies.lock').exists())
         !(new File(projectDir, 'sub1/dependencies.lock').exists())
         !(new File(projectDir, 'sub2/dependencies.lock').exists())
+    }
+
+    def 'only the update dependency and its transitives are updated'() {
+        buildFile << """\
+            apply plugin: 'java'
+            apply plugin: 'nebula.dependency-lock'
+            repositories { maven { url '${Fixture.repo}' } }
+            dependencyLock {
+                includeTransitives = true
+            }
+            dependencies {
+                compile 'test.example:bar:1.+'
+                compile 'test.example:qux:latest.release'
+            }
+        """.stripIndent()
+
+        def lockFile = new File(projectDir, 'dependencies.lock')
+        def lockText = new LockGenerator().duplicateIntoConfigs(
+                '''\
+                    "test.example:bar": {
+                        "locked": "1.0.0",
+                        "requested": "1.+"
+                    },
+                    "test.example:qux": {
+                        "locked": "1.0.0",
+                        "requested": "latest.release"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:bar",
+                            "test.example:qux"
+                        ]
+                    }'''.stripIndent()
+        )
+        lockFile.text = lockText
+
+        def updatedLock = new LockGenerator().duplicateIntoConfigs(
+                '''\
+                    "test.example:bar": {
+                        "locked": "1.1.0",
+                        "requested": "1.+"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.1",
+                        "transitive": [
+                            "test.example:bar",
+                            "test.example:qux"
+                        ]
+                    },
+                    "test.example:qux": {
+                        "locked": "1.0.0",
+                        "requested": "latest.release"
+                    }'''.stripIndent()
+        )
+
+        when:
+        def results = runTasksSuccessfully('updateLock', '-PdependencyLock.updateDependencies=test.example:bar')
+
+        then:
+        println results.standardOutput
+        new File(projectDir, 'build/dependencies.lock').text == updatedLock
     }
 
     @Ignore
