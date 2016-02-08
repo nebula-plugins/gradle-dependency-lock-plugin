@@ -295,8 +295,10 @@ class DependencyLockPlugin implements Plugin<Project> {
     private void maybeApplyLock(Configuration conf, DependencyLockExtension extension, Map overrides, String globalLockFileName, String lockFilename) {
         File dependenciesLock
         File globalLock = new File(project.rootProject.projectDir, globalLockFileName ?: extension.globalLockFile)
+        boolean isGlobal = false
         if (globalLock.exists()) {
             dependenciesLock = globalLock
+            isGlobal = true
         } else {
             dependenciesLock = new File(project.projectDir, lockFilename ?: extension.lockFile)
         }
@@ -307,11 +309,11 @@ class DependencyLockPlugin implements Plugin<Project> {
             boolean hasGenerateTask = hasGenerationTask(taskNames)
             if (dependenciesLock.exists()) {
                 if (!hasGenerateTask) {
-                    applyLock(conf, dependenciesLock, overrides)
+                    applyLock(conf, dependenciesLock, overrides, [], isGlobal)
                     appliedLock = true
                 } else if (hasUpdateTask(taskNames)) {
                     def updates = project.hasProperty(UPDATE_DEPENDENCIES) ? parseUpdates(project.property(UPDATE_DEPENDENCIES) as String) : extension.updateDependencies
-                    applyLock(conf, dependenciesLock, overrides, updates)
+                    applyLock(conf, dependenciesLock, overrides, updates, isGlobal)
                     appliedLock = true
                 }
             }
@@ -361,12 +363,20 @@ class DependencyLockPlugin implements Plugin<Project> {
         updates.tokenize(',') as Set
     }
 
-    void applyLock(Configuration conf, File dependenciesLock, Map overrides, Collection<String> updates = []) {
+    private static boolean isTopLevel(info, deps, isGlobal) {
+        // If this is not listed as being depended on at all, it must be a top-level dependency
+        if (info.transitive == null) return true
+
+        // If a dependency is listed as being depended on by something that we know is a project, then it must be a top-level dependency
+        return isGlobal && info.transitive.any { deps[it]?.project }
+    }
+
+    void applyLock(Configuration conf, File dependenciesLock, Map overrides, Collection<String> updates = [], boolean isGlobal) {
         LOGGER.info("Using ${dependenciesLock.name} to lock dependencies in $conf")
         def locks = loadLock(dependenciesLock)
 
         if (updates) {
-            locks = locks.collectEntries { configurationName, deps -> [(configurationName): deps.findAll { coord, info -> (info.transitive == null) && !updates.contains(coord) }] }
+            locks = locks.collectEntries { configurationName, deps -> [(configurationName): deps.findAll { coord, info -> isTopLevel(info, deps, isGlobal) && !updates.contains(coord) }] }
         }
 
         // in the old format, all first level props were groupId:artifactId
