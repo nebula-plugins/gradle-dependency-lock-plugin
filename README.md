@@ -96,7 +96,7 @@ or
 
 Update lock (the lock must still be saved/committed):
 
-* `./gradlew updateLock -PdependencyLock.updateDependencies com.example:foo,com.example:bar`
+* `./gradlew updateLock -PdependencyLock.updateDependencies=com.example:foo,com.example:bar`
 
 ### Extensions Provided
 
@@ -199,7 +199,7 @@ or to override multiple libraries
 
 Allows user to list the dependencies that will be used by updateLock or updateGlobalLock
 
-    ./gradlew updateLock -PdependencyLock.updateDependencies com.example:foo,com.example:bar
+    ./gradlew updateLock -PdependencyLock.updateDependencies=com.example:foo,com.example:bar
 
 *commitDependencyLock.message*
 
