@@ -58,11 +58,11 @@ Command line overrides via `-PdependencyLock.override` or `-PdependencyLock.over
 
 | Task | Description |
 | --- | --- |
-| `generateLock` | Generate a lock file into the build directory. Any existing `dependency.lock` file will be ignored. |
+| `generateLock` | Generate a lock file into the build directory. Any existing `dependencies.lock` file will be ignored. |
 | `updateLock` | Update dependencies from the lock file into the build directory. By default, this task does the same thing as the `generateLock` task. If updateDependencies is specified in the extension or `-PdependencyLock.updateDependencies` on the command line we will keep direct dependencies not in the list locked and allow conflict resolution on everything else. |
 | `saveLock` | Copy the generated lock into the project directory. |
 | `deleteLock` | Delete the existing lock files. |
-| `generateGlobalLock` | Generate a lock file into the build directory representing the global dependencies of the entire multiproject. Any existing `dependency.lock` or `global.lock` will be ignored. |
+| `generateGlobalLock` | Generate a lock file into the build directory representing the global dependencies of the entire multiproject. Any existing `dependencies.lock` or `global.lock` will be ignored. |
 | `updateGlobalLock` | Update dependencies from the lock file into the build directory. By default, this task does the same thing as the `generateGlobalLock` task. |
 | `saveGlobalLock` | Copies the generated globalLock into the project directory. |
 | `deleteGlobalLock` | Delete the `global.lock` file. |
