@@ -3,9 +3,7 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * You may obtain a copy of the License atpre5*4nu
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -71,112 +69,27 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         }
     '''.stripIndent()
 
-    static final String PRE_DIFF_FOO_LOCK = '''\
-        {
-            "compile": {
+    static final String PRE_DIFF_FOO_LOCK = LockGenerator.duplicateIntoConfigs('''\
                 "test.example:foo": {
                     "locked": "1.0.0",
                     "requested": "1.+"
                 }
-            },
-            "default": {
-                "test.example:foo": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
-                }
-            },
-            "runtime": {
-                "test.example:foo": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
-                }
-            },
-            "testCompile": {
-                "test.example:foo": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
-                }
-            },
-            "testRuntime": {
-                "test.example:foo": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
-                }
-            }
-        }'''.stripIndent()
+                '''.stripIndent())
 
-    static final String FOO_LOCK = '''\
-        {
-            "compile": {
+    static final String FOO_LOCK = LockGenerator.duplicateIntoConfigs('''\
                 "test.example:foo": {
                     "locked": "1.0.1",
                     "requested": "1.+"
                 }
-            },
-            "default": {
-                "test.example:foo": {
-                    "locked": "1.0.1",
-                    "requested": "1.+"
-                }
-            },
-            "runtime": {
-                "test.example:foo": {
-                    "locked": "1.0.1",
-                    "requested": "1.+"
-                }
-            },
-            "testCompile": {
-                "test.example:foo": {
-                    "locked": "1.0.1",
-                    "requested": "1.+"
-                }
-            },
-            "testRuntime": {
-                "test.example:foo": {
-                    "locked": "1.0.1",
-                    "requested": "1.+"
-                }
-            }
-        }'''.stripIndent()
+                '''.stripIndent())
 
-    static final String NEW_FOO_LOCK = '''\
-        {
-            "compile": {
+    static final String NEW_FOO_LOCK = LockGenerator.duplicateIntoConfigs('''\
                 "test.example:foo": {
                     "locked": "2.0.1",
                     "requested": "1.+",
                     "viaOverride": "2.0.1"
                 }
-            },
-            "default": {
-                "test.example:foo": {
-                    "locked": "2.0.1",
-                    "requested": "1.+",
-                    "viaOverride": "2.0.1"
-                }
-            },
-            "runtime": {
-                "test.example:foo": {
-                    "locked": "2.0.1",
-                    "requested": "1.+",
-                    "viaOverride": "2.0.1"
-                }
-            },
-            "testCompile": {
-                "test.example:foo": {
-                    "locked": "2.0.1",
-                    "requested": "1.+",
-                    "viaOverride": "2.0.1"
-                }
-            },
-            "testRuntime": {
-                "test.example:foo": {
-                    "locked": "2.0.1",
-                    "requested": "1.+",
-                    "viaOverride": "2.0.1"
-                }
-            }
-        }'''.stripIndent()
+                '''.stripIndent())
 
     static FOO_LOCK_OVERRIDE = '''\
         {
@@ -372,39 +285,12 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             }
         """.stripIndent()
 
-        def lockWithSkips = '''\
-            {
-                "compile": {
-                    "test.example:baz": {
-                        "locked": "1.1.0",
-                        "requested": "1.+"
-                    }
-                },
-                "default": {
-                    "test.example:baz": {
-                        "locked": "1.1.0",
-                        "requested": "1.+"
-                    }
-                },
-                "runtime": {
-                    "test.example:baz": {
-                        "locked": "1.1.0",
-                        "requested": "1.+"
-                    }
-                },
-                "testCompile": {
-                    "test.example:baz": {
-                        "locked": "1.1.0",
-                        "requested": "1.+"
-                    }
-                },
-                "testRuntime": {
-                    "test.example:baz": {
-                        "locked": "1.1.0",
-                        "requested": "1.+"
-                    }
+        def lockWithSkips = LockGenerator.duplicateIntoConfigs('''\
+                "test.example:baz": {
+                    "locked": "1.1.0",
+                    "requested": "1.+"
                 }
-            }'''.stripIndent()
+            '''.stripIndent())
 
         when:
         runTasksSuccessfully('generateLock')
@@ -455,7 +341,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        def output = runTasksSuccessfully('generateLock')
+        runTasksSuccessfully('generateLock')
 
         then:
         new File(projectDir, 'build/dependencies.lock').text == FOO_LOCK
@@ -517,7 +403,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        def s = runTasksSuccessfully('-PdependencyLock.overrideFile=test.lock', 'generateLock', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.overrideFile=test.lock', 'generateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
@@ -612,86 +498,24 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         '''.stripIndent()
 
         when:
-        def aa = runTasksSuccessfully('-PdependencyLock.overrideFile=override.lock', 'generateLock', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.overrideFile=override.lock', 'generateLock', 'saveLock')
 
         then:
-        String lockText1 = '''\
-            {
-                "compile": {
-                    "test.example:foo": {
-                        "locked": "2.0.0",
-                        "requested": "2.+",
-                        "viaOverride": "2.0.0"
-                    }
-                },
-                "default": {
-                    "test.example:foo": {
-                        "locked": "2.0.0",
-                        "requested": "2.+",
-                        "viaOverride": "2.0.0"
-                    }
-                },
-                "runtime": {
-                    "test.example:foo": {
-                        "locked": "2.0.0",
-                        "requested": "2.+",
-                        "viaOverride": "2.0.0"
-                    }
-                },
-                "testCompile": {
-                    "test.example:foo": {
-                        "locked": "2.0.0",
-                        "requested": "2.+",
-                        "viaOverride": "2.0.0"
-                    }
-                },
-                "testRuntime": {
-                    "test.example:foo": {
-                        "locked": "2.0.0",
-                        "requested": "2.+",
-                        "viaOverride": "2.0.0"
-                    }
+        String lockText1 = LockGenerator.duplicateIntoConfigs('''\
+                "test.example:foo": {
+                    "locked": "2.0.0",
+                    "requested": "2.+",
+                    "viaOverride": "2.0.0"
                 }
-            }'''.stripIndent()
+            '''.stripIndent())
         new File(sub1, 'dependencies.lock').text == lockText1
-        String lockText2 = '''\
-            {
-                "compile": {
-                    "test.example:baz": {
-                        "locked": "1.0.0",
-                        "requested": "1.+",
-                        "viaOverride": "1.0.0"
-                    }
-                },
-                "default": {
-                    "test.example:baz": {
-                        "locked": "1.0.0",
-                        "requested": "1.+",
-                        "viaOverride": "1.0.0"
-                    }
-                },
-                "runtime": {
-                    "test.example:baz": {
-                        "locked": "1.0.0",
-                        "requested": "1.+",
-                        "viaOverride": "1.0.0"
-                    }
-                },
-                "testCompile": {
-                    "test.example:baz": {
-                        "locked": "1.0.0",
-                        "requested": "1.+",
-                        "viaOverride": "1.0.0"
-                    }
-                },
-                "testRuntime": {
-                    "test.example:baz": {
-                        "locked": "1.0.0",
-                        "requested": "1.+",
-                        "viaOverride": "1.0.0"
-                    }
+        String lockText2 = LockGenerator.duplicateIntoConfigs('''\
+                "test.example:baz": {
+                    "locked": "1.0.0",
+                    "requested": "1.+",
+                    "viaOverride": "1.0.0"
                 }
-            }'''.stripIndent()
+            '''.stripIndent())
         new File(sub2, 'dependencies.lock').text == lockText2
     }
 
@@ -754,7 +578,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         """.stripIndent()
 
         when:
-        def s = runTasksSuccessfully('generateGlobalLock')
+        runTasksSuccessfully('generateGlobalLock')
 
         then:
         String globalLockText = '''\
@@ -914,7 +738,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         """.stripIndent()
 
         when:
-        def s = runTasksSuccessfully('generateGlobalLock')
+        runTasksSuccessfully('generateGlobalLock')
 
         then:
         String globalLockText = '''\
@@ -945,7 +769,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         setupCommonMultiproject()
 
         when:
-        def s = runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock')
+        runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock')
 
         then:
         // Should this be an empty result? Check OneNote
@@ -983,73 +807,19 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
             }'''.stripIndent()
         new File(projectDir, 'dependencies.lock').text.replaceAll(' ', '') == lockText
-        String lockText1 = '''\
-            {
-                "compile": {
-                    "test.example:foo": {
-                        "locked": "2.0.0",
-                        "requested": "2.0.0"
-                    }
-                },
-                "default": {
-                    "test.example:foo": {
-                        "locked": "2.0.0",
-                        "requested": "2.0.0"
-                    }
-                },
-                "runtime": {
-                    "test.example:foo": {
-                        "locked": "2.0.0",
-                        "requested": "2.0.0"
-                    }
-                },
-                "testCompile": {
-                    "test.example:foo": {
-                        "locked": "2.0.0",
-                        "requested": "2.0.0"
-                    }
-                },
-                "testRuntime": {
-                    "test.example:foo": {
-                        "locked": "2.0.0",
-                        "requested": "2.0.0"
-                    }
+        String lockText1 = LockGenerator.duplicateIntoConfigs('''\
+                "test.example:foo": {
+                    "locked": "2.0.0",
+                    "requested": "2.0.0"
                 }
-            }'''.stripIndent()
+            '''.stripIndent())
         new File(projectDir, 'sub1/dependencies.lock').text == lockText1
-        String lockText2 = '''\
-            {
-                "compile": {
-                    "test.example:foo": {
-                        "locked": "1.0.1",
-                        "requested": "1.+"
-                    }
-                },
-                "default": {
-                    "test.example:foo": {
-                        "locked": "1.0.1",
-                        "requested": "1.+"
-                    }
-                },
-                "runtime": {
-                    "test.example:foo": {
-                        "locked": "1.0.1",
-                        "requested": "1.+"
-                    }
-                },
-                "testCompile": {
-                    "test.example:foo": {
-                        "locked": "1.0.1",
-                        "requested": "1.+"
-                    }
-                },
-                "testRuntime": {
-                    "test.example:foo": {
-                        "locked": "1.0.1",
-                        "requested": "1.+"
-                    }
+        String lockText2 = LockGenerator.duplicateIntoConfigs('''\
+                "test.example:foo": {
+                    "locked": "1.0.1",
+                    "requested": "1.+"
                 }
-            }'''.stripIndent()
+            '''.stripIndent())
         new File(projectDir, 'sub2/dependencies.lock').text == lockText2
     }
 
@@ -1093,7 +863,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             }'''.stripIndent()
 
         when:
-        def r = runTasksSuccessfully('generateGlobalLock')
+        runTasksSuccessfully('generateGlobalLock')
 
         then:
         new File(projectDir, 'build/global.lock').text == globalLockText
@@ -1162,7 +932,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         """.stripIndent()
 
         def lockFile = new File(projectDir, 'dependencies.lock')
-        def lockText = new LockGenerator().duplicateIntoConfigs(
+        def lockText = LockGenerator.duplicateIntoConfigs(
                 '''\
                     "test.example:bar": {
                         "locked": "1.0.0",
@@ -1182,7 +952,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         )
         lockFile.text = lockText
 
-        def updatedLock = new LockGenerator().duplicateIntoConfigs(
+        def updatedLock = LockGenerator.duplicateIntoConfigs(
                 '''\
                     "test.example:bar": {
                         "locked": "1.1.0",

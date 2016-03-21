@@ -22,7 +22,7 @@ class LockGenerator {
      * @param configs configurations to duplicate into, defaults to the 4 standard java configs
      * @return the String to put into the file
      */
-    String duplicateIntoConfigs(String deps, Collection<String> configs = ['compile', 'default', 'runtime', 'testCompile', 'testRuntime']) {
+    static String duplicateIntoConfigs(String deps, Collection<String> configs = ['compile', 'compileClasspath', 'compileOnly', 'default', 'runtime', 'testCompile', 'testCompileClasspath', 'testCompileOnly', 'testRuntime']) {
         def indentedDeps = deps.readLines().collect { "|        $it"}.join('\n')
 
         def pieces = configs.collect { config ->

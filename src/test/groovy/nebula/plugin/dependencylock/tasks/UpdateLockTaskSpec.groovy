@@ -45,7 +45,7 @@ class UpdateLockTaskSpec extends ProjectSpec {
         }
 
         def lockFile = new File(project.projectDir, 'dependencies.lock')
-        def lockText = new LockGenerator().duplicateIntoConfigs(
+        def lockText = LockGenerator.duplicateIntoConfigs(
                 '''\
                     "test.example:bar": {
                         "locked": "1.0.0",
@@ -68,7 +68,7 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def task = createTask()
         task.includeTransitives = true
 
-        def updatedLock = new LockGenerator().duplicateIntoConfigs(
+        def updatedLock = LockGenerator.duplicateIntoConfigs(
                 '''\
                     "test.example:bar": {
                         "locked": "1.1.0",
