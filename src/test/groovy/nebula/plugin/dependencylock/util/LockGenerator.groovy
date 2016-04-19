@@ -16,13 +16,15 @@
 package nebula.plugin.dependencylock.util
 
 class LockGenerator {
+    static final Collection<String> DEFAULT_CONFIG_NAMES = ['compile', 'compileClasspath', 'compileOnly', 'default', 'runtime', 'testCompile', 'testCompileClasspath', 'testCompileOnly', 'testRuntime']
+
     /**
      * Helper to copy the exact same lock block multiple times into different configurations
      * @param deps the String of dependencies, indentation should be what you want if that was the only thing going in the file
-     * @param configs configurations to duplicate into, defaults to the 4 standard java configs
+     * @param configs configurations to duplicate into, defaults to the 4 standard java DEFAULT_CONFIG_NAMES
      * @return the String to put into the file
      */
-    static String duplicateIntoConfigs(String deps, Collection<String> configs = ['compile', 'compileClasspath', 'compileOnly', 'default', 'runtime', 'testCompile', 'testCompileClasspath', 'testCompileOnly', 'testRuntime']) {
+    static String duplicateIntoConfigs(String deps, Collection<String> configs = DEFAULT_CONFIG_NAMES) {
         def indentedDeps = deps.readLines().collect { "|        $it"}.join('\n')
 
         def pieces = configs.collect { config ->
