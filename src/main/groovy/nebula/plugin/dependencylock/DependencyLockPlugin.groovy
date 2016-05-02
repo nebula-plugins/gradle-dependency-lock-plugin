@@ -26,6 +26,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ResolutionStrategy
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
@@ -75,7 +76,7 @@ class DependencyLockPlugin implements Plugin<Project> {
         createDeleteLock(saveTask)
 
         // configure global lock only on rootProject
-        SaveLockTask globalSave
+        SaveLockTask globalSave = null
         String globalLockFileName = project.hasProperty('dependencyLock.globalLockFile') ? project['dependencyLock.globalLockFile'] : null
         GenerateLockTask globalLockTask
         if (project == project.rootProject) {
@@ -92,10 +93,12 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         configureCommitTask(clLockFileName, globalLockFileName, saveTask, extension, commitExtension, globalSave)
 
-        def lockAfterEvaluating = project.hasProperty('dependencyLock.lockAfterEvaluating') ? Boolean.parseBoolean(project['dependencyLock.lockAfterEvaluating']) : extension.lockAfterEvaluating
+        def lockAfterEvaluating = project.hasProperty('dependencyLock.lockAfterEvaluating') ? Boolean.parseBoolean(project['dependencyLock.lockAfterEvaluating'] as String) : extension.lockAfterEvaluating
         if (lockAfterEvaluating) {
             logger.info('Applying dependency lock in afterEvaluate block')
-            project.afterEvaluate { applyLockToResolutionStrategy(extension, overrides, globalLockFileName, clLockFileName) }
+            project.afterEvaluate {
+                applyLockToResolutionStrategy(extension, overrides, globalLockFileName, clLockFileName)
+            }
         } else {
             logger.info('Applying dependency lock as is (outside afterEvaluate block)')
             applyLockToResolutionStrategy(extension, overrides, globalLockFileName, clLockFileName)
@@ -104,12 +107,12 @@ class DependencyLockPlugin implements Plugin<Project> {
         project.gradle.taskGraph.whenReady { taskGraph ->
             def hasLockingTask = taskGraph.hasTask(genLockTask) || taskGraph.hasTask(updateLockTask) || ((project == project.rootProject) && (taskGraph.hasTask(globalLockTask) || taskGraph.hasTask(globalUpdateLock)))
             if (hasLockingTask) {
-                project.configurations.all {
+                project.configurations.all({
                     resolutionStrategy {
                         cacheDynamicVersionsFor 0, 'seconds'
                         cacheChangingModulesFor 0, 'seconds'
                     }
-                }
+                })
                 if (!shouldIgnoreDependencyLock()) {
                     applyOverrides(overrides)
                 }
@@ -119,7 +122,7 @@ class DependencyLockPlugin implements Plugin<Project> {
 
     private void applyLockToResolutionStrategy(DependencyLockExtension extension, Map overrides, String globalLockFileName, String clLockFileName) {
         if (extension.configurationNames.empty) {
-            extension.configurationNames = project.configurations.collect { it.name }
+            extension.configurationNames = project.configurations.toSet().collect { it.name }
         }
 
         File dependenciesLock
@@ -135,7 +138,7 @@ class DependencyLockPlugin implements Plugin<Project> {
         if (dependenciesLock.exists() && !shouldIgnoreDependencyLock() && !hasGenerationTask(taskNames)) {
             applyLock(dependenciesLock, overrides)
         } else if (dependenciesLock.exists() && !shouldIgnoreDependencyLock() && hasUpdateTask(taskNames)) {
-            def updates = project.hasProperty('dependencyLock.updateDependencies') ? parseUpdates(project.property('dependencyLock.updateDependencies')) : extension.updateDependencies
+            def updates = project.hasProperty('dependencyLock.updateDependencies') ? parseUpdates(project.property('dependencyLock.updateDependencies') as String) : extension.updateDependencies
             applyLock(dependenciesLock, overrides, updates)
         } else if (!shouldIgnoreDependencyLock()) {
             applyOverrides(overrides)
@@ -178,7 +181,7 @@ class DependencyLockPlugin implements Plugin<Project> {
         }
     }
 
-    private Set<String> parseUpdates(String updates) {
+    private static Set<String> parseUpdates(String updates) {
         updates.tokenize(',') as Set
     }
 
@@ -198,7 +201,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                                 project['commitDependencyLock.message'] : commitExtension.message
                     }
                     patternsToCommit = {
-                        def lockFiles = []
+                        List<File> lockFiles = []
                         def rootLock = new File(project.rootProject.projectDir, clLockFileName ?: lockExtension.lockFile)
                         if (rootLock.exists()) {
                             lockFiles << rootLock
@@ -234,7 +237,7 @@ class DependencyLockPlugin implements Plugin<Project> {
     private SaveLockTask configureSaveTask(String lockFileName, GenerateLockTask lockTask, UpdateLockTask updateTask, DependencyLockExtension extension) {
         SaveLockTask saveTask = project.tasks.create('saveLock', SaveLockTask)
         saveTask.doFirst {
-            SaveLockTask globalSave = project.rootProject.tasks.findByName('saveGlobalLock')
+            SaveLockTask globalSave = project.rootProject.tasks.findByName('saveGlobalLock') as SaveLockTask
             if (globalSave?.outputLock?.exists()) {
                 throw new GradleException('Cannot save individual locks when global lock is in place, run deleteGlobalLock task')
             }
@@ -248,7 +251,8 @@ class DependencyLockPlugin implements Plugin<Project> {
         saveTask
     }
 
-    private void configureCommonSaveTask(SaveLockTask saveTask, GenerateLockTask lockTask, UpdateLockTask updateTask) {
+    private
+    static void configureCommonSaveTask(SaveLockTask saveTask, GenerateLockTask lockTask, UpdateLockTask updateTask) {
         saveTask.mustRunAfter lockTask, updateTask
         saveTask.outputs.upToDateWhen {
             if (saveTask.generatedLock.exists() && saveTask.outputLock.exists()) {
@@ -263,7 +267,7 @@ class DependencyLockPlugin implements Plugin<Project> {
         SaveLockTask globalSaveTask = project.tasks.create('saveGlobalLock', SaveLockTask)
         globalSaveTask.doFirst {
             project.subprojects.each { Project sub ->
-                SaveLockTask save = sub.tasks.findByName('saveLock')
+                SaveLockTask save = sub.tasks.findByName('saveLock') as SaveLockTask
                 if (save && save.outputLock?.exists()) {
                     throw new GradleException('Cannot save global lock, one or more individual locks are in place, run deleteLock task')
                 }
@@ -294,7 +298,7 @@ class DependencyLockPlugin implements Plugin<Project> {
         task.conventionMapping.with {
             skippedDependencies = { extension.skippedDependencies }
             includeTransitives = {
-                project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives']) : extension.includeTransitives
+                project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives'] as String) : extension.includeTransitives
             }
             filter = { extension.dependencyFilter }
             overrides = { overrideMap }
@@ -361,14 +365,12 @@ class DependencyLockPlugin implements Plugin<Project> {
             logger.info("Using command line overrides ${project['dependencyLock.override']}")
         }
 
-        def overrideForces = overrides.collect { "${it.key}:${it.value}" }
-        logger.debug(overrideForces.toString())
+        def overrideDeps = overrides.collect { "${it.key}:${it.value}" }
+        logger.debug(overrideDeps.toString())
 
-        project.configurations.all {
-            resolutionStrategy {
-                overrideForces.each { dep -> force dep }
-            }
-        }
+        project.configurations.all({ Configuration conf ->
+            configureResolutionStrategy(conf.resolutionStrategy, overrideDeps)
+        })
     }
 
     void applyLock(File dependenciesLock, Map overrides, Collection<String> updates = []) {
@@ -376,9 +378,10 @@ class DependencyLockPlugin implements Plugin<Project> {
         def locks = loadLock(dependenciesLock)
 
         if (updates) {
-            locks = locks.collectEntries { configurationName, deps -> [(configurationName): deps.findAll { coord, info -> (info.transitive == null) && !updates.contains(coord) }]}
+            locks = locks.collectEntries { configurationName, deps -> [(configurationName): deps.findAll { coord, info -> (info.transitive == null) && !updates.contains(coord) }] }
         }
 
+        // in the old format, all first level props were groupId:artifactId
         def isDeprecatedFormat = !locks.isEmpty() && locks.every { it.key ==~ /[^:]+:.+/ } // in the old format, all first level props were groupId:artifactId
         if (isDeprecatedFormat) {
             logger.warn("${dependenciesLock.name} is using a deprecated lock format. Support for this format may be removed in future versions.")
@@ -394,7 +397,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                 def nonProjectLocks = deps.findAll { it.value?.locked }
 
                 // Override locks from the file with any of the user specified manual overrides.
-                def lockForces = nonProjectLocks.collect {
+                def locked = nonProjectLocks.collect {
                     overrides.containsKey(it.key) ? "${it.key}:${overrides[it.key]}" : "${it.key}:${it.value.locked}"
                 }
 
@@ -403,19 +406,26 @@ class DependencyLockPlugin implements Plugin<Project> {
                     "${it.key}:${it.value}"
                 }
 
-                lockForces.addAll(unusedOverrides)
-                logger.debug('lockForces: {}', lockForces)
+                locked.addAll(unusedOverrides)
+                logger.debug('locked: {}', locked)
 
-                // Create the dependencies explicitly to avoid doing that implicitly for every configuration
-                lockForces = lockForces.collect { dep -> project.dependencies.create(dep) }
-                resolutionStrategy {
-                    force lockForces.toArray()
-                }
+                configureResolutionStrategy(conf.resolutionStrategy, locked)
             }
         })
     }
 
-    boolean shouldIgnoreDependencyLock() {
+    private void configureResolutionStrategy(ResolutionStrategy resolutionStrategy, List<String> dependencyNotations) {
+        def dependencies = dependencyNotations.collect { project.dependencies.create(it) }
+        resolutionStrategy.eachDependency { details ->
+            dependencies.each { dep ->
+                if (details.requested.group == dep.group && details.requested.name == dep.name) {
+                    details.useTarget group: details.requested.group, name: details.requested.name, version: dep.version
+                }
+            }
+        }
+    }
+
+    private boolean shouldIgnoreDependencyLock() {
         if (project.hasProperty('dependencyLock.ignore')) {
             def prop = project.property('dependencyLock.ignore')
 
@@ -434,9 +444,10 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         // Load overrides from a file if the user has specified one via a property.
         if (project.hasProperty('dependencyLock.overrideFile')) {
-            File dependenciesLock = new File(project.rootDir, project['dependencyLock.overrideFile'])
+            File dependenciesLock = new File(project.rootDir, project['dependencyLock.overrideFile'] as String)
             def lockOverride = loadLock(dependenciesLock)
-            def isDeprecatedFormat = lockOverride.any { it.value.getClass() != String && it.value.locked } // the old lock override files specified the version to override under the "locked" property
+            def isDeprecatedFormat = lockOverride.any { it.value.getClass() != String && it.value.locked }
+            // the old lock override files specified the version to override under the "locked" property
             if (isDeprecatedFormat) {
                 logger.warn("The override file ${dependenciesLock.name} is using a deprecated format. Support for this format may be removed in future versions.")
             }
@@ -456,7 +467,7 @@ class DependencyLockPlugin implements Plugin<Project> {
         return overrides
     }
 
-    private loadLock(File lock) {
+    private static loadLock(File lock) {
         try {
             return new JsonSlurper().parseText(lock.text)
         } catch (ex) {
