@@ -979,6 +979,81 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'build/dependencies.lock').text == updatedLock
     }
 
+    def 'eachDependency wins over force'() {
+        buildFile << """\
+            apply plugin: 'java'
+
+            repositories { maven { url '${Fixture.repo}' } }
+
+            dependencies {
+                compile 'test.example:foo:latest.release'
+            }
+
+            configurations.all {
+                resolutionStrategy {
+                    eachDependency { details ->
+                        if (details.requested.group == 'test.example' && details.requested.name == 'foo') {
+                            details.useTarget group: details.requested.group, name: details.requested.name, version: '1.0.1'
+                        }
+                    }
+                    force 'test.example:foo:1.0.0'
+                }
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasksSuccessfully('dependencies')
+
+        then:
+        result.standardOutput.contains('\\--- test.example:foo:latest.release -> 1.0.1\n')
+    }
+
+    @Issue("https://github.com/nebula-plugins/gradle-dependency-lock-plugin/issues/86")
+    def 'locks win over Spring dependency management'() {
+        buildFile << """\
+            buildscript {
+                repositories {
+                    mavenCentral()
+                }
+                dependencies {
+                    classpath 'org.springframework.boot:spring-boot-gradle-plugin:1.3.0.RELEASE'
+                }
+            }
+
+            apply plugin: 'java'
+            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'spring-boot'
+
+            repositories {
+                mavenCentral()
+            }
+
+            dependencies {
+                compile     ('com.hazelcast:hazelcast:3.6-RC1')
+                compile     ('com.hazelcast:hazelcast-spring:3.6-RC1')
+                compile     ('org.mariadb.jdbc:mariadb-java-client:1.1.7')
+                compile     ('org.flywaydb:flyway-core')
+
+                testCompile ('org.springframework.boot:spring-boot-starter-test')
+            }
+        """.stripIndent()
+
+        when:
+        runTasksSuccessfully('generateLock', 'saveLock')
+
+        then:
+        noExceptionThrown()
+        def buildFileText = buildFile.text
+        buildFile.delete()
+        buildFile << buildFileText.replace('com.hazelcast:hazelcast:3.6-RC1', 'com.hazelcast:hazelcast:3.6-EA2')
+
+        when:
+        def result = runTasksSuccessfully('dependencies')
+
+        then:
+        result.standardOutput.contains('\\--- com.hazelcast:hazelcast:3.6-RC1\n')
+    }
+
     def 'deprecated lock format message is not output for an empty file'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << """{}"""
