@@ -979,6 +979,19 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'build/dependencies.lock').text == updatedLock
     }
 
+    def 'deprecated lock format message is not output for an empty file'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << """{}"""
+
+        buildFile << BUILD_GRADLE
+
+        when:
+        def result = runTasksSuccessfully('dependencies')
+
+        then:
+        !result.standardOutput.contains("is using a deprecated lock format")
+    }
+
     @Ignore
     def 'diff the generated lock with the existing lock '() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')

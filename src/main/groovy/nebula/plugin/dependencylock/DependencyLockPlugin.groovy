@@ -379,7 +379,7 @@ class DependencyLockPlugin implements Plugin<Project> {
             locks = locks.collectEntries { configurationName, deps -> [(configurationName): deps.findAll { coord, info -> (info.transitive == null) && !updates.contains(coord) }]}
         }
 
-        def isDeprecatedFormat = locks.every { it.key ==~ /[^:]+:.+/ } // in the old format, all first level props were groupId:artifactId
+        def isDeprecatedFormat = !locks.isEmpty() && locks.every { it.key ==~ /[^:]+:.+/ } // in the old format, all first level props were groupId:artifactId
         if (isDeprecatedFormat) {
             logger.warn("${dependenciesLock.name} is using a deprecated lock format. Support for this format may be removed in future versions.")
         }
