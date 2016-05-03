@@ -362,7 +362,7 @@ class DependencyLockPlugin implements Plugin<Project> {
     }
 
     void applyLock(Configuration conf, File dependenciesLock, Map overrides, Collection<String> updates = []) {
-        LOGGER.info("Using ${dependenciesLock.name} to lock dependencies")
+        LOGGER.info("Using ${dependenciesLock.name} to lock dependencies in configuration $conf")
         def locks = loadLock(dependenciesLock)
 
         if (updates) {
