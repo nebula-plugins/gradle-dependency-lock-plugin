@@ -22,7 +22,7 @@ import spock.lang.Issue
 
 class DependencyLockLauncherSpec extends IntegrationSpec {
     def setup() {
-        fork = true
+        fork = false
     }
 
     static final String SPECIFIC_BUILD_GRADLE = """\
@@ -369,7 +369,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        def result = runTasksWithFailure('build')
+        def result = runTasksWithFailure('dependencies')
 
         then:
         result.failure.cause.cause.message.contains('unreadable or invalid json')
@@ -979,7 +979,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'build/dependencies.lock').text == updatedLock
     }
 
-    @Issue("https://github.com/nebula-plugins/gradle-dependency-lock-plugin/issues/86")
+    @Issue('#86')
     def 'locks win over Spring dependency management'() {
         buildFile << """\
             buildscript {
@@ -1025,7 +1025,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         result.standardOutput.contains('\\--- com.hazelcast:hazelcast:3.6-RC1\n')
     }
 
-    @Issue("https://github.com/nebula-plugins/gradle-dependency-lock-plugin/issues/95")
+    @Issue('#95')
     def 'locking applied to Android variant configurations'() {
         buildFile << """\
             buildscript {
@@ -1065,7 +1065,8 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
             gradle.addBuildListener(new BuildAdapter() {
                 void buildFinished(BuildResult result) {
-                   println "configurations=" + project.configurations.collect { '"' + it.name + '"' }
+                   def confsWithDependencies = project.configurations.findAll { !it.dependencies.empty }.collect { '"' + it.name + '"' }
+                   println "configurations=" + confsWithDependencies
                 }
             })
 
@@ -1097,7 +1098,8 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def dependenciesResult = runTasksSuccessfully('dependencies')
 
         then:
-        !dependenciesResult.standardOutput.contains('commons-io:commons-io:2.4')
+        dependenciesResult.standardOutput.contains('\\--- commons-io:commons-io:2.4 -> 2.3\n')
+        !dependenciesResult.standardOutput.contains('\\--- commons-io:commons-io:2.4\n')
     }
 
     def 'deprecated lock format message is not output for an empty file'() {

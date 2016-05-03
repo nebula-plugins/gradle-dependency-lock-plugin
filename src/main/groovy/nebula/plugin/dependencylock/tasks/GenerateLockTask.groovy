@@ -43,7 +43,11 @@ class GenerateLockTask extends AbstractLockTask {
     }
 
     public static Collection<Configuration> getConfigurationsFromConfigurationNames(Project project, Set<String> configurationNames) {
-        configurationNames.collect { project.configurations.getByName(it) }
+        if (configurationNames.empty) {
+            project.configurations.asList()
+        } else {
+            configurationNames.collect { project.configurations.getByName(it) }
+        }
     }
 
     Map readDependenciesFromConfigurations(Collection<Configuration> confs) {
