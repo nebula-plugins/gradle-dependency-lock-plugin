@@ -71,3 +71,7 @@ gradleTest.dependsOn(jar)
 gradleTest.doFirst {
     project.version = project.version.toString()
 }
+
+test {
+    jvmArgs '-Xmx256m'
+}
