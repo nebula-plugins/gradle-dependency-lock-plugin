@@ -2,6 +2,7 @@ language: android
 android:
   components:
     - build-tools-23.0.3
+    - android-23
 sudo: false
 jdk:
 - oraclejdk7
