@@ -1074,8 +1074,8 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             }
 
             android {
-                compileSdkVersion 23
-                buildToolsVersion '23.0.2'
+                compileSdkVersion 20
+                buildToolsVersion '20.0.0'
 
                 defaultConfig {
                     applicationId "com.netflix.dependencylocktest"
