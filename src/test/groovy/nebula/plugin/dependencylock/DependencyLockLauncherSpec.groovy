@@ -979,35 +979,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'build/dependencies.lock').text == updatedLock
     }
 
-    def 'eachDependency wins over force'() {
-        buildFile << """\
-            apply plugin: 'java'
-
-            repositories { maven { url '${Fixture.repo}' } }
-
-            dependencies {
-                compile 'test.example:foo:latest.release'
-            }
-
-            configurations.all {
-                resolutionStrategy {
-                    eachDependency { details ->
-                        if (details.requested.group == 'test.example' && details.requested.name == 'foo') {
-                            details.useTarget group: details.requested.group, name: details.requested.name, version: '1.0.1'
-                        }
-                    }
-                    force 'test.example:foo:1.0.0'
-                }
-            }
-        """.stripIndent()
-
-        when:
-        def result = runTasksSuccessfully('dependencies')
-
-        then:
-        result.standardOutput.contains('\\--- test.example:foo:latest.release -> 1.0.1\n')
-    }
-
     @Issue("https://github.com/nebula-plugins/gradle-dependency-lock-plugin/issues/86")
     def 'locks win over Spring dependency management'() {
         buildFile << """\
