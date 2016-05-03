@@ -1054,6 +1054,81 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         result.standardOutput.contains('\\--- com.hazelcast:hazelcast:3.6-RC1\n')
     }
 
+    @Issue("https://github.com/nebula-plugins/gradle-dependency-lock-plugin/issues/95")
+    def 'locking applied to Android variant configurations'() {
+        buildFile << """\
+            buildscript {
+                repositories {
+                    mavenCentral()
+                }
+                dependencies {
+                    classpath 'com.android.tools.build:gradle:2.0.0'
+                }
+            }
+
+            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.android.application'
+
+            repositories {
+                jcenter()
+            }
+
+            android {
+                compileSdkVersion 23
+                buildToolsVersion '23.0.3'
+
+                defaultConfig {
+                    applicationId "com.netflix.dependencylocktest"
+                    minSdkVersion 15
+                    targetSdkVersion 23
+                    versionCode 1
+                    versionName '1.0'
+                }
+                buildTypes {
+                    release {
+                        minifyEnabled false
+                        proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+                    }
+                }
+            }
+
+            gradle.addBuildListener(new BuildAdapter() {
+                void buildFinished(BuildResult result) {
+                   println "configurations=" + project.configurations.collect { '"' + it.name + '"' }
+                }
+            })
+
+            dependencies {
+                compile 'commons-io:commons-io:2.4'
+            }
+        """.stripIndent()
+
+        when:
+        def generateResult = runTasksSuccessfully('generateLock', 'saveLock')
+
+        then: 'all configurations are in the lock file'
+        def configList = generateResult.standardOutput.readLines().find{ it.startsWith("configurations=")}.split("configurations=")[1]
+        def configurations = Eval.me(configList)
+        def lockFile = new File(projectDir, 'dependencies.lock')
+        def json = new JsonSlurper().parseText(lockFile.text)
+        configurations.each {
+            assert json.keySet().contains(it)
+        }
+
+        when: 'all configurations are locked to the specified version'
+        def originalLockFile = new File('dependencies.lock.orig')
+        lockFile.renameTo(originalLockFile)
+        lockFile.withWriter { w ->
+            originalLockFile.eachLine { line ->
+                w << line.replaceAll( '2\\.4', '2.3' )
+            }
+        }
+        def dependenciesResult = runTasksSuccessfully('dependencies')
+
+        then:
+        !dependenciesResult.standardOutput.contains('commons-io:commons-io:2.4')
+    }
+
     def 'deprecated lock format message is not output for an empty file'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << """{}"""
