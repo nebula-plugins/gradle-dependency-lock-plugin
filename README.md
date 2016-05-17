@@ -1,6 +1,7 @@
 gradle-dependency-lock-plugin
 =============================
 
+![Support Status](https://img.shields.io/badge/Nebula-supported-brightgreen.svg)
 [![Build Status](https://travis-ci.org/nebula-plugins/gradle-dependency-lock-plugin.svg?branch=master)](https://travis-ci.org/nebula-plugins/gradle-dependency-lock-plugin)
 [![Coverage Status](https://coveralls.io/repos/nebula-plugins/gradle-dependency-lock-plugin/badge.svg?branch=master&service=github)](https://coveralls.io/github/nebula-plugins/gradle-dependency-lock-plugin?branch=master)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/nebula-plugins/gradle-dependency-lock-plugin?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
