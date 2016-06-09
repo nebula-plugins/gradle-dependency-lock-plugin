@@ -987,7 +987,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                     mavenCentral()
                 }
                 dependencies {
-                    classpath 'org.springframework.boot:spring-boot-gradle-plugin:1.3.0.RELEASE'
+                    classpath 'org.springframework.boot:spring-boot-gradle-plugin:1.4.0.RELEASE'
                 }
             }
 
@@ -1025,6 +1025,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         result.standardOutput.contains('\\--- com.hazelcast:hazelcast:3.6-RC1\n')
     }
 
+    @Ignore('Android plugin incompatible with Gradle 3.0')
     @Issue('#95')
     def 'locking applied to Android variant configurations'() {
         buildFile << """\
@@ -1033,7 +1034,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                     mavenCentral()
                 }
                 dependencies {
-                    classpath 'com.android.tools.build:gradle:2.0.0'
+                    classpath 'com.android.tools.build:gradle:2.1.2'
                 }
             }
 

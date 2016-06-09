@@ -97,12 +97,12 @@
     },
     "jacocoAgent": {
         "org.jacoco:org.jacoco.agent": {
-            "locked": "0.7.6.201602180812"
+            "locked": "0.7.7.201606060606"
         }
     },
     "jacocoAnt": {
         "org.jacoco:org.jacoco.ant": {
-            "locked": "0.7.6.201602180812"
+            "locked": "0.7.7.201606060606"
         }
     },
     "runtime": {
