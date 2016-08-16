@@ -42,7 +42,7 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
 
     def 'commitLock no-ops when no scm implementation is applied'() {
         buildFile << DependencyLockLauncherSpec.BUILD_GRADLE
-        buildFile << 'apply plugin: \'gradle-scm\''
+        buildFile << 'apply plugin: \'nebula.gradle-scm\''
 
         when:
         runTasksSuccessfully('generateLock', 'saveLock', 'commitLock')
@@ -56,7 +56,7 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         def git = commonGitSetup(gitDir)
 
         buildFile << DependencyLockLauncherSpec.BUILD_GRADLE
-        buildFile << 'apply plugin: \'gradle-git-scm\''
+        buildFile << 'apply plugin: \'nebula.gradle-git-scm\''
 
         finishGitSetup(['build.gradle', 'settings.gradle'])
 
@@ -80,7 +80,7 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
             subprojects {
                 apply plugin: 'java'
                 apply plugin: 'nebula.dependency-lock'
-                apply plugin: 'gradle-scm'
+                apply plugin: 'nebula.gradle-scm'
                 repositories { maven { url '${Fixture.repo}' } }
             }
         """.stripIndent()
@@ -122,7 +122,7 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
             subprojects {
                 apply plugin: 'java'
                 apply plugin: 'nebula.dependency-lock'
-                apply plugin: 'gradle-git-scm'
+                apply plugin: 'nebula.gradle-git-scm'
                 repositories { maven { url '${Fixture.repo}' } }
             }
         """.stripIndent()
@@ -169,7 +169,7 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
             subprojects {
                 apply plugin: 'java'
                 apply plugin: 'nebula.dependency-lock'
-                apply plugin: 'gradle-git-scm'
+                apply plugin: 'nebula.gradle-git-scm'
                 repositories { maven { url '${Fixture.repo}' } }
             }
         """.stripIndent()
