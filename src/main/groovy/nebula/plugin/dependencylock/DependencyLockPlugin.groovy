@@ -80,6 +80,17 @@ class DependencyLockPlugin implements Plugin<Project> {
             LOGGER.info("Applying dependency lock during plugin apply ($LOCK_AFTER_EVALUATING set to false)")
         }
 
+        project.gradle.taskGraph.whenReady {
+            if (hasGenerationTask(project.gradle.startParameter.taskNames)) {
+                project.configurations.all {
+                    resolutionStrategy {
+                        cacheDynamicVersionsFor 0, 'seconds'
+                        cacheChangingModulesFor 0, 'seconds'
+                    }
+                }
+            }
+        }
+
         project.configurations.all({ conf ->
             if (lockAfterEvaluating) {
                 conf.incoming.beforeResolve {
@@ -313,12 +324,6 @@ class DependencyLockPlugin implements Plugin<Project> {
                     def updates = project.hasProperty(UPDATE_DEPENDENCIES) ? parseUpdates(project.property(UPDATE_DEPENDENCIES) as String) : extension.updateDependencies
                     applyLock(conf, dependenciesLock, overrides, updates)
                     appliedLock = true
-                }
-            }
-            if (hasGenerateTask) {
-                conf.resolutionStrategy {
-                    cacheDynamicVersionsFor 0, 'seconds'
-                    cacheChangingModulesFor 0, 'seconds'
                 }
             }
             if (!appliedLock) {
