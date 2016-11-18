@@ -979,6 +979,33 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'build/dependencies.lock').text == updatedLock
     }
 
+    def 'generateLock interacts well with resolution rules'() {
+        buildFile << """\
+            plugins {
+                id "nebula.resolution-rules" version "2.0.0"
+            }
+
+            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'java'
+
+            repositories {
+                mavenCentral()
+            }
+
+            dependencies {
+                resolutionRules 'com.netflix.nebula:gradle-resolution-rules:latest.release'
+
+                compile 'commons-io:commons-io:2.4'
+            }
+        """.stripIndent()
+
+        when:
+        runTasksSuccessfully('generateLock')
+
+        then:
+        noExceptionThrown()
+    }
+
     @Issue('#86')
     def 'locks win over Spring dependency management'() {
         buildFile << """\

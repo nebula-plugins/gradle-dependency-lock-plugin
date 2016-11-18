@@ -26,6 +26,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.execution.TaskExecutionGraph
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
@@ -80,15 +81,10 @@ class DependencyLockPlugin implements Plugin<Project> {
             LOGGER.info("Applying dependency lock during plugin apply ($LOCK_AFTER_EVALUATING set to false)")
         }
 
-        project.gradle.taskGraph.whenReady {
-            if (hasGenerationTask(project.gradle.startParameter.taskNames)) {
-                project.configurations.all {
-                    resolutionStrategy {
-                        cacheDynamicVersionsFor 0, 'seconds'
-                        cacheChangingModulesFor 0, 'seconds'
-                    }
-                }
-            }
+        // We do this twice to catch resolves that happen during build evaluation, and ensure that we clobber configurations made during evaluation
+        disableCachingForGenerateLock()
+        project.gradle.taskGraph.whenReady { TaskExecutionGraph taskGraph ->
+            disableCachingForGenerateLock()
         }
 
         project.configurations.all({ conf ->
@@ -100,6 +96,19 @@ class DependencyLockPlugin implements Plugin<Project> {
                 maybeApplyLock(conf, extension, overrides, globalLockFilename, lockFilename)
             }
         })
+    }
+
+    private void disableCachingForGenerateLock() {
+        if (hasGenerationTask(project.gradle.startParameter.taskNames)) {
+            project.configurations.all({ configuration ->
+                if (configuration.state == Configuration.State.UNRESOLVED) {
+                    configuration.resolutionStrategy {
+                        cacheDynamicVersionsFor 0, 'seconds'
+                        cacheChangingModulesFor 0, 'seconds'
+                    }
+                }
+            })
+        }
     }
 
     private String configureTasks(String globalLockFilename, DependencyLockExtension extension, DependencyLockCommitExtension commitExtension, Map overrides) {
