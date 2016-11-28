@@ -312,27 +312,99 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
     }
 
     def 'run with generated lock'() {
-        def dependenciesLock = new File(projectDir, 'dependencies.lock')
-        dependenciesLock << OLD_FOO_LOCK
+        def generatedLock = new File(projectDir, 'build/dependencies.lock')
+        generatedLock.parentFile.mkdirs()
+        generatedLock << OLD_FOO_LOCK
         buildFile << BUILD_GRADLE
-
-        when:
-        runTasksSuccessfully('generateLock')
-
-        then:
-        new File(projectDir, 'build/dependencies.lock').text == FOO_LOCK
 
         when:
         def result0 = runTasksSuccessfully('dependencies')
 
         then:
-        result0.standardOutput.contains 'test.example:foo:1.+ -> 1.0.0'
+        result0.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
 
         when:
         def result1 = runTasksSuccessfully('-PdependencyLock.useGeneratedLock=true', 'dependencies')
 
         then:
+        result1.standardOutput.contains "Using build/dependencies.lock to lock dependencies"
+        result1.standardOutput.contains 'test.example:foo:1.+ -> 1.0.0'
+    }
+
+
+    def 'run with generated global lock in single project'() {
+        def generatedLock = new File(projectDir, 'build/global.lock')
+        generatedLock.parentFile.mkdirs()
+        generatedLock << OLD_FOO_LOCK
+        buildFile << BUILD_GRADLE
+
+        when:
+        def result0 = runTasksSuccessfully('dependencies')
+
+        then:
+        result0.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
+
+        when:
+        def result1 = runTasksSuccessfully('-PdependencyLock.useGeneratedGlobalLock=true', 'dependencies')
+
+        then:
+        result1.standardOutput.contains "Using build/global.lock to lock dependencies"
+        result1.standardOutput.contains 'test.example:foo:1.+ -> 1.0.0'
+    }
+
+
+    def 'run with generated global lock in multiproject'() {
+        def generatedLock = new File(projectDir, 'build/global.lock')
+        generatedLock.parentFile.mkdirs()
+        generatedLock << OLD_FOO_LOCK
+
+        addSubproject('sub1', """\
+            dependencies {
+                compile 'test.example:foo:2.+'
+            }
+        """.stripIndent())
+        addSubproject('sub2', """\
+            dependencies {
+                compile 'test.example:foo:1.+'
+            }
+        """.stripIndent())
+
+        buildFile << """\
+            allprojects {
+                ${applyPlugin(DependencyLockPlugin)}
+                group = 'test'
+            }
+            subprojects {
+                repositories { maven { url '${Fixture.repo}' } }
+                apply plugin: 'java'
+            }
+        """.stripIndent()
+
+        when:
+        def result0 = runTasksSuccessfully(':sub1:dependencies')
+
+        then:
+        result0.standardOutput.contains 'test.example:foo:2.+ -> 2.0.1'
+
+        when:
+        def result1 = runTasksSuccessfully(':sub2:dependencies')
+
+        then:
         result1.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
+
+        when:
+        def result2 = runTasksSuccessfully('-PdependencyLock.useGeneratedGlobalLock=true', ':sub1:dependencies')
+
+        then:
+        result2.standardOutput.contains "Using ../build/global.lock to lock dependencies"
+        result2.standardOutput.contains 'test.example:foo:2.+ -> 1.0.0'
+
+        when:
+        def result3 = runTasksSuccessfully('-PdependencyLock.useGeneratedGlobalLock=true', ':sub2:dependencies')
+
+        then:
+        result3.standardOutput.contains "Using ../build/global.lock to lock dependencies"
+        result3.standardOutput.contains 'test.example:foo:1.+ -> 1.0.0'
     }
 
     def 'generateLock with deprecated format existing causes no issues'() {
@@ -356,6 +428,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def result1 = runTasksSuccessfully('-PdependencyLock.useGeneratedLock=true', 'dependencies')
 
         then:
+        result1.standardOutput.contains "Using build/dependencies.lock to lock dependencies"
         result1.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
     }
 
