@@ -33,11 +33,11 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "4.2.2",
-            "requested": "latest.release"
+            "locked": "5.0.0",
+            "requested": "5.0.0"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.7.0",
+            "locked": "1.8.0",
             "requested": "latest.release"
         }
     },
@@ -51,11 +51,11 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "4.2.2",
-            "requested": "latest.release"
+            "locked": "5.0.0",
+            "requested": "5.0.0"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.7.0",
+            "locked": "1.8.0",
             "requested": "latest.release"
         }
     },
@@ -69,11 +69,11 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "4.2.2",
-            "requested": "latest.release"
+            "locked": "5.0.0",
+            "requested": "5.0.0"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.7.0",
+            "locked": "1.8.0",
             "requested": "latest.release"
         }
     },
@@ -87,11 +87,11 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "4.2.2",
-            "requested": "latest.release"
+            "locked": "5.0.0",
+            "requested": "5.0.0"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.7.0",
+            "locked": "1.8.0",
             "requested": "latest.release"
         }
     },
@@ -121,11 +121,11 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "4.2.2",
-            "requested": "latest.release"
+            "locked": "5.0.0",
+            "requested": "5.0.0"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.7.0",
+            "locked": "1.8.0",
             "requested": "latest.release"
         }
     },
@@ -139,11 +139,11 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "4.2.2",
-            "requested": "latest.release"
+            "locked": "5.0.0",
+            "requested": "5.0.0"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.7.0",
+            "locked": "1.8.0",
             "requested": "latest.release"
         }
     },
@@ -157,11 +157,11 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "4.2.2",
-            "requested": "latest.release"
+            "locked": "5.0.0",
+            "requested": "5.0.0"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.7.0",
+            "locked": "1.8.0",
             "requested": "latest.release"
         }
     },
@@ -175,11 +175,11 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "4.2.2",
-            "requested": "latest.release"
+            "locked": "5.0.0",
+            "requested": "5.0.0"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.7.0",
+            "locked": "1.8.0",
             "requested": "latest.release"
         }
     }
