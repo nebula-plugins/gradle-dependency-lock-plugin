@@ -281,7 +281,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                 def subprojects = project.subprojects.collect { subproject ->
                     def ext = subproject.getExtensions().findByType(DependencyLockExtension)
                     if (ext != null) {
-                        def configurations = getConfigurationsFromConfigurationNames(subproject, ext.configurationNames)
+                        def configurations = getConfigurationsFromConfigurationNames(project, subproject, ext.configurationNames)
                         configurations.collect { configuration ->
                             project.dependencies.create(project.dependencies.project(path: subproject.path, configuration: configuration.name))
                         }
@@ -293,7 +293,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                 def conf = project.configurations.detachedConfiguration(subprojectsArray)
                 project.allprojects.each { it.configurations.add(conf) }
 
-                [conf] + getConfigurationsFromConfigurationNames(project, extension.configurationNames)
+                [conf] + getConfigurationsFromConfigurationNames(project, project, extension.configurationNames)
             }
         }
 

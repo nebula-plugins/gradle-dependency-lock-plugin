@@ -16,7 +16,7 @@
 package nebula.plugin.dependencylock.util
 
 class LockGenerator {
-    static final Collection<String> DEFAULT_CONFIG_NAMES = ['compile', 'compileClasspath', 'compileOnly', 'default', 'runtime', 'testCompile', 'testCompileClasspath', 'testCompileOnly', 'testRuntime']
+    static final Collection<String> DEFAULT_CONFIG_NAMES = ['compile', 'compileClasspath', 'default', 'runtime', 'runtimeClasspath', 'testCompile', 'testCompileClasspath', 'testRuntime', 'testRuntimeClasspath']
 
     /**
      * Helper to copy the exact same lock block multiple times into different configurations

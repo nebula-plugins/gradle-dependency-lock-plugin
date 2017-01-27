@@ -23,7 +23,7 @@ import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.tasks.TaskAction
 
-import static nebula.plugin.dependencylock.DependencyLockPlugin.*
+import static nebula.plugin.dependencylock.DependencyLockPlugin.GLOBAL_LOCK_CONFIG
 
 class GenerateLockTask extends AbstractLockTask {
     String description = 'Create a lock file in build/<configured name>'
@@ -37,14 +37,24 @@ class GenerateLockTask extends AbstractLockTask {
 
     @TaskAction
     void lock() {
-        Collection<Configuration> confs = getConfigurations() ?: getConfigurationsFromConfigurationNames(project, getConfigurationNames())
+        Collection<Configuration> confs = getConfigurations() ?: getConfigurationsFromConfigurationNames(project, project, getConfigurationNames())
         def dependencyMap = readDependenciesFromConfigurations(confs)
         writeLock(dependencyMap)
     }
 
-    public static Collection<Configuration> getConfigurationsFromConfigurationNames(Project project, Set<String> configurationNames) {
+    public static Collection<Configuration> getConfigurationsFromConfigurationNames(Project taskProject, Project project, Set<String> configurationNames) {
         if (configurationNames.empty) {
-            project.configurations.asList()
+            if (Configuration.class.declaredMethods.any { it.name == 'isCanBeResolved' }) {
+                project.configurations.findAll {
+                    if (taskProject == project) {
+                        it.canBeResolved
+                    } else {
+                        it.canBeResolved && it.canBeConsumed
+                    }
+                }
+            } else {
+                project.configurations.asList()
+            }
         } else {
             configurationNames.collect { project.configurations.getByName(it) }
         }
