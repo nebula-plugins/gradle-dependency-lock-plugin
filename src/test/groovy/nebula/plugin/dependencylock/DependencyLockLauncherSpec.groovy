@@ -1143,6 +1143,95 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         !result.standardOutput.contains("is using a deprecated lock format")
     }
 
+    def 'only the update dependency and its transitives are updated when using a global lock'() {
+        addSubproject('sub1', """\
+            dependencies {
+                compile 'test.example:bar:1.+'
+                compile 'test.example:qux:latest.release'
+            }
+        """.stripIndent())
+        buildFile << """\
+            allprojects {
+                ${applyPlugin(DependencyLockPlugin)}
+                group = 'test'
+            }
+            subprojects {
+                apply plugin: 'java'
+                repositories { maven { url '${Fixture.repo}' } }
+            }
+            dependencyLock {
+                includeTransitives = true
+            }
+        """.stripIndent()
+
+        def lockFile = new File(projectDir, 'global.lock')
+        def lockText = '''\
+                {
+                    "_global_": {
+                        "test.example:bar": {
+                            "locked": "1.0.0",
+                            "requested": "1.+",
+                            "transitive": [
+                                "test:sub1"
+                            ]
+                        },
+                        "test.example:qux": {
+                            "locked": "1.0.0",
+                            "requested": "latest.release",
+                            "transitive": [
+                                "test:sub1"
+                            ]
+                        },
+                        "test.example:foo": {
+                            "locked": "1.0.0",
+                            "transitive": [
+                                "test.example:bar",
+                                "test.example:qux"
+                            ]
+                        },
+                        "test:sub1": {
+                            "project": true
+                        }
+                    }
+                }'''.stripIndent()
+        lockFile.text = lockText
+
+        def updatedLock = '''\
+                {
+                    "_global_": {
+                        "test.example:bar": {
+                            "locked": "1.1.0",
+                            "transitive": [
+                                "test:sub1"
+                            ]
+                        },
+                        "test.example:foo": {
+                            "locked": "1.0.1",
+                            "transitive": [
+                                "test.example:bar",
+                                "test.example:qux"
+                            ]
+                        },
+                        "test.example:qux": {
+                            "locked": "1.0.0",
+                            "transitive": [
+                                "test:sub1"
+                            ]
+                        },
+                        "test:sub1": {
+                            "project": true
+                        }
+                    }
+                }'''.stripIndent()
+
+        when:
+        def results = runTasksSuccessfully('updateGlobalLock', '-PdependencyLock.updateDependencies=test.example:bar')
+
+        then:
+        println results.standardOutput
+        new File(projectDir, 'build/global.lock').text == updatedLock
+    }
+
     @Ignore
     def 'diff the generated lock with the existing lock '() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
