@@ -975,7 +975,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def results = runTasksSuccessfully('updateLock', '-PdependencyLock.updateDependencies=test.example:bar')
 
         then:
-        println results.standardOutput
         new File(projectDir, 'build/dependencies.lock').text == updatedLock
     }
 
@@ -1042,7 +1041,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def results = runTasksSuccessfully('updateLock', '-PdependencyLock.updateDependencies=test.example:qux')
 
         then:
-        println results.standardOutput
         new File(projectDir, 'build/dependencies.lock').text == updatedLock
     }
 
