@@ -979,6 +979,73 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'build/dependencies.lock').text == updatedLock
     }
 
+    def 'only the update dependency, its transitives and dependencies without requested versions are updated'() {
+        buildFile << """\
+            apply plugin: 'java'
+            apply plugin: 'nebula.dependency-lock'
+            repositories { maven { url '${Fixture.repo}' } }
+            dependencyLock {
+                includeTransitives = true
+            }
+            configurations.all {
+                resolutionStrategy.eachDependency { details ->
+                    if (details.requested.name == 'bar') {
+                        details.useVersion '1.1.0'
+                    }
+                }
+            }
+            dependencies {
+                compile 'test.example:bar'
+                compile 'test.example:qux:latest.release'
+            }
+        """.stripIndent()
+
+        def lockFile = new File(projectDir, 'dependencies.lock')
+        def lockText = LockGenerator.duplicateIntoConfigs(
+                '''\
+                    "test.example:bar": {
+                        "locked": "1.0.0"
+                    },
+                    "test.example:qux": {
+                        "locked": "1.0.0",
+                        "requested": "latest.release"
+                    },
+                    "test.example:foo": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:bar",
+                            "test.example:qux"
+                        ]
+                    }'''.stripIndent()
+        )
+        lockFile.text = lockText
+
+        def updatedLock = LockGenerator.duplicateIntoConfigs(
+                '''\
+                    "test.example:bar": {
+                        "locked": "1.1.0"
+                    },
+                    "test.example:foo": {
+                        "locked": "2.0.1",
+                        "transitive": [
+                            "test.example:bar",
+                            "test.example:qux"
+                        ]
+                    },
+                    "test.example:qux": {
+                        "locked": "2.0.0",
+                        "requested": "latest.release"
+                    }'''.stripIndent()
+        )
+
+        when:
+        def results = runTasksSuccessfully('updateLock', '-PdependencyLock.updateDependencies=test.example:qux')
+
+        then:
+        println results.standardOutput
+        new File(projectDir, 'build/dependencies.lock').text == updatedLock
+    }
+
     def 'generateLock interacts well with resolution rules'() {
         buildFile << """\
             plugins {

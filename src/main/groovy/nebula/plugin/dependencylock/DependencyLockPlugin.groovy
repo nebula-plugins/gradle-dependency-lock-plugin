@@ -380,7 +380,14 @@ class DependencyLockPlugin implements Plugin<Project> {
         def locks = loadLock(dependenciesLock)
 
         if (updates) {
-            locks = locks.collectEntries { configurationName, deps -> [(configurationName): deps.findAll { coord, info -> (info.transitive == null) && !updates.contains(coord) }] }
+            locks = locks.collectEntries { configurationName, deps ->
+                [(configurationName): deps.findAll { coord, info ->
+                    def notUpdate = !updates.contains(coord)
+                    def notTransitive = info.transitive == null
+                    def hasRequestedVersion = info.requested != null
+                    notUpdate && notTransitive && hasRequestedVersion
+                }]
+            }
         }
 
         // in the old format, all first level props were groupId:artifactId
