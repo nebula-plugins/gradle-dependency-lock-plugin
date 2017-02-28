@@ -321,23 +321,18 @@ class DependencyLockPlugin implements Plugin<Project> {
             dependenciesLock = new File(project.projectDir, lockFilename ?: extension.lockFile)
         }
 
-        boolean appliedLock = false
         if (!shouldIgnoreDependencyLock()) {
             def taskNames = project.gradle.startParameter.taskNames
             boolean hasGenerateTask = hasGenerationTask(taskNames)
             if (dependenciesLock.exists()) {
                 if (!hasGenerateTask) {
-                    applyLock(conf, dependenciesLock, overrides)
-                    appliedLock = true
+                    applyLock(conf, dependenciesLock)
                 } else if (hasUpdateTask(taskNames)) {
                     def updates = project.hasProperty(UPDATE_DEPENDENCIES) ? parseUpdates(project.property(UPDATE_DEPENDENCIES) as String) : extension.updateDependencies
-                    applyLock(conf, dependenciesLock, overrides, updates)
-                    appliedLock = true
+                    applyLock(conf, dependenciesLock, updates)
                 }
             }
-            if (!appliedLock) {
-                applyOverrides(conf, overrides)
-            }
+            applyOverrides(conf, overrides)
         }
     }
 
@@ -375,7 +370,7 @@ class DependencyLockPlugin implements Plugin<Project> {
         updates.tokenize(',') as Set
     }
 
-    void applyLock(Configuration conf, File dependenciesLock, Map overrides, Collection<String> updates = []) {
+    void applyLock(Configuration conf, File dependenciesLock, Collection<String> updates = []) {
         LOGGER.info("Using ${dependenciesLock.name} to lock dependencies in $conf")
         def locks = loadLock(dependenciesLock)
 
@@ -400,26 +395,14 @@ class DependencyLockPlugin implements Plugin<Project> {
         // In the old format of the lock file, there was only one locked setting. In that case, apply it on all configurations.
         // In the new format, apply _global_ to all configurations or use the config name
         def notations = isDeprecatedFormat ? locks : locks[GLOBAL_LOCK_CONFIG] ?: locks[conf.name]
-        if (notations) {
-            // Non-project locks are the top-level dependencies, and possibly transitive thereof, of this project which are
-            // locked by the lock file. There may also be dependencies on other projects. These are not captured here.
-            def nonProjectLocks = notations.findAll { it.value?.locked }
 
-            // Override locks from the file with any of the user specified manual overrides.
-            def locked = nonProjectLocks.collect {
-                overrides.containsKey(it.key) ? "${it.key}:${overrides[it.key]}" : "${it.key}:${it.value.locked}"
-            }
+        // Non-project locks are the top-level dependencies, and possibly transitive thereof, of this project which are
+        // locked by the lock file. There may also be dependencies on other projects. These are not captured here.
+        def locked = notations.findAll { it.value?.locked }.collect { "${it.key}:${it.value.locked}" }
 
-            // If the user specifies an override that does not exist in the lock file, force that dependency anyway.
-            def unusedOverrides = overrides.findAll { !locks.containsKey(it.key) }.collect {
-                "${it.key}:${it.value}"
-            }
+        LOGGER.debug('locked: {}', locked)
 
-            locked.addAll(unusedOverrides)
-            LOGGER.debug('locked: {}', locked)
-
-            lockConfiguration(conf, locked)
-        }
+        lockConfiguration(conf, locked)
     }
 
     void applyOverrides(Configuration conf, Map overrides) {

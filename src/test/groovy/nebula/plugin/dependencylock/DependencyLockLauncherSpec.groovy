@@ -387,7 +387,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'dependencies.lock').text == FOO_LOCK
     }
 
-    def 'command line override respected while updating lock'() {
+    def 'command line override respected while generating lock'() {
         buildFile << BUILD_GRADLE
 
         when:
@@ -397,7 +397,19 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
     }
 
-    def 'command line override file respected while updating lock'() {
+    def 'command line override respected while updating lock'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << FOO_LOCK
+        buildFile << BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('-PdependencyLock.updateDependencies=test.example:foo', '-PdependencyLock.override=test.example:foo:2.0.1', 'updateLock', 'saveLock')
+
+        then:
+        new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
+    }
+
+    def 'command line override file respected while generating lock'() {
         def testLock = new File(projectDir, 'test.lock')
         testLock << FOO_LOCK_OVERRIDE
         buildFile << BUILD_GRADLE
