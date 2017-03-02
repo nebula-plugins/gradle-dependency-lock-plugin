@@ -15,6 +15,9 @@
  */
 package nebula.plugin.dependencylock
 
+import nebula.plugin.dependencylock.wayback.WaybackProvider
+import nebula.plugin.dependencylock.wayback.WaybackProviderFactory
+
 class DependencyLockExtension {
     String lockFile = 'dependencies.lock'
 	String globalLockFile = 'global.lock'
@@ -24,4 +27,5 @@ class DependencyLockExtension {
     Set<String> skippedDependencies = [] as Set
     boolean includeTransitives = false
     boolean lockAfterEvaluating = true
+    Object waybackProvider
 }

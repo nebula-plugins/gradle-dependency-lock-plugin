@@ -15,11 +15,12 @@
  */
 package nebula.plugin.dependencylock
 
-import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.tasks.CommitLockTask
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.plugin.dependencylock.tasks.UpdateLockTask
+import nebula.plugin.dependencylock.wayback.WaybackProvider
+import nebula.plugin.dependencylock.wayback.WaybackProviderFactory
 import nebula.plugin.scm.ScmPlugin
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -32,7 +33,7 @@ import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
 import org.gradle.util.NameMatcher
 
-import static nebula.plugin.dependencylock.tasks.GenerateLockTask.getConfigurationsFromConfigurationNames
+import static nebula.plugin.dependencylock.tasks.GenerateLockTask.lockableConfigurations
 
 class DependencyLockPlugin implements Plugin<Project> {
     private static final Logger LOGGER = Logging.getLogger(DependencyLockPlugin)
@@ -45,24 +46,26 @@ class DependencyLockPlugin implements Plugin<Project> {
     private static final String USE_GENERATED_LOCK = 'dependencyLock.useGeneratedLock'
     private static final String USE_GENERATED_GLOBAL_LOCK = 'dependencyLock.useGeneratedGlobalLock'
     private static final String UPDATE_DEPENDENCIES = 'dependencyLock.updateDependencies'
-    private static final String OVERRIDE_FILE = 'dependencyLock.overrideFile'
     private static final String OVERRIDE = 'dependencyLock.override'
-
     private static final List<String> GENERATION_TASK_NAMES = [GENERATE_LOCK_TASK_NAME, GENERATE_GLOBAL_LOCK_TASK_NAME,
                                                                UPDATE_LOCK_TASK_NAME, UPDATE_GLOBAL_LOCK_TASK_NAME]
     private static final List<String> UPDATE_TASK_NAMES = [UPDATE_LOCK_TASK_NAME, UPDATE_GLOBAL_LOCK_TASK_NAME]
 
+    public static final String OVERRIDE_FILE = 'dependencyLock.overrideFile'
     public static final String GLOBAL_LOCK_CONFIG = '_global_'
     public static final String GENERATE_GLOBAL_LOCK_TASK_NAME = 'generateGlobalLock'
     public static final String UPDATE_GLOBAL_LOCK_TASK_NAME = 'updateGlobalLock'
     public static final String GENERATE_LOCK_TASK_NAME = 'generateLock'
     public static final String UPDATE_LOCK_TASK_NAME = 'updateLock'
+    public static final String WAYBACK_TASK_NAME = 'waybackLock'
 
     Project project
+    DependencyLockReader lockReader
 
     @Override
     void apply(Project project) {
         this.project = project
+        this.lockReader = new DependencyLockReader(project)
 
         DependencyLockExtension extension = project.extensions.create(EXTENSION_NAME, DependencyLockExtension)
         DependencyLockCommitExtension commitExtension = project.rootProject.extensions.findByType(DependencyLockCommitExtension)
@@ -70,7 +73,7 @@ class DependencyLockPlugin implements Plugin<Project> {
             commitExtension = project.rootProject.extensions.create(COMMIT_EXTENSION_NAME, DependencyLockCommitExtension)
         }
 
-        Map overrides = loadOverrides()
+        Map overrides = lockReader.readOverrides()
         String globalLockFilename = project.hasProperty(GLOBAL_LOCK_FILE) ? project[GLOBAL_LOCK_FILE] : null
         String lockFilename = configureTasks(globalLockFilename, extension, commitExtension, overrides)
 
@@ -115,13 +118,13 @@ class DependencyLockPlugin implements Plugin<Project> {
         String lockFilename = project.hasProperty(LOCK_FILE) ? project[LOCK_FILE] : null
 
         GenerateLockTask genLockTask = project.tasks.create(GENERATE_LOCK_TASK_NAME, GenerateLockTask)
-        configureLockTask(genLockTask, lockFilename, extension, overrides)
+        configureGenerateLockTask(genLockTask, lockFilename, extension, overrides)
         if (project.hasProperty(USE_GENERATED_LOCK)) {
             lockFilename = genLockTask.getDependenciesLock().path
         }
 
         UpdateLockTask updateLockTask = project.tasks.create(UPDATE_LOCK_TASK_NAME, UpdateLockTask)
-        configureLockTask(updateLockTask, lockFilename, extension, overrides)
+        configureGenerateLockTask(updateLockTask, lockFilename, extension, overrides)
 
         SaveLockTask saveTask = configureSaveTask(lockFilename, genLockTask, updateLockTask, extension)
         createDeleteLock(saveTask)
@@ -245,9 +248,22 @@ class DependencyLockPlugin implements Plugin<Project> {
         globalSaveTask
     }
 
-    private GenerateLockTask configureLockTask(GenerateLockTask lockTask, String clLockFileName, DependencyLockExtension extension, Map overrides) {
+    private GenerateLockTask configureGenerateLockTask(GenerateLockTask lockTask, String clLockFileName, DependencyLockExtension extension, Map overrides) {
         setupLockConventionMapping(lockTask, extension, overrides)
         lockTask.conventionMapping.with {
+            waybackProvider = {
+                def impl = null
+                switch (extension.waybackProvider) {
+                    case WaybackProvider:
+                        impl = extension.waybackProvider
+                        break
+                    case String:
+                        impl = new WaybackProviderFactory(project, getClass().classLoader).build(extension.waybackProvider as String)
+                        break
+                }
+                impl
+            }
+
             dependenciesLock = {
                 new File(project.buildDir, clLockFileName ?: extension.lockFile)
             }
@@ -281,7 +297,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                 def subprojects = project.subprojects.collect { subproject ->
                     def ext = subproject.getExtensions().findByType(DependencyLockExtension)
                     if (ext != null) {
-                        def configurations = getConfigurationsFromConfigurationNames(project, subproject, ext.configurationNames)
+                        def configurations = lockableConfigurations(project, subproject, ext.configurationNames)
                         configurations.collect { configuration ->
                             project.dependencies.create(project.dependencies.project(path: subproject.path, configuration: configuration.name))
                         }
@@ -293,7 +309,7 @@ class DependencyLockPlugin implements Plugin<Project> {
                 def conf = project.configurations.detachedConfiguration(subprojectsArray)
                 project.allprojects.each { it.configurations.add(conf) }
 
-                [conf] + getConfigurationsFromConfigurationNames(project, project, extension.configurationNames)
+                [conf] + lockableConfigurations(project, project, extension.configurationNames)
             }
         }
 
@@ -372,37 +388,15 @@ class DependencyLockPlugin implements Plugin<Project> {
 
     void applyLock(Configuration conf, File dependenciesLock, Collection<String> updates = []) {
         LOGGER.info("Using ${dependenciesLock.name} to lock dependencies in $conf")
-        def locks = loadLock(dependenciesLock)
+        def locks = lockReader.readLocks(conf, dependenciesLock, updates)
 
-        if (updates) {
-            locks = locks.collectEntries { configurationName, deps ->
-                [(configurationName): deps.findAll { coord, info ->
-                    def notUpdate = !updates.contains(coord)
-                    def notTransitive = info.transitive == null
-                    def hasRequestedVersion = info.requested != null
-                    notUpdate && notTransitive && hasRequestedVersion
-                }]
-            }
+        if(locks) {
+            // Non-project locks are the top-level dependencies, and possibly transitive thereof, of this project which are
+            // locked by the lock file. There may also be dependencies on other projects. These are not captured here.
+            def locked = locks.findAll { it.value?.locked }.collect { "${it.key}:${it.value.locked}" }
+            LOGGER.debug('locked: {}', locked)
+            lockConfiguration(conf, locked)
         }
-
-        // in the old format, all first level props were groupId:artifactId
-        def isDeprecatedFormat = !locks.isEmpty() && locks.every { it.key ==~ /[^:]+:.+/ }
-        // in the old format, all first level props were groupId:artifactId
-        if (isDeprecatedFormat) {
-            LOGGER.warn("${dependenciesLock.name} is using a deprecated lock format. Support for this format may be removed in future versions.")
-        }
-
-        // In the old format of the lock file, there was only one locked setting. In that case, apply it on all configurations.
-        // In the new format, apply _global_ to all configurations or use the config name
-        def notations = isDeprecatedFormat ? locks : locks[GLOBAL_LOCK_CONFIG] ?: locks[conf.name]
-
-        // Non-project locks are the top-level dependencies, and possibly transitive thereof, of this project which are
-        // locked by the lock file. There may also be dependencies on other projects. These are not captured here.
-        def locked = notations.findAll { it.value?.locked }.collect { "${it.key}:${it.value.locked}" }
-
-        LOGGER.debug('locked: {}', locked)
-
-        lockConfiguration(conf, locked)
     }
 
     void applyOverrides(Configuration conf, Map overrides) {
@@ -435,45 +429,6 @@ class DependencyLockPlugin implements Plugin<Project> {
             (prop instanceof String) ? prop.toBoolean() : prop.asBoolean()
         } else {
             false
-        }
-    }
-
-    private Map loadOverrides() {
-        // Overrides are dependencies that trump the lock file.
-        Map overrides = [:]
-
-        // Load overrides from a file if the user has specified one via a property.
-        if (project.hasProperty(OVERRIDE_FILE)) {
-            File dependenciesLock = new File(project.rootDir, project[OVERRIDE_FILE] as String)
-            def lockOverride = loadLock(dependenciesLock)
-            def isDeprecatedFormat = lockOverride.any { it.value.getClass() != String && it.value.locked }
-            // the old lock override files specified the version to override under the "locked" property
-            if (isDeprecatedFormat) {
-                LOGGER.warn("The override file ${dependenciesLock.name} is using a deprecated format. Support for this format may be removed in future versions.")
-            }
-            lockOverride.each { overrides[it.key] = isDeprecatedFormat ? it.value.locked : it.value }
-            LOGGER.debug "Override file loaded: ${project[OVERRIDE_FILE]}"
-        }
-
-        // Allow the user to specify overrides via a property as well.
-        if (project.hasProperty('dependencyLock.override')) {
-            project['dependencyLock.override'].tokenize(',').each {
-                def (group, artifact, version) = it.tokenize(':')
-                overrides["${group}:${artifact}".toString()] = version
-                LOGGER.debug "Override added for: ${it}"
-            }
-        }
-
-        return overrides
-    }
-
-    private static loadLock(File lock) {
-        try {
-            return new JsonSlurper().parseText(lock.text)
-        } catch (ex) {
-            LOGGER.debug('Unreadable json file: ' + lock.text)
-            LOGGER.error('JSON unreadable')
-            throw new GradleException("${lock.name} is unreadable or invalid json, terminating run", ex)
         }
     }
 }
