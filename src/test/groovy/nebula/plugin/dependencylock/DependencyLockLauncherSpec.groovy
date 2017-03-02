@@ -1050,10 +1050,73 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         )
 
         when:
-        def results = runTasksSuccessfully('updateLock', '-PdependencyLock.updateDependencies=test.example:qux')
+        runTasksSuccessfully('updateLock', '-PdependencyLock.updateDependencies=test.example:qux')
 
         then:
         new File(projectDir, 'build/dependencies.lock').text == updatedLock
+    }
+
+    def 'project first level transitives are kept locked during update'() {
+        setupCommonMultiproject()
+        addSubproject('sub3', """\
+            dependencies {
+                compile project(':sub4')
+            }
+        """.stripIndent())
+
+        addSubproject('sub4', """\
+            dependencies {
+                compile project(':sub2')
+            }
+        """.stripIndent())
+        def lockFile = new File(new File(projectDir, 'sub3'), 'dependencies.lock')
+        def lockText = LockGenerator.duplicateIntoConfigs('''\
+        "test.example:foo": {
+            "locked": "1.0.0",
+            "transitive": [
+                "test:sub2"
+            ],
+            "viaOverride": "1.0.0"
+        },
+        "test:sub2": {
+            "project": true,
+            "transitive": [
+                "test:sub4"
+            ]
+        },
+        "test:sub4": {
+            "project": true
+        }
+        '''.stripIndent())
+
+        when:
+        runTasksSuccessfully('generateLock', 'saveLock', '-PdependencyLock.override=test.example:foo:1.0.0')
+
+        then:
+        lockFile.text == lockText
+
+        when:
+        runTasksSuccessfully('updateLock', 'saveLock', '-PdependencyLock.updateDependencies=test.example:qux')
+
+        then:
+        def updateLockText = LockGenerator.duplicateIntoConfigs('''\
+        "test.example:foo": {
+            "locked": "1.0.0",
+            "transitive": [
+                "test:sub2"
+            ]
+        },
+        "test:sub2": {
+            "project": true,
+            "transitive": [
+                "test:sub4"
+            ]
+        },
+        "test:sub4": {
+            "project": true
+        }
+        '''.stripIndent())
+        lockFile.text == updateLockText
     }
 
     def 'generateLock interacts well with resolution rules'() {
@@ -1263,13 +1326,14 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             allprojects {
                 ${applyPlugin(DependencyLockPlugin)}
                 group = 'test'
+
+                dependencyLock {
+                    includeTransitives = true
+                }
             }
             subprojects {
                 apply plugin: 'java'
                 repositories { maven { url '${Fixture.repo}' } }
-            }
-            dependencyLock {
-                includeTransitives = true
             }
         """.stripIndent()
     }
