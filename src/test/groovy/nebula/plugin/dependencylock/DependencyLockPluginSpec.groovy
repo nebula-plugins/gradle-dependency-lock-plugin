@@ -16,8 +16,12 @@
 package nebula.plugin.dependencylock
 
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
+import nebula.plugin.dependencylock.model.GradleDependency
+import nebula.plugin.dependencylock.wayback.NebulaMetricsCommitWaybackProvider
+import nebula.plugin.dependencylock.wayback.WaybackProvider
 import nebula.test.ProjectSpec
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.testfixtures.ProjectBuilder
 
 class DependencyLockPluginSpec extends ProjectSpec {
@@ -418,6 +422,47 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def foo2 = sub2.configurations.compile.resolvedConfiguration.resolvedArtifacts.find { it.name == 'foo'}
         foo1.moduleVersion.id.version == '1.0.1'
         foo2.moduleVersion.id.version == '1.0.1'
+    }
+
+    def 'configure wayback provider by id'() {
+        when:
+        project.with {
+            buildscript {
+                repositories { jcenter() }
+                dependencies { classpath 'com.netflix.nebula:gradle-metrics-plugin:5.+' }
+            }
+
+            apply plugin: 'nebula.metrics'
+            apply plugin: pluginName
+            dependencyLock.waybackProvider = 'nebula.metrics-commit'
+        }
+
+        then:
+        project.tasks.generateLock.waybackProvider instanceof NebulaMetricsCommitWaybackProvider
+    }
+
+    def 'configure wayback provider with an inline custom implementation'() {
+        when:
+        project.with {
+            buildscript {
+                repositories { jcenter() }
+                dependencies { classpath 'com.netflix.nebula:gradle-metrics-plugin:5.+' }
+            }
+
+            apply plugin: 'nebula.metrics'
+            apply plugin: pluginName
+            dependencyLock.waybackProvider = new WaybackProvider(project) {
+                String name = 'custom'
+
+                @Override
+                Set<GradleDependency> wayback(String selector, Configuration configuration) {
+                    return [] as Set
+                }
+            }
+        }
+
+        then:
+        project.tasks.generateLock.waybackProvider.name == 'custom'
     }
 
     private List multiProjectSetup() {

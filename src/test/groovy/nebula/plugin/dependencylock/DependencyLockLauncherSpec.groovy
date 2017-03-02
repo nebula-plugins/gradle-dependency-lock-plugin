@@ -1059,7 +1059,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
     def 'generateLock interacts well with resolution rules'() {
         buildFile << """\
             plugins {
-                id "nebula.resolution-rules" version "2.0.0"
+                id "nebula.resolution-rules" version "2.4.1"
             }
 
             apply plugin: 'nebula.dependency-lock'

@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nebula.plugin.dependencylock.tasks
+package nebula.plugin.dependencylock.model
 
-import groovy.transform.EqualsAndHashCode
+import groovy.transform.Canonical
 
 /**
  * Map key for locked dependencies.
  */
-@EqualsAndHashCode
+@Canonical
 class LockKey {
     String group
     String artifact
