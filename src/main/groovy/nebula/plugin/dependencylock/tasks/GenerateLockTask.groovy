@@ -44,7 +44,7 @@ class GenerateLockTask extends AbstractLockTask {
     @TaskAction
     void lock() {
         if (DependencyLockPlugin.shouldIgnoreDependencyLock(project)) {
-            throw new DependencyLockException("Locks can not be generated, dependency locks are disabled for this project (dependencyLock.ignore is set to true)")
+            throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
         }
         Collection<Configuration> confs = getConfigurations() ?: lockableConfigurations(project, project, getConfigurationNames())
         Map dependencyMap = project.hasProperty('waybackTo') ?

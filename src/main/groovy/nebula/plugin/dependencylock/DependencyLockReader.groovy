@@ -2,6 +2,7 @@ package nebula.plugin.dependencylock
 
 import groovy.json.JsonSlurper
 import groovy.transform.TupleConstructor
+import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -18,6 +19,7 @@ class DependencyLockReader {
 
     Map readLocks(Configuration conf, File dependenciesLock, Collection<String> updates = []) {
         logger.info("Using ${dependenciesLock.name} to lock dependencies in $conf")
+
         if(!dependenciesLock.exists())
             return null
 

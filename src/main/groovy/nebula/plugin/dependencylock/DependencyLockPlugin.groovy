@@ -15,6 +15,7 @@
  */
 package nebula.plugin.dependencylock
 
+import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.tasks.CommitLockTask
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
@@ -339,12 +340,19 @@ class DependencyLockPlugin implements Plugin<Project> {
 
         if (!shouldIgnoreDependencyLock(project)) {
             def taskNames = project.gradle.startParameter.taskNames
+            def hasUpdateTask = hasUpdateTask(taskNames)
+
+            def updates = project.hasProperty(UPDATE_DEPENDENCIES) ? parseUpdates(project.property(UPDATE_DEPENDENCIES) as String) : extension.updateDependencies
+            String projectCoord = "${project.group}:${project.name}"
+            if (hasUpdateTask && updates.find { it == projectCoord }) {
+                throw new DependencyLockException("Dependency locks cannot be updated. An update was requested for a project dependency ($projectCoord)")
+            }
+
             boolean hasGenerateTask = hasGenerationTask(taskNames)
             if (dependenciesLock.exists()) {
                 if (!hasGenerateTask) {
                     applyLock(conf, dependenciesLock)
-                } else if (hasUpdateTask(taskNames)) {
-                    def updates = project.hasProperty(UPDATE_DEPENDENCIES) ? parseUpdates(project.property(UPDATE_DEPENDENCIES) as String) : extension.updateDependencies
+                } else if (hasUpdateTask) {
                     applyLock(conf, dependenciesLock, updates)
                 }
             }

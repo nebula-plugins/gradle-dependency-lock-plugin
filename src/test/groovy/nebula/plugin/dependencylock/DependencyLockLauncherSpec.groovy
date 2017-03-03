@@ -367,7 +367,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def result = runTasks('generateLock', '-PdependencyLock.ignore=true')
 
         then:
-        Throwables.getRootCause(result.failure).message == 'Locks can not be generated, dependency locks are disabled for this project (dependencyLock.ignore is set to true)'
+        Throwables.getRootCause(result.failure).message == 'Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)'
     }
 
     def 'trigger failure with bad lock file'() {
@@ -1128,6 +1128,16 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         }
         '''.stripIndent())
         lockFile.text == updateLockText
+    }
+
+    def 'update fails if the update matches a project coordinate'() {
+        setupCommonMultiproject()
+
+        when:
+        def result = runTasks('updateLock', '-PdependencyLock.updateDependencies=test:sub1')
+
+        then:
+        Throwables.getRootCause(result.failure).message == 'Dependency locks cannot be updated. An update was requested for a project dependency (test:sub1)'
     }
 
     def 'generateLock interacts well with resolution rules'() {
