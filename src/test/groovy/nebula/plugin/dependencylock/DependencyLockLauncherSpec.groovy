@@ -370,6 +370,16 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         Throwables.getRootCause(result.failure).message == 'Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)'
     }
 
+    def 'generateGlobalLock fails if dependency locks are ignored'() {
+        buildFile << BUILD_GRADLE
+
+        when:
+        def result = runTasks('generateGlobalLock', '-PdependencyLock.ignore=true')
+
+        then:
+        Throwables.getRootCause(result.failure).message == 'Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)'
+    }
+
     def 'trigger failure with bad lock file'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << '''\
