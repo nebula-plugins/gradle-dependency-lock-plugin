@@ -337,7 +337,7 @@ class DependencyLockPlugin implements Plugin<Project> {
             dependenciesLock = new File(project.projectDir, lockFilename ?: extension.lockFile)
         }
 
-        if (!shouldIgnoreDependencyLock()) {
+        if (!shouldIgnoreDependencyLock(project)) {
             def taskNames = project.gradle.startParameter.taskNames
             boolean hasGenerateTask = hasGenerationTask(taskNames)
             if (dependenciesLock.exists()) {
@@ -423,7 +423,7 @@ class DependencyLockPlugin implements Plugin<Project> {
         }
     }
 
-    private boolean shouldIgnoreDependencyLock() {
+    public static boolean shouldIgnoreDependencyLock(Project project) {
         if (project.hasProperty('dependencyLock.ignore')) {
             def prop = project.property('dependencyLock.ignore')
             (prop instanceof String) ? prop.toBoolean() : prop.asBoolean()

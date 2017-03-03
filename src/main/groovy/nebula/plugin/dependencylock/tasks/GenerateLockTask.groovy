@@ -15,6 +15,8 @@
  */
 package nebula.plugin.dependencylock.tasks
 
+import nebula.plugin.dependencylock.DependencyLockExtension
+import nebula.plugin.dependencylock.DependencyLockPlugin
 import nebula.plugin.dependencylock.DependencyLockReader
 import nebula.plugin.dependencylock.DependencyLockWriter
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
@@ -41,6 +43,9 @@ class GenerateLockTask extends AbstractLockTask {
 
     @TaskAction
     void lock() {
+        if (DependencyLockPlugin.shouldIgnoreDependencyLock(project)) {
+            throw new DependencyLockException("Locks can not be generated, dependency locks are disabled for this project (dependencyLock.ignore is set to true)")
+        }
         Collection<Configuration> confs = getConfigurations() ?: lockableConfigurations(project, project, getConfigurationNames())
         Map dependencyMap = project.hasProperty('waybackTo') ?
                 new GenerateLockFromWayback().lock(confs) :

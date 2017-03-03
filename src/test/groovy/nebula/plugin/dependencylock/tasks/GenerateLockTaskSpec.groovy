@@ -16,6 +16,7 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
+import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.test.ProjectSpec
 import org.gradle.testfixtures.ProjectBuilder
 

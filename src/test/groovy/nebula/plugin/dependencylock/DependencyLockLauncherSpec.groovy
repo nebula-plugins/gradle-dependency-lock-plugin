@@ -13,6 +13,7 @@
  */
 package nebula.plugin.dependencylock
 
+import com.google.common.base.Throwables
 import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.plugin.dependencylock.util.LockGenerator
@@ -357,6 +358,16 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         result1.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
+    }
+
+    def 'generateLock fails if dependency locks are ignored'() {
+        buildFile << BUILD_GRADLE
+
+        when:
+        def result = runTasks('generateLock', '-PdependencyLock.ignore=true')
+
+        then:
+        Throwables.getRootCause(result.failure).message == 'Locks can not be generated, dependency locks are disabled for this project (dependencyLock.ignore is set to true)'
     }
 
     def 'trigger failure with bad lock file'() {
