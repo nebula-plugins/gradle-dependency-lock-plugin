@@ -56,9 +56,9 @@ class DependencyLockPlugin : Plugin<Project> {
 
         // We do this twice to catch resolves that happen during build evaluation, and ensure that we clobber configurations made during evaluation
         disableCachingForGenerateLock()
-        project.gradle.taskGraph.whenReady {
+        project.gradle.taskGraph.whenReady(groovyClosure {
             disableCachingForGenerateLock()
-        }
+        })
 
         project.configurations.all({ conf ->
             if (lockAfterEvaluating) {
