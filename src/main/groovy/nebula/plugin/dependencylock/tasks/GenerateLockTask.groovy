@@ -15,9 +15,8 @@
  */
 package nebula.plugin.dependencylock.tasks
 
-import nebula.plugin.dependencylock.DependencyLockExtension
-import nebula.plugin.dependencylock.DependencyLockPlugin
 import nebula.plugin.dependencylock.DependencyLockReader
+import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
 import nebula.plugin.dependencylock.DependencyLockWriter
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.model.LockKey
@@ -43,7 +42,7 @@ class GenerateLockTask extends AbstractLockTask {
 
     @TaskAction
     void lock() {
-        if (DependencyLockPlugin.shouldIgnoreDependencyLock(project)) {
+        if (DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
             throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
         }
         Collection<Configuration> confs = getConfigurations() ?: lockableConfigurations(project, project, getConfigurationNames())
@@ -193,7 +192,7 @@ class GenerateLockTask extends AbstractLockTask {
 
     class GenerateLockFromWayback {
         Map<LockKey, LockValue> lock(Collection<Configuration> confs) {
-            if(!waybackProvider) {
+            if (!waybackProvider) {
                 throw new DependencyLockException("In order to use wayback, you must configure a provider")
             }
 
@@ -204,13 +203,13 @@ class GenerateLockTask extends AbstractLockTask {
                     // parse the string representation returned by readLocks into (LockKey, LockValue) entries
                     def (group, artifact) = (k as String).split(':')
                     [(new LockKey(group, artifact, conf.name)): v as LockValue]
-                } ]
+                }]
             }
 
             confs.each { conf ->
                 def wayback = waybackProvider.wayback(project.property('waybackTo') as String, conf)
                 // we only override or create a new configuration to lock if wayback has some advice about it
-                if(!wayback.isEmpty())
+                if (!wayback.isEmpty())
                     updateLocks[conf.name] = wayback.collectEntries { dep -> [(new LockKey(dep.group, dep.name, conf.name)): new LockValue(locked: dep.version)] }
             }
 

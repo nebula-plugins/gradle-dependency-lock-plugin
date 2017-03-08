@@ -5,7 +5,7 @@ import groovy.transform.Canonical
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
 
-import static nebula.plugin.dependencylock.DependencyLockPlugin.GLOBAL_LOCK_CONFIG
+import static DependencyLockTaskConfigurer.GLOBAL_LOCK_CONFIG
 
 @Canonical
 class DependencyLockWriter {

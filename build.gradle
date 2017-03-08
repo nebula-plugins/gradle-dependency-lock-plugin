@@ -20,6 +20,7 @@ plugins {
     id 'nebula.plugin-plugin' version '5.1.0'
     id 'org.ysb33r.gradletest' version '0.5.4'
     id 'nebula.optional-base' version '3.0.3'
+    id 'nebula.kotlin' version '1.0.3'
 }
 
 description 'Gradle plugin to allow locking of dynamic dependency versions'
@@ -79,3 +80,10 @@ gradleTest.doFirst {
     project.version = project.version.toString()
 }
 
+// Kotlin compiles first, stubbing Java dependencies, however it can't stub Groovy and we need to call Groovy code from Kotlin. For details see:
+// https://discuss.gradle.org/t/kotlin-groovy-and-java-compilation/14903/10
+
+compileGroovy.dependsOn = compileGroovy.taskDependencies.values - 'compileJava'
+compileKotlin.dependsOn compileGroovy
+compileKotlin.classpath += files(compileGroovy.destinationDir)
+classes.dependsOn compileKotlin

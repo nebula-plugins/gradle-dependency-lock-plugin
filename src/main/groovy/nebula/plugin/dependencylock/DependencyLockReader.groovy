@@ -2,20 +2,23 @@ package nebula.plugin.dependencylock
 
 import groovy.json.JsonSlurper
 import groovy.transform.TupleConstructor
-import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import static nebula.plugin.dependencylock.DependencyLockPlugin.OVERRIDE_FILE
-import static nebula.plugin.dependencylock.DependencyLockPlugin.GLOBAL_LOCK_CONFIG
+import static DependencyLockTaskConfigurer.OVERRIDE_FILE
+import static DependencyLockTaskConfigurer.GLOBAL_LOCK_CONFIG
 
 @TupleConstructor
 class DependencyLockReader {
-    private static final Logger logger = Logging.getLogger(DependencyLockPlugin)
+    private static final Logger logger = Logging.getLogger(DependencyLockReader)
 
     Project project
+
+    DependencyLockReader(Project project) {
+        this.project = project
+    }
 
     Map readLocks(Configuration conf, File dependenciesLock, Collection<String> updates = []) {
         logger.info("Using ${dependenciesLock.name} to lock dependencies in $conf")
