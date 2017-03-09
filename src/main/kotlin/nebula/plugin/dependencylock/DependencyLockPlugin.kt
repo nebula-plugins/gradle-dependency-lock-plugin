@@ -44,7 +44,7 @@ class DependencyLockPlugin : Plugin<Project> {
         }
 
         val overrides = lockReader.readOverrides()
-        val globalLockFilename = project.findProperty(GLOBAL_LOCK_FILE) as String?
+        val globalLockFilename = project.findStringProperty(GLOBAL_LOCK_FILE)
         val lockFilename = DependencyLockTaskConfigurer(project).configureTasks(globalLockFilename, extension, commitExtension, overrides)
 
         val lockAfterEvaluating = if (project.hasProperty(LOCK_AFTER_EVALUATING)) project.property(LOCK_AFTER_EVALUATING).toString().toBoolean() else extension.lockAfterEvaluating
