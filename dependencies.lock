@@ -1,32 +1,70 @@
 {
     "compile": {
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "5.3.0",
+            "requested": "5.+"
+        },
         "com.netflix.nebula:gradle-scm-plugin": {
             "locked": "3.0.1",
             "requested": "latest.release"
+        },
+        "org.codehaus.groovy.modules.http-builder:http-builder": {
+            "locked": "0.7.1",
+            "requested": "0.7.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
         }
     },
     "compileClasspath": {
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "5.3.0",
+            "requested": "5.+"
+        },
         "com.netflix.nebula:gradle-scm-plugin": {
             "locked": "3.0.1",
             "requested": "latest.release"
-        }
-    },
-    "compileOnly": {
-        "com.netflix.nebula:gradle-scm-plugin": {
-            "locked": "3.0.1",
-            "requested": "latest.release"
+        },
+        "org.codehaus.groovy.modules.http-builder:http-builder": {
+            "locked": "0.7.1",
+            "requested": "0.7.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
         }
     },
     "default": {
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "5.3.0",
+            "requested": "5.+"
+        },
         "com.netflix.nebula:gradle-scm-plugin": {
             "locked": "3.0.1",
             "requested": "latest.release"
+        },
+        "org.codehaus.groovy.modules.http-builder:http-builder": {
+            "locked": "0.7.1",
+            "requested": "0.7.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
         }
     },
     "integTestCompile": {
+        "com.fasterxml.jackson.core:jackson-databind": {
+            "locked": "2.8.7",
+            "requested": "2.8.+"
+        },
         "com.netflix.nebula:gradle-git-scm-plugin": {
             "locked": "3.0.1",
             "requested": "latest.release"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "5.3.0",
+            "requested": "5.+"
         },
         "com.netflix.nebula:gradle-scm-plugin": {
             "locked": "3.0.1",
@@ -39,12 +77,28 @@
         "org.ajoberstar:grgit": {
             "locked": "1.8.0",
             "requested": "latest.release"
+        },
+        "org.codehaus.groovy.modules.http-builder:http-builder": {
+            "locked": "0.7.1",
+            "requested": "0.7.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
         }
     },
     "integTestCompileClasspath": {
+        "com.fasterxml.jackson.core:jackson-databind": {
+            "locked": "2.8.7",
+            "requested": "2.8.+"
+        },
         "com.netflix.nebula:gradle-git-scm-plugin": {
             "locked": "3.0.1",
             "requested": "latest.release"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "5.3.0",
+            "requested": "5.+"
         },
         "com.netflix.nebula:gradle-scm-plugin": {
             "locked": "3.0.1",
@@ -57,30 +111,28 @@
         "org.ajoberstar:grgit": {
             "locked": "1.8.0",
             "requested": "latest.release"
-        }
-    },
-    "integTestCompileOnly": {
-        "com.netflix.nebula:gradle-git-scm-plugin": {
-            "locked": "3.0.1",
-            "requested": "latest.release"
         },
-        "com.netflix.nebula:gradle-scm-plugin": {
-            "locked": "3.0.1",
-            "requested": "latest.release"
+        "org.codehaus.groovy.modules.http-builder:http-builder": {
+            "locked": "0.7.1",
+            "requested": "0.7.1"
         },
-        "com.netflix.nebula:nebula-test": {
-            "locked": "5.0.0",
-            "requested": "5.0.0"
-        },
-        "org.ajoberstar:grgit": {
-            "locked": "1.8.0",
-            "requested": "latest.release"
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
         }
     },
     "integTestRuntime": {
+        "com.fasterxml.jackson.core:jackson-databind": {
+            "locked": "2.8.7",
+            "requested": "2.8.+"
+        },
         "com.netflix.nebula:gradle-git-scm-plugin": {
             "locked": "3.0.1",
             "requested": "latest.release"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "5.3.0",
+            "requested": "5.+"
         },
         "com.netflix.nebula:gradle-scm-plugin": {
             "locked": "3.0.1",
@@ -93,28 +145,126 @@
         "org.ajoberstar:grgit": {
             "locked": "1.8.0",
             "requested": "latest.release"
+        },
+        "org.codehaus.groovy.modules.http-builder:http-builder": {
+            "locked": "0.7.1",
+            "requested": "0.7.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
+        }
+    },
+    "integTestRuntimeClasspath": {
+        "com.fasterxml.jackson.core:jackson-databind": {
+            "locked": "2.8.7",
+            "requested": "2.8.+"
+        },
+        "com.netflix.nebula:gradle-git-scm-plugin": {
+            "locked": "3.0.1",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "5.3.0",
+            "requested": "5.+"
+        },
+        "com.netflix.nebula:gradle-scm-plugin": {
+            "locked": "3.0.1",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-test": {
+            "locked": "5.0.0",
+            "requested": "5.0.0"
+        },
+        "org.ajoberstar:grgit": {
+            "locked": "1.8.0",
+            "requested": "latest.release"
+        },
+        "org.codehaus.groovy.modules.http-builder:http-builder": {
+            "locked": "0.7.1",
+            "requested": "0.7.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
         }
     },
     "jacocoAgent": {
         "org.jacoco:org.jacoco.agent": {
-            "locked": "0.7.7.201606060606"
+            "locked": "0.7.8"
         }
     },
     "jacocoAnt": {
         "org.jacoco:org.jacoco.ant": {
-            "locked": "0.7.7.201606060606"
+            "locked": "0.7.8"
+        }
+    },
+    "kapt": {
+        "org.jetbrains.kotlin:kotlin-annotation-processing": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
+        }
+    },
+    "kaptIntegTest": {
+        "org.jetbrains.kotlin:kotlin-annotation-processing": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
+        }
+    },
+    "kaptTest": {
+        "org.jetbrains.kotlin:kotlin-annotation-processing": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
         }
     },
     "runtime": {
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "5.3.0",
+            "requested": "5.+"
+        },
         "com.netflix.nebula:gradle-scm-plugin": {
             "locked": "3.0.1",
             "requested": "latest.release"
+        },
+        "org.codehaus.groovy.modules.http-builder:http-builder": {
+            "locked": "0.7.1",
+            "requested": "0.7.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
+        }
+    },
+    "runtimeClasspath": {
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "5.3.0",
+            "requested": "5.+"
+        },
+        "com.netflix.nebula:gradle-scm-plugin": {
+            "locked": "3.0.1",
+            "requested": "latest.release"
+        },
+        "org.codehaus.groovy.modules.http-builder:http-builder": {
+            "locked": "0.7.1",
+            "requested": "0.7.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
         }
     },
     "testCompile": {
+        "com.fasterxml.jackson.core:jackson-databind": {
+            "locked": "2.8.7",
+            "requested": "2.8.+"
+        },
         "com.netflix.nebula:gradle-git-scm-plugin": {
             "locked": "3.0.1",
             "requested": "latest.release"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "5.3.0",
+            "requested": "5.+"
         },
         "com.netflix.nebula:gradle-scm-plugin": {
             "locked": "3.0.1",
@@ -127,12 +277,28 @@
         "org.ajoberstar:grgit": {
             "locked": "1.8.0",
             "requested": "latest.release"
+        },
+        "org.codehaus.groovy.modules.http-builder:http-builder": {
+            "locked": "0.7.1",
+            "requested": "0.7.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
         }
     },
     "testCompileClasspath": {
+        "com.fasterxml.jackson.core:jackson-databind": {
+            "locked": "2.8.7",
+            "requested": "2.8.+"
+        },
         "com.netflix.nebula:gradle-git-scm-plugin": {
             "locked": "3.0.1",
             "requested": "latest.release"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "5.3.0",
+            "requested": "5.+"
         },
         "com.netflix.nebula:gradle-scm-plugin": {
             "locked": "3.0.1",
@@ -145,30 +311,28 @@
         "org.ajoberstar:grgit": {
             "locked": "1.8.0",
             "requested": "latest.release"
-        }
-    },
-    "testCompileOnly": {
-        "com.netflix.nebula:gradle-git-scm-plugin": {
-            "locked": "3.0.1",
-            "requested": "latest.release"
         },
-        "com.netflix.nebula:gradle-scm-plugin": {
-            "locked": "3.0.1",
-            "requested": "latest.release"
+        "org.codehaus.groovy.modules.http-builder:http-builder": {
+            "locked": "0.7.1",
+            "requested": "0.7.1"
         },
-        "com.netflix.nebula:nebula-test": {
-            "locked": "5.0.0",
-            "requested": "5.0.0"
-        },
-        "org.ajoberstar:grgit": {
-            "locked": "1.8.0",
-            "requested": "latest.release"
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
         }
     },
     "testRuntime": {
+        "com.fasterxml.jackson.core:jackson-databind": {
+            "locked": "2.8.7",
+            "requested": "2.8.+"
+        },
         "com.netflix.nebula:gradle-git-scm-plugin": {
             "locked": "3.0.1",
             "requested": "latest.release"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "5.3.0",
+            "requested": "5.+"
         },
         "com.netflix.nebula:gradle-scm-plugin": {
             "locked": "3.0.1",
@@ -181,6 +345,48 @@
         "org.ajoberstar:grgit": {
             "locked": "1.8.0",
             "requested": "latest.release"
+        },
+        "org.codehaus.groovy.modules.http-builder:http-builder": {
+            "locked": "0.7.1",
+            "requested": "0.7.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
+        }
+    },
+    "testRuntimeClasspath": {
+        "com.fasterxml.jackson.core:jackson-databind": {
+            "locked": "2.8.7",
+            "requested": "2.8.+"
+        },
+        "com.netflix.nebula:gradle-git-scm-plugin": {
+            "locked": "3.0.1",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "5.3.0",
+            "requested": "5.+"
+        },
+        "com.netflix.nebula:gradle-scm-plugin": {
+            "locked": "3.0.1",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-test": {
+            "locked": "5.0.0",
+            "requested": "5.0.0"
+        },
+        "org.ajoberstar:grgit": {
+            "locked": "1.8.0",
+            "requested": "latest.release"
+        },
+        "org.codehaus.groovy.modules.http-builder:http-builder": {
+            "locked": "0.7.1",
+            "requested": "0.7.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "1.0.3",
+            "requested": "1.0.3"
         }
     }
 }
