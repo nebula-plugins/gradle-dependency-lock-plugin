@@ -1152,8 +1152,13 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
     def 'generateLock interacts well with resolution rules'() {
         buildFile << """\
-            plugins {
-                id "nebula.resolution-rules" version "2.4.1"
+            buildscript {
+                repositories {
+                    maven { url "https://plugins.gradle.org/m2/" }
+                }
+                dependencies {
+                    classpath "com.netflix.nebula:gradle-resolution-rules-plugin:latest.release"
+                }
             }
 
             apply plugin: 'nebula.dependency-lock'
