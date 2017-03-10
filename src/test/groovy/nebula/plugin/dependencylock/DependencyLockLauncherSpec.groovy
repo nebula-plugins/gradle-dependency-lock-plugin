@@ -1162,6 +1162,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             }
 
             apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'nebula.resolution-rules'
             apply plugin: 'java'
 
             repositories {
