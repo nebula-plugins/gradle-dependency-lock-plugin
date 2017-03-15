@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,6 +123,20 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         result.standardOutput.contains 'test.example:foo:1.0.1 -> 1.0.0'
+    }
+
+    def 'lock file contributes to dependencyInsightEnhanced'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << OLD_FOO_LOCK
+
+        buildFile << SPECIFIC_BUILD_GRADLE
+
+        when:
+        def result = runTasksSuccessfully('dependencyInsightEnhanced', '--configuration', 'compile', '--dependency', 'foo')
+
+        then:
+        result.standardOutput.contains 'test.example:foo:1.0.0 (locked to 1.0.0 by dependencies.lock)'
+        result.standardOutput.contains 'nebula.dependency-lock locked with: dependencies.lock'
     }
 
     @Issue('#79')

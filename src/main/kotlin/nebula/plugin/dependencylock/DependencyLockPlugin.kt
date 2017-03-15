@@ -1,5 +1,22 @@
+/*
+ * Copyright 2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package nebula.plugin.dependencylock
 
+import com.netflix.nebula.dependencybase.DependencyBasePlugin
+import com.netflix.nebula.dependencybase.DependencyManagement
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -32,10 +49,15 @@ class DependencyLockPlugin : Plugin<Project> {
 
     lateinit var project: Project
     lateinit var lockReader: DependencyLockReader
+    lateinit var insight: DependencyManagement
+    lateinit var lockUsed: String
 
     override fun apply(project: Project) {
         this.project = project
         this.lockReader = DependencyLockReader(project)
+
+        project.plugins.apply(DependencyBasePlugin::class.java)
+        this.insight = project.extensions.extraProperties.get("nebulaDependencyBase") as DependencyManagement
 
         val extension = project.extensions.create(EXTENSION_NAME, DependencyLockExtension::class.java)
         var commitExtension = project.rootProject.extensions.findByType(DependencyLockCommitExtension::class.java)
@@ -91,6 +113,9 @@ class DependencyLockPlugin : Plugin<Project> {
         } else {
             File(project.projectDir, lockFilename ?: extension.lockFile)
         }
+
+        lockUsed = dependenciesLock.name
+        insight.addPluginMessage("nebula.dependency-lock locked with: $lockUsed")
 
         if (!DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
             val taskNames = project.gradle.startParameter.taskNames
@@ -165,9 +190,11 @@ class DependencyLockPlugin : Plugin<Project> {
     private fun applyOverrides(conf: Configuration, overrides: Map<*, *>) {
         if (project.hasProperty(OVERRIDE_FILE)) {
             LOGGER.info("Using override file ${project.property(OVERRIDE_FILE)} to lock dependencies")
+            insight.addPluginMessage("nebula.dependency-lock using override file: ${project.property(OVERRIDE_FILE)}")
         }
         if (project.hasProperty(OVERRIDE)) {
             LOGGER.info("Using command line overrides ${project.property(OVERRIDE)}")
+            insight.addPluginMessage("nebula.dependency-lock using override: ${project.property(OVERRIDE)}")
         }
 
         val overrideDeps = overrides.map { "${it.key}:${it.value}" }
@@ -182,6 +209,7 @@ class DependencyLockPlugin : Plugin<Project> {
                 if (details.requested.group == dep.group && details.requested.name == dep.name) {
                     val module = DefaultModuleVersionSelector(details.requested.group, details.requested.name, dep.version)
                     details.useTarget(module)
+                    insight.addLock(conf.name, "${dep.group}:${dep.name}", dep.version, lockUsed, "nebula.dependency-lock")
                 }
             }
         }
