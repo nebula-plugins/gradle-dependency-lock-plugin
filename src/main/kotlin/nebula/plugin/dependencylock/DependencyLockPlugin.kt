@@ -21,11 +21,14 @@ import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.DependencyResolveDetails
+import org.gradle.api.artifacts.ModuleVersionSelector
 import org.gradle.api.internal.artifacts.DefaultModuleVersionSelector
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.util.NameMatcher
 import java.io.File
+import java.util.*
 
 class DependencyLockPlugin : Plugin<Project> {
     companion object {
@@ -179,8 +182,8 @@ class DependencyLockPlugin : Plugin<Project> {
             val locked = locks.filter {
                 (it.value as Map<*, *>).containsKey("locked")
             }.map {
-                val locked = (it.value as Map<*, *>)["locked"] as String
-                "${it.key}:$locked"
+                val version = (it.value as Map<*, *>)["locked"]
+                ModuleVersionSelectorKey.create(it.key, version)
             }
             LOGGER.debug("locked: {}", locked)
             lockConfiguration(conf, locked)
@@ -197,21 +200,44 @@ class DependencyLockPlugin : Plugin<Project> {
             insight.addPluginMessage("nebula.dependency-lock using override: ${project.property(OVERRIDE)}")
         }
 
-        val overrideDeps = overrides.map { "${it.key}:${it.value}" }
+        val overrideDeps = overrides.map {
+            ModuleVersionSelectorKey.create(it.key, it.value)
+        }
         LOGGER.debug("overrides: {}", overrideDeps)
         lockConfiguration(conf, overrideDeps)
     }
 
-    private fun lockConfiguration(conf: Configuration, dependencyNotations: List<String>) {
-        val dependencies = dependencyNotations.map { project.dependencies.create(it) }
+    private fun lockConfiguration(conf: Configuration, selectorKeys: List<ModuleVersionSelectorKey>) {
+        val selectorsByKey = selectorKeys.groupBy { it }.mapValues { it.key.selector }
         conf.resolutionStrategy.eachDependency { details ->
-            dependencies.forEach { dep ->
-                if (details.requested.group == dep.group && details.requested.name == dep.name) {
-                    val module = DefaultModuleVersionSelector(details.requested.group, details.requested.name, dep.version)
-                    details.useTarget(module)
-                    insight.addLock(conf.name, "${dep.group}:${dep.name}", dep.version, lockUsed, "nebula.dependency-lock")
-                }
+            val moduleKey = details.toKey()
+            val module = selectorsByKey[moduleKey]
+            if (module != null) {
+                details.useTarget(module)
+                insight.addLock(conf.name, moduleKey.toString(), module.version, lockUsed, "nebula.dependency-lock")
             }
         }
+    }
+
+    private fun DependencyResolveDetails.toKey(): ModuleVersionSelectorKey =
+            ModuleVersionSelectorKey(requested)
+
+    private class ModuleVersionSelectorKey(val selector: ModuleVersionSelector) : ModuleVersionSelector by selector {
+        companion object {
+            fun create(notation: Any?, version: Any?): ModuleVersionSelectorKey {
+                val (group, name) = (notation as String).split(":")
+                val selector = DefaultModuleVersionSelector(group, name, version as String)
+                return ModuleVersionSelectorKey(selector)
+            }
+        }
+
+        override fun hashCode(): Int = Objects.hash(group, name)
+
+        override fun equals(other: Any?): Boolean = when (other) {
+            is ModuleVersionSelector -> group == other.group && name == other.name
+            else -> false
+        }
+
+        override fun toString(): String = "$group:$name"
     }
 }
