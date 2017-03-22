@@ -214,7 +214,7 @@ class DependencyLockPlugin : Plugin<Project> {
             val module = selectorsByKey[moduleKey]
             if (module != null) {
                 details.useTarget(module)
-                insight.addLock(conf.name, moduleKey.toString(), module.version, lockUsed, "nebula.dependency-lock")
+                insight.addLock(conf.name, moduleKey.toModuleString(), module.version, lockUsed, "nebula.dependency-lock")
             }
         }
     }
@@ -238,6 +238,8 @@ class DependencyLockPlugin : Plugin<Project> {
             else -> false
         }
 
-        override fun toString(): String = "$group:$name"
+        override fun toString(): String = "$group:$name:$version"
+
+        fun toModuleString(): String = "$group:$name"
     }
 }
