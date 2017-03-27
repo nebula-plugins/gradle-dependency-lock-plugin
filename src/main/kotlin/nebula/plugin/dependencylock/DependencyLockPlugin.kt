@@ -17,6 +17,7 @@ package nebula.plugin.dependencylock
 
 import com.netflix.nebula.dependencybase.DependencyBasePlugin
 import com.netflix.nebula.dependencybase.DependencyManagement
+import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -87,7 +88,7 @@ class DependencyLockPlugin : Plugin<Project> {
 
         project.configurations.all({ conf ->
             if (lockAfterEvaluating) {
-                conf.incoming.beforeResolve {
+                conf.onResolve {
                     maybeApplyLock(conf, extension, overrides, globalLockFilename, lockFilename)
                 }
             } else {
