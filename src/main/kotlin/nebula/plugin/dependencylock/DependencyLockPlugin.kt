@@ -226,7 +226,9 @@ class DependencyLockPlugin : Plugin<Project> {
     private class ModuleVersionSelectorKey(val selector: ModuleVersionSelector) : ModuleVersionSelector by selector {
         companion object {
             fun create(notation: Any?, version: Any?): ModuleVersionSelectorKey {
-                val (group, name) = (notation as String).split(":")
+                notation as String
+                val group = notation.substringBefore(":")
+                val name = notation.substringAfter(":")
                 val selector = DefaultModuleVersionSelector(group, name, version as String)
                 return ModuleVersionSelectorKey(selector)
             }
