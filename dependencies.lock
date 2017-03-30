@@ -103,12 +103,12 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.0.0",
-            "requested": "6.0.0"
+            "locked": "5.1.3",
+            "requested": "5.1.3"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.9.0",
-            "requested": "latest.release"
+            "locked": "0.4.1",
+            "requested": "0.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
@@ -145,12 +145,12 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.0.0",
-            "requested": "6.0.0"
+            "locked": "5.1.3",
+            "requested": "5.1.3"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.9.0",
-            "requested": "latest.release"
+            "locked": "0.4.1",
+            "requested": "0.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
@@ -187,12 +187,12 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.0.0",
-            "requested": "6.0.0"
+            "locked": "5.1.3",
+            "requested": "5.1.3"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.9.0",
-            "requested": "latest.release"
+            "locked": "0.4.1",
+            "requested": "0.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
@@ -229,12 +229,12 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.0.0",
-            "requested": "6.0.0"
+            "locked": "5.1.3",
+            "requested": "5.1.3"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.9.0",
-            "requested": "latest.release"
+            "locked": "0.4.1",
+            "requested": "0.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
@@ -351,12 +351,12 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.0.0",
-            "requested": "6.0.0"
+            "locked": "5.1.3",
+            "requested": "5.1.3"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.9.0",
-            "requested": "latest.release"
+            "locked": "0.4.1",
+            "requested": "0.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
@@ -393,12 +393,12 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.0.0",
-            "requested": "6.0.0"
+            "locked": "5.1.3",
+            "requested": "5.1.3"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.9.0",
-            "requested": "latest.release"
+            "locked": "0.4.1",
+            "requested": "0.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
@@ -435,12 +435,12 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.0.0",
-            "requested": "6.0.0"
+            "locked": "5.1.3",
+            "requested": "5.1.3"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.9.0",
-            "requested": "latest.release"
+            "locked": "0.4.1",
+            "requested": "0.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
@@ -477,12 +477,12 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.0.0",
-            "requested": "6.0.0"
+            "locked": "5.1.3",
+            "requested": "5.1.3"
         },
         "org.ajoberstar:grgit": {
-            "locked": "1.9.0",
-            "requested": "latest.release"
+            "locked": "0.4.1",
+            "requested": "0.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
