@@ -103,8 +103,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "5.1.3",
-            "requested": "5.1.3"
+            "locked": "6.0.1",
+            "requested": "6.0.1"
         },
         "org.ajoberstar:grgit": {
             "locked": "0.4.1",
@@ -145,8 +145,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "5.1.3",
-            "requested": "5.1.3"
+            "locked": "6.0.1",
+            "requested": "6.0.1"
         },
         "org.ajoberstar:grgit": {
             "locked": "0.4.1",
@@ -187,8 +187,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "5.1.3",
-            "requested": "5.1.3"
+            "locked": "6.0.1",
+            "requested": "6.0.1"
         },
         "org.ajoberstar:grgit": {
             "locked": "0.4.1",
@@ -229,8 +229,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "5.1.3",
-            "requested": "5.1.3"
+            "locked": "6.0.1",
+            "requested": "6.0.1"
         },
         "org.ajoberstar:grgit": {
             "locked": "0.4.1",
@@ -351,8 +351,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "5.1.3",
-            "requested": "5.1.3"
+            "locked": "6.0.1",
+            "requested": "6.0.1"
         },
         "org.ajoberstar:grgit": {
             "locked": "0.4.1",
@@ -393,8 +393,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "5.1.3",
-            "requested": "5.1.3"
+            "locked": "6.0.1",
+            "requested": "6.0.1"
         },
         "org.ajoberstar:grgit": {
             "locked": "0.4.1",
@@ -435,8 +435,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "5.1.3",
-            "requested": "5.1.3"
+            "locked": "6.0.1",
+            "requested": "6.0.1"
         },
         "org.ajoberstar:grgit": {
             "locked": "0.4.1",
@@ -477,8 +477,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "5.1.3",
-            "requested": "5.1.3"
+            "locked": "6.0.1",
+            "requested": "6.0.1"
         },
         "org.ajoberstar:grgit": {
             "locked": "0.4.1",
