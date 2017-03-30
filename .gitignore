@@ -1,7 +1,6 @@
 build/
 .gradle/
 gradle.properties
-.java-version
 .DS_Store
 out/
 .idea/
