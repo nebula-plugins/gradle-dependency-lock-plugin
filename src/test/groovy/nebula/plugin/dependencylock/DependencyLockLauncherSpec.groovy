@@ -92,6 +92,17 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 }
                 '''.stripIndent())
 
+    static final String REMOVE_UPDATE_LOCK = LockGenerator.duplicateIntoConfigs('''\
+                "test.example:baz": {
+                    "locked": "1.1.0",
+                    "requested": "1.+"
+                },
+                "test.example:foo": {
+                    "locked": "1.0.1",
+                    "requested": "1.+"
+                }
+                '''.stripIndent())
+
     static FOO_LOCK_OVERRIDE = '''\
         {
           "test.example:foo": "2.0.1"
@@ -442,6 +453,17 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
+    }
+
+    def 'update lock removed dependency'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << REMOVE_UPDATE_LOCK
+        buildFile.text = BUILD_GRADLE
+        when:
+        runTasksSuccessfully('-PdependencyLock.updateDependencies=test.example:baz', 'updateLock', 'saveLock')
+
+        then:
+        new File(projectDir, 'dependencies.lock').text == FOO_LOCK
     }
 
     def 'command line override file respected while generating lock'() {
