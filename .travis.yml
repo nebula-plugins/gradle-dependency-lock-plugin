@@ -5,7 +5,7 @@ android:
     - android-20
 sudo: false
 jdk:
-- oraclejdk7
+- openjdk7
 install: true
 script: "./gradle/buildViaTravis.sh"
 cache:
