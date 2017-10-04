@@ -45,6 +45,8 @@ class DependencyLockTaskConfigurer {
     public static final String UPDATE_LOCK_TASK_NAME = 'updateLock'
     public static final String GENERATE_LOCK_TASK_NAME = 'generateLock'
 
+    final Set<String> configurationsToSkipForGlobalLock = ['checkstyle', 'findbugs', 'findbugsPlugins', 'jacocoAgent', 'jacocoAnt']
+
     Project project
 
     DependencyLockTaskConfigurer(Project project) {
@@ -235,9 +237,13 @@ class DependencyLockTaskConfigurer {
                     def ext = subproject.getExtensions().findByType(DependencyLockExtension)
                     if (ext != null) {
                         def configurations = lockableConfigurations(project, subproject, ext.configurationNames)
-                        configurations.collect { configuration ->
-                            project.dependencies.create(project.dependencies.project(path: subproject.path, configuration: configuration.name))
-                        }
+                        configurations
+                                .findAll { configuration ->
+                                    !configurationsToSkipForGlobalLock.contains(configuration.name)
+                                }
+                                .collect { configuration ->
+                                    project.dependencies.create(project.dependencies.project(path: subproject.path, configuration: configuration.name))
+                                }
                     } else {
                         [project.dependencies.create(subproject)]
                     }

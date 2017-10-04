@@ -20,6 +20,7 @@ import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.IntegrationSpec
 import spock.lang.Ignore
 import spock.lang.Issue
+import spock.lang.Unroll
 
 class DependencyLockLauncherSpec extends IntegrationSpec {
     def setup() {
@@ -1380,8 +1381,43 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         '''.stripIndent()
     }
 
-    /*test.example:new:1.0.0 (added)
-            test.example:removed:1.0.0 (removed)*/
+    @Unroll
+    def 'global lock with dependencyReport and default dependencies works with #plugin'() {
+        addSubproject('one', """\
+            plugins {
+                id 'java'
+                $plugin
+                id 'project-report'
+            }
+            """.stripIndent())
+
+        addSubproject('two', """\
+            plugins {
+                id 'java'
+                $plugin
+                id 'project-report'
+            }
+            """.stripIndent())
+
+        buildFile << """\
+            allprojects {
+                apply plugin: 'nebula.dependency-lock'
+            }
+            
+            subprojects {
+                repositories { jcenter() }
+            }
+            """.stripIndent()
+
+        when:
+        def result = runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock', 'dependencyReport')
+
+        then:
+        noExceptionThrown()
+
+        where:
+        plugin << ['id \'checkstyle\'', 'id \'findbugs\'', 'id \'net.saliman.cobertura\' version \'2.5.0\'', 'id \'jacoco\'']
+    }
 
     private void setupCommonMultiproject() {
         addSubproject('sub1', """\

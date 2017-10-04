@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ plugins {
     id 'nebula.plugin-plugin' version '5.17.2'
     id 'org.ysb33r.gradletest' version '0.5.4'
     id 'nebula.optional-base' version '3.1.0'
-    id 'nebula.kotlin' version '1.1.0'
+    id 'nebula.kotlin' version '1.1.51'
 }
 
 description 'Gradle plugin to allow locking of dynamic dependency versions'
