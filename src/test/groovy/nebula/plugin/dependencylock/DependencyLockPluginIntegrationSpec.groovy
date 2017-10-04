@@ -64,7 +64,7 @@ class DependencyLockPluginIntegrationSpec extends IntegrationSpec {
                 compile 'test.example:foo:latest.release'
                 compile 'test.example:bar:latest.release'
             }
-        """.stripIndent()
+            """.stripIndent()
 
         when:
         def result = runTasksSuccessfully('dependencies')
