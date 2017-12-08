@@ -21,9 +21,7 @@ import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.DependencyResolveDetails
-import org.gradle.api.artifacts.ModuleVersionSelector
+import org.gradle.api.artifacts.*
 import org.gradle.api.internal.artifacts.DefaultModuleVersionSelector
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -209,7 +207,7 @@ class DependencyLockPlugin : Plugin<Project> {
     }
 
     private fun lockConfiguration(conf: Configuration, selectorKeys: List<ModuleVersionSelectorKey>) {
-        val selectorsByKey = selectorKeys.groupBy { it }.mapValues { it.key.selector }
+        val selectorsByKey = selectorKeys.groupBy { it }.mapValues { it.key }
         conf.resolutionStrategy.eachDependency { details ->
             val moduleKey = details.toKey()
             val module = selectorsByKey[moduleKey]
@@ -221,19 +219,18 @@ class DependencyLockPlugin : Plugin<Project> {
     }
 
     private fun DependencyResolveDetails.toKey(): ModuleVersionSelectorKey =
-            ModuleVersionSelectorKey(requested)
+            ModuleVersionSelectorKey(requested.group, requested.name, requested.version, requested.versionConstraint)
 
-    private class ModuleVersionSelectorKey(val selector: ModuleVersionSelector) : ModuleVersionSelector by selector {
+    private class ModuleVersionSelectorKey(private val group: String, private val name: String, private val version: String, private val versionConstraint: VersionConstraint) : ModuleVersionSelector {
         companion object {
             fun create(notation: Any?, version: Any?): ModuleVersionSelectorKey {
                 notation as String
                 val group = notation.substringBefore(":")
                 val name = notation.substringAfter(":")
-                val selector = DefaultModuleVersionSelector(group, name, version as String)
-                return ModuleVersionSelectorKey(selector)
+
+                return ModuleVersionSelectorKey(group, name, version as String, LockVersionConstaint(version, mutableListOf()))
             }
         }
-
         override fun hashCode(): Int = Objects.hash(group, name)
 
         override fun equals(other: Any?): Boolean = when (other) {
@@ -242,7 +239,23 @@ class DependencyLockPlugin : Plugin<Project> {
         }
 
         override fun toString(): String = "$group:$name:$version"
+        override fun getGroup(): String = group
+        override fun getName(): String = name
+        override fun getVersion(): String = version
+        override fun getVersionConstraint(): VersionConstraint = versionConstraint
+        override fun matchesStrictly(p0: ModuleVersionIdentifier?): Boolean {
+            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            return false
+        }
 
         fun toModuleString(): String = "$group:$name"
     }
+
+    private class LockVersionConstaint(private val preferredVersion: String, private val rejectedVersions: MutableList<String>): VersionConstraint {
+        override fun getRejectedVersions(): MutableList<String> = rejectedVersions
+
+        override fun getPreferredVersion(): String? = preferredVersion
+
+    }
+
 }

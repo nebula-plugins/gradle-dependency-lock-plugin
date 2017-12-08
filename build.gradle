@@ -13,15 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+buildscript {
+    repositories { jcenter() }
+    dependencies { classpath 'com.netflix.nebula:nebula-plugin-plugin:5.19.0-rc.1'}
+}
 
 plugins {
-    id 'nebula.plugin-plugin' version '5.18.0'
+//    id 'nebula.plugin-plugin' version '5.19.0'
     id 'org.ysb33r.gradletest' version '0.5.4'
     id 'nebula.optional-base' version '3.1.0'
     id 'nebula.kotlin' version '1.1.51'
 }
-
+apply plugin: 'nebula.plugin-plugin'
 description 'Gradle plugin to allow locking of dynamic dependency versions'
 
 group = 'com.netflix.nebula'
@@ -45,7 +48,7 @@ dependencies {
     compile 'org.codehaus.groovy.modules.http-builder:http-builder:0.7.1'
 
     testCompile 'com.netflix.nebula:gradle-git-scm-plugin:latest.release'
-    testCompile 'org.ajoberstar:grgit:0.+'
+    testCompile 'org.ajoberstar:grgit:1.+'
 
     // resolution rules requires at least 2.8.1, and currently DependencyLockLauncherSpec resolution-rules integration
     // test will fail without this
