@@ -45,6 +45,7 @@ Tested with Oracle JDK8
 | 3.0            | yes   |
 | 3.1            | yes   |
 | 3.4.1          | yes   |
+| 4.4            | yes   |
 
 LICENSE
 =======

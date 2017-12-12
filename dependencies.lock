@@ -21,8 +21,8 @@
             "requested": "0.7.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "compileClasspath": {
@@ -47,8 +47,8 @@
             "requested": "0.7.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "default": {
@@ -73,13 +73,13 @@
             "requested": "0.7.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "integTestCompile": {
         "com.fasterxml.jackson.core:jackson-databind": {
-            "locked": "2.8.9",
+            "locked": "2.8.10",
             "requested": "2.8.+"
         },
         "com.netflix.nebula:gradle-git-scm-plugin": {
@@ -107,21 +107,21 @@
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
-            "locked": "0.4.1",
-            "requested": "0.+"
+            "locked": "1.9.3",
+            "requested": "1.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "integTestCompileClasspath": {
         "com.fasterxml.jackson.core:jackson-databind": {
-            "locked": "2.8.9",
+            "locked": "2.8.10",
             "requested": "2.8.+"
         },
         "com.netflix.nebula:gradle-git-scm-plugin": {
@@ -149,21 +149,21 @@
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
-            "locked": "0.4.1",
-            "requested": "0.+"
+            "locked": "1.9.3",
+            "requested": "1.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "integTestRuntime": {
         "com.fasterxml.jackson.core:jackson-databind": {
-            "locked": "2.8.9",
+            "locked": "2.8.10",
             "requested": "2.8.+"
         },
         "com.netflix.nebula:gradle-git-scm-plugin": {
@@ -191,21 +191,21 @@
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
-            "locked": "0.4.1",
-            "requested": "0.+"
+            "locked": "1.9.3",
+            "requested": "1.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "integTestRuntimeClasspath": {
         "com.fasterxml.jackson.core:jackson-databind": {
-            "locked": "2.8.9",
+            "locked": "2.8.10",
             "requested": "2.8.+"
         },
         "com.netflix.nebula:gradle-git-scm-plugin": {
@@ -233,44 +233,46 @@
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
-            "locked": "0.4.1",
-            "requested": "0.+"
+            "locked": "1.9.3",
+            "requested": "1.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "jacocoAgent": {
         "org.jacoco:org.jacoco.agent": {
-            "locked": "0.7.8"
+            "locked": "0.7.9",
+            "requested": "0.7.9"
         }
     },
     "jacocoAnt": {
         "org.jacoco:org.jacoco.ant": {
-            "locked": "0.7.8"
+            "locked": "0.7.9",
+            "requested": "0.7.9"
         }
     },
     "kapt": {
-        "org.jetbrains.kotlin:kotlin-annotation-processing": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+        "org.jetbrains.kotlin:kotlin-annotation-processing-gradle": {
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "kaptIntegTest": {
-        "org.jetbrains.kotlin:kotlin-annotation-processing": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+        "org.jetbrains.kotlin:kotlin-annotation-processing-gradle": {
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "kaptTest": {
-        "org.jetbrains.kotlin:kotlin-annotation-processing": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+        "org.jetbrains.kotlin:kotlin-annotation-processing-gradle": {
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "runtime": {
@@ -295,8 +297,8 @@
             "requested": "0.7.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "runtimeClasspath": {
@@ -321,13 +323,13 @@
             "requested": "0.7.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "testCompile": {
         "com.fasterxml.jackson.core:jackson-databind": {
-            "locked": "2.8.9",
+            "locked": "2.8.10",
             "requested": "2.8.+"
         },
         "com.netflix.nebula:gradle-git-scm-plugin": {
@@ -355,21 +357,21 @@
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
-            "locked": "0.4.1",
-            "requested": "0.+"
+            "locked": "1.9.3",
+            "requested": "1.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "testCompileClasspath": {
         "com.fasterxml.jackson.core:jackson-databind": {
-            "locked": "2.8.9",
+            "locked": "2.8.10",
             "requested": "2.8.+"
         },
         "com.netflix.nebula:gradle-git-scm-plugin": {
@@ -397,21 +399,21 @@
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
-            "locked": "0.4.1",
-            "requested": "0.+"
+            "locked": "1.9.3",
+            "requested": "1.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "testRuntime": {
         "com.fasterxml.jackson.core:jackson-databind": {
-            "locked": "2.8.9",
+            "locked": "2.8.10",
             "requested": "2.8.+"
         },
         "com.netflix.nebula:gradle-git-scm-plugin": {
@@ -439,21 +441,21 @@
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
-            "locked": "0.4.1",
-            "requested": "0.+"
+            "locked": "1.9.3",
+            "requested": "1.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     },
     "testRuntimeClasspath": {
         "com.fasterxml.jackson.core:jackson-databind": {
-            "locked": "2.8.9",
+            "locked": "2.8.10",
             "requested": "2.8.+"
         },
         "com.netflix.nebula:gradle-git-scm-plugin": {
@@ -481,16 +483,16 @@
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
-            "locked": "0.4.1",
-            "requested": "0.+"
+            "locked": "1.9.3",
+            "requested": "1.+"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.1.0",
-            "requested": "1.1.0"
+            "locked": "1.2.0",
+            "requested": "1.2.0"
         }
     }
 }
