@@ -212,50 +212,32 @@ class DependencyLockPlugin : Plugin<Project> {
             val moduleKey = details.toKey()
             val module = selectorsByKey[moduleKey]
             if (module != null) {
-                details.useTarget(module)
+                details.useTarget(module.toMap())
                 insight.addLock(conf.name, moduleKey.toModuleString(), module.version, lockUsed, "nebula.dependency-lock")
             }
         }
     }
 
     private fun DependencyResolveDetails.toKey(): ModuleVersionSelectorKey =
-            ModuleVersionSelectorKey(requested.group, requested.name, requested.version, requested.versionConstraint)
+            ModuleVersionSelectorKey(requested.group, requested.name, requested.version)
 
-    private class ModuleVersionSelectorKey(private val group: String, private val name: String, private val version: String, private val versionConstraint: VersionConstraint) : ModuleVersionSelector {
+    private class ModuleVersionSelectorKey(val group: String, val name: String, val version: String) {
         companion object {
             fun create(notation: Any?, version: Any?): ModuleVersionSelectorKey {
                 notation as String
                 val group = notation.substringBefore(":")
                 val name = notation.substringAfter(":")
 
-                return ModuleVersionSelectorKey(group, name, version as String, LockVersionConstaint(version, mutableListOf()))
+                return ModuleVersionSelectorKey(group, name, version as String)
             }
         }
         override fun hashCode(): Int = Objects.hash(group, name)
 
         override fun equals(other: Any?): Boolean = when (other) {
-            is ModuleVersionSelector -> group == other.group && name == other.name
+            is ModuleVersionSelectorKey -> group == other.group && name == other.name
             else -> false
         }
-
-        override fun toString(): String = "$group:$name:$version"
-        override fun getGroup(): String = group
-        override fun getName(): String = name
-        override fun getVersion(): String = version
-        override fun getVersionConstraint(): VersionConstraint = versionConstraint
-        override fun matchesStrictly(p0: ModuleVersionIdentifier?): Boolean {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-            return false
-        }
-
+        fun toMap(): Map<String, String> = mapOf("group" to group, "name" to name, "version" to version)
         fun toModuleString(): String = "$group:$name"
     }
-
-    private class LockVersionConstaint(private val preferredVersion: String, private val rejectedVersions: MutableList<String>): VersionConstraint {
-        override fun getRejectedVersions(): MutableList<String> = rejectedVersions
-
-        override fun getPreferredVersion(): String? = preferredVersion
-
-    }
-
 }
