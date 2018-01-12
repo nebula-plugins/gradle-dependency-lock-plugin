@@ -33,7 +33,7 @@ class DependencyLockReader {
                 [(configurationName): deps.findAll { coord, info ->
                     def notUpdate = !updates.contains(coord)
                     def isFirstLevel = info.transitive == null && info.requested != null
-                    def isFirstLevelTransitive = info.transitive.any { deps[it].project }
+                    def isFirstLevelTransitive = info.transitive.any { deps[it]?.project }
                     notUpdate && (isFirstLevel || isFirstLevelTransitive)
                 }]
             }
