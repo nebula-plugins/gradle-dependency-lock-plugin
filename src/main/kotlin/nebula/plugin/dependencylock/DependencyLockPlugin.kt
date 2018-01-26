@@ -239,5 +239,6 @@ class DependencyLockPlugin : Plugin<Project> {
         }
         fun toMap(): Map<String, String> = mapOf("group" to group, "name" to name, "version" to version)
         fun toModuleString(): String = "$group:$name"
+        override fun toString(): String = "$group:$name:$version"
     }
 }
