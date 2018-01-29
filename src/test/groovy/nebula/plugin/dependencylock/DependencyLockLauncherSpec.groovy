@@ -18,6 +18,9 @@ import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.IntegrationSpec
+import nebula.test.dependencies.DependencyGraphBuilder
+import nebula.test.dependencies.GradleDependencyGenerator
+import nebula.test.dependencies.ModuleBuilder
 import spock.lang.Ignore
 import spock.lang.Issue
 import spock.lang.Unroll
@@ -1417,6 +1420,104 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         where:
         plugin << ['id \'checkstyle\'', 'id \'findbugs\'', 'id \'net.saliman.cobertura\' version \'2.5.0\'', 'id \'jacoco\'']
+    }
+
+    def 'handle generating a lock with circular dependencies depending on a jar that depends on us'() {
+        def builder = new DependencyGraphBuilder()
+        builder.addModule(new ModuleBuilder('test.nebula:foo:1.0.0').addDependency('example.nebula:circulartest:1.0.0').build())
+        def generator = new GradleDependencyGenerator(builder.build(), "$projectDir/repo")
+        generator.generateTestMavenRepo()
+        buildFile << """\
+            plugins {
+                id 'java'
+                id 'nebula.maven-publish' version '5.1.5'
+            }
+            group = 'example.nebula'
+            version = '1.1.0'
+            apply plugin: 'nebula.dependency-lock'
+            
+            repositories {
+                ${generator.mavenRepositoryBlock}
+            }
+
+            dependencyLock {
+                includeTransitives = true
+            }
+            dependencies {
+                implementation 'test.nebula:foo:1.+'
+            }
+            """.stripIndent()
+        settingsFile.text = '''\
+            rootProject.name = 'circulartest'
+            '''.stripIndent()
+
+        when:
+        def result = runTasksSuccessfully('generateLock')
+
+        then:
+        noExceptionThrown()
+        File lock = new File(projectDir, 'build/dependencies.lock')
+        lock.text.contains '''\
+            |        "example.nebula:circulartest": {
+            |            "project": true,
+            |            "transitive": [
+            |                "test.nebula:foo"
+            |            ]
+            |        },
+            |'''.stripMargin('|')
+    }
+
+    def 'handle reading a lock with circular dependencies depending on a jar that depends on us'() {
+        def builder = new DependencyGraphBuilder()
+        builder.addModule(new ModuleBuilder('test.nebula:foo:1.0.0').addDependency('example.nebula:circulartest:1.0.0').build())
+        def generator = new GradleDependencyGenerator(builder.build(), "$projectDir/repo")
+        generator.generateTestMavenRepo()
+        buildFile << """\
+            plugins {
+                id 'java'
+                id 'project-report'
+                id 'nebula.maven-publish' version '5.1.5'
+            }
+            group = 'example.nebula'
+            version = '1.1.0'
+            apply plugin: 'nebula.dependency-lock'
+            
+            repositories {
+                ${generator.mavenRepositoryBlock}
+            }
+
+            dependencyLock {
+                includeTransitives = true
+            }
+            dependencies {
+                implementation 'test.nebula:foo:1.+'
+            }
+            """.stripIndent()
+        settingsFile.text = '''\
+            rootProject.name = 'circulartest'
+            '''.stripIndent()
+
+        def deplock = new File(projectDir, 'dependencies.lock')
+        deplock.text = LockGenerator.duplicateIntoConfigs('''\
+            "example.nebula:circulartest": {
+                "project": true,
+                "transitive": [
+                    "test.nebula:foo"
+                ]
+            },
+            "test.nebula:foo": {
+                "locked": "1.0.0",
+                "requested": "1.+"
+            }
+            '''.stripIndent())
+
+        when:
+        def result = runTasksSuccessfully('dependencyReport', 'build')
+
+        then:
+        println result?.standardError
+        println result?.standardOutput
+        noExceptionThrown()
     }
 
     private void setupCommonMultiproject() {
