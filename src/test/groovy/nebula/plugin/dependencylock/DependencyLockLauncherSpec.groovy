@@ -1547,4 +1547,81 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             }
         """.stripIndent()
     }
+
+    def 'handle case where asked to update non existent dependency'() {
+        def builder = new DependencyGraphBuilder()
+        builder.addModule('test.nebula:foo:1.0.0').addModule('test.nebula:foo:1.1.0')
+        def generator = new GradleDependencyGenerator(builder.build(), "$projectDir/repo")
+        generator.generateTestMavenRepo()
+        buildFile << """\
+            plugins {
+                id 'java'
+            }
+            apply plugin: 'nebula.dependency-lock'
+            
+            repositories {
+                ${generator.mavenRepositoryBlock}
+            }
+
+            dependencies {
+                implementation 'test.nebula:foo:1.+'
+            }
+            """.stripIndent()
+
+        def deplock = new File(projectDir, 'dependencies.lock')
+        deplock.text = LockGenerator.duplicateIntoConfigs('''\
+            "test.nebula:foo": {
+                "locked": "1.0.0",
+                "requested": "1.+"
+            }
+            '''.stripIndent())
+
+        when:
+        def result = runTasks('updateLock', 'saveLock', '-PdependencyLock.updateDependencies=test.nebula:bar')
+
+        then:
+        def newLock = new File(projectDir, 'build/dependencies.lock').text
+        !newLock.contains('"locked": "1.1.0"')
+    }
+
+    def 'handle case where asked to update when lock has a bogus dependency'() {
+        def builder = new DependencyGraphBuilder()
+        builder.addModule('test.nebula:foo:1.0.0').addModule('test.nebula:foo:1.1.0')
+        def generator = new GradleDependencyGenerator(builder.build(), "$projectDir/repo")
+        generator.generateTestMavenRepo()
+        buildFile << """\
+            plugins {
+                id 'java'
+            }
+            apply plugin: 'nebula.dependency-lock'
+            
+            repositories {
+                ${generator.mavenRepositoryBlock}
+            }
+
+            dependencies {
+                implementation 'test.nebula:foo:1.+'
+            }
+            """.stripIndent()
+
+        def deplock = new File(projectDir, 'dependencies.lock')
+        deplock.text = LockGenerator.duplicateIntoConfigs('''\
+            "test.nebula:bar": {
+                "locked": "1.0.0",
+                "requested": "1.+"
+            },
+            "test.nebula:foo": {
+                "locked": "1.0.0",
+                "requested": "1.+"
+            }
+            '''.stripIndent())
+
+        when:
+        def result = runTasks('updateLock', 'saveLock', '-PdependencyLock.updateDependencies=test.nebula:bar')
+
+        then:
+        def newLock = new File(projectDir, 'build/dependencies.lock').text
+        println newLock
+        !newLock.contains('"test.nebula:bar"')
+    }
 }
