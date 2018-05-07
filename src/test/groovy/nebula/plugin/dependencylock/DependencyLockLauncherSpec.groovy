@@ -140,14 +140,14 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         result.standardOutput.contains 'test.example:foo:1.0.1 -> 1.0.0'
     }
 
-    def 'lock file contributes to dependencyInsightEnhanced'() {
+    def 'lock file contributes to dependencyInsight'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << OLD_FOO_LOCK
 
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        def result = runTasksSuccessfully('dependencyInsightEnhanced', '--configuration', 'compile', '--dependency', 'foo')
+        def result = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo')
 
         then:
         result.standardOutput.contains 'test.example:foo:1.0.0 (locked to 1.0.0 by dependencies.lock)'
