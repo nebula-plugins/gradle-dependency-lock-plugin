@@ -48,7 +48,7 @@ class GenerateLockTaskWithWaybackSpec extends ProjectSpec {
 
     def 'lock both configurations using wayback data'() {
         when:
-        task.execute()
+        task.lock()
         def locks = new JsonSlurper().parse(task.dependenciesLock)
 
         then:
@@ -70,7 +70,7 @@ class GenerateLockTaskWithWaybackSpec extends ProjectSpec {
         '''.stripMargin()
 
         when:
-        task.execute()
+        task.lock()
         def locks = new JsonSlurper().parse(task.dependenciesLock)
 
         then:
@@ -91,7 +91,7 @@ class GenerateLockTaskWithWaybackSpec extends ProjectSpec {
         '''.stripMargin()
 
         when:
-        task.execute()
+        task.lock()
         def locks = new JsonSlurper().parse(task.dependenciesLock)
 
         then:

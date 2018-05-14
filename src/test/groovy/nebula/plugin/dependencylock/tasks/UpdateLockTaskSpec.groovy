@@ -88,7 +88,7 @@ class UpdateLockTaskSpec extends ProjectSpec {
         )
 
         when:
-        task.execute()
+        task.lock()
 
         then:
         task.dependenciesLock.text == updatedLock
