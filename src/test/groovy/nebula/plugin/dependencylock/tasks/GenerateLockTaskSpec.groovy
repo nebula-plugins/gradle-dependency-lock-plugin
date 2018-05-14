@@ -41,7 +41,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames = [ 'testRuntime' ]
 
         when:
-        task.execute()
+        task.lock()
 
         then:
         String lockText = '''\
@@ -90,7 +90,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
             }'''.stripIndent()
 
         when:
-        task.execute()
+        task.lock()
 
         then:
         task.dependenciesLock.text == lockText
@@ -118,7 +118,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames= [ 'testRuntime' ]
 
         when:
-        task.execute()
+        task.lock()
 
         then:
         String lockText = '''\
@@ -164,7 +164,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.includeTransitives = true
 
         when:
-        task.execute()
+        task.lock()
 
         then:
         String lockText = '''\
@@ -217,7 +217,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames= [ 'testRuntime' ]
 
         when:
-        task.execute()
+        task.lock()
 
         then:
         String lockText = '''\
@@ -291,7 +291,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames= [ 'testRuntime' ]
 
         when:
-        task.execute()
+        task.lock()
 
         then:
         String lockText = '''\
@@ -338,7 +338,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.includeTransitives = true
 
         when:
-        task.execute()
+        task.lock()
 
         then:
         String lockText = '''\
@@ -373,7 +373,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.includeTransitives = true
 
         when:
-        task.execute()
+        task.lock()
 
         then:
         String lockText = '''\
@@ -411,7 +411,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.includeTransitives = true
 
         when:
-        task.execute()
+        task.lock()
 
         then:
         String lockText = '''\
@@ -454,7 +454,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.includeTransitives = true
 
         when:
-        task.execute()
+        task.lock()
 
         then:
         String lockText = '''\
@@ -500,7 +500,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.includeTransitives = true
 
         when:
-        task.execute()
+        task.lock()
 
         then:
         String lockText = '''\
@@ -555,7 +555,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.filter = filter as Closure
 
         when:
-        task.execute()
+        task.lock()
 
         then:
         task.dependenciesLock.text == lockText
