@@ -9,7 +9,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-dependency-base-plugin": {
-            "locked": "0.3.2",
+            "locked": "0.4.0",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
@@ -35,7 +35,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-dependency-base-plugin": {
-            "locked": "0.3.2",
+            "locked": "0.4.0",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
@@ -61,7 +61,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-dependency-base-plugin": {
-            "locked": "0.3.2",
+            "locked": "0.4.0",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
@@ -95,7 +95,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-dependency-base-plugin": {
-            "locked": "0.3.2",
+            "locked": "0.4.0",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
@@ -103,7 +103,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.4.5",
+            "locked": "6.7.0",
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
@@ -137,7 +137,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-dependency-base-plugin": {
-            "locked": "0.3.2",
+            "locked": "0.4.0",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
@@ -145,7 +145,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.4.5",
+            "locked": "6.7.0",
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
@@ -179,7 +179,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-dependency-base-plugin": {
-            "locked": "0.3.2",
+            "locked": "0.4.0",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
@@ -187,7 +187,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.4.5",
+            "locked": "6.7.0",
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
@@ -221,7 +221,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-dependency-base-plugin": {
-            "locked": "0.3.2",
+            "locked": "0.4.0",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
@@ -229,7 +229,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.4.5",
+            "locked": "6.7.0",
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
@@ -283,7 +283,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-dependency-base-plugin": {
-            "locked": "0.3.2",
+            "locked": "0.4.0",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
@@ -309,7 +309,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-dependency-base-plugin": {
-            "locked": "0.3.2",
+            "locked": "0.4.0",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
@@ -343,7 +343,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-dependency-base-plugin": {
-            "locked": "0.3.2",
+            "locked": "0.4.0",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
@@ -351,7 +351,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.4.5",
+            "locked": "6.7.0",
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
@@ -385,7 +385,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-dependency-base-plugin": {
-            "locked": "0.3.2",
+            "locked": "0.4.0",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
@@ -393,7 +393,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.4.5",
+            "locked": "6.7.0",
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
@@ -427,7 +427,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-dependency-base-plugin": {
-            "locked": "0.3.2",
+            "locked": "0.4.0",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
@@ -435,7 +435,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.4.5",
+            "locked": "6.7.0",
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
@@ -469,7 +469,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-dependency-base-plugin": {
-            "locked": "0.3.2",
+            "locked": "0.4.0",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
@@ -477,7 +477,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "6.4.5",
+            "locked": "6.7.0",
             "requested": "6.+"
         },
         "org.ajoberstar:grgit": {
