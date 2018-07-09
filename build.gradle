@@ -38,7 +38,7 @@ dependencies {
     compile 'com.netflix.nebula:nebula-gradle-interop:latest.release'
     compile 'com.netflix.nebula:gradle-scm-plugin:latest.release'
     compile 'com.netflix.nebula:gradle-metrics-plugin:5.+', optional
-    compile 'com.netflix.nebula:nebula-dependency-base-plugin:latest.release'
+    compile 'com.netflix.nebula:nebula-dependency-base-plugin:1.0.0-rc.1'
     compile 'org.codehaus.groovy.modules.http-builder:http-builder:0.7.1'
 
     testCompile 'com.netflix.nebula:gradle-git-scm-plugin:latest.release'

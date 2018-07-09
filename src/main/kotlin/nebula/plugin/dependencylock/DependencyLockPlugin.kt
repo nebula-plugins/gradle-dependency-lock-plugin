@@ -21,8 +21,8 @@ import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.*
-import org.gradle.api.internal.artifacts.DefaultModuleVersionSelector
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.util.NameMatcher
@@ -212,8 +212,8 @@ class DependencyLockPlugin : Plugin<Project> {
             val moduleKey = details.toKey()
             val module = selectorsByKey[moduleKey]
             if (module != null) {
-                details.useTarget(module.toMap())
-                insight.addLock(conf.name, moduleKey.toModuleString(), module.version, lockUsed, "nebula.dependency-lock")
+                details.because("${moduleKey.toModuleString()} locked to ${module.version} by nebula.dependency-lock with ${lockUsed}")
+                        .useTarget(module.toMap())
             }
         }
     }
@@ -231,12 +231,14 @@ class DependencyLockPlugin : Plugin<Project> {
                 return ModuleVersionSelectorKey(group, name, version as String)
             }
         }
+
         override fun hashCode(): Int = Objects.hash(group, name)
 
         override fun equals(other: Any?): Boolean = when (other) {
             is ModuleVersionSelectorKey -> group == other.group && name == other.name
             else -> false
         }
+
         fun toMap(): Map<String, String> = mapOf("group" to group, "name" to name, "version" to version)
         fun toModuleString(): String = "$group:$name"
         override fun toString(): String = "$group:$name:$version"

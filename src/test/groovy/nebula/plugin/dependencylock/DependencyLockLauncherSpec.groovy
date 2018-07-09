@@ -150,8 +150,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def result = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo')
 
         then:
-        result.standardOutput.contains 'test.example:foo:1.0.0 (locked to 1.0.0 by dependencies.lock)'
-        result.standardOutput.contains 'nebula.dependency-lock locked with: dependencies.lock'
+        result.standardOutput.contains 'locked to 1.0.0 by nebula.dependency-lock with dependencies.lock'
     }
 
     @Issue('#79')
@@ -1190,6 +1189,8 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         Throwables.getRootCause(result.failure).message == 'Dependency locks cannot be updated. An update was requested for a project dependency (test:sub1)'
     }
 
+    @Ignore('until the next major release of gradle-resolution-rules plugin')
+    // TODO: update gradle-resolution-rules and this test
     def 'generateLock interacts well with resolution rules'() {
         buildFile << """\
             buildscript {
@@ -1324,7 +1325,9 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def generateResult = runTasksSuccessfully('generateLock', 'saveLock')
 
         then: 'all configurations are in the lock file'
-        def configList = generateResult.standardOutput.readLines().find{ it.startsWith("configurations=")}.split("configurations=")[1]
+        def configList = generateResult.standardOutput.readLines().find {
+            it.startsWith("configurations=")
+        }.split("configurations=")[1]
         def configurations = Eval.me(configList)
         def lockFile = new File(projectDir, 'dependencies.lock')
         def json = new JsonSlurper().parseText(lockFile.text)
@@ -1337,7 +1340,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         lockFile.renameTo(originalLockFile)
         lockFile.withWriter { w ->
             originalLockFile.eachLine { line ->
-                w << line.replaceAll( '2\\.4', '2.3' )
+                w << line.replaceAll('2\\.4', '2.3')
             }
         }
         def dependenciesResult = runTasksSuccessfully('dependencies')
