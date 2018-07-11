@@ -16,7 +16,6 @@
 package nebula.plugin.dependencylock
 
 import com.netflix.nebula.dependencybase.DependencyBasePlugin
-import com.netflix.nebula.dependencybase.DependencyManagement
 import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import org.gradle.api.Plugin
@@ -51,15 +50,14 @@ class DependencyLockPlugin : Plugin<Project> {
 
     lateinit var project: Project
     lateinit var lockReader: DependencyLockReader
-    lateinit var insight: DependencyManagement
     lateinit var lockUsed: String
+    val reasons: MutableSet<String> = mutableSetOf()
 
     override fun apply(project: Project) {
         this.project = project
         this.lockReader = DependencyLockReader(project)
 
         project.plugins.apply(DependencyBasePlugin::class.java)
-        this.insight = project.extensions.extraProperties.get("nebulaDependencyBase") as DependencyManagement
 
         val extension = project.extensions.create(EXTENSION_NAME, DependencyLockExtension::class.java)
         var commitExtension = project.rootProject.extensions.findByType(DependencyLockCommitExtension::class.java)
@@ -117,7 +115,7 @@ class DependencyLockPlugin : Plugin<Project> {
         }
 
         lockUsed = dependenciesLock.name
-        insight.addPluginMessage("nebula.dependency-lock locked with: $lockUsed")
+        reasons.add("nebula.dependency-lock locked with: $lockUsed")
 
         if (!DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
             val taskNames = project.gradle.startParameter.taskNames
@@ -192,11 +190,11 @@ class DependencyLockPlugin : Plugin<Project> {
     private fun applyOverrides(conf: Configuration, overrides: Map<*, *>) {
         if (project.hasProperty(OVERRIDE_FILE)) {
             LOGGER.info("Using override file ${project.property(OVERRIDE_FILE)} to lock dependencies")
-            insight.addPluginMessage("nebula.dependency-lock using override file: ${project.property(OVERRIDE_FILE)}")
+            reasons.add("nebula.dependency-lock using override file: ${project.property(OVERRIDE_FILE)}")
         }
         if (project.hasProperty(OVERRIDE)) {
             LOGGER.info("Using command line overrides ${project.property(OVERRIDE)}")
-            insight.addPluginMessage("nebula.dependency-lock using override: ${project.property(OVERRIDE)}")
+            reasons.add("nebula.dependency-lock using override: ${project.property(OVERRIDE)}")
         }
 
         val overrideDeps = overrides.map {
@@ -212,7 +210,8 @@ class DependencyLockPlugin : Plugin<Project> {
             val moduleKey = details.toKey()
             val module = selectorsByKey[moduleKey]
             if (module != null) {
-                details.because("${moduleKey.toModuleString()} locked to ${module.version} by nebula.dependency-lock with ${lockUsed}")
+                details.because("${moduleKey.toModuleString()} locked to ${module.version}\n" +
+                        "\twith reasons: ${reasons.joinToString()}")
                         .useTarget(module.toMap())
             }
         }

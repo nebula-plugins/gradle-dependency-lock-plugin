@@ -150,7 +150,41 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def result = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo')
 
         then:
-        result.standardOutput.contains 'locked to 1.0.0 by nebula.dependency-lock with dependencies.lock'
+        result.standardOutput.contains 'locked to 1.0.0'
+        result.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+    }
+
+    def 'override lock file contributes to dependencyInsight'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << OLD_FOO_LOCK
+
+        def dependenciesLockOverride = new File(projectDir, 'override.lock')
+        dependenciesLockOverride << '''
+            { "test.example:foo": "2.0.0" }
+            '''.stripIndent()
+
+        buildFile << SPECIFIC_BUILD_GRADLE
+
+        when:
+        def result = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo', '-PdependencyLock.overrideFile=override.lock')
+
+        then:
+        result.standardOutput.contains 'locked to 2.0.0'
+        result.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock, nebula.dependency-lock using override file: override.lock')
+    }
+
+    def 'override lock property contributes to dependencyInsight'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << OLD_FOO_LOCK
+
+        buildFile << SPECIFIC_BUILD_GRADLE
+
+        when:
+        def result = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo', '-PdependencyLock.override=test.example:foo:2.0.1')
+
+        then:
+        result.standardOutput.contains 'locked to 2.0.1'
+        result.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock, nebula.dependency-lock using override: test.example:foo:2.0.1')
     }
 
     @Issue('#79')
