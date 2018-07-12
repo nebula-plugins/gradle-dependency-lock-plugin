@@ -36,6 +36,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             compile 'test.example:foo:1.0.1'
+            compile 'test.example:baz:1.0.0'
         }
     """.stripIndent()
 
@@ -147,11 +148,19 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        def result = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo')
+        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo')
 
         then:
-        result.standardOutput.contains 'locked to 1.0.0'
-        result.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+        fooResult.standardOutput.contains 'locked to 1.0.0'
+        fooResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+
+        when:
+        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'baz')
+
+        then:
+        !bazResult.standardOutput.contains('locked')
+        !bazResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+        bazResult.standardOutput.contains('baz:1.0.0')
     }
 
     def 'override lock file contributes to dependencyInsight'() {
@@ -166,11 +175,21 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        def result = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo', '-PdependencyLock.overrideFile=override.lock')
+        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo', '-PdependencyLock.overrideFile=override.lock')
 
         then:
-        result.standardOutput.contains 'locked to 2.0.0'
-        result.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock, nebula.dependency-lock using override file: override.lock')
+        fooResult.standardOutput.contains 'locked to 2.0.0'
+        fooResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+        fooResult.standardOutput.contains('nebula.dependency-lock using override file: override.lock')
+
+        when:
+        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'baz', '-PdependencyLock.overrideFile=override.lock')
+
+        then:
+        !bazResult.standardOutput.contains('locked')
+        !bazResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+        !bazResult.standardOutput.contains('nebula.dependency-lock using override file: override.lock')
+        bazResult.standardOutput.contains('baz:1.0.0')
     }
 
     def 'override lock property contributes to dependencyInsight'() {
@@ -180,11 +199,21 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        def result = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo', '-PdependencyLock.override=test.example:foo:2.0.1')
+        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo', '-PdependencyLock.override=test.example:foo:2.0.1')
 
         then:
-        result.standardOutput.contains 'locked to 2.0.1'
-        result.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock, nebula.dependency-lock using override: test.example:foo:2.0.1')
+        fooResult.standardOutput.contains 'locked to 2.0.1'
+        fooResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+        fooResult.standardOutput.contains('nebula.dependency-lock using override: test.example:foo:2.0.1')
+
+        when:
+        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'baz', '-PdependencyLock.override=test.example:foo:2.0.1')
+
+        then:
+        !bazResult.standardOutput.contains('locked')
+        !bazResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+        !bazResult.standardOutput.contains('nebula.dependency-lock using override: test.example:foo:2.0.1')
+        bazResult.standardOutput.contains('baz:1.0.0')
     }
 
     @Issue('#79')
