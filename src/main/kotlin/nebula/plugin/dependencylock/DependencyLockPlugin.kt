@@ -15,14 +15,12 @@
  */
 package nebula.plugin.dependencylock
 
-import com.netflix.nebula.dependencybase.DependencyBasePlugin
-import com.netflix.nebula.dependencybase.DependencyManagement
 import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.*
-import org.gradle.api.internal.artifacts.DefaultModuleVersionSelector
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.util.NameMatcher
@@ -51,15 +49,12 @@ class DependencyLockPlugin : Plugin<Project> {
 
     lateinit var project: Project
     lateinit var lockReader: DependencyLockReader
-    lateinit var insight: DependencyManagement
     lateinit var lockUsed: String
+    val reasons: MutableSet<String> = mutableSetOf()
 
     override fun apply(project: Project) {
         this.project = project
         this.lockReader = DependencyLockReader(project)
-
-        project.plugins.apply(DependencyBasePlugin::class.java)
-        this.insight = project.extensions.extraProperties.get("nebulaDependencyBase") as DependencyManagement
 
         val extension = project.extensions.create(EXTENSION_NAME, DependencyLockExtension::class.java)
         var commitExtension = project.rootProject.extensions.findByType(DependencyLockCommitExtension::class.java)
@@ -117,7 +112,7 @@ class DependencyLockPlugin : Plugin<Project> {
         }
 
         lockUsed = dependenciesLock.name
-        insight.addPluginMessage("nebula.dependency-lock locked with: $lockUsed")
+        reasons.add("nebula.dependency-lock locked with: $lockUsed")
 
         if (!DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
             val taskNames = project.gradle.startParameter.taskNames
@@ -192,11 +187,11 @@ class DependencyLockPlugin : Plugin<Project> {
     private fun applyOverrides(conf: Configuration, overrides: Map<*, *>) {
         if (project.hasProperty(OVERRIDE_FILE)) {
             LOGGER.info("Using override file ${project.property(OVERRIDE_FILE)} to lock dependencies")
-            insight.addPluginMessage("nebula.dependency-lock using override file: ${project.property(OVERRIDE_FILE)}")
+            reasons.add("nebula.dependency-lock using override file: ${project.property(OVERRIDE_FILE)}")
         }
         if (project.hasProperty(OVERRIDE)) {
             LOGGER.info("Using command line overrides ${project.property(OVERRIDE)}")
-            insight.addPluginMessage("nebula.dependency-lock using override: ${project.property(OVERRIDE)}")
+            reasons.add("nebula.dependency-lock using override: ${project.property(OVERRIDE)}")
         }
 
         val overrideDeps = overrides.map {
@@ -212,8 +207,9 @@ class DependencyLockPlugin : Plugin<Project> {
             val moduleKey = details.toKey()
             val module = selectorsByKey[moduleKey]
             if (module != null) {
-                details.useTarget(module.toMap())
-                insight.addLock(conf.name, moduleKey.toModuleString(), module.version, lockUsed, "nebula.dependency-lock")
+                details.because("${moduleKey.toModuleString()} locked to ${module.version}\n" +
+                        "\twith reasons: ${reasons.joinToString()}")
+                        .useTarget(module.toMap())
             }
         }
     }
@@ -231,12 +227,14 @@ class DependencyLockPlugin : Plugin<Project> {
                 return ModuleVersionSelectorKey(group, name, version as String)
             }
         }
+
         override fun hashCode(): Int = Objects.hash(group, name)
 
         override fun equals(other: Any?): Boolean = when (other) {
             is ModuleVersionSelectorKey -> group == other.group && name == other.name
             else -> false
         }
+
         fun toMap(): Map<String, String> = mapOf("group" to group, "name" to name, "version" to version)
         fun toModuleString(): String = "$group:$name"
         override fun toString(): String = "$group:$name:$version"

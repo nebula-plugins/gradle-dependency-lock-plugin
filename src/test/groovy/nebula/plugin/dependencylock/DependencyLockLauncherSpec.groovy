@@ -36,6 +36,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             compile 'test.example:foo:1.0.1'
+            compile 'test.example:baz:1.0.0'
         }
     """.stripIndent()
 
@@ -147,11 +148,72 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        def result = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo')
+        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo')
 
         then:
-        result.standardOutput.contains 'test.example:foo:1.0.0 (locked to 1.0.0 by dependencies.lock)'
-        result.standardOutput.contains 'nebula.dependency-lock locked with: dependencies.lock'
+        fooResult.standardOutput.contains 'locked to 1.0.0'
+        fooResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+
+        when:
+        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'baz')
+
+        then:
+        !bazResult.standardOutput.contains('locked')
+        !bazResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+        bazResult.standardOutput.contains('baz:1.0.0')
+    }
+
+    def 'override lock file contributes to dependencyInsight'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << OLD_FOO_LOCK
+
+        def dependenciesLockOverride = new File(projectDir, 'override.lock')
+        dependenciesLockOverride << '''
+            { "test.example:foo": "2.0.0" }
+            '''.stripIndent()
+
+        buildFile << SPECIFIC_BUILD_GRADLE
+
+        when:
+        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo', '-PdependencyLock.overrideFile=override.lock')
+
+        then:
+        fooResult.standardOutput.contains 'locked to 2.0.0'
+        fooResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+        fooResult.standardOutput.contains('nebula.dependency-lock using override file: override.lock')
+
+        when:
+        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'baz', '-PdependencyLock.overrideFile=override.lock')
+
+        then:
+        !bazResult.standardOutput.contains('locked')
+        !bazResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+        !bazResult.standardOutput.contains('nebula.dependency-lock using override file: override.lock')
+        bazResult.standardOutput.contains('baz:1.0.0')
+    }
+
+    def 'override lock property contributes to dependencyInsight'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << OLD_FOO_LOCK
+
+        buildFile << SPECIFIC_BUILD_GRADLE
+
+        when:
+        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo', '-PdependencyLock.override=test.example:foo:2.0.1')
+
+        then:
+        fooResult.standardOutput.contains 'locked to 2.0.1'
+        fooResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+        fooResult.standardOutput.contains('nebula.dependency-lock using override: test.example:foo:2.0.1')
+
+        when:
+        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'baz', '-PdependencyLock.override=test.example:foo:2.0.1')
+
+        then:
+        !bazResult.standardOutput.contains('locked')
+        !bazResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+        !bazResult.standardOutput.contains('nebula.dependency-lock using override: test.example:foo:2.0.1')
+        bazResult.standardOutput.contains('baz:1.0.0')
     }
 
     @Issue('#79')
@@ -1190,6 +1252,8 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         Throwables.getRootCause(result.failure).message == 'Dependency locks cannot be updated. An update was requested for a project dependency (test:sub1)'
     }
 
+    @Ignore('until the next major release of gradle-resolution-rules plugin')
+    // TODO: update gradle-resolution-rules and this test
     def 'generateLock interacts well with resolution rules'() {
         buildFile << """\
             buildscript {
@@ -1324,7 +1388,9 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def generateResult = runTasksSuccessfully('generateLock', 'saveLock')
 
         then: 'all configurations are in the lock file'
-        def configList = generateResult.standardOutput.readLines().find{ it.startsWith("configurations=")}.split("configurations=")[1]
+        def configList = generateResult.standardOutput.readLines().find {
+            it.startsWith("configurations=")
+        }.split("configurations=")[1]
         def configurations = Eval.me(configList)
         def lockFile = new File(projectDir, 'dependencies.lock')
         def json = new JsonSlurper().parseText(lockFile.text)
@@ -1337,7 +1403,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         lockFile.renameTo(originalLockFile)
         lockFile.withWriter { w ->
             originalLockFile.eachLine { line ->
-                w << line.replaceAll( '2\\.4', '2.3' )
+                w << line.replaceAll('2\\.4', '2.3')
             }
         }
         def dependenciesResult = runTasksSuccessfully('dependencies')
