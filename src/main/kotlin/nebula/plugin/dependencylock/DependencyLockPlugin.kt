@@ -15,7 +15,6 @@
  */
 package nebula.plugin.dependencylock
 
-import com.netflix.nebula.dependencybase.DependencyBasePlugin
 import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import org.gradle.api.Plugin
@@ -56,8 +55,6 @@ class DependencyLockPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         this.project = project
         this.lockReader = DependencyLockReader(project)
-
-        project.plugins.apply(DependencyBasePlugin::class.java)
 
         val extension = project.extensions.create(EXTENSION_NAME, DependencyLockExtension::class.java)
         var commitExtension = project.rootProject.extensions.findByType(DependencyLockCommitExtension::class.java)
