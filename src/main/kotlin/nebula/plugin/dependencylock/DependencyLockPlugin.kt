@@ -217,7 +217,7 @@ class DependencyLockPlugin : Plugin<Project> {
     private fun DependencyResolveDetails.toKey(): ModuleVersionSelectorKey =
             ModuleVersionSelectorKey(requested.group, requested.name, requested.version)
 
-    private class ModuleVersionSelectorKey(val group: String, val name: String, val version: String) {
+    private class ModuleVersionSelectorKey(val group: String, val name: String, val version: String?) {
         companion object {
             fun create(notation: Any?, version: Any?): ModuleVersionSelectorKey {
                 notation as String
@@ -235,7 +235,7 @@ class DependencyLockPlugin : Plugin<Project> {
             else -> false
         }
 
-        fun toMap(): Map<String, String> = mapOf("group" to group, "name" to name, "version" to version)
+        fun toMap(): Map<String, String?> = mapOf("group" to group, "name" to name, "version" to version)
         fun toModuleString(): String = "$group:$name"
         override fun toString(): String = "$group:$name:$version"
     }
