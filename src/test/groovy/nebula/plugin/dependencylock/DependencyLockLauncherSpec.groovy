@@ -1252,16 +1252,15 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         Throwables.getRootCause(result.failure).message == 'Dependency locks cannot be updated. An update was requested for a project dependency (test:sub1)'
     }
 
-    @Ignore('until the next major release of gradle-resolution-rules plugin')
     // TODO: update gradle-resolution-rules and this test
     def 'generateLock interacts well with resolution rules'() {
         buildFile << """\
             buildscript {
                 repositories {
-                    maven { url "https://plugins.gradle.org/m2/" }
+                    jcenter()
                 }
                 dependencies {
-                    classpath "com.netflix.nebula:gradle-resolution-rules-plugin:latest.release"
+                    classpath "com.netflix.nebula:gradle-resolution-rules-plugin:6.0.0-rc.1"
                 }
             }
 
