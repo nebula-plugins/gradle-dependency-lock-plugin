@@ -1,1 +1,4 @@
 rootProject.name='gradle-dependency-lock-plugin'
+
+enableFeaturePreview('STABLE_PUBLISHING')
+
