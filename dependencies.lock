@@ -16,9 +16,9 @@
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
-        "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+            "locked": "1.2.61",
+            "requested": "1.2.61"
         }
     },
     "compileClasspath": {
@@ -38,9 +38,9 @@
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
-        "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+            "locked": "1.2.61",
+            "requested": "1.2.61"
         }
     },
     "default": {
@@ -60,9 +60,9 @@
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
-        "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+            "locked": "1.2.61",
+            "requested": "1.2.61"
         }
     },
     "integTestCompile": {
@@ -98,9 +98,9 @@
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
-        "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+            "locked": "1.2.61",
+            "requested": "1.2.61"
         }
     },
     "integTestCompileClasspath": {
@@ -136,9 +136,9 @@
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
-        "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+            "locked": "1.2.61",
+            "requested": "1.2.61"
         }
     },
     "integTestRuntime": {
@@ -174,9 +174,9 @@
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
-        "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+            "locked": "1.2.61",
+            "requested": "1.2.61"
         }
     },
     "integTestRuntimeClasspath": {
@@ -212,9 +212,9 @@
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
-        "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+            "locked": "1.2.61",
+            "requested": "1.2.61"
         }
     },
     "jacocoAgent": {
@@ -227,22 +227,15 @@
             "locked": "0.8.1"
         }
     },
-    "kapt": {
-        "org.jetbrains.kotlin:kotlin-annotation-processing-gradle": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+    "kotlinCompilerClasspath": {
+        "org.jetbrains.kotlin:kotlin-compiler-embeddable": {
+            "locked": "1.2.61"
         }
     },
-    "kaptIntegTest": {
-        "org.jetbrains.kotlin:kotlin-annotation-processing-gradle": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
-        }
-    },
-    "kaptTest": {
-        "org.jetbrains.kotlin:kotlin-annotation-processing-gradle": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+    "kotlinCompilerPluginClasspath": {
+        "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable": {
+            "locked": "1.2.61",
+            "requested": "1.2.61"
         }
     },
     "runtime": {
@@ -262,9 +255,9 @@
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
-        "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+            "locked": "1.2.61",
+            "requested": "1.2.61"
         }
     },
     "runtimeClasspath": {
@@ -284,9 +277,9 @@
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
-        "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+            "locked": "1.2.61",
+            "requested": "1.2.61"
         }
     },
     "testCompile": {
@@ -322,9 +315,9 @@
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
-        "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+            "locked": "1.2.61",
+            "requested": "1.2.61"
         }
     },
     "testCompileClasspath": {
@@ -360,9 +353,9 @@
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
-        "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+            "locked": "1.2.61",
+            "requested": "1.2.61"
         }
     },
     "testRuntime": {
@@ -398,9 +391,9 @@
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
-        "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+            "locked": "1.2.61",
+            "requested": "1.2.61"
         }
     },
     "testRuntimeClasspath": {
@@ -436,9 +429,9 @@
             "locked": "0.7.1",
             "requested": "0.7.1"
         },
-        "org.jetbrains.kotlin:kotlin-stdlib-jre7": {
-            "locked": "1.2.10",
-            "requested": "1.2.10"
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7": {
+            "locked": "1.2.61",
+            "requested": "1.2.61"
         }
     }
 }
