@@ -16,7 +16,7 @@
 plugins {
     id 'nebula.plugin-plugin' version '8.0.0'
     id 'nebula.optional-base' version '3.1.0'
-    id 'nebula.kotlin' version '1.2.61'
+    id 'nebula.kotlin' version '1.2.70'
 }
 
 description 'Gradle plugin to allow locking of dynamic dependency versions'
