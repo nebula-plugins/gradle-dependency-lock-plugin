@@ -218,7 +218,7 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
     }
 
     private finishGitSetup(List<String> patterns) {
-        def project = Grgit.open(projectDir.absolutePath)
+        def project = Grgit.open(dir: projectDir.absolutePath)
         project.reset(commit: 'HEAD', mode: ResetOp.Mode.SOFT)
         project.add(patterns: patterns)
         project.commit(message: 'test setup')

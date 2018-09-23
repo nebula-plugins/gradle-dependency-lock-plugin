@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 plugins {
-    id 'nebula.plugin-plugin' version '8.1.0'
+    id 'nebula.plugin-plugin' version '8.1.2'
     id 'nebula.optional-base' version '3.1.0'
-    id 'nebula.kotlin' version '1.2.70'
+    id 'nebula.kotlin' version '1.2.70-3'
 }
 
 description 'Gradle plugin to allow locking of dynamic dependency versions'
@@ -41,7 +41,9 @@ dependencies {
     compile 'org.codehaus.groovy.modules.http-builder:http-builder:0.7.1'
 
     testCompile 'com.netflix.nebula:gradle-git-scm-plugin:latest.release'
-    testCompile 'org.ajoberstar:grgit:1.+'
+    testCompile ('org.ajoberstar.grgit:grgit-gradle:3.0.0-beta.1') {
+        exclude group: 'org.codehaus.groovy', module: 'groovy'
+    }
 
     // resolution rules requires at least 2.8.1, and currently DependencyLockLauncherSpec resolution-rules integration
     // test will fail without this
