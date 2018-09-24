@@ -9,7 +9,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
-            "locked": "1.0.1",
+            "locked": "1.0.2",
             "requested": "latest.release"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
@@ -31,7 +31,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
-            "locked": "1.0.1",
+            "locked": "1.0.2",
             "requested": "latest.release"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
@@ -53,7 +53,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
-            "locked": "1.0.1",
+            "locked": "1.0.2",
             "requested": "latest.release"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
@@ -75,7 +75,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
-            "locked": "1.0.1",
+            "locked": "1.0.2",
             "requested": "latest.release"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
@@ -105,14 +105,14 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
-            "locked": "1.0.1",
+            "locked": "1.0.2",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
             "locked": "7.1.0",
             "requested": "7.+"
         },
-        "org.ajoberstar.grgit:grgit-gradle": {
+        "org.ajoberstar.grgit:grgit-core": {
             "locked": "3.0.0-beta.1",
             "requested": "3.0.0-beta.1"
         },
@@ -143,14 +143,14 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
-            "locked": "1.0.1",
+            "locked": "1.0.2",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
             "locked": "7.1.0",
             "requested": "7.+"
         },
-        "org.ajoberstar.grgit:grgit-gradle": {
+        "org.ajoberstar.grgit:grgit-core": {
             "locked": "3.0.0-beta.1",
             "requested": "3.0.0-beta.1"
         },
@@ -181,14 +181,14 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
-            "locked": "1.0.1",
+            "locked": "1.0.2",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
             "locked": "7.1.0",
             "requested": "7.+"
         },
-        "org.ajoberstar.grgit:grgit-gradle": {
+        "org.ajoberstar.grgit:grgit-core": {
             "locked": "3.0.0-beta.1",
             "requested": "3.0.0-beta.1"
         },
@@ -219,14 +219,14 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
-            "locked": "1.0.1",
+            "locked": "1.0.2",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
             "locked": "7.1.0",
             "requested": "7.+"
         },
-        "org.ajoberstar.grgit:grgit-gradle": {
+        "org.ajoberstar.grgit:grgit-core": {
             "locked": "3.0.0-beta.1",
             "requested": "3.0.0-beta.1"
         },
@@ -241,12 +241,12 @@
     },
     "jacocoAgent": {
         "org.jacoco:org.jacoco.agent": {
-            "locked": "0.8.1"
+            "locked": "0.8.2"
         }
     },
     "jacocoAnt": {
         "org.jacoco:org.jacoco.ant": {
-            "locked": "0.8.1"
+            "locked": "0.8.2"
         }
     },
     "kotlinCompilerClasspath": {
@@ -270,7 +270,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
-            "locked": "1.0.1",
+            "locked": "1.0.2",
             "requested": "latest.release"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
@@ -292,7 +292,7 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
-            "locked": "1.0.1",
+            "locked": "1.0.2",
             "requested": "latest.release"
         },
         "org.codehaus.groovy.modules.http-builder:http-builder": {
@@ -322,14 +322,14 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
-            "locked": "1.0.1",
+            "locked": "1.0.2",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
             "locked": "7.1.0",
             "requested": "7.+"
         },
-        "org.ajoberstar.grgit:grgit-gradle": {
+        "org.ajoberstar.grgit:grgit-core": {
             "locked": "3.0.0-beta.1",
             "requested": "3.0.0-beta.1"
         },
@@ -360,14 +360,14 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
-            "locked": "1.0.1",
+            "locked": "1.0.2",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
             "locked": "7.1.0",
             "requested": "7.+"
         },
-        "org.ajoberstar.grgit:grgit-gradle": {
+        "org.ajoberstar.grgit:grgit-core": {
             "locked": "3.0.0-beta.1",
             "requested": "3.0.0-beta.1"
         },
@@ -398,14 +398,14 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
-            "locked": "1.0.1",
+            "locked": "1.0.2",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
             "locked": "7.1.0",
             "requested": "7.+"
         },
-        "org.ajoberstar.grgit:grgit-gradle": {
+        "org.ajoberstar.grgit:grgit-core": {
             "locked": "3.0.0-beta.1",
             "requested": "3.0.0-beta.1"
         },
@@ -436,14 +436,14 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-gradle-interop": {
-            "locked": "1.0.1",
+            "locked": "1.0.2",
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
             "locked": "7.1.0",
             "requested": "7.+"
         },
-        "org.ajoberstar.grgit:grgit-gradle": {
+        "org.ajoberstar.grgit:grgit-core": {
             "locked": "3.0.0-beta.1",
             "requested": "3.0.0-beta.1"
         },
