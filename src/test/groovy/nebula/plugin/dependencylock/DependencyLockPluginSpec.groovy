@@ -360,7 +360,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
                     },
                     "test.example:foo": {
                         "locked": "2.0.0",
-                        "requested": "2.+",
+                        "requested": "2.+"
                     },
                     "test.nebula:sub1": {
                         "project": true,
