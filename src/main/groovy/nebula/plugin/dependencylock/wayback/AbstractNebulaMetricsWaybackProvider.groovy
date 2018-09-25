@@ -81,12 +81,17 @@ abstract class AbstractNebulaMetricsWaybackProvider extends WaybackProvider {
          */
         Map<String, String> projectDependencies = hit?.'resolved-dependencies'?.find { it.key.startsWith(project.name) }?.value
         return ((projectDependencies?.collectEntries { k, v ->
-            [(StringUtils.uncapitalize(StringUtils.substringAfter(k, 'Resolved-Dependencies-'))) :
+            [(uncapitalize(StringUtils.substringAfter(k, 'Resolved-Dependencies-'))) :
                 v.split(',').collect { GradleDependency.fromConstant(it) }.toSet()]
         } ?: [:]) as Map<String, Set<GradleDependency>>).withDefault {[] as Set}
     }
 
     protected static String getIndexName(Project project, DateTime dt) {
         return project.extensions.findByType(MetricsPluginExtension).getIndexName(dt)
+    }
+
+    protected static String uncapitalize(String str) {
+        int strLen
+        return str != null && (strLen = str.length()) != 0 ? (new StringBuilder(strLen)).append(Character.toLowerCase(str.charAt(0))).append(str.substring(1)).toString() : str
     }
 }
