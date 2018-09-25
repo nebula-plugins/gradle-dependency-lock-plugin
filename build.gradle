@@ -35,6 +35,8 @@ contacts {
 }
 
 dependencies {
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.9.4'
+    compile 'joda-time:joda-time:2.10'
     compile 'com.netflix.nebula:nebula-gradle-interop:latest.release'
     compile 'com.netflix.nebula:gradle-scm-plugin:latest.release'
     compile 'com.netflix.nebula:gradle-metrics-plugin:5.+', optional

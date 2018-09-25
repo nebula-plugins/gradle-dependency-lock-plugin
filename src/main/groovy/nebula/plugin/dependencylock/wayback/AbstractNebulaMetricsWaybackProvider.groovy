@@ -1,16 +1,8 @@
 package nebula.plugin.dependencylock.wayback
 
-import com.google.gson.FieldNamingPolicy
-import com.google.gson.GsonBuilder
 import groovy.transform.Memoized
 import groovyx.net.http.HttpResponseException
 import groovyx.net.http.RESTClient
-import io.searchbox.client.JestClient
-import io.searchbox.client.JestClientFactory
-import io.searchbox.client.config.HttpClientConfig
-import io.searchbox.client.http.JestHttpClient
-import io.searchbox.core.Search
-import io.searchbox.core.SearchResult
 import nebula.plugin.dependencylock.model.GradleDependency
 import nebula.plugin.metrics.MetricsPluginExtension
 import net.logstash.logback.encoder.org.apache.commons.lang.StringUtils
