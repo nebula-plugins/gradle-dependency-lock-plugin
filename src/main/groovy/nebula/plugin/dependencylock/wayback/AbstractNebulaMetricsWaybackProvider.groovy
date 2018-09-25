@@ -4,8 +4,8 @@ import groovy.transform.Memoized
 import groovyx.net.http.HttpResponseException
 import groovyx.net.http.RESTClient
 import nebula.plugin.dependencylock.model.GradleDependency
+import nebula.plugin.dependencylock.utils.StringUtils
 import nebula.plugin.metrics.MetricsPluginExtension
-import net.logstash.logback.encoder.org.apache.commons.lang.StringUtils
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.joda.time.DateTime
@@ -81,17 +81,12 @@ abstract class AbstractNebulaMetricsWaybackProvider extends WaybackProvider {
          */
         Map<String, String> projectDependencies = hit?.'resolved-dependencies'?.find { it.key.startsWith(project.name) }?.value
         return ((projectDependencies?.collectEntries { k, v ->
-            [(uncapitalize(StringUtils.substringAfter(k, 'Resolved-Dependencies-'))) :
+            [(StringUtils.uncapitalize(StringUtils.substringAfter(k, 'Resolved-Dependencies-'))) :
                 v.split(',').collect { GradleDependency.fromConstant(it) }.toSet()]
         } ?: [:]) as Map<String, Set<GradleDependency>>).withDefault {[] as Set}
     }
 
     protected static String getIndexName(Project project, DateTime dt) {
         return project.extensions.findByType(MetricsPluginExtension).getIndexName(dt)
-    }
-
-    protected static String uncapitalize(String str) {
-        int strLen
-        return str != null && (strLen = str.length()) != 0 ? (new StringBuilder(strLen)).append(Character.toLowerCase(str.charAt(0))).append(str.substring(1)).toString() : str
     }
 }
