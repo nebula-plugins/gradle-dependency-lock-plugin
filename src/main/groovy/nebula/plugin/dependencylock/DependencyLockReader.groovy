@@ -1,7 +1,7 @@
 package nebula.plugin.dependencylock
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import groovy.json.JsonSlurper
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.Moshi
 import groovy.transform.TupleConstructor
 import org.gradle.api.GradleException
 import org.gradle.api.Project
@@ -14,8 +14,8 @@ import static DependencyLockTaskConfigurer.GLOBAL_LOCK_CONFIG
 @TupleConstructor
 class DependencyLockReader {
     private static final Logger logger = Logging.getLogger(DependencyLockReader)
-    private static final ObjectMapper mapper = new ObjectMapper()
-
+    private static final Moshi moshi = new Moshi.Builder().build()
+    private static final JsonAdapter<Map> jsonAdapter = moshi.adapter(Map)
     Project project
 
     DependencyLockReader(Project project) {
@@ -84,7 +84,7 @@ class DependencyLockReader {
 
     private static Map parseLockFile(File lock) {
         try {
-            return mapper.readValue(lock.text, HashMap)
+            return jsonAdapter.fromJson(lock.text)
         } catch (ex) {
             logger.debug('Unreadable json file: ' + lock.text)
             logger.error('JSON unreadable')
