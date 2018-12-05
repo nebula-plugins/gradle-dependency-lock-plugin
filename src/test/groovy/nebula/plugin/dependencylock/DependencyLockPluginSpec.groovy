@@ -429,7 +429,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.with {
             buildscript {
                 repositories { jcenter() }
-                dependencies { classpath 'com.netflix.nebula:gradle-metrics-plugin:5.+' }
+                dependencies { classpath 'com.netflix.nebula:gradle-metrics-plugin:8.+' }
             }
 
             apply plugin: 'nebula.metrics'
@@ -446,7 +446,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.with {
             buildscript {
                 repositories { jcenter() }
-                dependencies { classpath 'com.netflix.nebula:gradle-metrics-plugin:5.+' }
+                dependencies { classpath 'com.netflix.nebula:gradle-metrics-plugin:8.+' }
             }
 
             apply plugin: 'nebula.metrics'
