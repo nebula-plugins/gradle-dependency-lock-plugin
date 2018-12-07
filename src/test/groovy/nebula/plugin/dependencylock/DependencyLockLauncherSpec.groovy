@@ -1484,7 +1484,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         noExceptionThrown()
 
         where:
-        plugin << ['id \'checkstyle\'', 'id \'findbugs\'', 'id \'net.saliman.cobertura\' version \'2.5.0\'', 'id \'jacoco\'']
+        plugin << ['id \'checkstyle\'', 'id \'findbugs\'', 'id \'jacoco\''] // removed 'id \'net.saliman.cobertura\' version \'2.5.0\'', because it isn't gradle 5.1 compatible yet
     }
 
     def 'handle generating a lock with circular dependencies depending on a jar that depends on us'() {
