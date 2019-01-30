@@ -19,6 +19,7 @@ plugins {
     id 'nebula.plugin-plugin' version '9.2.4'
     id 'nebula.optional-base' version '3.1.0'
     id 'nebula.kotlin' version '1.3.11'
+    id 'java-gradle-plugin'
 }
 
 description 'Gradle plugin to allow locking of dynamic dependency versions'
@@ -49,6 +50,7 @@ dependencies {
     compile 'org.codehaus.groovy.modules.http-builder:http-builder:0.7.1'
 
     testCompile 'com.netflix.nebula:gradle-git-scm-plugin:latest.release'
+    testImplementation gradleTestKit()
     testCompile ('org.ajoberstar.grgit:grgit-core:3.0.0-beta.1') {
         exclude group: 'org.codehaus.groovy', module: 'groovy'
     }
@@ -56,6 +58,15 @@ dependencies {
     // resolution rules requires at least 2.8.1, and currently DependencyLockLauncherSpec resolution-rules integration
     // test will fail without this
     testCompile 'com.fasterxml.jackson.core:jackson-databind:2.8.+'
+}
+
+gradlePlugin {
+    plugins {
+        dependencyLock {
+            id = 'nebula.dependency-lock'
+            implementationClass = 'nebula.plugin.dependencylock.DependencyLockPlugin'
+        }
+    }
 }
 
 pluginBundle {
@@ -88,3 +99,7 @@ if (GradleVersion.version(project.gradle.gradleVersion).compareTo(GradleVersion.
 compileKotlin.dependsOn compileGroovy
 compileKotlin.classpath += files(compileGroovy.destinationDir)
 classes.dependsOn compileKotlin
+
+test {
+    forkEvery = 1
+}

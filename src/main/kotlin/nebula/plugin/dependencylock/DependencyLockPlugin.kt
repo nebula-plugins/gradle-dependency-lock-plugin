@@ -17,6 +17,8 @@ package nebula.plugin.dependencylock
 
 import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
+import nebula.plugin.dependencylock.utils.CoreLocking
+import org.gradle.api.BuildCancelledException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -28,6 +30,9 @@ import java.io.File
 import java.util.*
 
 class DependencyLockPlugin : Plugin<Project> {
+
+    private val logger: Logger = Logging.getLogger(DependencyLockPlugin::class.java)
+
     companion object {
         const val EXTENSION_NAME = "dependencyLock"
         const val COMMIT_EXTENSION_NAME = "commitDependencyLock"
@@ -61,33 +66,47 @@ class DependencyLockPlugin : Plugin<Project> {
         if (commitExtension == null) {
             commitExtension = project.rootProject.extensions.create(COMMIT_EXTENSION_NAME, DependencyLockCommitExtension::class.java)
         }
-
         val overrides = lockReader.readOverrides()
         val globalLockFilename = project.findStringProperty(GLOBAL_LOCK_FILE)
         val lockFilename = DependencyLockTaskConfigurer(project).configureTasks(globalLockFilename, extension, commitExtension, overrides)
+        if (CoreLocking.isCoreLockingEnabled()) {
+            logger.warn("${project.name}: coreLockingSupport feature enabled")
+            project.dependencyLocking {
+                it.lockAllConfigurations()
+            }
+            val lockFile = File(project.projectDir, extension.lockFile)
+            if (lockFile.exists()) {
+                throw BuildCancelledException("Legacy locks are not supported with core locking. Please remove ${lockFile.absolutePath}")
+            }
+            val globalLockFile = File(project.projectDir, extension.globalLockFile)
+            if (globalLockFile.exists()) {
+                throw BuildCancelledException("Legacy global locks are not supported with core locking. Please remove ${globalLockFile.absolutePath}")
+            }
 
-        val lockAfterEvaluating = if (project.hasProperty(LOCK_AFTER_EVALUATING)) project.property(LOCK_AFTER_EVALUATING).toString().toBoolean() else extension.lockAfterEvaluating
-        if (lockAfterEvaluating) {
-            LOGGER.info("Delaying dependency lock apply until beforeResolve ($LOCK_AFTER_EVALUATING set to true)")
         } else {
-            LOGGER.info("Applying dependency lock during plugin apply ($LOCK_AFTER_EVALUATING set to false)")
-        }
-
-        // We do this twice to catch resolves that happen during build evaluation, and ensure that we clobber configurations made during evaluation
-        disableCachingForGenerateLock()
-        project.gradle.taskGraph.whenReady(groovyClosure {
-            disableCachingForGenerateLock()
-        })
-
-        project.configurations.all({ conf ->
+            val lockAfterEvaluating = if (project.hasProperty(LOCK_AFTER_EVALUATING)) project.property(LOCK_AFTER_EVALUATING).toString().toBoolean() else extension.lockAfterEvaluating
             if (lockAfterEvaluating) {
-                conf.onResolve {
+                LOGGER.info("Delaying dependency lock apply until beforeResolve ($LOCK_AFTER_EVALUATING set to true)")
+            } else {
+                LOGGER.info("Applying dependency lock during plugin apply ($LOCK_AFTER_EVALUATING set to false)")
+            }
+
+            // We do this twice to catch resolves that happen during build evaluation, and ensure that we clobber configurations made during evaluation
+            disableCachingForGenerateLock()
+            project.gradle.taskGraph.whenReady(groovyClosure {
+                disableCachingForGenerateLock()
+            })
+
+            project.configurations.all({ conf ->
+                if (lockAfterEvaluating) {
+                    conf.onResolve {
+                        maybeApplyLock(conf, extension, overrides, globalLockFilename, lockFilename)
+                    }
+                } else {
                     maybeApplyLock(conf, extension, overrides, globalLockFilename, lockFilename)
                 }
-            } else {
-                maybeApplyLock(conf, extension, overrides, globalLockFilename, lockFilename)
-            }
-        })
+            })
+        }
     }
 
     private fun disableCachingForGenerateLock() {

@@ -15,10 +15,23 @@
  */
 package nebula.plugin.dependencylock.tasks
 
+import nebula.plugin.dependencylock.utils.CoreLocking
+import org.gradle.api.BuildCancelledException
+import org.gradle.api.tasks.TaskAction
+
 /**
  * The update task is a generate task, it simply reads in the old locked dependencies and then overwrites the desired
  * dependencies per user request.
  */
 class UpdateLockTask extends GenerateLockTask {
     String description = 'Apply updates to a preexisting lock file and write to build/<specified name>'
+
+    @TaskAction
+    @Override
+    void lock() {
+        if (CoreLocking.isCoreLockingEnabled()) {
+            throw new BuildCancelledException("updateLock is not supported with core locking. Please use `./gradlew dependencies --update-locks group1:module1,group2:module2`")
+        }
+        super.lock()
+    }
 }
