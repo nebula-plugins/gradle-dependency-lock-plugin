@@ -21,7 +21,9 @@ import nebula.plugin.dependencylock.DependencyLockWriter
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
+import nebula.plugin.dependencylock.utils.CoreLocking
 import nebula.plugin.dependencylock.wayback.WaybackProvider
+import org.gradle.api.BuildCancelledException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -42,6 +44,9 @@ class GenerateLockTask extends AbstractLockTask {
 
     @TaskAction
     void lock() {
+        if (CoreLocking.isCoreLockingEnabled()) {
+            throw new BuildCancelledException("generateLock is not supported with core locking. Please use `./gradlew dependencies --write-locks`")
+        }
         if (DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
             throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
         }
