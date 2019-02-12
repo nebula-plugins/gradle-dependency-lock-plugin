@@ -15,6 +15,7 @@
  */
 package nebula.plugin.dependencylock.tasks
 
+
 import nebula.plugin.dependencylock.DependencyLockReader
 import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
 import nebula.plugin.dependencylock.DependencyLockWriter

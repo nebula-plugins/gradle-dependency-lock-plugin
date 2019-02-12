@@ -18,6 +18,7 @@ package nebula.plugin.dependencylock
 import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.utils.CoreLocking
+import org.eclipse.jgit.util.FileUtils
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -76,7 +77,20 @@ class DependencyLockPlugin : Plugin<Project> {
             }
             val lockFile = File(project.projectDir, extension.lockFile)
             if (lockFile.exists()) {
-                throw BuildCancelledException("Legacy locks are not supported with core locking. Please remove ${lockFile.absolutePath}")
+                if (project.gradle.startParameter.isWriteDependencyLocks) {
+                    val dependencyLockDirectory = File(project.projectDir, "/gradle/dependency-locks")
+                    logger.warn("Migrating legacy locks to core Gradle locking. This will remove legacy locks.\n" +
+                            "Legacy lock: ${lockFile.absolutePath}\n" +
+                            "Core Gradle locks: ${dependencyLockDirectory.absoluteFile}")
+                    try {
+                        FileUtils.delete(lockFile)
+                    } catch (e: Exception) {
+                        throw BuildCancelledException("Failed to delete legacy locks. Please remove ${lockFile.absolutePath} manually.", e)
+                    }
+                } else {
+                    throw BuildCancelledException("Legacy locks are not supported with core locking. Please remove ${lockFile.absolutePath}\n" +
+                            "If you wish to migrate with the current locked dependencies, please use `./gradlew dependencies --write-locks`")
+                }
             }
             val globalLockFile = File(project.projectDir, extension.globalLockFile)
             if (globalLockFile.exists()) {
