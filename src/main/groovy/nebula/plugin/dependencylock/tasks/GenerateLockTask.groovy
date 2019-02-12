@@ -15,7 +15,7 @@
  */
 package nebula.plugin.dependencylock.tasks
 
-
+import nebula.plugin.dependencylock.DependencyLockExtension
 import nebula.plugin.dependencylock.DependencyLockReader
 import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
 import nebula.plugin.dependencylock.DependencyLockWriter
@@ -46,6 +46,12 @@ class GenerateLockTask extends AbstractLockTask {
     @TaskAction
     void lock() {
         if (CoreLocking.isCoreLockingEnabled()) {
+            def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
+            def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile)
+            if (globalLockFile.exists()) {
+                throw new BuildCancelledException("Legacy global locks are not supported with core locking.\nPlease remove ${globalLockFile.absolutePath}")
+            }
+
             throw new BuildCancelledException("generateLock is not supported with core locking. Please use `./gradlew dependencies --write-locks`")
         }
         if (DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {

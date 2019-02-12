@@ -85,16 +85,21 @@ class DependencyLockPlugin : Plugin<Project> {
                     try {
                         FileUtils.delete(lockFile)
                     } catch (e: Exception) {
-                        throw BuildCancelledException("Failed to delete legacy locks. Please remove ${lockFile.absolutePath} manually.", e)
+                        throw BuildCancelledException("Failed to delete legacy locks.\nPlease remove ${lockFile.absolutePath} manually.", e)
                     }
                 } else {
-                    throw BuildCancelledException("Legacy locks are not supported with core locking. Please remove ${lockFile.absolutePath}\n" +
+                    throw BuildCancelledException("Legacy locks are not supported with core locking.\nPlease remove ${lockFile.absolutePath}\n" +
                             "If you wish to migrate with the current locked dependencies, please use `./gradlew dependencies --write-locks`")
                 }
             }
+
+            val taskNames = project.gradle.startParameter.taskNames
+            val hasUpdateTask = hasUpdateTask(taskNames)
+            val hasGenerationTask = hasGenerationTask(taskNames)
             val globalLockFile = File(project.projectDir, extension.globalLockFile)
-            if (globalLockFile.exists()) {
-                throw BuildCancelledException("Legacy global locks are not supported with core locking. Please remove ${globalLockFile.absolutePath}")
+
+            if (globalLockFile.exists() && !hasGenerationTask && !hasUpdateTask) {
+                throw BuildCancelledException("Legacy global locks are not supported with core locking.\nPlease remove ${globalLockFile.absolutePath}")
             }
 
         } else {

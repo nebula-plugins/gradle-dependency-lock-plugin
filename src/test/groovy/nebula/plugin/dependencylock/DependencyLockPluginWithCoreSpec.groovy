@@ -4,6 +4,7 @@ import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
+import spock.lang.Unroll
 
 class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
     def expectedLocks = [
@@ -27,9 +28,9 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         keepFiles = true
         new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.coreLockingSupport=true"
 
-        settingsFile << '''\
-            rootProject.name = 'locktest'
-        '''.stripIndent()
+        settingsFile << """\
+            rootProject.name = '${getProjectDir().getName().replaceAll(/_\d+/, '')}'
+        """.stripIndent()
 
         def graph = new DependencyGraphBuilder()
                 .addModule('test.nebula:a:1.0.0')
@@ -82,10 +83,11 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         then:
         result.output.contains("Legacy locks are not supported with core locking")
         result.output.contains("If you wish to migrate with the current locked dependencies")
+        assertFailureOccursAtPluginLevel(result.output)
         legacyLockFile.exists()
     }
 
-    def 'migrates to core lock when legacy lock is present and writing locks'() {
+    def 'migrate to core lock when legacy lock is present and writing locks'() {
         given:
         def legacyLockFile = new File(projectDir, 'dependencies.lock')
         legacyLockFile.text = expectedNebulaLockText
@@ -106,7 +108,7 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         !legacyLockFile.exists()
     }
 
-    def 'migrates to core lock when legacy lock is present and writing locks with custom task'() {
+    def 'migrate to core lock when legacy lock is present and writing locks with custom task'() {
         given:
         buildFile << '''
             task resolveAndLockAll {
@@ -140,7 +142,8 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         !legacyLockFile.exists()
     }
 
-    def 'fail with core lock if legacy global lock is present'() {
+    @Unroll
+    def 'fail at task level with core lock if legacy global lock is present when running #task'() {
         given:
         buildFile.text = """\
             plugins {
@@ -152,11 +155,40 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         new File(projectDir, 'global.lock').text = """{}"""
 
         when:
-        def result = runTasksAndFail('dependencies', '--write-locks')
+        def result = runTasksAndFail(task)
 
         then:
         result.output.contains("Legacy global locks are not supported with core locking")
+        result.output.contains("> Task :${task} FAILED")
+        assertNoErrorsOnAParticularBuildLine(result.output)
 
+        where:
+        task << ['generateGlobalLock', 'updateGlobalLock']
+    }
+
+    @Unroll
+    def 'fail at plugin level with core lock if legacy global lock is present when running #taskGroup'() {
+        given:
+        buildFile.text = """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+            }
+            """
+
+        new File(projectDir, 'global.lock').text = """{}"""
+
+        when:
+        def result = runTasksAndFail(*tasks)
+
+        then:
+        result.output.contains("Legacy global locks are not supported with core locking")
+        assertFailureOccursAtPluginLevel(result.output)
+
+        where:
+        taskGroup                    | tasks
+        'dependencies & write locks' | ['dependencies', '--write-locks']
+        'clean build'                | ['clean', 'build']
     }
 
     def 'fail with core lock if if you try to use legacy generateLock'() {
@@ -174,6 +206,7 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         then:
         result.output.contains("generateLock is not supported with core locking")
         result.output.contains("Please use `./gradlew dependencies --write-locks`")
+        assertNoErrorsOnAParticularBuildLine(result.output)
     }
 
     def 'fail with core lock if if you try to use legacy updateLock'() {
@@ -191,6 +224,15 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         then:
         result.output.contains("updateLock is not supported with core locking")
         result.output.contains("Please use `./gradlew dependencies --update-locks group1:module1,group2:module2`")
+        assertNoErrorsOnAParticularBuildLine(result.output)
+    }
+
+    private static void assertNoErrorsOnAParticularBuildLine(String text) {
+        assert !text.contains("* Where:")
+    }
+
+    private static void assertFailureOccursAtPluginLevel(String text) {
+        assert text.contains("Failed to apply plugin [id 'nebula.dependency-lock']")
     }
 
 }
