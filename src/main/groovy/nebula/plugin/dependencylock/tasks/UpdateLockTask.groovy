@@ -15,6 +15,7 @@
  */
 package nebula.plugin.dependencylock.tasks
 
+import nebula.plugin.dependencylock.DependencyLockExtension
 import nebula.plugin.dependencylock.utils.CoreLocking
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.tasks.TaskAction
@@ -30,6 +31,12 @@ class UpdateLockTask extends GenerateLockTask {
     @Override
     void lock() {
         if (CoreLocking.isCoreLockingEnabled()) {
+            def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
+            def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile)
+            if (globalLockFile.exists()) {
+                throw new BuildCancelledException("Legacy global locks are not supported with core locking.\nPlease remove ${globalLockFile.absolutePath}")
+            }
+
             throw new BuildCancelledException("updateLock is not supported with core locking. Please use `./gradlew dependencies --update-locks group1:module1,group2:module2`")
         }
         super.lock()
