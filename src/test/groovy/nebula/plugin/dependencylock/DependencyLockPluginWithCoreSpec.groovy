@@ -23,6 +23,7 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
                     "locked": "1.1.0",
                     "requested": "1.1.0"
                 }'''.stripIndent())
+    def mavenrepo
 
     def setup() {
         keepFiles = true
@@ -38,7 +39,7 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
                 .addModule('test.nebula:b:1.0.0')
                 .addModule('test.nebula:b:1.1.0')
                 .build()
-        def mavenrepo = new GradleDependencyGenerator(graph, "${projectDir}/testrepogen")
+        mavenrepo = new GradleDependencyGenerator(graph, "${projectDir}/testrepogen")
         mavenrepo.generateTestMavenRepo()
 
         buildFile << """\
@@ -125,6 +126,88 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         lockFile.contains('test.nebula:b:1.1.0')
 
         !legacyLockFile.exists()
+    }
+
+    def 'migrate to core lock when legacy lock is present with multiproject setup'() {
+        given:
+        buildFile.text = """\
+            plugins {
+                id 'java'
+            }
+            allprojects {
+                task resolveAndLockAll {
+                    doFirst {
+                        assert gradle.startParameter.writeDependencyLocks
+                    }
+                    doLast {
+                        configurations.findAll {
+                            // Add any custom filtering on the configurations to be resolved
+                            it.canBeResolved
+                        }.each { it.resolve() }
+                    }
+                }
+            }""".stripIndent()
+
+        addSubproject('sub1', """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+            }
+            dependencies {
+                compile 'test.nebula:a:1.0.0'
+            }
+        """.stripIndent())
+
+        addSubproject('sub2', """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+            }
+            dependencies {
+                compile 'test.nebula:b:1.1.0'
+            }
+        """.stripIndent())
+
+        def sub1LegacyLockFile = new File(projectDir, 'sub1/dependencies.lock')
+        sub1LegacyLockFile.text = LockGenerator.duplicateIntoConfigs(
+                '''\
+                "test.nebula:a": {
+                    "locked": "1.0.0",
+                    "requested": "1.0.0"
+                }'''.stripIndent())
+
+        def sub2LegacyLockFile = new File(projectDir, 'sub2/dependencies.lock')
+        sub2LegacyLockFile.text = LockGenerator.duplicateIntoConfigs(
+                '''\
+                "test.nebula:b": {
+                    "locked": "1.1.0",
+                    "requested": "1.1.0"
+                }'''.stripIndent())
+
+        when:
+        def result = runTasks('resolveAndLockAll', '--write-locks')
+
+        then:
+        !result.output.contains('not supported')
+        result.output.contains('Migrating legacy locks')
+
+        def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
+        sub1ActualLocks.containsAll(expectedLocks)
+        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compile.lockfile').text
+        sub1LockFile.contains('test.nebula:a:1.0.0')
+        !sub1LegacyLockFile.exists()
+
+        def sub2ActualLocks = new File(projectDir, 'sub2/gradle/dependency-locks/').list().toList()
+        sub2ActualLocks.containsAll(expectedLocks)
+        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compile.lockfile').text
+        sub2LockFile.contains('test.nebula:b:1.1.0')
+        !sub2LegacyLockFile.exists()
     }
 
     @Unroll
