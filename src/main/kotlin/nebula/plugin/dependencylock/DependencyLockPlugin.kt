@@ -18,7 +18,6 @@ package nebula.plugin.dependencylock
 import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.utils.CoreLocking
-import org.eclipse.jgit.util.FileUtils
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -44,12 +43,13 @@ class DependencyLockPlugin : Plugin<Project> {
         const val UPDATE_GLOBAL_LOCK_TASK_NAME = "updateGlobalLock"
         const val GENERATE_LOCK_TASK_NAME = "generateLock"
         const val UPDATE_LOCK_TASK_NAME = "updateLock"
-        const val MIGRATE_LOCK_TASK_TO_RUN = "`./gradlew -DmigrateLocks=true`"
+        const val MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
         const val WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
 
 
         val GENERATION_TASK_NAMES = setOf(GENERATE_LOCK_TASK_NAME, GENERATE_GLOBAL_LOCK_TASK_NAME, UPDATE_LOCK_TASK_NAME, UPDATE_GLOBAL_LOCK_TASK_NAME)
         val UPDATE_TASK_NAMES = setOf(UPDATE_LOCK_TASK_NAME, UPDATE_GLOBAL_LOCK_TASK_NAME)
+        val MIGRATION_TASK_NAMES = setOf(MIGRATE_TO_CORE_LOCK_TASK_NAME)
     }
 
     private val LOGGER: Logger = Logging.getLogger(DependencyLockPlugin::class.java)
@@ -71,24 +71,29 @@ class DependencyLockPlugin : Plugin<Project> {
         val overrides = lockReader.readOverrides()
         val globalLockFilename = project.findStringProperty(GLOBAL_LOCK_FILE)
         val lockFilename = DependencyLockTaskConfigurer(project).configureTasks(globalLockFilename, extension, commitExtension, overrides)
-        val dependencyLockDirectory = File(project.projectDir, "/gradle/dependency-locks")
         if (CoreLocking.isCoreLockingEnabled()) {
             LOGGER.warn("${project.name}: coreLockingSupport feature enabled")
-            project.dependencyLocking {
-                it.lockAllConfigurations()
+            val configurationsToLock = ConfigurationsToLockFinder(project.configurations).findConfigurationsToLock()
+            project.configurations.forEach {
+                if (configurationsToLock.contains(it.name)) {
+                    it.resolutionStrategy.activateDependencyLocking()
+                }
             }
+
             val lockFile = File(project.projectDir, extension.lockFile)
+
             if (lockFile.exists()) {
                 if (project.gradle.startParameter.isWriteDependencyLocks) {
-                    rewriteLocksUsingCoreLocking(lockFile, dependencyLockDirectory)
-                }
-                if (project.hasProperty("migrateLocks") && (project.property("migrateLocks") as String).toBoolean()) {
-                    migrateLocksToUseCoreLocking(dependencyLockDirectory, project, lockFile)
+                    rewriteLocksUsingCoreLocking(lockFile)
                 } else {
-                    throw BuildCancelledException("Legacy locks are not supported with core locking.\n" +
-                            "If you wish to migrate with the current locked dependencies, please use $MIGRATE_LOCK_TASK_TO_RUN\n" +
-                            "Alternatively, please remove the legacy lockfile manually and use $WRITE_CORE_LOCK_TASK_TO_RUN\n" +
-                            " - Legacy lock: ${lockFile.absolutePath}")
+                    val taskNames = project.gradle.startParameter.taskNames
+                    val hasMigrationTask = hasMigrationTask(taskNames)
+                    if (!hasMigrationTask) {
+                        throw BuildCancelledException("Legacy locks are not supported with core locking.\n" +
+                                "If you wish to migrate with the current locked dependencies, please use `./gradlew $MIGRATE_TO_CORE_LOCK_TASK_NAME`\n" +
+                                "Alternatively, please remove the legacy lockfile manually and use $WRITE_CORE_LOCK_TASK_TO_RUN\n" +
+                                " - Legacy lock: ${lockFile.absolutePath}")
+                    }
                 }
             }
 
@@ -98,11 +103,11 @@ class DependencyLockPlugin : Plugin<Project> {
             val globalLockFile = File(project.projectDir, extension.globalLockFile)
 
             if (globalLockFile.exists() && !hasGenerationTask && !hasUpdateTask) {
+                // do not fail for generation or update tasks here. It's more readable when the task itself fails.
                 throw BuildCancelledException("Legacy global locks are not supported with core locking.\n" +
                         "Please remove global locks.\n" +
                         " - Legacy global lock: ${globalLockFile.absolutePath}")
             }
-
         } else {
             val lockAfterEvaluating = if (project.hasProperty(LOCK_AFTER_EVALUATING)) project.property(LOCK_AFTER_EVALUATING).toString().toBoolean() else extension.lockAfterEvaluating
             if (lockAfterEvaluating) {
@@ -180,6 +185,9 @@ class DependencyLockPlugin : Plugin<Project> {
 
     private fun hasUpdateTask(cliTasks: Collection<String>): Boolean =
             hasTask(cliTasks, UPDATE_TASK_NAMES)
+
+    private fun hasMigrationTask(cliTasks: Collection<String>): Boolean =
+            hasTask(cliTasks, MIGRATION_TASK_NAMES)
 
     private fun hasTask(cliTasks: Collection<String>, taskNames: Collection<String>): Boolean {
         val matcher = NameMatcher()
@@ -279,65 +287,24 @@ class DependencyLockPlugin : Plugin<Project> {
         override fun toString(): String = "$group:$name:$version"
     }
 
-    private fun rewriteLocksUsingCoreLocking(lockFile: File, dependencyLockDirectory: File) {
+    private fun rewriteLocksUsingCoreLocking(lockFile: File) {
+        val dependencyLockDirectory = File(project.projectDir, "/gradle/dependency-locks")
+
         LOGGER.warn("Removing legacy locks to use core Gradle locking. This will remove legacy locks." +
                 "This is not a migration.\n" +
                 " - Legacy lock: ${lockFile.absolutePath}\n" +
                 " - Core Gradle locks: ${dependencyLockDirectory.absoluteFile}\n" +
                 "\n" +
-                "To migrate your currently locked state, please run $MIGRATE_LOCK_TASK_TO_RUN")
+                "To migrate your currently locked state, please run `./gradlew $MIGRATE_TO_CORE_LOCK_TASK_NAME`")
+        val failureToDeleteLockfileMessage = "Failed to delete legacy locks.\n" +
+                "Please remove the legacy lock file manually.\n" +
+                " - Legacy lock: ${lockFile.absolutePath}"
         try {
-            FileUtils.delete(lockFile)
+            if (!lockFile.delete()) {
+                throw BuildCancelledException(failureToDeleteLockfileMessage)
+            }
         } catch (e: Exception) {
-            throw BuildCancelledException("Failed to delete legacy locks.\n" +
-                    "Please remove the legacy lock file manually.\n" +
-                    " - Legacy lock: ${lockFile.absolutePath}", e)
-        }
-    }
-
-    private fun migrateLocksToUseCoreLocking(dependencyLockDirectory: File, project: Project, lockFile: File) {
-        LOGGER.warn("Migrating legacy locks to core Gradle locking. This will remove legacy locks.\n" +
-                " - Legacy lock: ${lockFile.absolutePath}\n" +
-                " - Core Gradle locks: ${dependencyLockDirectory.absoluteFile}")
-        if (!dependencyLockDirectory.exists()) {
-            if (!dependencyLockDirectory.mkdirs()) {
-                throw BuildCancelledException("Failed to create core lock directory. Check your permissions.\n" +
-                        " - Core lock directory: ${dependencyLockDirectory.absolutePath}")
-            }
-        }
-
-        project.configurations.forEach { conf ->
-            val dependenciesForConf = mutableListOf<String>()
-            lockReader.readLocks(conf, lockFile)?.forEach { entry ->
-                val groupAndName = entry.key as String
-                val entryLockedValue = (entry.value as Map<*, *>)["locked"]
-                if (entryLockedValue != null) {
-                    val lockedVersion = entryLockedValue as String
-                    dependenciesForConf.add("$groupAndName:$lockedVersion")
-                } else {
-                    LOGGER.info("No locked version for '$groupAndName' to migrate in $conf")
-                }
-            }
-
-            val configLockFile = File(dependencyLockDirectory, "/${conf.name}.lockfile")
-            if (!configLockFile.exists()) {
-                configLockFile.createNewFile()
-                configLockFile.writeText("# This is a file for dependency locking, migrated from Nebula locks.\n")
-
-                dependenciesForConf.sort()
-
-                dependenciesForConf.forEach { depAndVersion ->
-                    configLockFile.appendText("$depAndVersion\n")
-                }
-            }
-        }
-
-        try {
-            FileUtils.delete(lockFile)
-        } catch (e: Exception) {
-            throw BuildCancelledException("Failed to delete legacy locks.\n" +
-                    "Please remove the legacy lockfile manually.\n" +
-                    " - Legacy lock: ${lockFile.absolutePath}", e)
+            throw BuildCancelledException(failureToDeleteLockfileMessage, e)
         }
     }
 }
