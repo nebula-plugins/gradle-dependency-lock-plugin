@@ -34,10 +34,13 @@ class UpdateLockTask extends GenerateLockTask {
             def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
             def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile)
             if (globalLockFile.exists()) {
-                throw new BuildCancelledException("Legacy global locks are not supported with core locking.\nPlease remove ${globalLockFile.absolutePath}")
+                throw new BuildCancelledException("Legacy global locks are not supported with core locking.\n" +
+                        "Please remove global locks.\n" +
+                        " - Global locks: ${globalLockFile.absolutePath}")
             }
 
-            throw new BuildCancelledException("updateLock is not supported with core locking. Please use `./gradlew dependencies --update-locks group1:module1,group2:module2`")
+            throw new BuildCancelledException("updateLock is not supported with core locking.\n" +
+                    "Please use `./gradlew dependencies --update-locks group1:module1,group2:module2`")
         }
         super.lock()
     }
