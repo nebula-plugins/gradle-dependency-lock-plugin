@@ -269,6 +269,7 @@ class DependencyLockTaskConfigurer {
         def dependencyLockDirectory = new File(project.projectDir, "/gradle/dependency-locks")
 
         migrateToCoreLocksTask.conventionMapping.with {
+            configurationNames = { extension.configurationNames }
             inputLockFile = { lockFile }
             outputLocksDirectory = { dependencyLockDirectory }
         }

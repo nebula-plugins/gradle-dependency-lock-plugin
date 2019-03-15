@@ -80,7 +80,7 @@ class DependencyLockPlugin : Plugin<Project> {
                         it.lockAllConfigurations()
                     }
                 } else {
-                    val configurationsToLock = ConfigurationsToLockFinder(project).findConfigurationsToLock()
+                    val configurationsToLock = ConfigurationsToLockFinder(project).findConfigurationsToLock(extension.configurationNames)
                     project.configurations.forEach {
                         if (configurationsToLock.contains(it.name)) {
                             it.resolutionStrategy.activateDependencyLocking()

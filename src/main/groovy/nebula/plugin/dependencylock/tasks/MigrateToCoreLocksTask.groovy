@@ -1,6 +1,6 @@
 /**
  *
- *  Copyright 2018 Netflix, Inc.
+ *  Copyright 2014-2019 Netflix, Inc.
  *
  *     Licensed under the Apache License, Version 2.0 (the "License");
  *     you may not use this file except in compliance with the License.
@@ -39,6 +39,8 @@ class MigrateToCoreLocksTask extends AbstractLockTask {
     @OutputDirectory
     File outputLocksDirectory
 
+    Set<String> configurationNames
+
     @TaskAction
     void migrate() {
         if (CoreLocking.isCoreLockingEnabled()) {
@@ -48,7 +50,7 @@ class MigrateToCoreLocksTask extends AbstractLockTask {
                         it.lockAllConfigurations()
                     }
                 } else {
-                    def configurationsToLock = new ConfigurationsToLockFinder(project).findConfigurationsToLock()
+                    def configurationsToLock = new ConfigurationsToLockFinder(project).findConfigurationsToLock(getConfigurationNames())
                     project.configurations.each {
                         if (configurationsToLock.contains(it.name)) {
                             it.resolutionStrategy.activateDependencyLocking()

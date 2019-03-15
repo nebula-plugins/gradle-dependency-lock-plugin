@@ -1,6 +1,6 @@
 /**
  *
- *  Copyright 2018 Netflix, Inc.
+ *  Copyright 2014-2019 Netflix, Inc.
  *
  *     Licensed under the Apache License, Version 2.0 (the "License");
  *     you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 
 package nebula.plugin.dependencylock
 
+import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import org.gradle.api.Project
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -30,9 +31,8 @@ class ConfigurationsToLockFinder {
         this.project = project
     }
 
-    List<String> findConfigurationsToLock() {
-
-        def configurationsToLock = new ArrayList<>()
+    List<String> findConfigurationsToLock(Set<String> configurationNames) {
+        def configurationsToLock = new ArrayList<String>()
         def baseConfigurations = [
                 'annotationProcessor',
                 'apiElements',
@@ -55,9 +55,19 @@ class ConfigurationsToLockFinder {
             configurationsToLock.addAll(returnConfigurationNamesWithPrefix(confPrefix))
         }
 
-        configurationsToLock.sort()
+        // ensure gathered configurations to lock are lockable
+        def lockableConfigurationNames = []
+        def lockableConfigurations = GenerateLockTask.lockableConfigurations(project, project, configurationNames)
+        lockableConfigurations.each {
+            lockableConfigurationNames.add(it.name)
+        }
+        def lockableConfigsToLock = configurationsToLock.findAll {
+            lockableConfigurationNames.contains(it)
+        }
 
-        return configurationsToLock
+        lockableConfigsToLock.sort()
+
+        return lockableConfigsToLock
     }
 
     private static List<String> returnConfigurationNamesWithPrefix(it) {

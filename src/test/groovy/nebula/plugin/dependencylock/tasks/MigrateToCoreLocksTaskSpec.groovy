@@ -58,7 +58,6 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         debug = true // if you want to debug with IntegrationTestKit, this is needed
     }
 
-
     def 'migration to core locks'() {
         given:
         def legacyLockFile = new File(projectDir, 'dependencies.lock')
