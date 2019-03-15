@@ -17,6 +17,7 @@ package nebula.plugin.dependencylock
 
 import nebula.plugin.dependencylock.tasks.CommitLockTask
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
+import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.plugin.dependencylock.tasks.UpdateLockTask
 import nebula.plugin.dependencylock.wayback.WaybackProvider
@@ -44,6 +45,7 @@ class DependencyLockTaskConfigurer {
     public static final String UPDATE_GLOBAL_LOCK_TASK_NAME = 'updateGlobalLock'
     public static final String UPDATE_LOCK_TASK_NAME = 'updateLock'
     public static final String GENERATE_LOCK_TASK_NAME = 'generateLock'
+    public static final String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
 
     final Set<String> configurationsToSkipForGlobalLock = ['checkstyle', 'findbugs', 'findbugsPlugins', 'jacocoAgent', 'jacocoAnt']
 
@@ -67,6 +69,8 @@ class DependencyLockTaskConfigurer {
 
         SaveLockTask saveTask = configureSaveTask(lockFilename, genLockTask, updateLockTask, extension)
         createDeleteLock(saveTask)
+
+        configureMigrateToCoreLocksTask(extension)
 
         // configure global lock only on rootProject
         SaveLockTask globalSave = null
@@ -239,11 +243,11 @@ class DependencyLockTaskConfigurer {
                         def configurations = lockableConfigurations(project, subproject, ext.configurationNames)
                         configurations
                                 .findAll { configuration ->
-                                    !configurationsToSkipForGlobalLock.contains(configuration.name)
-                                }
-                                .collect { configuration ->
-                                    project.dependencies.create(project.dependencies.project(path: subproject.path, configuration: configuration.name))
-                                }
+                            !configurationsToSkipForGlobalLock.contains(configuration.name)
+                        }
+                        .collect { configuration ->
+                            project.dependencies.create(project.dependencies.project(path: subproject.path, configuration: configuration.name))
+                        }
                     } else {
                         [project.dependencies.create(subproject)]
                     }
@@ -257,6 +261,19 @@ class DependencyLockTaskConfigurer {
         }
 
         globalLockTask
+    }
+
+    private MigrateToCoreLocksTask configureMigrateToCoreLocksTask(DependencyLockExtension extension) {
+        def migrateToCoreLocksTask = project.tasks.create(MIGRATE_TO_CORE_LOCK_TASK_NAME, MigrateToCoreLocksTask)
+        def lockFile = new File(project.projectDir, extension.lockFile)
+        def dependencyLockDirectory = new File(project.projectDir, "/gradle/dependency-locks")
+
+        migrateToCoreLocksTask.conventionMapping.with {
+            configurationNames = { extension.configurationNames }
+            inputLockFile = { lockFile }
+            outputLocksDirectory = { dependencyLockDirectory }
+        }
+        migrateToCoreLocksTask
     }
 
     private void createDeleteLock(SaveLockTask saveLock) {

@@ -33,7 +33,8 @@ import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.tasks.TaskAction
 
 class GenerateLockTask extends AbstractLockTask {
-    String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
+    private String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
+    private String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
 
     String description = 'Create a lock file in build/<configured name>'
     Collection<Configuration> configurations = []
@@ -58,7 +59,7 @@ class GenerateLockTask extends AbstractLockTask {
 
             throw new BuildCancelledException("generateLock is not supported with core locking.\n" +
                     "Please use $WRITE_CORE_LOCK_TASK_TO_RUN\n" +
-                    "or do a one-time migration with `./gradlew -DmigrateLocks=true` to preserve the current lock state")
+                    "or do a one-time migration with `./gradlew $MIGRATE_TO_CORE_LOCK_TASK_NAME` to preserve the current lock state")
         }
         if (DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
             throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
