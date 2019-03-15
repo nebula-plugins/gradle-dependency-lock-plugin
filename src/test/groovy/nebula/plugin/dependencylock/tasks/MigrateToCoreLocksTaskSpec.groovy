@@ -1,11 +1,11 @@
 package nebula.plugin.dependencylock.tasks
 
-
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
+import spock.lang.Unroll
 
 class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
     def expectedLocks = [
@@ -83,9 +83,9 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile').text
-        lockFile.contains('test.nebula:a:1.0.0')
-        lockFile.contains('test.nebula:b:1.1.0')
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
+        lockFile.text.contains('test.nebula:a:1.0.0')
+        lockFile.text.contains('test.nebula:b:1.1.0')
 
         !legacyLockFile.exists()
 
@@ -191,13 +191,69 @@ dependencies {
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile').text
-        lockFile.contains('test.nebula:a:1.0.0')
-        lockFile.contains('test.nebula:b:1.1.0')
-        lockFile.contains('test.nebula:c:1.0.0')
-        lockFile.contains('test.nebula:d:1.0.0')
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
+        lockFile.text.contains('test.nebula:a:1.0.0')
+        lockFile.text.contains('test.nebula:b:1.1.0')
+        lockFile.text.contains('test.nebula:c:1.0.0')
+        lockFile.text.contains('test.nebula:d:1.0.0')
 
         !legacyLockFile.exists()
+    }
+
+    def 'migration with transitives - must lock transitives'() {
+        given:
+        buildFile << """
+dependencies {
+    compile 'test.nebula:c:1.+'
+}"""
+        def legacyLockFile = new File(projectDir, 'dependencies.lock')
+        def expectedNebulaLockText = LockGenerator.duplicateIntoConfigs(
+                '''\
+                "test.nebula:a": {
+                    "locked": "1.0.0",
+                    "requested": "1.+"
+                },
+                "test.nebula:b": {
+                    "locked": "1.1.0",
+                    "requested": "1.+"
+                },
+                "test.nebula:c": {
+                    "locked": "1.0.0",
+                    "requested": "1.+"
+                }'''.stripIndent())
+        legacyLockFile.text = expectedNebulaLockText
+
+        when:
+        def result = runTasks('migrateToCoreLocks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        !result.output.contains('not supported')
+        result.output.contains('Migrating legacy locks')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        actualLocks.containsAll(expectedLocks)
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
+        lockFile.text.contains('test.nebula:a:1.0.0')
+        lockFile.text.contains('test.nebula:b:1.1.0')
+        lockFile.text.contains('test.nebula:c:1.0.0')
+        !lockFile.text.contains('test.nebula:d:1.0.0')
+
+        !legacyLockFile.exists()
+
+        when:
+        def mismatchedDependenciesResult = runTasks('dependencies')
+
+        then:
+        mismatchedDependenciesResult.output.contains('FAILED')
+
+        when:
+        runTasks('dependencies', '--update-locks', 'test.nebula:d')
+        def updatedDependencies = runTasks('dependencies')
+
+        then:
+        lockFile.text.contains('test.nebula:d:1.0.0')
+
     }
 
     def 'migration with multiproject setup'() {
@@ -265,15 +321,15 @@ dependencies {
 
         def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
         sub1ActualLocks.containsAll(expectedLocks)
-        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compile.lockfile').text
-        sub1LockFile.contains('test.nebula:a:1.0.0')
+        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compile.lockfile')
+        sub1LockFile.text.contains('test.nebula:a:1.0.0')
         !sub1LegacyLockFile.exists()
 
         def sub2ActualLocks = new File(projectDir, 'sub2/gradle/dependency-locks/').list().toList()
         sub2ActualLocks.containsAll(expectedLocks)
-        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compile.lockfile').text
-        sub2LockFile.contains('test.nebula:c:1.0.0')
-        sub2LockFile.contains('test.nebula:d:1.0.0')
+        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compile.lockfile')
+        sub2LockFile.text.contains('test.nebula:c:1.0.0')
+        sub2LockFile.text.contains('test.nebula:d:1.0.0')
         !sub2LegacyLockFile.exists()
     }
 
@@ -353,16 +409,16 @@ dependencies {
 
         def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
         sub1ActualLocks.containsAll(expectedLocks)
-        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compile.lockfile').text
-        sub1LockFile.contains('test.nebula:a:1.0.0')
+        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compile.lockfile')
+        sub1LockFile.text.contains('test.nebula:a:1.0.0')
         !sub1LegacyLockFile.exists()
 
         def sub2ActualLocks = new File(projectDir, 'sub2/gradle/dependency-locks/').list().toList()
         sub2ActualLocks.containsAll(expectedLocks)
-        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compile.lockfile').text
-        sub2LockFile.contains('test.nebula:a:1.0.0')
-        sub2LockFile.contains('test.nebula:c:1.0.0')
-        sub2LockFile.contains('test.nebula:d:1.0.0')
+        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compile.lockfile')
+        sub2LockFile.text.contains('test.nebula:a:1.0.0')
+        sub2LockFile.text.contains('test.nebula:c:1.0.0')
+        sub2LockFile.text.contains('test.nebula:d:1.0.0')
         !sub2LegacyLockFile.exists()
     }
 
@@ -443,30 +499,29 @@ dependencies {
 
         def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
         sub1ActualLocks.containsAll(expectedLocks)
-        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compile.lockfile').text
-        sub1LockFile.contains('test.nebula:a:1.0.0')
+        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compile.lockfile')
+        sub1LockFile.text.contains('test.nebula:a:1.0.0')
         !sub1LegacyLockFile.exists()
 
         def sub2ActualLocks = new File(projectDir, 'sub2/gradle/dependency-locks/').list().toList()
         sub2ActualLocks.containsAll(expectedLocks)
-        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compile.lockfile').text
-        sub2LockFile.contains('test.nebula:a:1.0.0')
-        sub2LockFile.findAll('test.nebula:a:1.0.0').size() == 1
-        sub2LockFile.contains('test.nebula:c:1.0.0')
-        sub2LockFile.contains('test.nebula:d:1.0.0')
+        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compile.lockfile')
+        sub2LockFile.text.contains('test.nebula:a:1.0.0')
+        sub2LockFile.text.findAll('test.nebula:a:1.0.0').size() == 1
+        sub2LockFile.text.contains('test.nebula:c:1.0.0')
+        sub2LockFile.text.contains('test.nebula:d:1.0.0')
         !sub2LegacyLockFile.exists()
     }
 
     def 'previously partial lockfiles must include all dependencies'() {
         given:
         def legacyLockFile = new File(projectDir, 'dependencies.lock')
-        legacyLockFile.text = '''
-            {
+        legacyLockFile.text = LockGenerator.duplicateIntoConfigs(
+                '''\
                 "test.nebula:a": {
                     "locked": "1.0.0",
                     "requested": "1.+"
-                }
-            }'''.stripIndent()
+                }'''.stripIndent())
 
         when:
         def result = runTasks('migrateToCoreLocks')
@@ -501,6 +556,94 @@ dependencies {
 
         lockFile.text.contains('test.nebula:a:1.0.0')
         lockFile.text.contains('test.nebula:b:1.1.0')
+    }
+
+    @Unroll
+    def 'migrating with facet #facet'() {
+        def legacyLockFile = new File(projectDir, 'dependencies.lock')
+        legacyLockFile.text = createFacetLockfileText(facet)
+
+        def sourceSetConfig
+        if (setParentSourceSet) {
+            sourceSetConfig = """{
+                parentSourceSet = 'test'
+            }""".stripIndent()
+        } else {
+            sourceSetConfig = ''
+        }
+
+        buildFile.text = """
+            buildscript {
+              repositories {
+                maven {
+                  url "https://plugins.gradle.org/m2/"
+                }
+              }
+              dependencies {
+                classpath "com.netflix.nebula:nebula-project-plugin:6.0.0"
+              }
+            }
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+            }
+            apply plugin: '$plugin'
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+                mavenCentral()
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                testCompile 'junit:junit:4.12'
+            }
+            facets {
+                $facet $sourceSetConfig
+            }
+            """.stripIndent()
+
+        def facetTestFile = createFile("${projectDir}/src/${facet}/java/${facet.capitalize()}.java")
+        facetTestFile.text = """
+            import org.junit.Test;
+            public class ${facet.capitalize()} {
+                @Test
+                public void helloWorld${facet.capitalize()}() {
+                    System.out.println("Hello World");
+                }
+            }
+            """.stripIndent()
+
+        when:
+        def result = runTasks('migrateToCoreLocks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        !result.output.contains('not supported')
+        result.output.contains('Migrating legacy locks')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def facetLockfiles = [
+                "${facet}AnnotationProcessor.lockfile".toString(),
+                "${facet}Compile.lockfile".toString(),
+                "${facet}CompileClasspath.lockfile".toString(),
+                "${facet}CompileOnly.lockfile".toString(),
+                "${facet}Runtime.lockfile".toString(),
+                "${facet}RuntimeClasspath.lockfile".toString()
+        ]
+        def updatedExpectedLocks = expectedLocks + facetLockfiles
+        updatedExpectedLocks.each {
+            assert actualLocks.contains(it)
+        }
+
+        def lockFile = new File(projectDir, "/gradle/dependency-locks/${facet}Compile.lockfile")
+        lockFile.text.contains('test.nebula:a:1.0.0')
+        lockFile.text.contains('junit:junit:4.12')
+        lockFile.text.contains('org.hamcrest:hamcrest-core:1.3')
+
+        where:
+        facet       | plugin             | setParentSourceSet
+        'integTest' | 'nebula.integtest' | false
+        'smokeTest' | 'nebula.facet'     | true
+        'examples'  | 'nebula.facet'     | true
     }
 
     def 'fails migrating global locks'() {
@@ -572,6 +715,38 @@ dependencies {
         result.output.contains("Legacy global locks are not supported with core locking")
         assertFailureOccursAtPluginLevel(result.output)
         legacyGlobalLockFile.exists()
+    }
+
+    private static String createFacetLockfileText(String facet) {
+        def configsBasedOnCompile = ['compile', 'compileClasspath', 'default', 'runtime', 'runtimeClasspath']
+        def configsBasedOnTestCompile = [
+                "testCompile", "testCompileClasspath", "testDefault", "testRuntime", "testRuntimeClasspath",
+                "${facet}Compile".toString(), "${facet}CompileClasspath".toString(), "${facet}Default".toString(), "${facet}Runtime".toString(), "${facet}RuntimeClasspath".toString()
+        ]
+        def locks = LockGenerator.duplicateIntoConfigs(
+                '''\
+                "test.nebula:a": {
+                    "locked": "1.0.0",
+                    "requested": "1.0.0"
+                }'''.stripIndent(),
+                configsBasedOnCompile,
+                '''\
+                "junit:junit": {
+                    "locked": "4.12",
+                    "requested": "4.12"
+                },
+                "org.hamcrest:hamcrest-core": {
+                    "locked": "1.3",
+                    "transitive": [
+                        "junit:junit"
+                    ]
+                },
+                "test.nebula:a": {
+                    "locked": "1.0.0",
+                    "requested": "1.0.0"
+                }'''.stripIndent(),
+                configsBasedOnTestCompile)
+        return locks
     }
 
     private static void assertFailureOccursAtPluginLevel(String text) {

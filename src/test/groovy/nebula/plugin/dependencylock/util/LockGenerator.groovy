@@ -25,7 +25,7 @@ class LockGenerator {
      * @return the String to put into the file
      */
     static String duplicateIntoConfigs(String deps, Collection<String> configs = DEFAULT_CONFIG_NAMES) {
-        def indentedDeps = deps.readLines().collect { "|        $it"}.join('\n')
+        def indentedDeps = deps.readLines().collect { "|        $it" }.join('\n')
 
         def pieces = configs.collect { config ->
             """\
@@ -37,6 +37,44 @@ class LockGenerator {
         def builder = new StringBuilder()
         builder.append('|{\n')
         builder.append(pieces.join(',\n'))
+        builder.append('\n|}')
+
+        return builder.toString().stripMargin()
+    }
+
+    /**
+     * Helper to copy the same lock block multiple times into different configurations, that takes two sets of dependencies
+     * and two sets of configurations
+     * @param firstDeps the String of dependencies, indentation should be what you want if that was the only thing going in the file
+     * @param firstConfigs configurations to duplicate into
+     * @param secondDeps the String of the second set of dependencies, indentation should be what you want if that was the only thing going in the file
+     * @param secondConfigs configurations to duplicate the second set of dependencies into
+     * @return the String to put into the file
+     */
+    static String duplicateIntoConfigs(String firstDeps, Collection<String> firstConfigs, String secondDeps, Collection<String> secondConfigs) {
+        def indentedFirstDeps = firstDeps.readLines().collect { "|        $it" }.join('\n')
+
+        def firstPieces = firstConfigs.collect { config ->
+            """\
+            |    "${config}": {
+            ${indentedFirstDeps}
+            |    }"""
+        }
+
+        def indentedSecondDeps = secondDeps.readLines().collect { "|        $it" }.join('\n')
+
+        def secondPieces = secondConfigs.collect { config ->
+            """\
+            |    "${config}": {
+            ${indentedSecondDeps}
+            |    }"""
+        }
+
+        def builder = new StringBuilder()
+        builder.append('|{\n')
+        builder.append(firstPieces.join(',\n'))
+        builder.append(',\n')
+        builder.append(secondPieces.join(',\n'))
         builder.append('\n|}')
 
         return builder.toString().stripMargin()

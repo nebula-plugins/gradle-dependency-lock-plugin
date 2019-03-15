@@ -22,6 +22,7 @@ import nebula.plugin.dependencylock.ConfigurationsToLockFinder
 import nebula.plugin.dependencylock.DependencyLockReader
 import nebula.plugin.dependencylock.utils.CoreLocking
 import org.gradle.api.BuildCancelledException
+import org.gradle.api.execution.TaskExecutionGraph
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.InputFile
@@ -41,10 +42,18 @@ class MigrateToCoreLocksTask extends AbstractLockTask {
     @TaskAction
     void migrate() {
         if (CoreLocking.isCoreLockingEnabled()) {
-            def configurationsToLock = new ConfigurationsToLockFinder(project.configurations).findConfigurationsToLock()
-            project.configurations.each {
-                if (configurationsToLock.contains(it.name)) {
-                    it.resolutionStrategy.activateDependencyLocking()
+            project.gradle.taskGraph.whenReady { TaskExecutionGraph taskGraph ->
+                if (project.hasProperty("lockAllConfigurations") && (project.property("lockAllConfigurations") as String).toBoolean()) {
+                    project.dependencyLocking {
+                        it.lockAllConfigurations()
+                    }
+                } else {
+                    def configurationsToLock = new ConfigurationsToLockFinder(project).findConfigurationsToLock()
+                    project.configurations.each {
+                        if (configurationsToLock.contains(it.name)) {
+                            it.resolutionStrategy.activateDependencyLocking()
+                        }
+                    }
                 }
             }
 
@@ -60,7 +69,7 @@ class MigrateToCoreLocksTask extends AbstractLockTask {
 
                 project.configurations.forEach { conf ->
                     def dependenciesForConf = new ArrayList()
-                    def locks = lockReader.readLocks(conf, getInputLockFile()) // as Map<String, Map<String, String>>
+                    def locks = lockReader.readLocks(conf, getInputLockFile())
 
                     if (locks != null) {
                         for (Map.Entry<String, ArrayList<String>> entry : locks.entrySet()) {

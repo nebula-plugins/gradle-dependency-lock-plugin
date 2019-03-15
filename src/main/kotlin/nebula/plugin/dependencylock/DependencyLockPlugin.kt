@@ -73,10 +73,19 @@ class DependencyLockPlugin : Plugin<Project> {
         val lockFilename = DependencyLockTaskConfigurer(project).configureTasks(globalLockFilename, extension, commitExtension, overrides)
         if (CoreLocking.isCoreLockingEnabled()) {
             LOGGER.warn("${project.name}: coreLockingSupport feature enabled")
-            val configurationsToLock = ConfigurationsToLockFinder(project.configurations).findConfigurationsToLock()
-            project.configurations.forEach {
-                if (configurationsToLock.contains(it.name)) {
-                    it.resolutionStrategy.activateDependencyLocking()
+            project.gradle.taskGraph.whenReady {
+
+                if (project.hasProperty("lockAllConfigurations") && (project.property("lockAllConfigurations") as String).toBoolean()) {
+                    project.dependencyLocking {
+                        it.lockAllConfigurations()
+                    }
+                } else {
+                    val configurationsToLock = ConfigurationsToLockFinder(project).findConfigurationsToLock()
+                    project.configurations.forEach {
+                        if (configurationsToLock.contains(it.name)) {
+                            it.resolutionStrategy.activateDependencyLocking()
+                        }
+                    }
                 }
             }
 

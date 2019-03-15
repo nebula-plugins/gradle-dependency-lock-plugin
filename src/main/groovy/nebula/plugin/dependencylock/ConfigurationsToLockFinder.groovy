@@ -18,19 +18,22 @@
 
 package nebula.plugin.dependencylock
 
-import org.gradle.api.artifacts.ConfigurationContainer
+import org.gradle.api.Project
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
 
 class ConfigurationsToLockFinder {
-    private ConfigurationContainer configurations
+    private static final Logger LOGGER = Logging.getLogger(ConfigurationsToLockFinder)
+    private Project project
 
-    ConfigurationsToLockFinder(ConfigurationContainer configurations) {
-        this.configurations = configurations
+    ConfigurationsToLockFinder(Project project) {
+        this.project = project
     }
 
     List<String> findConfigurationsToLock() {
 
         def configurationsToLock = new ArrayList<>()
-        configurationsToLock.addAll(
+        def baseConfigurations = [
                 'annotationProcessor',
                 'apiElements',
                 'archives',
@@ -42,17 +45,32 @@ class ConfigurationsToLockFinder {
                 'runtime',
                 'runtimeClasspath',
                 'runtimeElements',
-                'runtimeOnly',
-                'testAnnotationProcessor',
-                'testCompile',
-                'testCompileClasspath',
-                'testCompileOnly',
-                'testImplementation',
-                'testRuntime',
-                'testRuntimeClasspath',
-                'testRuntimeOnly'
-        )
+                'runtimeOnly']
+        configurationsToLock.addAll(baseConfigurations)
+
+        def confSuffix = 'CompileOnly'
+        def configurationsWithPrefix = project.configurations.findAll { it.name.contains(confSuffix) }
+        configurationsWithPrefix.each {
+            def confPrefix = it.name.replace(confSuffix, '')
+            configurationsToLock.addAll(returnConfigurationNamesWithPrefix(confPrefix))
+        }
+
+        configurationsToLock.sort()
 
         return configurationsToLock
+    }
+
+    private static List<String> returnConfigurationNamesWithPrefix(it) {
+        def testConfigurations = [
+                "${it}AnnotationProcessor".toString(),
+                "${it}Compile".toString(),
+                "${it}CompileClasspath".toString(),
+                "${it}CompileOnly".toString(),
+                "${it}Implementation".toString(),
+                "${it}Runtime".toString(),
+                "${it}RuntimeClasspath".toString(),
+                "${it}RuntimeOnly".toString()
+        ]
+        testConfigurations
     }
 }

@@ -44,11 +44,9 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
                 id 'nebula.dependency-lock'
                 id 'java'
             }
-            
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
             }
-            
             dependencies {
                 compile 'test.nebula:a:1.+'
                 compile 'test.nebula:b:1.+'
@@ -67,9 +65,154 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile').text
-        lockFile.contains('test.nebula:a:1.1.0')
-        lockFile.contains('test.nebula:b:1.1.0')
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
+        lockFile.text.contains('test.nebula:a:1.1.0')
+        lockFile.text.contains('test.nebula:b:1.1.0')
+    }
+
+    def 'generate core lock file while locking all configurations via property'() {
+        given:
+        buildFile.text = """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+                id 'jacoco'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+                mavenCentral()
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                compile 'test.nebula:b:1.+'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('dependencies', '--write-locks', '-PlockAllConfigurations=true')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        actualLocks.containsAll(expectedLocks)
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
+        lockFile.exists()
+    }
+
+    def 'generate core lock file but do not all configurations by default'() {
+        given:
+        buildFile.text = """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+                id 'jacoco'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+                mavenCentral()
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                compile 'test.nebula:b:1.+'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('dependencies', '--write-locks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        actualLocks.containsAll(expectedLocks)
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
+        !lockFile.exists()
+    }
+
+    @Unroll
+    def 'generate core lock file with #facet facet configurations'() {
+        given:
+        def sourceSetConfig
+        if (setParentSourceSet) {
+            sourceSetConfig = """{
+                parentSourceSet = 'test'
+            }""".stripIndent()
+        } else {
+            sourceSetConfig = ''
+        }
+
+        buildFile.text = """
+            buildscript {
+              repositories {
+                maven {
+                  url "https://plugins.gradle.org/m2/"
+                }
+              }
+              dependencies {
+                classpath "com.netflix.nebula:nebula-project-plugin:6.0.0"
+              }
+            }
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+            }
+            apply plugin: '$plugin'
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+                mavenCentral()
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                compile 'test.nebula:b:1.+'
+                testCompile 'junit:junit:4.12'
+            }
+            facets {
+                $facet $sourceSetConfig
+            }
+            """.stripIndent()
+
+        def facetTestFile = createFile("${projectDir}/src/${facet}/java/${facet.capitalize()}.java")
+        facetTestFile.text = """
+            import org.junit.Test;
+            public class ${facet.capitalize()} {
+                @Test
+                public void helloWorld${facet.capitalize()}() {
+                    System.out.println("Hello World");
+                }
+            }
+            """.stripIndent()
+
+        when:
+        def result = runTasks('dependencies', '--write-locks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def facetLockfiles = [
+                "${facet}AnnotationProcessor.lockfile".toString(),
+                "${facet}Compile.lockfile".toString(),
+                "${facet}CompileClasspath.lockfile".toString(),
+                "${facet}CompileOnly.lockfile".toString(),
+                "${facet}Runtime.lockfile".toString(),
+                "${facet}RuntimeClasspath.lockfile".toString()
+        ]
+        def updatedExpectedLocks = expectedLocks + facetLockfiles
+        updatedExpectedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        def lockFile = new File(projectDir, "/gradle/dependency-locks/${facet}Compile.lockfile")
+        lockFile.text.contains('test.nebula:a:1.1.0')
+        lockFile.text.contains('test.nebula:b:1.1.0')
+        lockFile.text.contains('junit:junit:4.12')
+        lockFile.text.contains('org.hamcrest:hamcrest-core:1.3')
+
+        where:
+        facet       | plugin             | setParentSourceSet
+        'integTest' | 'nebula.integtest' | false
+        'smokeTest' | 'nebula.facet'     | true
+        'examples'  | 'nebula.facet'     | true
     }
 
     def 'fails when generating Nebula locks and writing core locks together'() {
@@ -81,9 +224,9 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile').text
-        lockFile.contains('test.nebula:a:1.1.0')
-        lockFile.contains('test.nebula:b:1.1.0')
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
+        lockFile.text.contains('test.nebula:a:1.1.0')
+        lockFile.text.contains('test.nebula:b:1.1.0')
 
         result.output.contains("> Task :generateLock FAILED")
     }
