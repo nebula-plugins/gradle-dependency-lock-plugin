@@ -18,114 +18,86 @@
 
 package nebula.plugin.dependencylock.tasks
 
-import nebula.plugin.dependencylock.ConfigurationsToLockFinder
-import nebula.plugin.dependencylock.DependencyLockReader
 import nebula.plugin.dependencylock.utils.CoreLocking
 import org.gradle.api.BuildCancelledException
-import org.gradle.api.execution.TaskExecutionGraph
-import org.gradle.api.logging.Logger
-import org.gradle.api.logging.Logging
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ResolveException
 import org.gradle.api.tasks.TaskAction
 
-class MigrateToCoreLocksTask extends AbstractLockTask {
-    String description = 'Migrates Nebula locks to core Gradle locks'
-    private static final Logger LOGGER = Logging.getLogger(MigrateToCoreLocksTask)
-
-    @InputFile
-    File inputLockFile
-
-    @OutputDirectory
-    File outputLocksDirectory
-
-    Set<String> configurationNames
+class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
+    String description = 'Migrates all dependencies to use core Gradle locks'
 
     @TaskAction
-    void migrate() {
+    void migrateUnlockedDependencies() {
         if (CoreLocking.isCoreLockingEnabled()) {
-            project.gradle.taskGraph.whenReady { TaskExecutionGraph taskGraph ->
-                if (project.hasProperty("lockAllConfigurations") && (project.property("lockAllConfigurations") as String).toBoolean()) {
-                    project.dependencyLocking {
-                        it.lockAllConfigurations()
-                    }
-                } else {
-                    def configurationsToLock = new ConfigurationsToLockFinder(project).findConfigurationsToLock(getConfigurationNames())
-                    project.configurations.each {
-                        if (configurationsToLock.contains(it.name)) {
-                            it.resolutionStrategy.activateDependencyLocking()
-                        }
-                    }
-                }
-            }
+            lockSelectedConfigurations()
 
-            if (getInputLockFile().exists()) {
-                LOGGER.warn("Migrating legacy locks to core Gradle locking. This will remove legacy locks.\n" +
-                        " - Legacy lock: ${getInputLockFile().absolutePath}\n" +
-                        " - Core Gradle locks: ${getOutputLocksDirectory().absoluteFile}")
-                if (!getOutputLocksDirectory().exists()) {
-                    createOutputLocksDirectory()
-                }
+            lockableConfigurations().forEach { conf ->
+                HashSet<String> unlockedDependencies = findUnlockedDependencies(conf)
 
-                def lockReader = new DependencyLockReader(project)
-
-                project.configurations.forEach { conf ->
-                    def dependenciesForConf = new ArrayList()
-                    def locks = lockReader.readLocks(conf, getInputLockFile())
-
-                    if (locks != null) {
-                        for (Map.Entry<String, ArrayList<String>> entry : locks.entrySet()) {
-                            def groupAndName = entry.key as String
-                            def entryLockedValue = (entry.value as Map<String, String>)["locked"]
-                            if (entryLockedValue != null) {
-                                def lockedVersion = entryLockedValue as String
-                                dependenciesForConf.add("$groupAndName:$lockedVersion")
-                            } else {
-                                LOGGER.info("No locked version for '$groupAndName' to migrate in $conf")
-                            }
-                        }
-                    }
+                if (unlockedDependencies.size() > 0) {
+                    List<String> sortableDeps = unlockedDependencies.toList()
+                    sortableDeps.sort()
 
                     def configLockFile = new File(getOutputLocksDirectory(), "/${conf.name}.lockfile")
-                    if (!configLockFile.exists()) {
-                        configLockFile.createNewFile()
-                        configLockFile.write("# This is a file for dependency locking, migrated from Nebula locks.\n")
 
-                        dependenciesForConf.sort()
-
-                        dependenciesForConf.forEach { depAndVersion ->
-                            configLockFile.append("$depAndVersion\n")
-                        }
-                    }
+                    writeDependenciesIntoLockFile(conf, sortableDeps, configLockFile)
                 }
-
-                deleteInputLockFile()
             }
         }
     }
 
-    private void deleteInputLockFile() {
-        def failureToDeleteInputLockFileMessage = "Failed to delete legacy locks.\n" +
-                "Please remove the legacy lockfile manually.\n" +
-                " - Legacy lock: ${getInputLockFile().absolutePath}"
+    static def writeDependenciesIntoLockFile(Configuration conf, List<String> sortedDeps, File configLockFile) {
         try {
-            if (!getInputLockFile().delete()) {
-                throw new BuildCancelledException(failureToDeleteInputLockFileMessage)
+            List<String> lockfileContents = configLockFile.readLines()
+
+            List<String> previouslyUnlockedDeps = sortedDeps.findAll {
+                !lockfileContents.contains(it)
             }
+
+            def comments = new ArrayList()
+            def lockedDeps = new ArrayList()
+            lockfileContents.each {
+                if (it.startsWith('#')) {
+                    comments.add(it)
+                } else if (it.matches(/\w*/)) {
+                    // do nothing
+                } else {
+                    lockedDeps.add(it)
+                }
+            }
+
+            def allDeps = lockedDeps + previouslyUnlockedDeps
+            allDeps.sort()
+
+            configLockFile.text =
+                    comments.join('\n') +
+                            '\n' +
+                            allDeps.join('\n')
+
         } catch (Exception e) {
-            throw new BuildCancelledException(failureToDeleteInputLockFileMessage, e)
+            throw new BuildCancelledException("Failed to update the ${conf.name} core lock file." +
+                    " - Core lock file location: ${configLockFile.absolutePath}", e)
         }
     }
 
-    private void createOutputLocksDirectory() {
-        def failureToDeleteOutputLocksDirectoryMessage = "Failed to create core lock directory. Check your permissions.\n" +
-                " - Core lock directory: ${getOutputLocksDirectory().absolutePath}"
+    private static Set<String> findUnlockedDependencies(Configuration conf) {
+        def unlockedDependencies = new HashSet<String>()
         try {
-            if (!getOutputLocksDirectory().mkdirs()) {
-                throw new BuildCancelledException(failureToDeleteOutputLocksDirectoryMessage)
+            conf.resolvedConfiguration.firstLevelModuleDependencies
+        } catch (ResolveException re) {
+            re.causes.each {
+                def missingDep
+                try {
+                    def matcher = it.getMessage() =~ /.*'(.*)'.*/
+                    def results = matcher[0]
+                    missingDep = results[1] as String
+                } catch (Exception e) {
+                    throw new BuildCancelledException("Error finding unlocked dependencies", e)
+                }
+                unlockedDependencies.add(missingDep)
             }
-        } catch (Exception e) {
-            throw new BuildCancelledException(failureToDeleteOutputLocksDirectoryMessage, e)
         }
+        unlockedDependencies
     }
 }
