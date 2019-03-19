@@ -87,15 +87,15 @@ class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
             conf.resolvedConfiguration.firstLevelModuleDependencies
         } catch (ResolveException re) {
             re.causes.each {
-                def missingDep
+                def unlockedDep
                 try {
                     def matcher = it.getMessage() =~ /.*'(.*)'.*/
-                    def results = matcher[0]
-                    missingDep = results[1] as String
+                    def results = matcher[0] as List
+                    unlockedDep = results[1] as String
                 } catch (Exception e) {
-                    throw new BuildCancelledException("Error finding unlocked dependencies", e)
+                    throw new BuildCancelledException("Error finding unlocked dependency from '${it.getMessage()}'", e)
                 }
-                unlockedDependencies.add(missingDep)
+                unlockedDependencies.add(unlockedDep)
             }
         }
         unlockedDependencies
