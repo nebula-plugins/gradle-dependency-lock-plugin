@@ -33,8 +33,14 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                 .addModule('test.nebula:b:1.1.0')
                 .addModule('test.nebula:d:1.0.0')
                 .addModule('test.nebula:d:1.1.0')
+                .addModule('third-party:a:1.0.0')
+                .addModule('third-party:b:1.0.0')
+                .addModule(new ModuleBuilder('test.nebula:some-dep:1.0.0').addDependency('third-party:a:1.0.0').build())
+                .addModule(new ModuleBuilder('test.nebula:some-other-dep:1.0.0').addDependency('third-party:b:1.0.0').build())
                 .addModule(new ModuleBuilder('test.nebula:c:1.0.0').addDependency('test.nebula:d:1.0.0').build())
                 .addModule(new ModuleBuilder('test.nebula:c:1.1.0').addDependency('test.nebula:d:1.1.0').build())
+                .addModule(new ModuleBuilder('test.nebula:e:1.0.0').addDependency('test.nebula:some-dep:1.0.0').build())
+                .addModule(new ModuleBuilder('test.nebula:e:1.1.0').addDependency('test.nebula:some-other-dep:1.0.0').build())
                 .build()
         mavenrepo = new GradleDependencyGenerator(graph, "${projectDir}/testrepogen")
         mavenrepo.generateTestMavenRepo()
@@ -154,9 +160,9 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
     def 'migration with transitives'() {
         given:
         buildFile << """
-dependencies {
-    compile 'test.nebula:c:1.+'
-}"""
+            dependencies {
+                compile 'test.nebula:c:1.+'
+            }""".stripIndent()
         def legacyLockFile = new File(projectDir, 'dependencies.lock')
         def expectedNebulaLockText = LockGenerator.duplicateIntoConfigs(
                 '''\
@@ -199,12 +205,13 @@ dependencies {
         !legacyLockFile.exists()
     }
 
-    def 'migration with transitives - must lock transitives'() {
+    def 'migration with previously unlocked transitives'() {
         given:
         buildFile << """
-dependencies {
-    compile 'test.nebula:c:1.+'
-}"""
+            dependencies {
+                compile 'test.nebula:c:1.+'
+                compile 'test.nebula:e:1.+'
+            }""".stripIndent()
         def legacyLockFile = new File(projectDir, 'dependencies.lock')
         def expectedNebulaLockText = LockGenerator.duplicateIntoConfigs(
                 '''\
@@ -217,6 +224,10 @@ dependencies {
                     "requested": "1.+"
                 },
                 "test.nebula:c": {
+                    "locked": "1.0.0",
+                    "requested": "1.+"
+                },
+                "test.nebula:e": {
                     "locked": "1.0.0",
                     "requested": "1.+"
                 }'''.stripIndent())
@@ -236,23 +247,15 @@ dependencies {
         lockFile.text.contains('test.nebula:a:1.0.0')
         lockFile.text.contains('test.nebula:b:1.1.0')
         lockFile.text.contains('test.nebula:c:1.0.0')
-        !lockFile.text.contains('test.nebula:d:1.0.0')
-
-        !legacyLockFile.exists()
-
-        when:
-        def mismatchedDependenciesResult = runTasks('dependencies')
-
-        then:
-        mismatchedDependenciesResult.output.contains('FAILED')
-
-        when:
-        runTasks('dependencies', '--update-locks', 'test.nebula:d')
-        def updatedDependencies = runTasks('dependencies')
-
-        then:
         lockFile.text.contains('test.nebula:d:1.0.0')
+        lockFile.text.contains('test.nebula:e:1.0.0')
+        lockFile.text.contains('test.nebula:some-dep:1.0.0')
 
+        when:
+        def verify = runTasks('dependencies')
+
+        then:
+        !verify.output.contains('Failure')
     }
 
     def 'migration with multiproject setup'() {
@@ -534,26 +537,6 @@ dependencies {
         actualLocks.containsAll(expectedLocks)
         def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
         lockFile.text.contains('test.nebula:a:1.0.0')
-
-        !legacyLockFile.exists()
-
-        when:
-        def mismatchedDependenciesResult = runTasks('dependencies')
-
-        then:
-        mismatchedDependenciesResult.output.contains('FAILED')
-
-        when:
-        runTasks('dependencies', '--update-locks', 'test.nebula:b')
-        def updatedDependencies = runTasks('dependencies')
-
-        then:
-        updatedDependencies.output.contains('test.nebula:a:1.+ -> 1.0.0')
-        updatedDependencies.output.contains('test.nebula:b:1.+ -> 1.1.0')
-        updatedDependencies.output.contains('dependency constraint')
-        !updatedDependencies.output.contains('FAILED')
-
-        lockFile.text.contains('test.nebula:a:1.0.0')
         lockFile.text.contains('test.nebula:b:1.1.0')
     }
 
@@ -714,6 +697,14 @@ dependencies {
         result.output.contains("Legacy global locks are not supported with core locking")
         assertFailureOccursAtPluginLevel(result.output)
         legacyGlobalLockFile.exists()
+    }
+
+    def 'task appears'() {
+        when:
+        def result = runTasks('tasks')
+
+        then:
+        result.output.contains('migrateToCoreLocks')
     }
 
     private static String createFacetLockfileText(String facet) {

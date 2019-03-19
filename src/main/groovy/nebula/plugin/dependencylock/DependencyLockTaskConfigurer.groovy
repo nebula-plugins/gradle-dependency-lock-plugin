@@ -17,6 +17,7 @@ package nebula.plugin.dependencylock
 
 import nebula.plugin.dependencylock.tasks.CommitLockTask
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
+import nebula.plugin.dependencylock.tasks.MigrateLockedDepsToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.plugin.dependencylock.tasks.UpdateLockTask
@@ -45,7 +46,8 @@ class DependencyLockTaskConfigurer {
     public static final String UPDATE_GLOBAL_LOCK_TASK_NAME = 'updateGlobalLock'
     public static final String UPDATE_LOCK_TASK_NAME = 'updateLock'
     public static final String GENERATE_LOCK_TASK_NAME = 'generateLock'
-    public static final String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
+    public static final String MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME = "migrateLockeDepsToCoreLocks"
+    public static final String MIGRATE_TO_CORE_LOCKS_TASK_NAME = "migrateToCoreLocks"
 
     final Set<String> configurationsToSkipForGlobalLock = ['checkstyle', 'findbugs', 'findbugsPlugins', 'jacocoAgent', 'jacocoAnt']
 
@@ -264,15 +266,23 @@ class DependencyLockTaskConfigurer {
     }
 
     private MigrateToCoreLocksTask configureMigrateToCoreLocksTask(DependencyLockExtension extension) {
-        def migrateToCoreLocksTask = project.tasks.create(MIGRATE_TO_CORE_LOCK_TASK_NAME, MigrateToCoreLocksTask)
+        def migrateLockedDepsToCoreLocksTask = project.tasks.create(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME, MigrateLockedDepsToCoreLocksTask)
+        def migrateToCoreLocksTask = project.tasks.create(MIGRATE_TO_CORE_LOCKS_TASK_NAME, MigrateToCoreLocksTask)
         def lockFile = new File(project.projectDir, extension.lockFile)
         def dependencyLockDirectory = new File(project.projectDir, "/gradle/dependency-locks")
 
-        migrateToCoreLocksTask.conventionMapping.with {
+        migrateLockedDepsToCoreLocksTask.conventionMapping.with {
             configurationNames = { extension.configurationNames }
             inputLockFile = { lockFile }
             outputLocksDirectory = { dependencyLockDirectory }
         }
+        
+        migrateToCoreLocksTask.conventionMapping.with {
+            configurationNames = { extension.configurationNames }
+            outputLocksDirectory = { dependencyLockDirectory }
+        }
+
+        migrateToCoreLocksTask.dependsOn(migrateLockedDepsToCoreLocksTask)
         migrateToCoreLocksTask
     }
 
