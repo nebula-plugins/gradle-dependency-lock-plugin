@@ -68,6 +68,53 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
         lockFile.text.contains('test.nebula:a:1.1.0')
         lockFile.text.contains('test.nebula:b:1.1.0')
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
+    }
+
+    def 'generate and update core lock file'() {
+        when:
+        def result = runTasks('dependencies', '--write-locks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        actualLocks.containsAll(expectedLocks)
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
+        lockFile.text.contains('test.nebula:a:1.1.0')
+        lockFile.text.contains('test.nebula:b:1.1.0')
+
+        when:
+        // update build file, so it no longer matches locks
+        buildFile.text = """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                compile 'test.nebula:b:1.+'
+                compile 'test.nebula:d:1.+'
+            }
+        """.stripIndent()
+        def updateLocksResult = runTasks('dependencies', '--update-locks', 'test.nebula:d')
+
+        then:
+        lockFile.text.contains('test.nebula:d:1.1.0')
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
     }
 
     def 'generate core lock file while locking all configurations via property'() {
@@ -98,6 +145,12 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         actualLocks.containsAll(expectedLocks)
         def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
         lockFile.exists()
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
     }
 
     def 'generate core lock file but do not all configurations by default'() {
@@ -128,6 +181,12 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         actualLocks.containsAll(expectedLocks)
         def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
         !lockFile.exists()
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
     }
 
     @Unroll
