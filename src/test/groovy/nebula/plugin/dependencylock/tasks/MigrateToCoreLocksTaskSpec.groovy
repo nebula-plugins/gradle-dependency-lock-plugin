@@ -628,6 +628,188 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         'examples'  | 'nebula.facet'     | true
     }
 
+    @Unroll
+    def 'migrating with previously unlocked facet #facet can cause dependencies to skew across configurations'() {
+        def legacyLockFile = new File(projectDir, 'dependencies.lock')
+        legacyLockFile.text = LockGenerator.duplicateIntoConfigs(
+                '''\
+                "test.nebula:a": {
+                    "locked": "1.0.0",
+                    "requested": "1.+"
+                }
+                '''.stripIndent())
+
+        def sourceSetConfig
+        if (setParentSourceSet) {
+            sourceSetConfig = """{
+                parentSourceSet = 'test'
+            }""".stripIndent()
+        } else {
+            sourceSetConfig = ''
+        }
+
+        buildFile.text = """
+            buildscript {
+              repositories {
+                maven {
+                  url "https://plugins.gradle.org/m2/"
+                }
+              }
+              dependencies {
+                classpath "com.netflix.nebula:nebula-project-plugin:6.0.0"
+              }
+            }
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+            }
+            apply plugin: '$plugin'
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+                mavenCentral()
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+            }
+            facets {
+                $facet $sourceSetConfig
+            }
+            """.stripIndent()
+
+        when:
+        def result = runTasks('migrateToCoreLocks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        !result.output.contains('not supported')
+        result.output.contains('Migrating legacy locks')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def facetLockfiles = [
+                "${facet}AnnotationProcessor.lockfile".toString(),
+                "${facet}Compile.lockfile".toString(),
+                "${facet}CompileClasspath.lockfile".toString(),
+                "${facet}CompileOnly.lockfile".toString(),
+                "${facet}Runtime.lockfile".toString(),
+                "${facet}RuntimeClasspath.lockfile".toString()
+        ]
+        def updatedExpectedLocks = expectedLocks + facetLockfiles
+        updatedExpectedLocks.each {
+            assert actualLocks.contains(it)
+        }
+
+        // compile lock came from json lockfile
+        def compileLockFile = new File(projectDir, "/gradle/dependency-locks/compile.lockfile")
+        compileLockFile.text.contains('test.nebula:a:1.0.0')
+
+        // facet lock had been unlocked & resolved to different version
+        def facetLockFile = new File(projectDir, "/gradle/dependency-locks/${facet}Compile.lockfile")
+        facetLockFile.text.contains('test.nebula:a:1.1.0')
+
+        where:
+        facet       | plugin             | setParentSourceSet
+        'integTest' | 'nebula.integtest' | false
+        'smokeTest' | 'nebula.facet'     | true
+        'examples'  | 'nebula.facet'     | true
+    }
+
+    def 'migration does not lock all configurations by default'() {
+        given:
+        def legacyLockFile = new File(projectDir, 'dependencies.lock')
+        legacyLockFile.text = LockGenerator.duplicateIntoConfigs(
+                '''\
+                "test.nebula:a": {
+                    "locked": "1.0.0",
+                    "requested": "1.+"
+                },
+                "test.nebula:b": {
+                    "locked": "1.1.0",
+                    "requested": "1.+"
+                }'''.stripIndent())
+
+        buildFile.text = """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+                id 'jacoco'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+                mavenCentral()
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                compile 'test.nebula:b:1.+'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('migrateToCoreLocks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        actualLocks.containsAll(expectedLocks)
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
+        !lockFile.exists()
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
+    }
+
+
+    def 'migration locks all configurations via property'() {
+        given:
+        def legacyLockFile = new File(projectDir, 'dependencies.lock')
+        legacyLockFile.text = LockGenerator.duplicateIntoConfigs(
+                '''\
+                "test.nebula:a": {
+                    "locked": "1.0.0",
+                    "requested": "1.+"
+                },
+                "test.nebula:b": {
+                    "locked": "1.1.0",
+                    "requested": "1.+"
+                }'''.stripIndent())
+
+        buildFile.text = """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+                id 'jacoco'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+                mavenCentral()
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                compile 'test.nebula:b:1.+'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('migrateToCoreLocks', '-PlockAllConfigurations=true')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        actualLocks.containsAll(expectedLocks)
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
+        lockFile.exists()
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
+    }
+
     def 'fails migrating global locks'() {
         given:
         buildFile.text = """
@@ -697,6 +879,18 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         result.output.contains("Legacy global locks are not supported with core locking")
         assertFailureOccursAtPluginLevel(result.output)
         legacyGlobalLockFile.exists()
+    }
+
+    def 'migration fails when there is no lockfile to migrate from'() {
+        given:
+        def legacyLockFile = new File(projectDir, 'dependencies.lock')
+        legacyLockFile.delete()
+
+        when:
+        def result = runTasksAndFail('migrateToCoreLocks')
+
+        then:
+        result.output.contains('Stopping migration')
     }
 
     def 'task appears'() {

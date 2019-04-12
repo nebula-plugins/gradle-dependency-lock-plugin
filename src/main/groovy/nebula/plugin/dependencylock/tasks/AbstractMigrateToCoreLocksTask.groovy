@@ -18,7 +18,6 @@ package nebula.plugin.dependencylock.tasks
 import nebula.plugin.dependencylock.ConfigurationsToLockFinder
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.execution.TaskExecutionGraph
 import org.gradle.api.tasks.OutputDirectory
 
 abstract class AbstractMigrateToCoreLocksTask extends DefaultTask {
@@ -30,24 +29,48 @@ abstract class AbstractMigrateToCoreLocksTask extends DefaultTask {
     Set<String> configurationNames
 
     void lockSelectedConfigurations() {
-        project.gradle.taskGraph.whenReady { TaskExecutionGraph taskGraph ->
-            if (project.hasProperty("lockAllConfigurations") && (project.property("lockAllConfigurations") as String).toBoolean()) {
-                project.dependencyLocking {
-                    it.lockAllConfigurations()
-                }
-            } else {
-                def configurationsToLock = new ConfigurationsToLockFinder(project)
-                        .findConfigurationsToLock(getConfigurationNames())
-                project.configurations.each {
-                    if (configurationsToLock.contains(it.name)) {
-                        it.resolutionStrategy.activateDependencyLocking()
-                    }
+        if (project.hasProperty("lockAllConfigurations") && (project.property("lockAllConfigurations") as String).toBoolean()) {
+            project.dependencyLocking {
+                it.lockAllConfigurations()
+            }
+        } else {
+            def namesOfConfigurationsToLock = lockableConfigurations()
+            project.configurations.each {
+                if (namesOfConfigurationsToLock.contains(it)) {
+                    it.resolutionStrategy.activateDependencyLocking()
                 }
             }
         }
     }
 
+
     Collection<Configuration> lockableConfigurations() {
-        GenerateLockTask.lockableConfigurations(project, project, getConfigurationNames())
+        if (project.hasProperty("lockAllConfigurations") && (project.property("lockAllConfigurations") as String).toBoolean()) {
+            GenerateLockTask.lockableConfigurations(project, project, getConfigurationNames())
+        } else {
+            def lockableConfigurationNames = new HashSet()
+
+            def configurationsToLock = new ConfigurationsToLockFinder(project).findConfigurationsToLock(getConfigurationNames(), lockableConfigurationNames)
+            lockableConfigurationNames.addAll(configurationsToLock)
+
+            project.plugins.withId("nebula.facet", {
+                def facetConfigurationsToLock = new ConfigurationsToLockFinder(project).findConfigurationsToLock(getConfigurationNames(), lockableConfigurationNames)
+                lockableConfigurationNames.addAll(facetConfigurationsToLock)
+            })
+            project.plugins.withId("nebula.integtest", {
+                def integTestConfigurationsToLock = new ConfigurationsToLockFinder(project).findConfigurationsToLock(getConfigurationNames(), lockableConfigurationNames)
+                lockableConfigurationNames.addAll(integTestConfigurationsToLock)
+            })
+
+            lockableConfigurationNames
+
+            def lockableConfigurations = new HashSet()
+            project.configurations.each {
+                if (lockableConfigurationNames.contains(it.name)) {
+                    lockableConfigurations.add(it)
+                }
+            }
+            lockableConfigurations
+        }
     }
 }

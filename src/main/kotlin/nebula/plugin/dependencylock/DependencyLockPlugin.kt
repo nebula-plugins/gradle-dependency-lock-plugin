@@ -73,19 +73,18 @@ class DependencyLockPlugin : Plugin<Project> {
         val lockFilename = DependencyLockTaskConfigurer(project).configureTasks(globalLockFilename, extension, commitExtension, overrides)
         if (CoreLocking.isCoreLockingEnabled()) {
             LOGGER.warn("${project.name}: coreLockingSupport feature enabled")
-            project.gradle.taskGraph.whenReady {
+            if (project.hasProperty("lockAllConfigurations") && (project.property("lockAllConfigurations") as String).toBoolean()) {
+                project.dependencyLocking {
+                    it.lockAllConfigurations()
+                }
+            } else {
+                lockTheseConfigurations(project, extension)
 
-                if (project.hasProperty("lockAllConfigurations") && (project.property("lockAllConfigurations") as String).toBoolean()) {
-                    project.dependencyLocking {
-                        it.lockAllConfigurations()
-                    }
-                } else {
-                    val configurationsToLock = ConfigurationsToLockFinder(project).findConfigurationsToLock(extension.configurationNames)
-                    project.configurations.forEach {
-                        if (configurationsToLock.contains(it.name)) {
-                            it.resolutionStrategy.activateDependencyLocking()
-                        }
-                    }
+                project.plugins.withId("nebula.facet") {
+                    lockTheseConfigurations(project, extension)
+                }
+                project.plugins.withId("nebula.integtest") {
+                    lockTheseConfigurations(project, extension)
                 }
             }
 
@@ -140,6 +139,15 @@ class DependencyLockPlugin : Plugin<Project> {
                     maybeApplyLock(conf, extension, overrides, globalLockFilename, lockFilename)
                 }
             })
+        }
+    }
+
+    private fun lockTheseConfigurations(project: Project, extension: DependencyLockExtension) {
+        val configurationsToLock = ConfigurationsToLockFinder(project).findConfigurationsToLock(extension.configurationNames, emptySet())
+        project.configurations.forEach {
+            if (configurationsToLock.contains(it.name)) {
+                it.resolutionStrategy.activateDependencyLocking()
+            }
         }
     }
 

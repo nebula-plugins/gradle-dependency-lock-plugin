@@ -23,14 +23,12 @@ import nebula.plugin.dependencylock.utils.CoreLocking
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.TaskAction
 
 class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
     String description = "Migrates Nebula-locked dependencies to use core Gradle locks"
     private static final Logger LOGGER = Logging.getLogger(MigrateLockedDepsToCoreLocksTask)
 
-    @InputFile
     File inputLockFile
 
     @TaskAction
@@ -79,6 +77,9 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
                 }
 
                 deleteInputLockFile()
+            } else {
+                throw new BuildCancelledException("Stopping migration. There is no lockfile at expected location:\n" +
+                        "${getInputLockFile().path}")
             }
         }
     }
