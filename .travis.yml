@@ -1,8 +1,8 @@
 language: android
 android:
   components:
-    - build-tools-20.0.0
-    - android-20
+  - build-tools-20.0.0
+  - android-20
 sudo: false
 jdk: openjdk8
 install: true
@@ -11,14 +11,20 @@ cache:
   directories:
     - $HOME/.gradle/caches/
     - $HOME/.gradle/wrapper/
-before_install:
-- test $TRAVIS_PULL_REQUEST = false && openssl aes-256-cbc -K $encrypted_d7cddead3109_key -iv $encrypted_d7cddead3109_iv -in gradle.properties.enc -out gradle.properties -d || true
 after_success:
-- ./gradlew jacocoTestReport coveralls
+- "./gradlew jacocoTestReport coveralls"
 notifications:
   webhooks:
     urls:
-      - https://webhooks.gitter.im/e/6508d3ba06fa0d2b5ffc
-    on_success: change  # options: [always|never|change] default: always
-    on_failure: always  # options: [always|never|change] default: always
-    on_start: never     # options: [always|never|change] default: always
+    - https://webhooks.gitter.im/e/6508d3ba06fa0d2b5ffc
+    on_success: change
+    on_failure: always
+    on_start: never
+env:
+  global:
+  - secure: QU5aAISo94jaFEnO5eFYD0rcJvHnHjcvqQwnT2iZPlasdcSIGCqgcxLwnajsYjI2SEKdNJtryRiaugih5gra1poCgBvcuWNuZVXeQTu7BgYG2gxJbykAXcGW/SSIL2KLSpmD+LQRkCaKd9gMXMCPN6yJYggDNY40UuWp3UzoBCc=
+  - secure: a2Fj9nE3wN8aXBoNtUDsPeZTxUNDGWikn9Odd9rq2qU6kNvWBQPHMNJKbHv/ITvMczQNskinsxe1UZ6+VHS8wA++lFBChvy6IcsZLy/BI639N+vMHW93KeUZCKMsQwCz58R+YbdomFa0LZTJeTmgabMK4WckX2Z7xXo4bUfD750=
+  - secure: JmHCVkltBYpJ9ULndZEFv4cpIYrKR7q78u/k2cLktle5IHfN73V4PXzHLsGSA0BIAWvmDQYcIsv2oQYzMCVdu55q/+k+OMn3klpD/ykRIdlD3s27kCZ9S9lQdOtQ3TBb8djgnrtmj3b0PTvGoNch5LIprchOInehZ15OL2pnuDo=
+  - secure: Q+m/JYf0E0RyXfgBUw1NPyYAUL2wsoW20dVvN/44P13n/bV8/5bp8SqGeSYm2Pos9PNpBoskib1o5N1OhCQdh0x1bc47bYGQiLzQEH8UKIXBAsZbvU+oQp4b481Qu4Oa4kI7mVsvmLNEe5m0gSrYpyE6lrX0sC9X92BnD0rC7fI=
+  - secure: GhYO6atfZmeATPaEJr5370aqOzp9OayN6RkiYt4Mupvoix++1FgZx3jhQ9TvTrKfgPtIeyKic4V2qqBuOlXnQW8jiMTRsCvliDrafGJAwWLXMrXwQhBlsTA2CHBu4+oExteL2sMEtRUvCFED749dXQQWAphnFoYDAjK0xocVU14=
+  - secure: MiVujL1Duh+f8c7Y/4zqUnK2Quv2+S5XBcySOxgl7OLla3MTsHq8mIjZZ14vORomXiJQIY1b/T+q8S9mF6NUUEMe/YQLA1BamKFUUAkLpiC3LFRVk11pj3eRjPliukmIDYj3Kr4e9ah6eWKWEPGDVCGbgCUMOtolooyCvzRXk0E=
