@@ -18,6 +18,7 @@ package nebula.plugin.dependencylock
 import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.utils.CoreLocking
+import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -73,20 +74,8 @@ class DependencyLockPlugin : Plugin<Project> {
         val lockFilename = DependencyLockTaskConfigurer(project).configureTasks(globalLockFilename, extension, commitExtension, overrides)
         if (CoreLocking.isCoreLockingEnabled()) {
             LOGGER.warn("${project.name}: coreLockingSupport feature enabled")
-            if (project.hasProperty("lockAllConfigurations") && (project.property("lockAllConfigurations") as String).toBoolean()) {
-                project.dependencyLocking {
-                    it.lockAllConfigurations()
-                }
-            } else {
-                lockTheseConfigurations(project, extension)
-
-                project.plugins.withId("nebula.facet") {
-                    lockTheseConfigurations(project, extension)
-                }
-                project.plugins.withId("nebula.integtest") {
-                    lockTheseConfigurations(project, extension)
-                }
-            }
+            val coreLockingHelper = CoreLockingHelper(project)
+            coreLockingHelper.lockSelectedConfigurations(extension.configurationNames)
 
             val lockFile = File(project.projectDir, extension.lockFile)
 
@@ -139,15 +128,6 @@ class DependencyLockPlugin : Plugin<Project> {
                     maybeApplyLock(conf, extension, overrides, globalLockFilename, lockFilename)
                 }
             })
-        }
-    }
-
-    private fun lockTheseConfigurations(project: Project, extension: DependencyLockExtension) {
-        val configurationsToLock = ConfigurationsToLockFinder(project).findConfigurationsToLock(extension.configurationNames, emptySet())
-        project.configurations.forEach {
-            if (configurationsToLock.contains(it.name)) {
-                it.resolutionStrategy.activateDependencyLocking()
-            }
         }
     }
 

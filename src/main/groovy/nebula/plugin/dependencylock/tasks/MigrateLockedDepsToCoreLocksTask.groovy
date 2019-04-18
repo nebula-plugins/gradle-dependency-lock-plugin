@@ -20,6 +20,7 @@ package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.DependencyLockReader
 import nebula.plugin.dependencylock.utils.CoreLocking
+import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -34,7 +35,8 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
     @TaskAction
     void migrateLockedDependencies() {
         if (CoreLocking.isCoreLockingEnabled()) {
-            lockSelectedConfigurations()
+            def coreLockingHelper = new CoreLockingHelper(project)
+            coreLockingHelper.lockSelectedConfigurations(getConfigurationNames())
 
             if (getInputLockFile().exists()) {
                 LOGGER.warn("Migrating legacy locks to core Gradle locking. This will remove legacy locks.\n" +
@@ -46,9 +48,9 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
 
                 def lockReader = new DependencyLockReader(project)
 
-                lockableConfigurations().forEach { conf ->
+                def migrateConfigurationClosure = {
                     def dependenciesForConf = new ArrayList()
-                    def locks = lockReader.readLocks(conf, getInputLockFile())
+                    def locks = lockReader.readLocks(it, getInputLockFile())
 
                     if (locks != null) {
                         for (Map.Entry<String, ArrayList<String>> entry : locks.entrySet()) {
@@ -58,12 +60,12 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
                                 def lockedVersion = entryLockedValue as String
                                 dependenciesForConf.add("$groupAndName:$lockedVersion")
                             } else {
-                                LOGGER.info("No locked version for '$groupAndName' to migrate in $conf")
+                                LOGGER.info("No locked version for '$groupAndName' to migrate in $it")
                             }
                         }
                     }
 
-                    def configLockFile = new File(getOutputLocksDirectory(), "/${conf.name}.lockfile")
+                    def configLockFile = new File(getOutputLocksDirectory(), "/${it.name}.lockfile")
                     if (!configLockFile.exists()) {
                         configLockFile.createNewFile()
                         configLockFile.write("# This is a file for dependency locking, migrated from Nebula locks.\n" +
@@ -75,6 +77,7 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
                         configLockFile.append(dependenciesForConf.join('\n'))
                     }
                 }
+                coreLockingHelper.migrateLockedConfigurations(getConfigurationNames(), migrateConfigurationClosure)
 
                 deleteInputLockFile()
             } else {

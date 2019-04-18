@@ -19,6 +19,7 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.utils.CoreLocking
+import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolveException
@@ -30,20 +31,22 @@ class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
     @TaskAction
     void migrateUnlockedDependencies() {
         if (CoreLocking.isCoreLockingEnabled()) {
-            lockSelectedConfigurations()
+            def coreLockingHelper = new CoreLockingHelper(project)
+            coreLockingHelper.lockSelectedConfigurations(getConfigurationNames())
 
-            lockableConfigurations().forEach { conf ->
-                HashSet<String> unlockedDependencies = findUnlockedDependencies(conf)
+            def migratingUnlockedDependenciesClosure = {
+                HashSet<String> unlockedDependencies = findUnlockedDependencies(it)
 
                 if (unlockedDependencies.size() > 0) {
                     List<String> sortableDeps = unlockedDependencies.toList()
                     sortableDeps.sort()
 
-                    def configLockFile = new File(getOutputLocksDirectory(), "/${conf.name}.lockfile")
+                    def configLockFile = new File(getOutputLocksDirectory(), "/${it.name}.lockfile")
 
-                    writeDependenciesIntoLockFile(conf, sortableDeps, configLockFile)
+                    writeDependenciesIntoLockFile(it, sortableDeps, configLockFile)
                 }
             }
+            coreLockingHelper.migrateUnlockedDependenciesClosure(getConfigurationNames(), migratingUnlockedDependenciesClosure)
         }
     }
 

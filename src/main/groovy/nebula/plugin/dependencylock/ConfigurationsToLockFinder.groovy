@@ -31,7 +31,7 @@ class ConfigurationsToLockFinder {
         this.project = project
     }
 
-    List<String> findConfigurationsToLock(Set<String> configurationNames, Set<String> alreadyLockedConfigurationNames) {
+    List<String> findConfigurationsToLock(Set<String> configurationNames) {
         def configurationsToLock = new ArrayList<String>()
         def baseConfigurations = [
                 'annotationProcessor',
@@ -65,11 +65,7 @@ class ConfigurationsToLockFinder {
             lockableConfigurationNames.contains(it)
         }
 
-        lockableConfigsToLock.sort()
-
-        def newConfigsToLock = lockableConfigsToLock - alreadyLockedConfigurationNames
-
-        return newConfigsToLock
+        return lockableConfigsToLock.sort()
     }
 
     private static List<String> returnConfigurationNamesWithPrefix(it) {

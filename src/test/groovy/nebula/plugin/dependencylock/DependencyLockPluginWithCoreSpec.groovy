@@ -270,8 +270,8 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         where:
         facet       | plugin             | setParentSourceSet
         'integTest' | 'nebula.integtest' | false
-//        'smokeTest' | 'nebula.facet' | true
-//        'examples'  | 'nebula.facet' | true
+//        'smokeTest' | 'nebula.facet'     | true
+//        'examples'  | 'nebula.facet'     | true
     }
 
     def 'fails when generating Nebula locks and writing core locks together'() {
