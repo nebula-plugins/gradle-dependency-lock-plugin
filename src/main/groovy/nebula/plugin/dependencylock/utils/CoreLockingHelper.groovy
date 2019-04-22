@@ -18,16 +18,20 @@
 
 package nebula.plugin.dependencylock.utils
 
-
 import nebula.plugin.dependencylock.ConfigurationsToLockFinder
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
 
 class CoreLockingHelper {
     private Project project
 
     private Boolean shouldLockAllConfigurations
+
+    private static final Logger LOGGER = Logging.getLogger(CoreLockingHelper)
+
 
     CoreLockingHelper(Project project) {
         this.project = project
@@ -56,22 +60,37 @@ class CoreLockingHelper {
     }
 
     private void runClosureWhenPluginsAreSeen(Set<String> configurationNames, Closure closure) {
-        runClosureOnConfigurations(configurationNames, closure)
+        runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
 
         project.plugins.withId("nebula.facet") { // FIXME: not working currently
-            runClosureOnConfigurations(configurationNames, closure)
+            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
         }
         project.plugins.withId("nebula.integtest") {
-            runClosureOnConfigurations(configurationNames, closure)
+            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
+        }
+        if (project.plugins.hasPlugin("scala")) {
+            // the configurations `incrementalScalaAnalysisFor_x_ extend from `compile` and `implementation` rather than `compileClasspath`
+            def scalaConfigurationsToLock = []
+            project.configurations
+                    .findAll { it.name == 'compile' }
+                    .each { it.isCanBeResolved() }
+                    .each {
+                        scalaConfigurationsToLock.add(it.name)
+                    }
+
+            // we cannot resolve the 'implementation' configuration to determine if there are dependencies on here. Providing warning instead:
+            LOGGER.warn("Locking warning: Cannot lock scala configurations based on the 'implementation' configuration. Please define dependencies on the 'compile' configuration, if needed")
+
+            runClosureOnConfigurations(configurationNames, closure, scalaConfigurationsToLock)
         }
     }
 
-    private void runClosureOnConfigurations(Set<String> configurationNames, Closure closure) {
+    private void runClosureOnConfigurations(Set<String> configurationNames, Closure closure, List<String> additionalBaseConfigurationsToLock) {
         Set<Configuration> configurationsToLock
         if (shouldLockAllConfigurations) {
             configurationsToLock = GenerateLockTask.lockableConfigurations(project, project, configurationNames)
         } else {
-            configurationsToLock = findConfigurationsToLock(configurationNames)
+            configurationsToLock = findConfigurationsToLock(configurationNames, additionalBaseConfigurationsToLock)
         }
 
         configurationsToLock.each {
@@ -79,8 +98,8 @@ class CoreLockingHelper {
         }
     }
 
-    private Set<Configuration> findConfigurationsToLock(Set<String> configurationNames) {
-        def lockableConfigurationNames = new ConfigurationsToLockFinder(project).findConfigurationsToLock(configurationNames)
+    private Set<Configuration> findConfigurationsToLock(Set<String> configurationNames, List<String> additionalBaseConfigurationsToLock) {
+        def lockableConfigurationNames = new ConfigurationsToLockFinder(project).findConfigurationsToLock(configurationNames, additionalBaseConfigurationsToLock)
 
         def lockableConfigurations = new HashSet()
         project.configurations.each {

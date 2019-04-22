@@ -9,10 +9,10 @@ import spock.lang.Unroll
 
 class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
     def expectedLocks = [
-            'compile.lockfile', 'archives.lockfile', 'testCompileClasspath.lockfile', 'compileOnly.lockfile',
-            'annotationProcessor.lockfile', 'runtime.lockfile', 'compileClasspath.lockfile', 'testCompile.lockfile',
-            'default.lockfile', 'testAnnotationProcessor.lockfile', 'testRuntime.lockfile',
-            'testRuntimeClasspath.lockfile', 'testCompileOnly.lockfile', 'runtimeClasspath.lockfile'
+            'annotationProcessor.lockfile',
+            'compileClasspath.lockfile',
+            'testAnnotationProcessor.lockfile',
+            'testRuntimeClasspath.lockfile'
     ] as String[]
     def mavenrepo
     def projectName
@@ -88,7 +88,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
         lockFile.text.contains('test.nebula:a:1.0.0')
         lockFile.text.contains('test.nebula:b:1.1.0')
 
@@ -196,7 +196,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
         lockFile.text.contains('test.nebula:a:1.0.0')
         lockFile.text.contains('test.nebula:b:1.1.0')
         lockFile.text.contains('test.nebula:c:1.0.0')
@@ -243,7 +243,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
         lockFile.text.contains('test.nebula:a:1.0.0')
         lockFile.text.contains('test.nebula:b:1.1.0')
         lockFile.text.contains('test.nebula:c:1.0.0')
@@ -323,13 +323,13 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
 
         def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
         sub1ActualLocks.containsAll(expectedLocks)
-        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compile.lockfile')
+        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compileClasspath.lockfile')
         sub1LockFile.text.contains('test.nebula:a:1.0.0')
         !sub1LegacyLockFile.exists()
 
         def sub2ActualLocks = new File(projectDir, 'sub2/gradle/dependency-locks/').list().toList()
         sub2ActualLocks.containsAll(expectedLocks)
-        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compile.lockfile')
+        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compileClasspath.lockfile')
         sub2LockFile.text.contains('test.nebula:c:1.0.0')
         sub2LockFile.text.contains('test.nebula:d:1.0.0')
         !sub2LegacyLockFile.exists()
@@ -407,17 +407,17 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         then:
         !result.output.contains('not supported')
         result.output.contains('Migrating legacy locks')
-        result.output.contains("No locked version for '${projectName}:sub1' to migrate in configuration ':sub2:compile'")
+        result.output.contains("No locked version for '${projectName}:sub1' to migrate in configuration ':sub2:compileClasspath'")
 
         def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
         sub1ActualLocks.containsAll(expectedLocks)
-        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compile.lockfile')
+        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compileClasspath.lockfile')
         sub1LockFile.text.contains('test.nebula:a:1.0.0')
         !sub1LegacyLockFile.exists()
 
         def sub2ActualLocks = new File(projectDir, 'sub2/gradle/dependency-locks/').list().toList()
         sub2ActualLocks.containsAll(expectedLocks)
-        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compile.lockfile')
+        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compileClasspath.lockfile')
         sub2LockFile.text.contains('test.nebula:a:1.0.0')
         sub2LockFile.text.contains('test.nebula:c:1.0.0')
         sub2LockFile.text.contains('test.nebula:d:1.0.0')
@@ -501,13 +501,13 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
 
         def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
         sub1ActualLocks.containsAll(expectedLocks)
-        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compile.lockfile')
+        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compileClasspath.lockfile')
         sub1LockFile.text.contains('test.nebula:a:1.0.0')
         !sub1LegacyLockFile.exists()
 
         def sub2ActualLocks = new File(projectDir, 'sub2/gradle/dependency-locks/').list().toList()
         sub2ActualLocks.containsAll(expectedLocks)
-        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compile.lockfile')
+        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compileClasspath.lockfile')
         sub2LockFile.text.contains('test.nebula:a:1.0.0')
         sub2LockFile.text.findAll('test.nebula:a:1.0.0').size() == 1
         sub2LockFile.text.contains('test.nebula:c:1.0.0')
@@ -535,7 +535,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
         lockFile.text.contains('test.nebula:a:1.0.0')
         lockFile.text.contains('test.nebula:b:1.1.0')
     }
@@ -605,10 +605,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
 
         def facetLockfiles = [
                 "${facet}AnnotationProcessor.lockfile".toString(),
-                "${facet}Compile.lockfile".toString(),
                 "${facet}CompileClasspath.lockfile".toString(),
-                "${facet}CompileOnly.lockfile".toString(),
-                "${facet}Runtime.lockfile".toString(),
                 "${facet}RuntimeClasspath.lockfile".toString()
         ]
         def updatedExpectedLocks = expectedLocks + facetLockfiles
@@ -616,7 +613,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
             assert actualLocks.contains(it)
         }
 
-        def lockFile = new File(projectDir, "/gradle/dependency-locks/${facet}Compile.lockfile")
+        def lockFile = new File(projectDir, "/gradle/dependency-locks/${facet}compileClasspath.lockfile")
         lockFile.text.contains('test.nebula:a:1.0.0')
         lockFile.text.contains('junit:junit:4.12')
         lockFile.text.contains('org.hamcrest:hamcrest-core:1.3')
@@ -687,10 +684,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
 
         def facetLockfiles = [
                 "${facet}AnnotationProcessor.lockfile".toString(),
-                "${facet}Compile.lockfile".toString(),
                 "${facet}CompileClasspath.lockfile".toString(),
-                "${facet}CompileOnly.lockfile".toString(),
-                "${facet}Runtime.lockfile".toString(),
                 "${facet}RuntimeClasspath.lockfile".toString()
         ]
         def updatedExpectedLocks = expectedLocks + facetLockfiles
@@ -699,11 +693,11 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         }
 
         // compile lock came from json lockfile
-        def compileLockFile = new File(projectDir, "/gradle/dependency-locks/compile.lockfile")
+        def compileLockFile = new File(projectDir, "/gradle/dependency-locks/compileClasspath.lockfile")
         compileLockFile.text.contains('test.nebula:a:1.0.0')
 
         // facet lock had been unlocked & resolved to different version
-        def facetLockFile = new File(projectDir, "/gradle/dependency-locks/${facet}Compile.lockfile")
+        def facetLockFile = new File(projectDir, "/gradle/dependency-locks/${facet}compileClasspath.lockfile")
         facetLockFile.text.contains('test.nebula:a:1.1.0')
 
         where:
