@@ -65,9 +65,7 @@ class ConfigurationsToLockFinder {
             lockableConfigurationNames.contains(it)
         }
 
-        lockableConfigsToLock.sort()
-
-        return lockableConfigsToLock
+        return lockableConfigsToLock.sort()
     }
 
     private static List<String> returnConfigurationNamesWithPrefix(it) {

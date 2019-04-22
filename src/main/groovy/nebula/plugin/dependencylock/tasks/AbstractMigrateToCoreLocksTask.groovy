@@ -15,10 +15,8 @@
  */
 package nebula.plugin.dependencylock.tasks
 
-import nebula.plugin.dependencylock.ConfigurationsToLockFinder
+
 import org.gradle.api.DefaultTask
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.execution.TaskExecutionGraph
 import org.gradle.api.tasks.OutputDirectory
 
 abstract class AbstractMigrateToCoreLocksTask extends DefaultTask {
@@ -29,25 +27,4 @@ abstract class AbstractMigrateToCoreLocksTask extends DefaultTask {
 
     Set<String> configurationNames
 
-    void lockSelectedConfigurations() {
-        project.gradle.taskGraph.whenReady { TaskExecutionGraph taskGraph ->
-            if (project.hasProperty("lockAllConfigurations") && (project.property("lockAllConfigurations") as String).toBoolean()) {
-                project.dependencyLocking {
-                    it.lockAllConfigurations()
-                }
-            } else {
-                def configurationsToLock = new ConfigurationsToLockFinder(project)
-                        .findConfigurationsToLock(getConfigurationNames())
-                project.configurations.each {
-                    if (configurationsToLock.contains(it.name)) {
-                        it.resolutionStrategy.activateDependencyLocking()
-                    }
-                }
-            }
-        }
-    }
-
-    Collection<Configuration> lockableConfigurations() {
-        GenerateLockTask.lockableConfigurations(project, project, getConfigurationNames())
-    }
 }
