@@ -403,6 +403,22 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'dependencies.lock').text == FOO_LOCK
     }
 
+    def 'diff lock'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << PRE_DIFF_FOO_LOCK
+        buildFile << BUILD_GRADLE
+
+        when:
+        def result = runTasksSuccessfully('generateLock', 'diffLock')
+
+        then:
+        final String MY_DIFF = '''\
+            updated:
+              test.example:foo: 1.0.0 -> 1.0.1
+            '''.stripIndent()
+        new File(projectDir, 'build/dependency-lock/lockdiff.txt').text == MY_DIFF
+    }
+
     def 'run with generated lock'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << OLD_FOO_LOCK
@@ -958,6 +974,55 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'sub2/dependencies.lock').text == lockText2
     }
 
+    def 'diffLock in multiproject'() {
+        setupCommonMultiproject()
+        new File(projectDir, 'dependencies.lock').text = '{}'
+        new File(projectDir, 'sub1/dependencies.lock').text = LockGenerator.duplicateIntoConfigs('''\
+                "test.example:foo": {
+                    "locked": "2.0.0",
+                    "requested": "2.0.0"
+                }
+            '''.stripIndent())
+
+        new File(projectDir, 'sub2/dependencies.lock').text = LockGenerator.duplicateIntoConfigs('''\
+                "test.example:foo": {
+                    "locked": "1.0.0",
+                    "requested": "1.+"
+                }
+            '''.stripIndent())
+
+        when:
+        runTasksSuccessfully('generateLock', 'diffLock')
+
+        then:
+        String lockText1 = ''
+        new File(projectDir, 'sub1/build/dependency-lock/lockdiff.txt').text == lockText1
+
+        String lockText2 = '''\
+            updated:
+              test.example:foo: 1.0.0 -> 1.0.1
+            '''.stripIndent()
+        new File(projectDir, 'sub2/build/dependency-lock/lockdiff.txt').text == lockText2
+    }
+
+    def 'diffLock in multiproject with no locks'() {
+        setupCommonMultiproject()
+
+        when:
+        runTasksSuccessfully('diffLock')
+
+        then:
+        String lockText1 = '''\
+            --no updated locks to diff--
+            '''.stripIndent()
+        new File(projectDir, 'sub1/build/dependency-lock/lockdiff.txt').text == lockText1
+
+        String lockText2 = '''\
+            --no updated locks to diff--
+            '''.stripIndent()
+        new File(projectDir, 'sub2/build/dependency-lock/lockdiff.txt').text == lockText2
+    }
+
     def 'generateGlobalLock ignores existing global lock file'() {
         setupCommonMultiproject()
         new File(projectDir, 'global.lock').text = '''\
@@ -1423,30 +1488,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         !result.standardOutput.contains("is using a deprecated lock format")
-    }
-
-    @Ignore
-    def 'diff the generated lock with the existing lock '() {
-        def dependenciesLock = new File(projectDir, 'dependencies.lock')
-        dependenciesLock << PRE_DIFF_FOO_LOCK
-
-        buildFile << BUILD_GRADLE
-
-        when:
-        runTasksSuccessfully('generateLock', 'diffLock')
-
-        then:
-        def diff = new File(projectDir, 'build/reports/dependencylock/lockdiff.txt')
-        diff.text == '''\
-          compile
-            test.example:foo:1.0.0 -> 1.0.1
-          runtime
-            test.example:foo:1.0.0 -> 1.0.1
-          testCompile
-            test.example:foo:1.0.0 -> 1.0.1
-          testRuntime
-            test.example:foo:1.0.0 -> 1.0.1
-        '''.stripIndent()
     }
 
     @Unroll
