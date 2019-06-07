@@ -16,6 +16,7 @@
 package nebula.plugin.dependencylock
 
 import nebula.plugin.dependencylock.tasks.CommitLockTask
+import nebula.plugin.dependencylock.tasks.DiffLockTask
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import nebula.plugin.dependencylock.tasks.MigrateLockedDepsToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
@@ -26,10 +27,12 @@ import nebula.plugin.dependencylock.wayback.WaybackProviderFactory
 import nebula.plugin.scm.ScmPlugin
 import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.TaskProvider
 
 import static nebula.plugin.dependencylock.tasks.GenerateLockTask.lockableConfigurations
 
@@ -48,6 +51,7 @@ class DependencyLockTaskConfigurer {
     public static final String GENERATE_LOCK_TASK_NAME = 'generateLock'
     public static final String MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME = "migrateLockeDepsToCoreLocks"
     public static final String MIGRATE_TO_CORE_LOCKS_TASK_NAME = "migrateToCoreLocks"
+    public static final String DIFF_LOCK_TASK_NAME = 'diffLock'
 
     final Set<String> configurationsToSkipForGlobalLock = ['checkstyle', 'findbugs', 'findbugsPlugins', 'jacocoAgent', 'jacocoAnt']
 
@@ -73,6 +77,8 @@ class DependencyLockTaskConfigurer {
         createDeleteLock(saveTask)
 
         configureMigrateToCoreLocksTask(extension)
+
+        TaskProvider<DiffLockTask> diffLockTask = configureDiffLockTask(lockFilename, extension)
 
         // configure global lock only on rootProject
         SaveLockTask globalSave = null
@@ -304,6 +310,21 @@ class DependencyLockTaskConfigurer {
             (prop instanceof String) ? prop.toBoolean() : prop.asBoolean()
         } else {
             false
+        }
+    }
+
+    private TaskProvider<DiffLockTask> configureDiffLockTask(String lockFileName, DependencyLockExtension extension) {
+        TaskProvider<DiffLockTask> diffLockTask = project.tasks.register(DIFF_LOCK_TASK_NAME, DiffLockTask) { diffTask ->
+            diffTask.mustRunAfter(project.tasks.named(GENERATE_LOCK_TASK_NAME), project.tasks.named(UPDATE_LOCK_TASK_NAME))
+            def existing = new File(project.projectDir, lockFileName ?: extension.lockFile)
+            if (existing.exists()) {
+                diffTask.existingLockFile = existing
+            }
+            diffTask.updatedLockFile = new File(project.buildDir, lockFileName ?: extension.lockFile)
+        }
+
+        project.tasks.named('saveLock').configure { save ->
+            save.mustRunAfter(diffLockTask)
         }
     }
 }
