@@ -9,10 +9,12 @@ import spock.lang.Unroll
 
 class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
     def expectedLocks = [
-            'compile.lockfile', 'archives.lockfile', 'testCompileClasspath.lockfile', 'compileOnly.lockfile',
-            'annotationProcessor.lockfile', 'runtime.lockfile', 'compileClasspath.lockfile', 'testCompile.lockfile',
-            'default.lockfile', 'testAnnotationProcessor.lockfile', 'testRuntime.lockfile',
-            'testRuntimeClasspath.lockfile', 'testCompileOnly.lockfile', 'runtimeClasspath.lockfile'
+            'annotationProcessor.lockfile',
+            'compileClasspath.lockfile',
+            'runtimeClasspath.lockfile',
+            'testAnnotationProcessor.lockfile',
+            'testCompileClasspath.lockfile',
+            'testRuntimeClasspath.lockfile'
     ] as String[]
     def mavenrepo
     def projectName
@@ -64,8 +66,14 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         result.output.contains('coreLockingSupport feature enabled')
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
-        actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
+        expectedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        actualLocks.each {
+            assert expectedLocks.contains(it)
+        }
+
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
         lockFile.text.contains('test.nebula:a:1.1.0')
         lockFile.text.contains('test.nebula:b:1.1.0')
 
@@ -84,8 +92,14 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         result.output.contains('coreLockingSupport feature enabled')
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
-        actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
+        expectedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        actualLocks.each {
+            assert expectedLocks.contains(it)
+        }
+
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
         lockFile.text.contains('test.nebula:a:1.1.0')
         lockFile.text.contains('test.nebula:b:1.1.0')
 
@@ -142,7 +156,20 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         result.output.contains('coreLockingSupport feature enabled')
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
-        actualLocks.containsAll(expectedLocks)
+        expectedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        assert actualLocks.size() > expectedLocks.size()
+        def allExpectedLocks = ["compile.lockfile", "archives.lockfile", "testCompileClasspath.lockfile",
+                                "compileOnly.lockfile", "annotationProcessor.lockfile", "runtime.lockfile",
+                                "compileClasspath.lockfile", "jacocoAnt.lockfile", "testCompile.lockfile",
+                                "default.lockfile", "testAnnotationProcessor.lockfile", "testRuntime.lockfile",
+                                "jacocoAgent.lockfile", "testRuntimeClasspath.lockfile", "testCompileOnly.lockfile",
+                                "runtimeClasspath.lockfile"]
+        allExpectedLocks.each {
+            assert actualLocks.contains(it)
+        }
+
         def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
         lockFile.exists()
 
@@ -178,7 +205,13 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         result.output.contains('coreLockingSupport feature enabled')
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
-        actualLocks.containsAll(expectedLocks)
+        expectedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        actualLocks.each {
+            assert expectedLocks.contains(it)
+        }
+
         def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
         !lockFile.exists()
 
@@ -191,6 +224,7 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
 
     @Unroll
     def 'generate core lock file with #facet facet configurations'() {
+        // TODO: Lock all the facet configurations by default
         given:
         def sourceSetConfig
         if (setParentSourceSet) {
@@ -251,27 +285,75 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
 
         def facetLockfiles = [
                 "${facet}AnnotationProcessor.lockfile".toString(),
-                "${facet}Compile.lockfile".toString(),
                 "${facet}CompileClasspath.lockfile".toString(),
-                "${facet}CompileOnly.lockfile".toString(),
-                "${facet}Runtime.lockfile".toString(),
                 "${facet}RuntimeClasspath.lockfile".toString()
         ]
         def updatedExpectedLocks = expectedLocks + facetLockfiles
         updatedExpectedLocks.each {
             assert actualLocks.contains(it)
         }
-        def lockFile = new File(projectDir, "/gradle/dependency-locks/${facet}Compile.lockfile")
-        lockFile.text.contains('test.nebula:a:1.1.0')
-        lockFile.text.contains('test.nebula:b:1.1.0')
-        lockFile.text.contains('junit:junit:4.12')
-        lockFile.text.contains('org.hamcrest:hamcrest-core:1.3')
+        actualLocks.each {
+            assert updatedExpectedLocks.contains(it)
+        }
+        def lockFile = new File(projectDir, "/gradle/dependency-locks/${facet}CompileClasspath.lockfile")
+        assert lockFile.text.contains('test.nebula:a:1.1.0')
+        assert lockFile.text.contains('test.nebula:b:1.1.0')
+        assert lockFile.text.contains('junit:junit:4.12')
+        assert lockFile.text.contains('org.hamcrest:hamcrest-core:1.3')
 
         where:
         facet       | plugin             | setParentSourceSet
         'integTest' | 'nebula.integtest' | false
 //        'smokeTest' | 'nebula.facet'     | true
 //        'examples'  | 'nebula.facet'     | true
+    }
+
+    @Unroll
+    def 'scala projects defining dependencies on base configuration "#conf" #areLocked'() {
+        // the configurations `incrementalScalaAnalysisFor_x_` are resolvable only from a scala context, and extend from `compile` and `implementation`
+        // https://github.com/gradle/gradle/blob/master/subprojects/scala/src/main/java/org/gradle/api/plugins/scala/ScalaBasePlugin.java#L143
+        // TODO: determine which of the scala configurations should be locked for project consistency
+        given:
+        setupScalaProject(conf)
+
+        when:
+        def result = runTasks('dependencies', '--write-locks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        assert actualLocks.size() > 0
+        def scalaRelatedLockfiles = [
+                "compile.lockfile",
+                "testCompile.lockfile"
+        ]
+        def updatedExpectedLocks = expectedLocks + scalaRelatedLockfiles
+        updatedExpectedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        actualLocks.each {
+            assert updatedExpectedLocks.contains(it)
+        }
+        def lockFile = new File(projectDir, "/gradle/dependency-locks/compile.lockfile")
+        if (conf == "compile") {
+            assert lockFile.text.contains('org.scala-lang:scala-library:')
+        } else {
+            assert !lockFile.text.contains('org.scala-lang:scala-library:')
+        }
+
+        result.output.contains("Cannot lock scala configurations based on the 'implementation' configuration.")
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
+
+        where:
+        conf             | areLocked
+        'compile'        | "are locked"
+        'implementation' | "are not locked"
     }
 
     def 'fails when generating Nebula locks and writing core locks together'() {
@@ -283,7 +365,7 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compile.lockfile')
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
         lockFile.text.contains('test.nebula:a:1.1.0')
         lockFile.text.contains('test.nebula:b:1.1.0')
 
@@ -395,6 +477,50 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         result.output.contains("Please use `./gradlew dependencies --update-locks group1:module1,group2:module2`")
         result.output.contains("> Task :updateLock FAILED")
         assertNoErrorsOnAParticularBuildLine(result.output)
+    }
+
+    private setupScalaProject(String conf) {
+        buildFile.delete()
+        buildFile.createNewFile()
+        buildFile << """
+            plugins {
+                id 'scala'
+                id 'nebula.dependency-lock'
+            }
+            repositories {
+                jcenter()
+            }
+            dependencies {
+                $conf 'org.scala-lang:scala-library:2.12.7'
+            
+                test${conf.capitalize()} 'junit:junit:4.12'
+                test${conf.capitalize()} 'org.scalatest:scalatest_2.12:3.0.5'
+            
+                testRuntimeOnly 'org.scala-lang.modules:scala-xml_2.12:1.1.1'
+            }
+            """.stripIndent()
+
+        def scalaFile = createFile("src/main/scala/Library.scala")
+        scalaFile << """
+            class Library {
+              def someLibraryMethod(): Boolean = true
+            }
+            """.stripIndent()
+
+        def scalaTest = createFile("src/test/scala/LibrarySuite.scala")
+        scalaTest << """
+            import org.scalatest.FunSuite
+            import org.junit.runner.RunWith
+            import org.scalatest.junit.JUnitRunner
+            
+            @RunWith(classOf[JUnitRunner])
+            class LibrarySuite extends FunSuite {
+              test("someLibraryMethod is always true") {
+                def library = new Library()
+                assert(library.someLibraryMethod)
+              }
+            }
+            """.stripIndent()
     }
 
     private static void assertNoErrorsOnAParticularBuildLine(String text) {

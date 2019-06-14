@@ -31,28 +31,22 @@ class ConfigurationsToLockFinder {
         this.project = project
     }
 
-    List<String> findConfigurationsToLock(Set<String> configurationNames) {
+    List<String> findConfigurationsToLock(Set<String> configurationNames, List<String> additionalBaseConfigurationsToLock = new ArrayList<>()) {
         def configurationsToLock = new ArrayList<String>()
         def baseConfigurations = [
                 'annotationProcessor',
-                'apiElements',
-                'archives',
-                'compile',
                 'compileClasspath',
-                'compileOnly',
-                'default',
-                'implementation',
-                'runtime',
-                'runtimeClasspath',
-                'runtimeElements',
-                'runtimeOnly']
+                'runtimeClasspath'
+        ]
+        baseConfigurations.addAll(additionalBaseConfigurationsToLock)
+
         configurationsToLock.addAll(baseConfigurations)
 
-        def confSuffix = 'CompileOnly'
+        def confSuffix = 'CompileClasspath'
         def configurationsWithPrefix = project.configurations.findAll { it.name.contains(confSuffix) }
         configurationsWithPrefix.each {
             def confPrefix = it.name.replace(confSuffix, '')
-            configurationsToLock.addAll(returnConfigurationNamesWithPrefix(confPrefix))
+            configurationsToLock.addAll(returnConfigurationNamesWithPrefix(confPrefix, baseConfigurations))
         }
 
         // ensure gathered configurations to lock are lockable
@@ -68,17 +62,11 @@ class ConfigurationsToLockFinder {
         return lockableConfigsToLock.sort()
     }
 
-    private static List<String> returnConfigurationNamesWithPrefix(it) {
-        def testConfigurations = [
-                "${it}AnnotationProcessor".toString(),
-                "${it}Compile".toString(),
-                "${it}CompileClasspath".toString(),
-                "${it}CompileOnly".toString(),
-                "${it}Implementation".toString(),
-                "${it}Runtime".toString(),
-                "${it}RuntimeClasspath".toString(),
-                "${it}RuntimeOnly".toString()
-        ]
-        testConfigurations
+    private static List<String> returnConfigurationNamesWithPrefix(it, List<String> baseConfigurations) {
+        def configurationNamesWithPrefix = []
+        baseConfigurations.each { baseConfig ->
+            configurationNamesWithPrefix.add("${it}${baseConfig.capitalize()}".toString())
+        }
+        return configurationNamesWithPrefix
     }
 }
