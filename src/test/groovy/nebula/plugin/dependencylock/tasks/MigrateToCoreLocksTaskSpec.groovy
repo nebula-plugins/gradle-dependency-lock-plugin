@@ -11,7 +11,9 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
     def expectedLocks = [
             'annotationProcessor.lockfile',
             'compileClasspath.lockfile',
+            'runtimeClasspath.lockfile',
             'testAnnotationProcessor.lockfile',
+            'testCompileClasspath.lockfile',
             'testRuntimeClasspath.lockfile'
     ] as String[]
     def mavenrepo
@@ -613,10 +615,10 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
             assert actualLocks.contains(it)
         }
 
-        def lockFile = new File(projectDir, "/gradle/dependency-locks/${facet}compileClasspath.lockfile")
-        lockFile.text.contains('test.nebula:a:1.0.0')
-        lockFile.text.contains('junit:junit:4.12')
-        lockFile.text.contains('org.hamcrest:hamcrest-core:1.3')
+        def lockFile = new File(projectDir, "/gradle/dependency-locks/${facet}CompileClasspath.lockfile")
+        assert lockFile.text.contains('test.nebula:a:1.0.0')
+        assert lockFile.text.contains('junit:junit:4.12')
+        assert lockFile.text.contains('org.hamcrest:hamcrest-core:1.3')
 
         where:
         facet       | plugin             | setParentSourceSet
@@ -697,8 +699,8 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         compileLockFile.text.contains('test.nebula:a:1.0.0')
 
         // facet lock had been unlocked & resolved to different version
-        def facetLockFile = new File(projectDir, "/gradle/dependency-locks/${facet}compileClasspath.lockfile")
-        facetLockFile.text.contains('test.nebula:a:1.1.0')
+        def facetLockFile = new File(projectDir, "/gradle/dependency-locks/${facet}CompileClasspath.lockfile")
+        assert facetLockFile.text.contains('test.nebula:a:1.1.0')
 
         where:
         facet       | plugin             | setParentSourceSet
