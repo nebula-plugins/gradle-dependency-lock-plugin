@@ -223,6 +223,205 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
     }
 
     @Unroll
+    def 'generate core lock file with multiproject setup - for configuration #configuration'() {
+        given:
+        buildFile.delete()
+        buildFile.createNewFile()
+        buildFile << """
+            plugins {
+                id 'java'
+            }
+            subprojects {
+                task dependenciesForAll(type: DependencyReportTask) {}
+            }
+            """.stripIndent()
+
+        addSubproject("sub1", """
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+            }
+            dependencies {
+                $configuration 'test.nebula:a:1.+'
+                $configuration 'test.nebula:b:1.+'
+            }
+            """.stripIndent())
+
+        addSubproject("sub2", """
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+            }
+            dependencies {
+                $configuration 'test.nebula:a:1.+'
+                $configuration 'test.nebula:c:1.+'
+            }
+            """.stripIndent())
+
+        when:
+        def result = runTasks('dependenciesForAll', '--write-locks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+
+        def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
+        expectedLocks.each {
+            assert sub1ActualLocks.contains(it)
+        }
+        sub1ActualLocks.each {
+            assert expectedLocks.contains(it)
+        }
+        def sub1LockFile = new File(projectDir, "sub1/gradle/dependency-locks/${lockFileToVerify}.lockfile")
+        sub1LockFile.text.contains('test.nebula:a:1.1.0')
+        sub1LockFile.text.contains('test.nebula:b:1.1.0')
+
+        def sub2ActualLocks = new File(projectDir, 'sub2/gradle/dependency-locks/').list().toList()
+        expectedLocks.each {
+            assert sub2ActualLocks.contains(it)
+        }
+        sub2ActualLocks.each {
+            assert expectedLocks.contains(it)
+        }
+        def sub2LockFile = new File(projectDir, "sub2/gradle/dependency-locks/${lockFileToVerify}.lockfile")
+        sub2LockFile.text.contains('test.nebula:a:1.1.0')
+        sub2LockFile.text.contains('test.nebula:c:1.1.0')
+        sub2LockFile.text.contains('test.nebula:d:1.1.0')
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
+
+        where:
+        configuration    | lockFileToVerify
+        'compile'        | 'compileClasspath'
+        'implementation' | 'compileClasspath'
+    }
+
+    @Unroll
+    def 'generate core lock file with kotlin plugin - for configuration #configuration'() {
+        given:
+        buildFile.delete()
+        buildFile.createNewFile()
+        buildFile << """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+                id 'nebula.kotlin' version '1.3.21'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+                mavenCentral()
+            }
+            dependencies {
+                $configuration 'test.nebula:a:1.+'
+                $configuration 'test.nebula:b:1.+'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('dependencies', '--write-locks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def updatedExpectedLocks = expectedLocks + 'default.lockfile'
+        updatedExpectedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        actualLocks.each {
+            assert updatedExpectedLocks.contains(it)
+        }
+
+        def lockFile = new File(projectDir, "/gradle/dependency-locks/${lockFileToVerify}.lockfile")
+        lockFile.text.contains('test.nebula:a:1.1.0')
+        lockFile.text.contains('test.nebula:b:1.1.0')
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
+
+        where:
+        configuration    | lockFileToVerify
+        'compile'        | 'default'
+        'implementation' | 'default'
+    }
+
+    @Unroll
+    def 'generate core lock file with kotlin plugin with multiproject setup - for configuration #configuration'() {
+        given:
+        definePluginOutsideOfPluginBlock = true
+
+        buildFile.delete()
+        buildFile.createNewFile()
+        buildFile << """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+            }
+            allprojects {
+                task dependenciesForAll(type: DependencyReportTask) {}
+                repositories {
+                    ${mavenrepo.mavenRepositoryBlock}
+                    mavenCentral()
+                }
+            }
+            """.stripIndent()
+
+        addSubproject("sub1", """
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+                id 'nebula.kotlin' version '1.3.21'
+            }
+            dependencies {
+                $configuration 'test.nebula:a:1.+'
+                $configuration 'test.nebula:b:1.+'
+            }
+        """.stripIndent())
+
+        when:
+        def result = runTasks('dependenciesForAll', '--write-locks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def actualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
+
+        def updatedExpectedLocks = expectedLocks + 'default.lockfile'
+        updatedExpectedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        actualLocks.each {
+            assert updatedExpectedLocks.contains(it)
+        }
+
+        def lockFile = new File(projectDir, "sub1/gradle/dependency-locks/${lockFileToVerify}.lockfile")
+        lockFile.text.contains('test.nebula:a:1.1.0')
+        lockFile.text.contains('test.nebula:b:1.1.0')
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
+
+        where:
+        configuration    | lockFileToVerify
+        'compile'        | 'default'
+        'implementation' | 'default'
+    }
+
+    @Unroll
     def 'generate core lock file with #facet facet configurations'() {
         // TODO: Lock all the facet configurations by default
         given:

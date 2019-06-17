@@ -171,8 +171,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.1.7",
-            "requested": "7.+"
+            "locked": "7.2.5",
+            "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
             "locked": "1.8.0",
@@ -217,8 +217,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.1.7",
-            "requested": "7.+"
+            "locked": "7.2.5",
+            "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
             "locked": "1.8.0",
@@ -263,8 +263,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.1.7",
-            "requested": "7.+"
+            "locked": "7.2.5",
+            "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
             "locked": "1.8.0",
@@ -309,8 +309,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.1.7",
-            "requested": "7.+"
+            "locked": "7.2.5",
+            "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
             "locked": "1.8.0",
@@ -355,8 +355,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.1.7",
-            "requested": "7.+"
+            "locked": "7.2.5",
+            "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
             "locked": "1.8.0",
@@ -401,8 +401,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.1.7",
-            "requested": "7.+"
+            "locked": "7.2.5",
+            "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
             "locked": "1.8.0",
@@ -427,12 +427,12 @@
     },
     "jacocoAgent": {
         "org.jacoco:org.jacoco.agent": {
-            "locked": "0.8.2"
+            "locked": "0.8.3"
         }
     },
     "jacocoAnt": {
         "org.jacoco:org.jacoco.ant": {
-            "locked": "0.8.2"
+            "locked": "0.8.3"
         }
     },
     "kotlinCompilerClasspath": {
@@ -528,8 +528,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.1.7",
-            "requested": "7.+"
+            "locked": "7.2.5",
+            "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
             "locked": "1.8.0",
@@ -574,8 +574,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.1.7",
-            "requested": "7.+"
+            "locked": "7.2.5",
+            "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
             "locked": "1.8.0",
@@ -620,8 +620,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.1.7",
-            "requested": "7.+"
+            "locked": "7.2.5",
+            "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
             "locked": "1.8.0",
@@ -666,8 +666,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.1.7",
-            "requested": "7.+"
+            "locked": "7.2.5",
+            "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
             "locked": "1.8.0",
@@ -712,8 +712,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.1.7",
-            "requested": "7.+"
+            "locked": "7.2.5",
+            "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
             "locked": "1.8.0",
@@ -758,8 +758,8 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.1.7",
-            "requested": "7.+"
+            "locked": "7.2.5",
+            "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
             "locked": "1.8.0",

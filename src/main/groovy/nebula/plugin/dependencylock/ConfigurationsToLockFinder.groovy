@@ -59,7 +59,21 @@ class ConfigurationsToLockFinder {
             lockableConfigurationNames.contains(it)
         }
 
-        return lockableConfigsToLock.sort()
+        def kotlinPlugins = project.plugins.findAll { it.class.name.contains("Kotlin") }
+        if (!lockableConfigsToLock.contains('compileClasspath')
+                || kotlinPlugins.size() > 0) {
+            def defaultConfigurations = project.configurations
+                    .findAll { it.name == 'default' }
+                    .each { it.isCanBeResolved() }
+            if (defaultConfigurations.size() > 0) {
+                defaultConfigurations.each {
+                    lockableConfigsToLock.add(it.name)
+                }
+            }
+        }
+
+        def sortedLockableConfigs = lockableConfigsToLock.sort()
+        return sortedLockableConfigs
     }
 
     private static List<String> returnConfigurationNamesWithPrefix(it, List<String> baseConfigurations) {
