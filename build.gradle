@@ -50,6 +50,7 @@ dependencies {
     compile 'org.codehaus.groovy.modules.http-builder:http-builder:0.7.1'
 
     testCompile 'com.netflix.nebula:gradle-git-scm-plugin:latest.release'
+    testCompile 'com.netflix.nebula:nebula-test:latest.release'
     testImplementation gradleTestKit()
     testCompile ('org.ajoberstar.grgit:grgit-core:3.0.0-beta.1') {
         exclude group: 'org.codehaus.groovy', module: 'groovy'
