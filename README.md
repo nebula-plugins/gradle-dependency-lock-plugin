@@ -29,8 +29,8 @@ Built with Oracle JDK8
 | Gradle Version | Works | Version |
 | :------------: | :---: | :---: |
 | 3.4.1          | yes   | 5.x |
-| 4.4.1          | yes   | 6.x |
-| 5.4            | yes   | 7.x |
+| 4.x            | yes   | 6.x |
+| 5.x            | yes   | 7.x |
 
 LICENSE
 =======
