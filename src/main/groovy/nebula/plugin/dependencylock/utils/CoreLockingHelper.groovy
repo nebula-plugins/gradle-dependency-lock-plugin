@@ -24,6 +24,9 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
+import org.gradle.api.plugins.JavaBasePlugin
+import org.gradle.api.plugins.JavaLibraryPlugin
+import org.gradle.api.plugins.JavaPlugin
 
 class CoreLockingHelper {
     private Project project
@@ -68,6 +71,17 @@ class CoreLockingHelper {
         project.plugins.withId("nebula.integtest") {
             runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
         }
+        project.plugins.withType(JavaLibraryPlugin.class) {
+            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
+        }
+        project.plugins.withType(JavaPlugin.class) {
+            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
+        }
+        project.plugins.withType(JavaBasePlugin.class) {
+            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
+        }
+
+//        project.plugins.withType(ScalaLanguagePlugin.class) { // TODO: do we want this instead?
         if (project.plugins.hasPlugin("scala")) {
             // the configurations `incrementalScalaAnalysisFor_x_ extend from `compile` and `implementation` rather than `compileClasspath`
             def scalaConfigurationsToLock = []

@@ -333,12 +333,11 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         result.output.contains('coreLockingSupport feature enabled')
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
-        def updatedExpectedLocks = expectedLocks + 'default.lockfile'
-        updatedExpectedLocks.each {
+        expectedLocks.each {
             assert actualLocks.contains(it)
         }
         actualLocks.each {
-            assert updatedExpectedLocks.contains(it)
+            assert expectedLocks.contains(it)
         }
 
         def lockFile = new File(projectDir, "/gradle/dependency-locks/${lockFileToVerify}.lockfile")
@@ -353,8 +352,8 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
 
         where:
         configuration    | lockFileToVerify
-        'compile'        | 'default'
-        'implementation' | 'default'
+        'compile'        | 'compileClasspath'
+        'implementation' | 'compileClasspath'
     }
 
     @Unroll
@@ -397,12 +396,11 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         result.output.contains('coreLockingSupport feature enabled')
         def actualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
 
-        def updatedExpectedLocks = expectedLocks + 'default.lockfile'
-        updatedExpectedLocks.each {
+        expectedLocks.each {
             assert actualLocks.contains(it)
         }
         actualLocks.each {
-            assert updatedExpectedLocks.contains(it)
+            assert expectedLocks.contains(it)
         }
 
         def lockFile = new File(projectDir, "sub1/gradle/dependency-locks/${lockFileToVerify}.lockfile")
@@ -417,8 +415,8 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
 
         where:
         configuration    | lockFileToVerify
-        'compile'        | 'default'
-        'implementation' | 'default'
+        'compile'        | 'compileClasspath'
+        'implementation' | 'compileClasspath'
     }
 
     @Unroll
