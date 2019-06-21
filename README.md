@@ -24,13 +24,13 @@ The project wiki contains the [full documentation](https://github.com/nebula-plu
 Gradle Compatibility Tested
 ---------------------------
 
-Built with Oracle JDK7
-Tested with Oracle JDK8
+Built with Oracle JDK8
 
-| Gradle Version | Works |
-| :------------: | :---: |
-| 3.4.1          | yes   |
-| 4.4.1          | yes   |
+| Gradle Version | Works | Version |
+| :------------: | :---: | :---: |
+| 3.4.1          | yes   | 5.x |
+| 4.4.1          | yes   | 6.x |
+| 5.4            | yes   | 7.x |
 
 LICENSE
 =======
