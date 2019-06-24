@@ -59,19 +59,6 @@ class ConfigurationsToLockFinder {
             lockableConfigurationNames.contains(it)
         }
 
-        def kotlinPlugins = project.plugins.findAll { it.class.name.contains("Kotlin") }
-        if (!lockableConfigsToLock.contains('compileClasspath')
-                || kotlinPlugins.size() > 0) {
-            def defaultConfigurations = project.configurations
-                    .findAll { it.name == 'default' }
-                    .each { it.isCanBeResolved() }
-            if (defaultConfigurations.size() > 0) {
-                defaultConfigurations.each {
-                    lockableConfigsToLock.add(it.name)
-                }
-            }
-        }
-
         def sortedLockableConfigs = lockableConfigsToLock.sort()
         return sortedLockableConfigs
     }
