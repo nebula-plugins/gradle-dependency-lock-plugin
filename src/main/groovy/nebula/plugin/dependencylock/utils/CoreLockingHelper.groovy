@@ -26,6 +26,8 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.plugins.JavaLibraryPlugin
+import org.gradle.util.DeprecationLogger
+import org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper
 
 class CoreLockingHelper {
     private Project project
@@ -76,7 +78,13 @@ class CoreLockingHelper {
         project.plugins.withType(JavaLibraryPlugin.class) {
             runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
         }
-        project.plugins.withId("nebula.kotlin") {
+        DeprecationLogger.whileDisabled {
+            //TODO: remove deprecation logger disabled once we upgrade kotlin versions to one without deprecations
+            project.plugins.withType(KotlinBasePluginWrapper.class) {
+                runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
+            }
+        }
+        project.plugins.withId("nebula.clojure") {
             runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
         }
         project.plugins.withId("scala") {

@@ -308,6 +308,7 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
     @Unroll
     def 'generate core lock file with kotlin plugin - for configuration #configuration'() {
         given:
+        System.setProperty("ignoreDeprecations", "true")
         buildFile.delete()
         buildFile.createNewFile()
         buildFile << """\
@@ -348,6 +349,7 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
 
         then:
         !cleanBuildResults.output.contains('FAILURE')
+        System.setProperty("ignoreDeprecations", "false")
 
         where:
         configuration    | lockFileToVerify
@@ -358,6 +360,7 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
     @Unroll
     def 'generate core lock file with kotlin plugin with multiproject setup - for configuration #configuration'() {
         given:
+        System.setProperty("ignoreDeprecations", "true")
         definePluginOutsideOfPluginBlock = true
 
         buildFile.delete()
@@ -401,6 +404,58 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         }
 
         def lockFile = new File(projectDir, "sub1/gradle/dependency-locks/${lockFileToVerify}.lockfile")
+        lockFile.text.contains('test.nebula:a:1.1.0')
+        lockFile.text.contains('test.nebula:b:1.1.0')
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
+        System.setProperty("ignoreDeprecations", "false")
+
+        where:
+        configuration    | lockFileToVerify
+        'compile'        | 'compileClasspath'
+        'implementation' | 'compileClasspath'
+    }
+
+    @Unroll
+    def 'generate core lock file with clojure plugin - for configuration #configuration'() {
+        given:
+        buildFile.delete()
+        buildFile.createNewFile()
+        buildFile << """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id "nebula.clojure" version "8.1.4"
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+                mavenCentral()
+            }
+            dependencies {
+                $configuration 'org.clojure:clojure:1.8.0'
+                $configuration 'test.nebula:a:1.+'
+                $configuration 'test.nebula:b:1.+'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('dependencies', '--write-locks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        expectedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        actualLocks.each {
+            assert expectedLocks.contains(it)
+        }
+
+        def lockFile = new File(projectDir, "/gradle/dependency-locks/${lockFileToVerify}.lockfile")
         lockFile.text.contains('test.nebula:a:1.1.0')
         lockFile.text.contains('test.nebula:b:1.1.0')
 
