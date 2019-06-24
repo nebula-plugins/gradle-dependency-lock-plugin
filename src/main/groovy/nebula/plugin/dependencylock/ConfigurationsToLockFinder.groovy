@@ -42,6 +42,12 @@ class ConfigurationsToLockFinder {
 
         configurationsToLock.addAll(baseConfigurations)
 
+        def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
+        def additionalConfigurationsToLock = project.hasProperty('dependencyLock.additionalConfigurationsToLock')
+                ? (project['dependencyLock.additionalConfigurationsToLock'] as String).split(",") as Set<String>
+                : dependencyLockExtension.additionalConfigurationsToLock as Set<String>
+        configurationsToLock.addAll(additionalConfigurationsToLock)
+
         def confSuffix = 'CompileClasspath'
         def configurationsWithPrefix = project.configurations.findAll { it.name.contains(confSuffix) }
         configurationsWithPrefix.each {
