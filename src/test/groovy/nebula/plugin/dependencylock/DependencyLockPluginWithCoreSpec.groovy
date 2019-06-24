@@ -471,6 +471,49 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         'implementation' | 'compileClasspath'
     }
 
+    def 'generate core lock should lock additional configurations via property'() {
+        given:
+        buildFile.text = """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+                id 'jacoco'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+                mavenCentral()
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                compile 'test.nebula:b:1.+'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('dependencies', '--write-locks', '-PdependencyLock.additionalConfigurationsToLock=jacocoAnt,jacocoAgent')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def updatedLocks = expectedLocks + ["jacocoAnt.lockfile", "jacocoAgent.lockfile"]
+        updatedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        actualLocks.each {
+            assert updatedLocks.contains(it)
+        }
+
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
+        lockFile.exists()
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
+    }
+
     @Unroll
     def 'generate core lock file with #facet facet configurations'() {
         // TODO: Lock all the facet configurations by default
