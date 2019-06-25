@@ -26,6 +26,7 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.plugins.JavaLibraryPlugin
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.util.DeprecationLogger
 import org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper
 
@@ -73,6 +74,9 @@ class CoreLockingHelper {
             runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
         }
         project.plugins.withType(JavaBasePlugin.class) {
+            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
+        }
+        project.plugins.withType(JavaPlugin.class) {
             runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
         }
         project.plugins.withType(JavaLibraryPlugin.class) {
