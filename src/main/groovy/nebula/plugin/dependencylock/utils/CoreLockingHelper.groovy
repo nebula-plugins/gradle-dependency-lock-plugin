@@ -24,6 +24,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
+import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.plugins.JavaLibraryPlugin
 import org.gradle.api.plugins.JavaPlugin
@@ -71,6 +72,9 @@ class CoreLockingHelper {
             runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
         }
         project.plugins.withId("nebula.integtest") {
+            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
+        }
+        project.plugins.withType(GroovyPlugin.class) {
             runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
         }
         project.plugins.withType(JavaBasePlugin.class) {

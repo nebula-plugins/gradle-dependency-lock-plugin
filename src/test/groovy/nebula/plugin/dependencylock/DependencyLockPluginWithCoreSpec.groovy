@@ -559,17 +559,19 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
 
         where:
         languagePlugin   | languagePluginFirst | notes
+        'groovy'         | true                | 'applied first'
         'java'           | true                | 'applied first'
         'java-library'   | true                | 'applied first'
-        'scala'          | true                | 'applied first'
         'nebula.clojure' | true                | 'applied first'
         'nebula.kotlin'  | true                | 'applied first'
+        'scala'          | true                | 'applied first'
 
+        'groovy'         | false               | 'applied last'
         'java'           | false               | 'applied last'
         'java-library'   | false               | 'applied last'
-        'scala'          | false               | 'applied last'
         'nebula.clojure' | false               | 'applied last'
         'nebula.kotlin'  | false               | 'applied last'
+        'scala'          | false               | 'applied last'
     }
 
     def 'generate core lock should lock additional configurations via property'() {
