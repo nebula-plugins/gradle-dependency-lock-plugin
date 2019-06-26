@@ -361,7 +361,6 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
     def 'generate core lock file with kotlin plugin with multiproject setup - for configuration #configuration'() {
         given:
         System.setProperty("ignoreDeprecations", "true")
-        definePluginOutsideOfPluginBlock = true
 
         buildFile.delete()
         buildFile.createNewFile()
@@ -469,6 +468,108 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         configuration    | lockFileToVerify
         'compile'        | 'compileClasspath'
         'implementation' | 'compileClasspath'
+    }
+
+    @Unroll
+    def 'ordering language plugin and locking plugin should not matter - #languagePlugin #notes'() {
+        given:
+        def additionalDependencies = ''
+        if (languagePlugin == 'scala') {
+            additionalDependencies = """
+                compile 'org.scala-lang:scala-library:2.12.7'
+                testCompile 'junit:junit:4.12'
+                testCompile 'org.scalatest:scalatest_2.12:3.0.5'
+                testRuntimeOnly 'org.scala-lang.modules:scala-xml_2.12:1.1.1'
+                """.stripIndent()
+        } else if (languagePlugin == "nebula.clojure") {
+            additionalDependencies = """
+                compile 'org.clojure:clojure:1.8.0'
+                """.stripIndent()
+        }
+        definePluginOutsideOfPluginBlock = true
+
+        def plugins = languagePluginFirst
+                ? """
+                apply plugin: '$languagePlugin'
+                apply plugin: 'nebula.dependency-lock'
+                """.stripIndent()
+                : """
+                apply plugin: 'nebula.dependency-lock'
+                apply plugin: '$languagePlugin'
+                """.stripIndent()
+
+        buildFile.delete()
+        buildFile.createNewFile()
+        buildFile << """\
+            buildscript {
+                repositories { maven { url "https://plugins.gradle.org/m2/" } }
+                dependencies {
+                    classpath "com.netflix.nebula:nebula-clojure-plugin:8.1.4"
+                    classpath "com.netflix.nebula:nebula-kotlin-plugin:1.3.40"
+                }
+            }
+            $plugins
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+                mavenCentral()
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                compile 'test.nebula:b:1.+'$additionalDependencies
+            }
+        """.stripIndent()
+
+        if (languagePlugin == 'nebula.kotlin') {
+            System.setProperty("ignoreDeprecations", "true")
+        }
+        when:
+        def result = runTasks('dependencies', '--write-locks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        assert new File(projectDir, "/gradle/").exists()
+
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def updatedLocks = languagePlugin != 'scala'
+                ? expectedLocks
+                : expectedLocks + ['compile.lockfile', 'testCompile.lockfile']
+        updatedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        actualLocks.each {
+            assert updatedLocks.contains(it)
+        }
+
+        def lockFileToVerify = "compileClasspath"
+
+        def lockFile = new File(projectDir, "/gradle/dependency-locks/${lockFileToVerify}.lockfile")
+        lockFile.text.contains('test.nebula:a:1.1.0')
+        lockFile.text.contains('test.nebula:b:1.1.0')
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
+
+        if (languagePlugin == 'nebula.kotlin') {
+            System.setProperty("ignoreDeprecations", "false")
+        }
+
+        where:
+        languagePlugin   | languagePluginFirst | notes
+        'java'           | true                | 'applied first'
+        'java-library'   | true                | 'applied first'
+        'scala'          | true                | 'applied first'
+        'nebula.clojure' | true                | 'applied first'
+        'nebula.kotlin'  | true                | 'applied first'
+
+        'java'           | false               | 'applied last'
+        'java-library'   | false               | 'applied last'
+        'scala'          | false               | 'applied last'
+        'nebula.clojure' | false               | 'applied last'
+        'nebula.kotlin'  | false               | 'applied last'
     }
 
     def 'generate core lock should lock additional configurations via property'() {
