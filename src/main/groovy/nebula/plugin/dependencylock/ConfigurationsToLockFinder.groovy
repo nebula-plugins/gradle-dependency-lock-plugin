@@ -25,6 +25,7 @@ import org.gradle.api.logging.Logging
 
 class ConfigurationsToLockFinder {
     private static final Logger LOGGER = Logging.getLogger(ConfigurationsToLockFinder)
+    public static final String ADDITIONAL_CONFIGS_TO_LOCK = 'dependencyLock.additionalConfigurationsToLock'
     private Project project
 
     ConfigurationsToLockFinder(Project project) {
@@ -43,8 +44,8 @@ class ConfigurationsToLockFinder {
         configurationsToLock.addAll(baseConfigurations)
 
         def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
-        def additionalConfigurationsToLock = project.hasProperty('dependencyLock.additionalConfigurationsToLock')
-                ? (project['dependencyLock.additionalConfigurationsToLock'] as String).split(",") as Set<String>
+        def additionalConfigurationsToLock = project.hasProperty(ADDITIONAL_CONFIGS_TO_LOCK)
+                ? (project[ADDITIONAL_CONFIGS_TO_LOCK] as String).split(",") as Set<String>
                 : dependencyLockExtension.additionalConfigurationsToLock as Set<String>
         configurationsToLock.addAll(additionalConfigurationsToLock)
 

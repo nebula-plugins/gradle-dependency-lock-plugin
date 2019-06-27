@@ -574,7 +574,8 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         'scala'          | false               | 'applied last'
     }
 
-    def 'generate core lock should lock additional configurations via property'() {
+    @Unroll
+    def 'generate core lock should lock additional configurations via property via #setupStyle'() {
         given:
         buildFile.text = """\
             plugins {
@@ -592,8 +593,19 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
             }
         """.stripIndent()
 
+        if (setupStyle == 'properties file') {
+            def file = new File("${projectDir}/gradle.properties")
+            file << """
+                dependencyLock.additionalConfigurationsToLock=jacocoAnt,jacocoAgent
+                """.stripIndent()
+        }
+
         when:
-        def result = runTasks('dependencies', '--write-locks', '-PdependencyLock.additionalConfigurationsToLock=jacocoAnt,jacocoAgent')
+        def tasks = ['dependencies', '--write-locks']
+        if (setupStyle == 'command line') {
+            tasks += '-PdependencyLock.additionalConfigurationsToLock=jacocoAnt,jacocoAgent'
+        }
+        def result = runTasks(*tasks)
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
@@ -615,6 +627,9 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
 
         then:
         !cleanBuildResults.output.contains('FAILURE')
+
+        where:
+        setupStyle << ['command line', 'properties file']
     }
 
     @Unroll
