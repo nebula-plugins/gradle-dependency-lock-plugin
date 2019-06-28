@@ -743,6 +743,64 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         setupStyle << ['command line', 'properties file']
     }
 
+    def 'generate core lock should lock additional configurations via property and extension configuration'() {
+        given:
+        definePluginOutsideOfPluginBlock = true
+        buildFile.text = """\
+            buildscript {
+              repositories {
+                maven {
+                  url "https://plugins.gradle.org/m2/"
+                }
+              }
+              dependencies {
+                classpath "gradle.plugin.com.github.spotbugs:spotbugs-gradle-plugin:2.0.0"
+              }
+            }
+            apply plugin: 'test.wrapper-plugin'
+            apply plugin: 'java'
+            apply plugin: 'jacoco'
+            apply plugin: 'com.github.spotbugs'
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+                mavenCentral()
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                compile 'test.nebula:b:1.+'
+            }
+        """.stripIndent()
+
+        def file = new File("${projectDir}/gradle.properties")
+        file << """
+            dependencyLock.additionalConfigurationsToLock=jacocoAnt,jacocoAgent
+            """.stripIndent()
+
+        when:
+        def result = runTasks('dependencies', '--write-locks', '--warning-mode', 'all')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def updatedLocks = expectedLocks + ["jacocoAnt.lockfile", "jacocoAgent.lockfile", "spotbugs.lockfile"]
+        updatedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        actualLocks.each {
+            assert updatedLocks.contains(it)
+        }
+
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
+        lockFile.exists()
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
+    }
+
     @Unroll
     def 'generate core lock file with #facet facet configurations'() {
         // TODO: Lock all the facet configurations by default

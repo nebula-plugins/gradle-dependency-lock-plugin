@@ -20,16 +20,11 @@ package nebula.plugin.dependencylock.utils
 
 import nebula.plugin.dependencylock.ConfigurationsToLockFinder
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
+import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import org.gradle.api.plugins.GroovyPlugin
-import org.gradle.api.plugins.JavaBasePlugin
-import org.gradle.api.plugins.JavaLibraryPlugin
-import org.gradle.api.plugins.JavaPlugin
-import org.gradle.util.DeprecationLogger
-import org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper
 
 class CoreLockingHelper {
     private Project project
@@ -66,33 +61,7 @@ class CoreLockingHelper {
     }
 
     private void runClosureWhenPluginsAreSeen(Set<String> configurationNames, Closure closure) {
-        runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-
-        project.plugins.withId("nebula.facet") { // FIXME: not working currently
-            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-        }
-        project.plugins.withId("nebula.integtest") {
-            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-        }
-        project.plugins.withType(GroovyPlugin.class) {
-            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-        }
-        project.plugins.withType(JavaBasePlugin.class) {
-            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-        }
-        project.plugins.withType(JavaPlugin.class) {
-            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-        }
-        project.plugins.withType(JavaLibraryPlugin.class) {
-            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-        }
-        DeprecationLogger.whileDisabled {
-            //TODO: remove deprecation logger disabled once we upgrade kotlin versions to one without deprecations
-            project.plugins.withType(KotlinBasePluginWrapper.class) {
-                runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-            }
-        }
-        project.plugins.withId("nebula.clojure") {
+        project.plugins.withType(Plugin) { plugin ->
             runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
         }
         project.plugins.withId("scala") {
