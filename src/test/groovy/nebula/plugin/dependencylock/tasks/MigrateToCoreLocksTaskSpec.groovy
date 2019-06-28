@@ -10,10 +10,16 @@ import spock.lang.Unroll
 class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
     def expectedLocks = [
             'annotationProcessor.lockfile',
+            'compile.lockfile',
             'compileClasspath.lockfile',
+            'compileOnly.lockfile',
+            'runtime.lockfile',
             'runtimeClasspath.lockfile',
             'testAnnotationProcessor.lockfile',
+            'testCompile.lockfile',
             'testCompileClasspath.lockfile',
+            'testCompileOnly.lockfile',
+            'testRuntime.lockfile',
             'testRuntimeClasspath.lockfile'
     ] as String[]
     def mavenrepo

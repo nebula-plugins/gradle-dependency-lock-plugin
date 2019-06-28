@@ -10,10 +10,16 @@ import spock.lang.Unroll
 class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
     def expectedLocks = [
             'annotationProcessor.lockfile',
+            'compile.lockfile',
             'compileClasspath.lockfile',
+            'compileOnly.lockfile',
+            'runtime.lockfile',
             'runtimeClasspath.lockfile',
             'testAnnotationProcessor.lockfile',
+            'testCompile.lockfile',
             'testCompileClasspath.lockfile',
+            'testCompileOnly.lockfile',
+            'testRuntime.lockfile',
             'testRuntimeClasspath.lockfile'
     ] as String[]
     def mavenrepo
@@ -129,6 +135,111 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
 
         then:
         !cleanBuildResults.output.contains('FAILURE')
+    }
+
+    def 'run the build with core lock file when newer dependency versions exist'() {
+        given:
+        buildFile.text = """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+                id 'com.github.johnrengelman.shadow' version '5.0.0'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                implementation 'test.nebula:b:1.+'
+                shadow 'test.nebula:d:1.+'
+            }
+        """.stripIndent()
+
+        when:
+        def setupLocks = runTasks('dependencies', '--write-locks')
+
+        then:
+        !setupLocks.output.contains('FAILED')
+
+        when:
+        def graph = new DependencyGraphBuilder()
+                .addModule('test.nebula:a:1.2.0')
+                .addModule('test.nebula:b:1.2.0')
+                .addModule('test.nebula:d:1.2.0')
+                .build()
+        mavenrepo = new GradleDependencyGenerator(graph, "${projectDir}/testrepogen")
+        mavenrepo.generateTestMavenRepo()
+
+        def dependencyInsightCompileClasspath = runTasks('dependencyInsight', '--dependency', 'test.nebula:a', '--configuration', 'compileClasspath')
+        def dependencyInsightCompile = runTasks('dependencyInsight', '--dependency', 'test.nebula:a', '--configuration', 'compile')
+
+        then:
+        // different configurations should use the same version before updating locks
+        dependencyInsightCompileClasspath.output.contains('test.nebula:a:1.1.0')
+        dependencyInsightCompile.output.contains('test.nebula:a:1.1.0')
+
+        when:
+        def result = runTasks('dependencies', '--write-locks')
+
+        then:
+        !result.output.contains('FAILED')
+
+        def lockfileDir = new File(projectDir, 'gradle/dependency-locks/')
+        assert lockfileDir.listFiles().size() > 0
+        lockfileDir.listFiles().each { lockFile ->
+            if (lockFile.text.contains('test.nebula:a')) {
+                assert lockFile.text.contains('test.nebula:a:1.2.0')
+            }
+        }
+
+        def actualLocks = lockfileDir.list().toList()
+        def updatedLocks = expectedLocks + 'shadow.lockfile'
+        updatedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        actualLocks.each {
+            assert updatedLocks.contains(it)
+        }
+    }
+
+    def 'fails to use same versions across configurations when newer dependency versions exist AND only the end result configurations are locked'() {
+        given:
+        buildFile.text = """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+                id 'com.github.johnrengelman.shadow' version '5.0.0'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                implementation 'test.nebula:b:1.+'
+            }
+        """.stripIndent()
+
+        def lockfileDir = new File(projectDir, 'gradle/dependency-locks/')
+        lockfileDir.mkdirs()
+        def endResultConfigurations = ['compileClasspath', 'runtimeClasspath', 'testCompileClasspath', 'testRuntimeClasspath']
+
+        endResultConfigurations.each { config ->
+            def lockFile = new File(lockfileDir, "${config}.lockfile")
+            lockFile.text = '''
+                test.nebula:a:1.0.0
+                test.nebula:b:1.0.0
+                '''.stripIndent()
+        }
+
+        when:
+        def results = runTasks('dependencies')
+
+        then:
+        results.output.contains('test.nebula:a:1.+ -> 1.1.0')
+        results.output.contains('test.nebula:a:{strictly 1.0.0} -> 1.0.0 ')
+
+        results.output.contains('test.nebula:b:1.+ -> 1.1.0')
+        results.output.contains('test.nebula:b:{strictly 1.0.0} -> 1.0.0 ')
     }
 
     def 'generate core lock file while locking all configurations via property'() {
@@ -695,7 +806,10 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
 
         def facetLockfiles = [
                 "${facet}AnnotationProcessor.lockfile".toString(),
+                "${facet}Compile.lockfile".toString(),
                 "${facet}CompileClasspath.lockfile".toString(),
+                "${facet}CompileOnly.lockfile".toString(),
+                "${facet}Runtime.lockfile".toString(),
                 "${facet}RuntimeClasspath.lockfile".toString()
         ]
         def updatedExpectedLocks = expectedLocks + facetLockfiles

@@ -20,6 +20,7 @@ package nebula.plugin.dependencylock
 
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 
@@ -63,6 +64,14 @@ class ConfigurationsToLockFinder {
             configurationsToLock.addAll(returnConfigurationNamesWithPrefix(confPrefix, baseConfigurations))
         }
 
+        def originatingConfigurationsToAlsoLock = new HashSet<String>()
+        configurationsToLock.each { nameOfConfToLock ->
+            originatingConfigurationsToAlsoLock.addAll(
+                    findOriginatingConfigurationsOf(nameOfConfToLock, originatingConfigurationsToAlsoLock).collect { it -> it.name }
+            )
+        }
+        configurationsToLock.addAll(originatingConfigurationsToAlsoLock)
+
         return configurationsToLock.sort()
     }
 
@@ -76,6 +85,26 @@ class ConfigurationsToLockFinder {
             lockableConfigurationNames.contains(it)
         }
         lockableConfigsToLock
+    }
+
+    private Collection<Configuration> findOriginatingConfigurationsOf(String nameOfConfToLock, Collection<String> accumulator) {
+        accumulator.add(nameOfConfToLock)
+        project.configurations.findAll { conf ->
+            conf.name == nameOfConfToLock
+        }.each { conf ->
+            if (conf.extendsFrom.size() != 0) {
+                def newConfigs = new HashSet<Configuration>()
+                conf.extendsFrom.each { newConf ->
+                    if (!accumulator.contains(newConf.name)) {
+                        newConfigs.addAll(findOriginatingConfigurationsOf(newConf.name, accumulator))
+                    }
+                }
+                accumulator.addAll(newConfigs.collect { it -> it.name })
+                return accumulator
+            } else {
+                return []
+            }
+        }
     }
 
     private static Collection<String> returnConfigurationNamesWithPrefix(String prefix, Collection<String> baseConfigurations) {
