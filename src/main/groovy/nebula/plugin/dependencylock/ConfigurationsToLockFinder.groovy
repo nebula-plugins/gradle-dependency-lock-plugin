@@ -33,7 +33,14 @@ class ConfigurationsToLockFinder {
     }
 
     List<String> findConfigurationsToLock(Set<String> configurationNames, List<String> additionalBaseConfigurationsToLock = new ArrayList<>()) {
-        def configurationsToLock = new ArrayList<String>()
+        Collection<String> gatheredConfigurationNames = gatherConfigurationNames(additionalBaseConfigurationsToLock)
+        Collection<String> lockableConfigurationNames = gatherLockableConfigurationNames(configurationNames, gatheredConfigurationNames)
+        Collection<String> sortedLockableConfigNames = lockableConfigurationNames.sort()
+        return sortedLockableConfigNames
+    }
+
+    private Collection<String> gatherConfigurationNames(Collection<String> additionalBaseConfigurationsToLock) {
+        def configurationsToLock = new HashSet<String>()
         def baseConfigurations = [
                 'annotationProcessor',
                 'compileClasspath',
@@ -56,24 +63,25 @@ class ConfigurationsToLockFinder {
             configurationsToLock.addAll(returnConfigurationNamesWithPrefix(confPrefix, baseConfigurations))
         }
 
-        // ensure gathered configurations to lock are lockable
+        return configurationsToLock.sort()
+    }
+
+    private Collection<String> gatherLockableConfigurationNames(Collection<String> configurationNames, Collection<String> gatheredConfigurations) {
         def lockableConfigurationNames = []
-        def lockableConfigurations = GenerateLockTask.lockableConfigurations(project, project, configurationNames)
+        def lockableConfigurations = GenerateLockTask.lockableConfigurations(project, project, configurationNames as Set)
         lockableConfigurations.each {
             lockableConfigurationNames.add(it.name)
         }
-        def lockableConfigsToLock = configurationsToLock.findAll {
+        def lockableConfigsToLock = gatheredConfigurations.findAll {
             lockableConfigurationNames.contains(it)
         }
-
-        def sortedLockableConfigs = lockableConfigsToLock.sort()
-        return sortedLockableConfigs
+        lockableConfigsToLock
     }
 
-    private static List<String> returnConfigurationNamesWithPrefix(it, List<String> baseConfigurations) {
+    private static Collection<String> returnConfigurationNamesWithPrefix(String prefix, Collection<String> baseConfigurations) {
         def configurationNamesWithPrefix = []
         baseConfigurations.each { baseConfig ->
-            configurationNamesWithPrefix.add("${it}${baseConfig.capitalize()}".toString())
+            configurationNamesWithPrefix.add("${prefix}${baseConfig.capitalize()}".toString())
         }
         return configurationNamesWithPrefix
     }
