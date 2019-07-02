@@ -938,6 +938,57 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         'implementation' | "are not locked"
     }
 
+    def 'custom configurations not added by a plugin must be setup for locking'() {
+        given:
+        buildFile.text = """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+            }
+            configurations {
+                customConfiguration
+                compile.extendsFrom customConfiguration
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                customConfiguration 'test.nebula:b:1.+'
+            }
+        """.stripIndent()
+
+        def file = new File("${projectDir}/gradle.properties")
+        file << """
+                dependencyLock.additionalConfigurationsToLock=customConfiguration
+                """.stripIndent()
+
+        when:
+        def result = runTasks('dependencies', '--write-locks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def updatedLocks = expectedLocks + 'customConfiguration.lockfile'
+        updatedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        actualLocks.each {
+            assert updatedLocks.contains(it)
+        }
+
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/customConfiguration.lockfile')
+        assert lockFile.exists()
+        assert lockFile.text.contains('test.nebula:b:')
+
+        when:
+        def cleanBuildResults = runTasks('clean', 'build')
+
+        then:
+        !cleanBuildResults.output.contains('FAILURE')
+    }
+
     def 'fails when generating Nebula locks and writing core locks together'() {
         when:
         def result = runTasksAndFail('dependencies', '--write-locks', 'generateLock', 'saveLock')

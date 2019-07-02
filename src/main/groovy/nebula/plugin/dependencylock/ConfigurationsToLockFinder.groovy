@@ -26,14 +26,13 @@ import org.gradle.api.logging.Logging
 
 class ConfigurationsToLockFinder {
     private static final Logger LOGGER = Logging.getLogger(ConfigurationsToLockFinder)
-    public static final String ADDITIONAL_CONFIGS_TO_LOCK = 'dependencyLock.additionalConfigurationsToLock'
     private Project project
 
     ConfigurationsToLockFinder(Project project) {
         this.project = project
     }
 
-    List<String> findConfigurationsToLock(Set<String> configurationNames, List<String> additionalBaseConfigurationsToLock = new ArrayList<>()) {
+    List<String> findConfigurationsToLock(Set<String> configurationNames, Collection<String> additionalBaseConfigurationsToLock = new ArrayList<>()) {
         Collection<String> gatheredConfigurationNames = gatherConfigurationNames(additionalBaseConfigurationsToLock)
         Collection<String> lockableConfigurationNames = gatherLockableConfigurationNames(configurationNames, gatheredConfigurationNames)
         Collection<String> sortedLockableConfigNames = lockableConfigurationNames.sort()
@@ -50,15 +49,6 @@ class ConfigurationsToLockFinder {
         baseConfigurations.addAll(additionalBaseConfigurationsToLock)
 
         configurationsToLock.addAll(baseConfigurations)
-
-        def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
-        def additionalConfigurationsToLockViaProperty = project.hasProperty(ADDITIONAL_CONFIGS_TO_LOCK)
-                ? (project[ADDITIONAL_CONFIGS_TO_LOCK] as String).split(",") as Set<String>
-                : []
-        def additionalConfigurationsToLockViaExtension = dependencyLockExtension.additionalConfigurationsToLock as Set<String>
-        
-        configurationsToLock.addAll(additionalConfigurationsToLockViaProperty)
-        configurationsToLock.addAll(additionalConfigurationsToLockViaExtension)
 
         def confSuffix = 'CompileClasspath'
         def configurationsWithPrefix = project.configurations.findAll { it.name.contains(confSuffix) }
