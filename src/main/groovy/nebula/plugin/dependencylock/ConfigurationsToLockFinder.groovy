@@ -20,6 +20,7 @@ package nebula.plugin.dependencylock
 
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 
@@ -31,8 +32,15 @@ class ConfigurationsToLockFinder {
         this.project = project
     }
 
-    List<String> findConfigurationsToLock(Set<String> configurationNames, List<String> additionalBaseConfigurationsToLock = new ArrayList<>()) {
-        def configurationsToLock = new ArrayList<String>()
+    List<String> findConfigurationsToLock(Set<String> configurationNames, Collection<String> additionalBaseConfigurationsToLock = new ArrayList<>()) {
+        Collection<String> gatheredConfigurationNames = gatherConfigurationNames(additionalBaseConfigurationsToLock)
+        Collection<String> lockableConfigurationNames = gatherLockableConfigurationNames(configurationNames, gatheredConfigurationNames)
+        Collection<String> sortedLockableConfigNames = lockableConfigurationNames.sort()
+        return sortedLockableConfigNames
+    }
+
+    private Collection<String> gatherConfigurationNames(Collection<String> additionalBaseConfigurationsToLock) {
+        def configurationsToLock = new HashSet<String>()
         def baseConfigurations = [
                 'annotationProcessor',
                 'compileClasspath',
@@ -42,12 +50,6 @@ class ConfigurationsToLockFinder {
 
         configurationsToLock.addAll(baseConfigurations)
 
-        def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
-        def additionalConfigurationsToLock = project.hasProperty('dependencyLock.additionalConfigurationsToLock')
-                ? (project['dependencyLock.additionalConfigurationsToLock'] as String).split(",") as Set<String>
-                : dependencyLockExtension.additionalConfigurationsToLock as Set<String>
-        configurationsToLock.addAll(additionalConfigurationsToLock)
-
         def confSuffix = 'CompileClasspath'
         def configurationsWithPrefix = project.configurations.findAll { it.name.contains(confSuffix) }
         configurationsWithPrefix.each {
@@ -55,24 +57,53 @@ class ConfigurationsToLockFinder {
             configurationsToLock.addAll(returnConfigurationNamesWithPrefix(confPrefix, baseConfigurations))
         }
 
-        // ensure gathered configurations to lock are lockable
+        def originatingConfigurationsToAlsoLock = new HashSet<String>()
+        configurationsToLock.each { nameOfConfToLock ->
+            originatingConfigurationsToAlsoLock.addAll(
+                    findOriginatingConfigurationsOf(nameOfConfToLock, originatingConfigurationsToAlsoLock).collect { it -> it.name }
+            )
+        }
+        configurationsToLock.addAll(originatingConfigurationsToAlsoLock)
+
+        return configurationsToLock.sort()
+    }
+
+    private Collection<String> gatherLockableConfigurationNames(Collection<String> configurationNames, Collection<String> gatheredConfigurations) {
         def lockableConfigurationNames = []
-        def lockableConfigurations = GenerateLockTask.lockableConfigurations(project, project, configurationNames)
+        def lockableConfigurations = GenerateLockTask.lockableConfigurations(project, project, configurationNames as Set)
         lockableConfigurations.each {
             lockableConfigurationNames.add(it.name)
         }
-        def lockableConfigsToLock = configurationsToLock.findAll {
+        def lockableConfigsToLock = gatheredConfigurations.findAll {
             lockableConfigurationNames.contains(it)
         }
-
-        def sortedLockableConfigs = lockableConfigsToLock.sort()
-        return sortedLockableConfigs
+        lockableConfigsToLock
     }
 
-    private static List<String> returnConfigurationNamesWithPrefix(it, List<String> baseConfigurations) {
+    private Collection<Configuration> findOriginatingConfigurationsOf(String nameOfConfToLock, Collection<String> accumulator) {
+        accumulator.add(nameOfConfToLock)
+        project.configurations.findAll { conf ->
+            conf.name == nameOfConfToLock
+        }.each { conf ->
+            if (conf.extendsFrom.size() != 0) {
+                def newConfigs = new HashSet<Configuration>()
+                conf.extendsFrom.each { newConf ->
+                    if (!accumulator.contains(newConf.name)) {
+                        newConfigs.addAll(findOriginatingConfigurationsOf(newConf.name, accumulator))
+                    }
+                }
+                accumulator.addAll(newConfigs.collect { it -> it.name })
+                return accumulator
+            } else {
+                return []
+            }
+        }
+    }
+
+    private static Collection<String> returnConfigurationNamesWithPrefix(String prefix, Collection<String> baseConfigurations) {
         def configurationNamesWithPrefix = []
         baseConfigurations.each { baseConfig ->
-            configurationNamesWithPrefix.add("${it}${baseConfig.capitalize()}".toString())
+            configurationNamesWithPrefix.add("${prefix}${baseConfig.capitalize()}".toString())
         }
         return configurationNamesWithPrefix
     }

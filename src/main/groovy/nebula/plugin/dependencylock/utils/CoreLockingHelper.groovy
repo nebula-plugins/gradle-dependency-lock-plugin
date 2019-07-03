@@ -19,16 +19,13 @@
 package nebula.plugin.dependencylock.utils
 
 import nebula.plugin.dependencylock.ConfigurationsToLockFinder
+import nebula.plugin.dependencylock.DependencyLockExtension
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
+import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import org.gradle.api.plugins.JavaBasePlugin
-import org.gradle.api.plugins.JavaLibraryPlugin
-import org.gradle.api.plugins.JavaPlugin
-import org.gradle.util.DeprecationLogger
-import org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper
 
 class CoreLockingHelper {
     private Project project
@@ -36,7 +33,7 @@ class CoreLockingHelper {
     private Boolean shouldLockAllConfigurations
 
     private static final Logger LOGGER = Logging.getLogger(CoreLockingHelper)
-
+    private static final String ADDITIONAL_CONFIGS_TO_LOCK = 'dependencyLock.additionalConfigurationsToLock'
 
     CoreLockingHelper(Project project) {
         this.project = project
@@ -65,31 +62,9 @@ class CoreLockingHelper {
     }
 
     private void runClosureWhenPluginsAreSeen(Set<String> configurationNames, Closure closure) {
-        runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-
-        project.plugins.withId("nebula.facet") { // FIXME: not working currently
+        project.plugins.withType(Plugin) { plugin ->
             runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-        }
-        project.plugins.withId("nebula.integtest") {
-            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-        }
-        project.plugins.withType(JavaBasePlugin.class) {
-            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-        }
-        project.plugins.withType(JavaPlugin.class) {
-            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-        }
-        project.plugins.withType(JavaLibraryPlugin.class) {
-            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-        }
-        DeprecationLogger.whileDisabled {
-            //TODO: remove deprecation logger disabled once we upgrade kotlin versions to one without deprecations
-            project.plugins.withType(KotlinBasePluginWrapper.class) {
-                runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
-            }
-        }
-        project.plugins.withId("nebula.clojure") {
-            runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
+            findAndLockAdditionalConfigurations(configurationNames, closure)
         }
         project.plugins.withId("scala") {
             // the configurations `incrementalScalaAnalysisFor_x_ extend from `compile` and `implementation` rather than `compileClasspath`
@@ -106,9 +81,21 @@ class CoreLockingHelper {
 
             runClosureOnConfigurations(configurationNames, closure, scalaConfigurationsToLock)
         }
+        findAndLockAdditionalConfigurations(configurationNames, closure)
     }
 
-    private void runClosureOnConfigurations(Set<String> configurationNames, Closure closure, List<String> additionalBaseConfigurationsToLock) {
+    private void findAndLockAdditionalConfigurations(Set<String> configurationNames, Closure closure) {
+        def additionalConfigNames = gatherAdditionalConfigurationsToLock()
+        project.configurations.matching { // returns a live collection
+            additionalConfigNames.findAll { additionalConfigName ->
+                it.name == additionalConfigName
+            }
+        }.all { it ->
+            runClosureOnConfigurations(configurationNames, closure, additionalConfigNames)
+        }
+    }
+
+    private void runClosureOnConfigurations(Set<String> configurationNames, Closure closure, Collection<String> additionalBaseConfigurationsToLock) {
         Set<Configuration> configurationsToLock
         if (shouldLockAllConfigurations) {
             configurationsToLock = GenerateLockTask.lockableConfigurations(project, project, configurationNames)
@@ -121,7 +108,7 @@ class CoreLockingHelper {
         }
     }
 
-    private Set<Configuration> findConfigurationsToLock(Set<String> configurationNames, List<String> additionalBaseConfigurationsToLock) {
+    private Set<Configuration> findConfigurationsToLock(Set<String> configurationNames, Collection<String> additionalBaseConfigurationsToLock) {
         def lockableConfigurationNames = new ConfigurationsToLockFinder(project).findConfigurationsToLock(configurationNames, additionalBaseConfigurationsToLock)
 
         def lockableConfigurations = new HashSet()
@@ -131,5 +118,15 @@ class CoreLockingHelper {
             }
         }
         return lockableConfigurations
+    }
+
+    private Collection<String> gatherAdditionalConfigurationsToLock() {
+        def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
+        def additionalConfigurationsToLockViaProperty = project.hasProperty(ADDITIONAL_CONFIGS_TO_LOCK)
+                ? (project[ADDITIONAL_CONFIGS_TO_LOCK] as String).split(",") as Set<String>
+                : []
+        def additionalConfigurationsToLockViaExtension = dependencyLockExtension.additionalConfigurationsToLock as Set<String>
+        def additionalConfigNames = additionalConfigurationsToLockViaProperty + additionalConfigurationsToLockViaExtension
+        additionalConfigNames
     }
 }
