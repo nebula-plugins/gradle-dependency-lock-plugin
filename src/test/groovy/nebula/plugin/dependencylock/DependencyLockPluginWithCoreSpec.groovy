@@ -801,6 +801,128 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         !cleanBuildResults.output.contains('FAILURE')
     }
 
+    def 'generate core lock should lock delete stale lockfiles when regenerating'() {
+        given:
+        buildFile.text = """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id 'java'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+            }
+            configurations {
+                customConfiguration
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                customConfiguration 'test.nebula:b:1.+'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('dependencies', '--write-locks', '-PdependencyLock.additionalConfigurationsToLock=customConfiguration')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def updatedLocks = expectedLocks + ["customConfiguration.lockfile"]
+        updatedLocks.each {
+            assert actualLocks.contains(it)
+        }
+        actualLocks.each {
+            assert updatedLocks.contains(it)
+        }
+
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/customConfiguration.lockfile')
+        lockFile.exists()
+
+        when:
+        def lockWithoutCustomConfigurationResult = runTasks('dependencies', '--write-locks')
+
+        then:
+        def updatedActualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        expectedLocks.each { expected ->
+            assert updatedActualLocks.contains(expected)
+        }
+        updatedActualLocks.each { actual ->
+            assert expectedLocks.contains(actual)
+        }
+
+        def customConfigurationLockFile = new File(projectDir, '/gradle/dependency-locks/customConfiguration.lockfile')
+        assert !customConfigurationLockFile.exists()
+    }
+
+
+    def 'generate core lock should lock delete stale lockfiles when regenerating - multiproject setup'() {
+        given:
+        definePluginOutsideOfPluginBlock = true
+        buildFile.text = """\
+            allprojects {
+                apply plugin: 'nebula.dependency-lock'
+                apply plugin: 'java' 
+                repositories {
+                    ${mavenrepo.mavenRepositoryBlock}
+                }
+                task dependenciesForAll(type: DependencyReportTask) {}
+            }
+        """.stripIndent()
+
+        addSubproject("sub1", """
+            configurations {
+                customConfiguration
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                customConfiguration 'test.nebula:b:1.+'
+            }
+            """.stripIndent())
+
+        addSubproject("sub2", """
+            configurations {
+                customConfiguration
+            }
+            dependencies {
+                compile 'test.nebula:a:1.+'
+                customConfiguration 'test.nebula:b:1.+'
+            }
+            """.stripIndent())
+
+        when:
+        def result = runTasks('dependenciesForAll', '--write-locks', '-PdependencyLock.additionalConfigurationsToLock=customConfiguration')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
+
+        def updatedLocks = expectedLocks + ["customConfiguration.lockfile"]
+        updatedLocks.each {
+            assert sub1ActualLocks.contains(it)
+        }
+        sub1ActualLocks.each {
+            assert updatedLocks.contains(it)
+        }
+
+        def lockFile = new File(projectDir, 'sub1/gradle/dependency-locks/customConfiguration.lockfile')
+        lockFile.exists()
+
+        when:
+        def lockWithoutCustomConfigurationResult = runTasks('dependenciesForAll', '--write-locks')
+
+        then:
+        def updatedSub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
+        expectedLocks.each { expected ->
+            assert updatedSub1ActualLocks.contains(expected)
+        }
+        updatedSub1ActualLocks.each { actual ->
+            assert expectedLocks.contains(actual)
+        }
+
+        def customConfigurationLockFile = new File(projectDir, 'sub1/gradle/dependency-locks/customConfiguration.lockfile')
+        assert !customConfigurationLockFile.exists()
+    }
+
     @Unroll
     def 'generate core lock file with #facet facet configurations'() {
         // TODO: Lock all the facet configurations by default
@@ -950,7 +1072,6 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
             }
             configurations {
                 customConfiguration
-                compile.extendsFrom customConfiguration
             }
             dependencies {
                 compile 'test.nebula:a:1.+'

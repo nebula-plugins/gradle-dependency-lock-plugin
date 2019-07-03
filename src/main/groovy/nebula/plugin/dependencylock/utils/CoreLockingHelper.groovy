@@ -51,6 +51,9 @@ class CoreLockingHelper {
             }
             runClosureWhenPluginsAreSeen(configurationNames, closureToLockConfigurations)
         }
+        if (project.gradle.startParameter.isWriteDependencyLocks()) {
+            removePreviousLockfiles()
+        }
     }
 
     void migrateLockedConfigurations(Set<String> configurationNames, Closure closure) {
@@ -128,5 +131,13 @@ class CoreLockingHelper {
         def additionalConfigurationsToLockViaExtension = dependencyLockExtension.additionalConfigurationsToLock as Set<String>
         def additionalConfigNames = additionalConfigurationsToLockViaProperty + additionalConfigurationsToLockViaExtension
         additionalConfigNames
+    }
+
+    private void removePreviousLockfiles() {
+        File gradleFilesDir = new File(project.projectDir, "gradle")
+        File lockfilesDir = new File(gradleFilesDir, "dependency-locks")
+        if (lockfilesDir.exists()) {
+            lockfilesDir.deleteDir()
+        }
     }
 }
