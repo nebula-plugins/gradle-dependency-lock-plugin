@@ -13,6 +13,7 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
             'compile.lockfile',
             'compileClasspath.lockfile',
             'compileOnly.lockfile',
+            'default.lockfile',
             'runtime.lockfile',
             'runtimeClasspath.lockfile',
             'testAnnotationProcessor.lockfile',

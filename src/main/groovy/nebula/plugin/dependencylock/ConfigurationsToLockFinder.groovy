@@ -44,6 +44,7 @@ class ConfigurationsToLockFinder {
         def baseConfigurations = [
                 'annotationProcessor',
                 'compileClasspath',
+                'default',
                 'runtimeClasspath'
         ]
         baseConfigurations.addAll(additionalBaseConfigurationsToLock)
