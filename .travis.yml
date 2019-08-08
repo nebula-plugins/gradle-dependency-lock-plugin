@@ -4,9 +4,7 @@ android:
   - build-tools-20.0.0
   - android-20
 sudo: false
-jdk:
-   - openjdk8
-   - openjdk11
+jdk: openjdk8
 install: true
 script: "./gradle/buildViaTravis.sh"
 cache:
