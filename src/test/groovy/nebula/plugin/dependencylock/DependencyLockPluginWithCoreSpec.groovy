@@ -426,7 +426,7 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         buildFile << """\
             plugins {
                 id 'nebula.dependency-lock'
-                id 'nebula.kotlin' version '1.3.21'
+                id 'nebula.kotlin' version '1.3.41'
             }
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
@@ -492,7 +492,7 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         addSubproject("sub1", """
             plugins {
                 id 'nebula.dependency-lock'
-                id 'nebula.kotlin' version '1.3.21'
+                id 'nebula.kotlin' version '1.3.41'
             }
             dependencies {
                 $configuration 'test.nebula:a:1.+'
