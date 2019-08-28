@@ -21,6 +21,7 @@ package nebula.plugin.dependencylock.utils
 import nebula.plugin.dependencylock.ConfigurationsToLockFinder
 import nebula.plugin.dependencylock.DependencyLockExtension
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
+import org.gradle.api.BuildCancelledException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -35,9 +36,12 @@ class CoreLockingHelper {
     private static final Logger LOGGER = Logging.getLogger(CoreLockingHelper)
     private static final String ADDITIONAL_CONFIGS_TO_LOCK = 'dependencyLock.additionalConfigurationsToLock'
 
+    private Set<Configuration> configsWithActivatedDependencyLocking
+
     CoreLockingHelper(Project project) {
         this.project = project
         shouldLockAllConfigurations = project.hasProperty("lockAllConfigurations") && (project.property("lockAllConfigurations") as String).toBoolean()
+        configsWithActivatedDependencyLocking = new HashSet<Configuration>()
     }
 
     void lockSelectedConfigurations(Set<String> configurationNames) {
@@ -47,7 +51,14 @@ class CoreLockingHelper {
             }
         } else {
             def closureToLockConfigurations = {
-                it.resolutionStrategy.activateDependencyLocking()
+                if (!it instanceof Configuration) {
+                    throw new BuildCancelledException("There is an issue with the configuration to lock '${it.toString()}'")
+                }
+                if (!configsWithActivatedDependencyLocking.contains(it)) {
+                    it.resolutionStrategy.activateDependencyLocking()
+                    LOGGER.debug("Locking ${it}")
+                    configsWithActivatedDependencyLocking.add(it as Configuration)
+                }
             }
             runClosureWhenPluginsAreSeen(configurationNames, closureToLockConfigurations)
         }
