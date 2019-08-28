@@ -1111,6 +1111,18 @@ class DependencyLockPluginWithCoreSpec extends IntegrationTestKitSpec {
         !cleanBuildResults.output.contains('FAILURE')
     }
 
+    def 'lock each configuration only once'() {
+        when:
+        def result = runTasks('dependencies', '--write-locks', '--debug')
+
+        then:
+        expectedLocks.each {
+            def lockingDebugMessage = "Locking configuration ':${it.split('.lockfile').first()}'"
+            assert result.output.contains(lockingDebugMessage)
+            assert result.output.findAll(lockingDebugMessage).size() == 1
+        }
+    }
+
     def 'fails when generating Nebula locks and writing core locks together'() {
         when:
         def result = runTasksAndFail('dependencies', '--write-locks', 'generateLock', 'saveLock')
