@@ -20,23 +20,25 @@ package nebula.plugin.dependencylock.utils
 
 import nebula.plugin.dependencylock.ConfigurationsToLockFinder
 import nebula.plugin.dependencylock.DependencyLockExtension
+import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.execution.TaskExecutionListener
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
+import org.gradle.api.tasks.TaskState
 
 class CoreLockingHelper {
-    private Project project
-
-    private Boolean shouldLockAllConfigurations
-
-    private static final Logger LOGGER = Logging.getLogger(CoreLockingHelper)
+    private static final Logger LOGGER = Logging.getLogger(CoreLockingHelper.class)
     private static final String ADDITIONAL_CONFIGS_TO_LOCK = 'dependencyLock.additionalConfigurationsToLock'
 
-    private Set<Configuration> configsWithActivatedDependencyLocking
+    private Project project
+    private Boolean shouldLockAllConfigurations
+    private synchronized Set<Configuration> configsWithActivatedDependencyLocking
 
     CoreLockingHelper(Project project) {
         this.project = project
@@ -56,15 +58,13 @@ class CoreLockingHelper {
                 }
                 if (!configsWithActivatedDependencyLocking.contains(it)) {
                     it.resolutionStrategy.activateDependencyLocking()
-                    LOGGER.debug("Locking ${it}")
+                    LOGGER.debug("Activated ${it} for dependency locking")
                     configsWithActivatedDependencyLocking.add(it as Configuration)
                 }
             }
             runClosureWhenPluginsAreSeen(configurationNames, closureToLockConfigurations)
         }
-        if (project.gradle.startParameter.isWriteDependencyLocks()) {
-            removePreviousLockfiles()
-        }
+        removeLockfilesForUnlockedConfigurations()
     }
 
     void migrateLockedConfigurations(Set<String> configurationNames, Closure closure) {
@@ -144,11 +144,43 @@ class CoreLockingHelper {
         additionalConfigNames
     }
 
-    private void removePreviousLockfiles() {
-        File gradleFilesDir = new File(project.projectDir, "gradle")
-        File lockfilesDir = new File(gradleFilesDir, "dependency-locks")
-        if (lockfilesDir.exists()) {
-            lockfilesDir.deleteDir()
+    private void removeLockfilesForUnlockedConfigurations() {
+        def migrationTaskWasRequested = project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)
+        if (!shouldLockAllConfigurations && !migrationTaskWasRequested) {
+            project.gradle.taskGraph.whenReady { taskGraph ->
+                LinkedList tasks = taskGraph.executionPlan.executionQueue
+                Task lastTask = tasks.last?.task
+                taskGraph.addTaskExecutionListener(new TaskExecutionListener() {
+                    @Override
+                    void beforeExecute(Task task) {
+                        //DO NOTHING
+                    }
+
+                    @Override
+                    void afterExecute(Task task, TaskState taskState) {
+                        if (task.path == lastTask.path && !taskState.failure) {
+                            File gradleFilesDir = new File(project.projectDir, "gradle")
+                            File lockfilesDir = new File(gradleFilesDir, "dependency-locks")
+                            if (lockfilesDir.exists()) {
+                                def configNamesThatShouldBeLocked = configsWithActivatedDependencyLocking.collect {
+                                    "${it.name}.lockfile"
+                                }.toString()
+                                def shouldProvideInfoToLockAdditionalConfigurations = false
+                                lockfilesDir.listFiles().each { actualFile ->
+                                    if (!configNamesThatShouldBeLocked.contains(actualFile.name)) {
+                                        LOGGER.warn("Removing lockfile ${actualFile.name} as it is not configured for locking.")
+                                        actualFile.delete()
+                                        shouldProvideInfoToLockAdditionalConfigurations = true
+                                    }
+                                }
+                                if (shouldProvideInfoToLockAdditionalConfigurations) {
+                                    LOGGER.warn("Add configurations to lock in \"gradle.properties\" with \"dependencyLock.additionalConfigurationsToLock=comma,separated,configurations,to,lock\"")
+                                }
+                            }
+                        }
+                    }
+                })
+            }
         }
     }
 }
