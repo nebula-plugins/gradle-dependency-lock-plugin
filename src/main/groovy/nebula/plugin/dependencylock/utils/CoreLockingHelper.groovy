@@ -158,7 +158,8 @@ class CoreLockingHelper {
 
                     @Override
                     void afterExecute(Task task, TaskState taskState) {
-                        if (task.path == lastTask.path && !taskState.failure) {
+                        def thisTaskPathIsLastTaskPath = task.path == lastTask.path // should happen only once
+                        if (thisTaskPathIsLastTaskPath && !taskState.failure) {
                             File gradleFilesDir = new File(project.projectDir, "gradle")
                             File lockfilesDir = new File(gradleFilesDir, "dependency-locks")
                             if (lockfilesDir.exists()) {

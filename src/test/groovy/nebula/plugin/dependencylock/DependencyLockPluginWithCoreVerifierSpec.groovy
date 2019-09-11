@@ -186,10 +186,10 @@ test.nebula:b:1.1.0
         results.output.contains(failedResolutionDependencies('sub1'))
 
         results.output.contains("""
-       1) Failed to resolve 'not.available:a:1.0.0' for project 'sub2'
-       2) Failed to resolve 'test.nebula:c' for project 'sub2'
-       3) Failed to resolve 'test.nebula:e' for project 'sub2'
-       4) Failed to resolve 'transitive.not.available:a:1.0.0' for project 'sub2'""")
+       1. Failed to resolve 'not.available:a:1.0.0' for project 'sub2'
+       2. Failed to resolve 'test.nebula:c' for project 'sub2'
+       3. Failed to resolve 'test.nebula:e' for project 'sub2'
+       4. Failed to resolve 'transitive.not.available:a:1.0.0' for project 'sub2'""")
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -235,6 +235,57 @@ test.nebula:b:1.1.0
         def secondRunTestCompileLockfile = new File(projectDir, 'sub1/gradle/dependency-locks/testCompileClasspath.lockfile')
         assert secondRunTestCompileLockfile.exists()
         secondRunTestCompileLockfile.text == BASELINE_LOCKFILE_CONTENTS
+
+        where:
+        lockArg << ['write-locks', 'update-locks']
+    }
+
+    @Unroll
+    def 'multiproject: works for parallel builds with #lockArg'() {
+        given:
+        createMultiProjectBaseline()
+
+        when:
+        new File(projectDir, 'sub1/build.gradle') << MIX_OF_RESOLVABLE_AND_UNRESOLVABLE_DEPENDENCIES
+        new File(projectDir, 'sub2/build.gradle') << MIX_OF_RESOLVABLE_AND_UNRESOLVABLE_DEPENDENCIES
+
+        def results = runTasksAndFail(*tasks(lockArg, true), '--parallel')
+
+        then:
+        results.output.contains('FAILURE: Build completed with 2 failures.')
+
+        results.output.findAll("Caused by: nebula.plugin.dependencylock.exceptions.DependencyLockException: Failed to resolve the following dependencies:\n" +
+                "  1. Failed to resolve 'not.available:a:1.0.0' for project 'sub1'").size() == 1
+
+        results.output.findAll("Caused by: nebula.plugin.dependencylock.exceptions.DependencyLockException: Failed to resolve the following dependencies:\n" +
+                "  1. Failed to resolve 'not.available:a:1.0.0' for project 'sub2'").size() == 1
+
+        where:
+        lockArg << ['write-locks', 'update-locks']
+    }
+
+    @Unroll
+    def 'multiproject: works for parallel builds with #lockArg and dependencies listed in parent build file'() {
+        given:
+        createMultiProjectBaseline(false)
+
+        when:
+        buildFile << """
+            subprojects {
+                $MIX_OF_RESOLVABLE_AND_UNRESOLVABLE_DEPENDENCIES
+            }
+            """.stripIndent()
+
+        def results = runTasksAndFail(*tasks(lockArg, true), '--parallel')
+
+        then:
+        results.output.contains('FAILURE: Build completed with 2 failures.')
+
+        results.output.findAll("Caused by: nebula.plugin.dependencylock.exceptions.DependencyLockException: Failed to resolve the following dependencies:\n" +
+                "  1. Failed to resolve 'not.available:a:1.0.0' for project 'sub1'").size() == 1
+
+        results.output.findAll("Caused by: nebula.plugin.dependencylock.exceptions.DependencyLockException: Failed to resolve the following dependencies:\n" +
+                "  1. Failed to resolve 'not.available:a:1.0.0' for project 'sub2'").size() == 1
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -382,7 +433,7 @@ test.nebula:b:1.1.0
         }
     }
 
-    def createMultiProjectBaseline() {
+    def createMultiProjectBaseline(boolean usesOwnBuildFile = true) {
         buildFile.delete()
         buildFile.createNewFile()
         buildFile << """
@@ -394,22 +445,42 @@ test.nebula:b:1.1.0
             }
             """.stripIndent()
 
-        def subProjectBuildFileContent = """
-            plugins {
-                id 'nebula.dependency-lock'
-                id 'java'
-            }
-            repositories {
-                ${mavenrepo.mavenRepositoryBlock}
-            }
-            dependencies {
-                compile 'test.nebula:a:1.+'
-                compile 'test.nebula:b:1.+'
-            }
-            """.stripIndent()
+        if (usesOwnBuildFile) {
+            def subProjectBuildFileContent = """
+                plugins {
+                    id 'nebula.dependency-lock'
+                    id 'java'
+                }
+                repositories {
+                    ${mavenrepo.mavenRepositoryBlock}
+                }
+                dependencies {
+                    compile 'test.nebula:a:1.+'
+                    compile 'test.nebula:b:1.+'
+                }
+                """.stripIndent()
 
-        addSubproject("sub1", subProjectBuildFileContent)
-        addSubproject("sub2", subProjectBuildFileContent)
+            addSubproject("sub1", subProjectBuildFileContent)
+            addSubproject("sub2", subProjectBuildFileContent)
+        } else {
+            definePluginOutsideOfPluginBlock = true
+
+            buildFile << """
+                subprojects {
+                    apply plugin: 'nebula.dependency-lock'
+                    apply plugin: 'java'
+                    repositories {
+                        ${mavenrepo.mavenRepositoryBlock}
+                    }
+                    dependencies {
+                        compile 'test.nebula:a:1.+'
+                        compile 'test.nebula:b:1.+'
+                    }
+                }
+                """.stripIndent()
+            addSubproject("sub1")
+            addSubproject("sub2")
+        }
 
         writeHelloWorld(new File(projectDir, 'sub1'))
         writeHelloWorld(new File(projectDir, 'sub2'))
@@ -648,9 +719,9 @@ test.nebula:b:1.1.0
     private String failedResolutionDependencies(String subprojectName = '') {
         def project = subprojectName != '' ? subprojectName : projectName
         return """
-  1) Failed to resolve 'not.available:a:1.0.0' for project '$project'
-  2) Failed to resolve 'test.nebula:c' for project '$project'
-  3) Failed to resolve 'test.nebula:e' for project '$project'
-  4) Failed to resolve 'transitive.not.available:a:1.0.0' for project '$project'"""
+  1. Failed to resolve 'not.available:a:1.0.0' for project '$project'
+  2. Failed to resolve 'test.nebula:c' for project '$project'
+  3. Failed to resolve 'test.nebula:e' for project '$project'
+  4. Failed to resolve 'transitive.not.available:a:1.0.0' for project '$project'"""
     }
 }

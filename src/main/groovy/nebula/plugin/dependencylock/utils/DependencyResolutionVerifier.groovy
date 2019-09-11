@@ -42,9 +42,23 @@ class DependencyResolutionVerifier {
         Map<String, Set<Configuration>> failedDepsByConf = new HashMap<String, Set<Configuration>>()
         Set<String> lockedDepsOutOfDate = new HashSet<>()
 
+        def projectExecutionEnabled = project.gradle.startParameter.isParallelProjectExecutionEnabled()
+
         project.gradle.taskGraph.whenReady { taskGraph ->
             LinkedList tasks = taskGraph.executionPlan.executionQueue
-            Task lastTask = tasks.last?.task
+
+            Task lastTask
+            if (projectExecutionEnabled) {
+                lastTask = tasks
+                        .groupBy { task -> task.project }
+                        .find { proj, tasksForProj -> proj == project }
+                        .value
+                        .last()
+                        ?.task
+            } else {
+                lastTask = tasks.last?.task
+            }
+
             taskGraph.addTaskExecutionListener(new TaskExecutionListener() {
                 @Override
                 void beforeExecute(Task task) {
@@ -97,7 +111,7 @@ class DependencyResolutionVerifier {
                                         .eachWithIndex { it, index ->
                                             def dep = it.key
                                             def failedConfs = it.value
-                                            message.add("  ${index + 1}) Failed to resolve '$dep' for project '${project.name}'")
+                                            message.add("  ${index + 1}. Failed to resolve '$dep' for project '${project.name}'")
                                             debugMessage.add("Failed to resolve $dep on:")
                                             failedConfs
                                                     .sort { a, b -> a.name <=> b.name }
@@ -112,7 +126,7 @@ class DependencyResolutionVerifier {
                                 lockedDepsOutOfDate
                                         .sort()
                                         .eachWithIndex { outOfDateMessage, index ->
-                                            message.add("  ${index + 1}) $outOfDateMessage for project '${project.name}'")
+                                            message.add("  ${index + 1}. $outOfDateMessage for project '${project.name}'")
                                         }
 
                             } catch (Exception e) {
