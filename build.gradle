@@ -83,11 +83,6 @@ pluginBundle {
             tags = ['nebula', 'dependencies', 'lock']
         }
     }
-
-    mavenCoordinates {
-        groupId = 'com.netflix.nebula'
-        artifactId = 'gradle-dependency-lock-plugin'
-    }
 }
 
 // Kotlin compiles first, stubbing Java dependencies, however it can't stub Groovy and we need to call Groovy code from Kotlin. For details see:
