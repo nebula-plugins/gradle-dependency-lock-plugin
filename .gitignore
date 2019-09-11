@@ -1,6 +1,5 @@
 build/
 .gradle/
-gradle.properties
 .DS_Store
 out/
 .idea/
