@@ -15,7 +15,7 @@ com.jcraft:jzlib:1.1.1
 com.netflix.nebula:gradle-git-scm-plugin:4.1.6
 com.netflix.nebula:gradle-metrics-plugin:8.4.1
 com.netflix.nebula:gradle-scm-plugin:5.0.3
-com.netflix.nebula:nebula-gradle-interop:1.0.10
+com.netflix.nebula:nebula-gradle-interop:1.0.11
 com.netflix.nebula:nebula-test:7.3.0
 com.squareup.moshi:moshi:1.8.0
 com.squareup.okio:okio:1.16.0

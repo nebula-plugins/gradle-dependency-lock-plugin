@@ -10,7 +10,7 @@ com.google.code.gson:gson:2.3.1
 com.google.guava:guava:18.0
 com.netflix.nebula:gradle-metrics-plugin:8.4.1
 com.netflix.nebula:gradle-scm-plugin:5.0.3
-com.netflix.nebula:nebula-gradle-interop:1.0.10
+com.netflix.nebula:nebula-gradle-interop:1.0.11
 com.squareup.moshi:moshi:1.8.0
 com.squareup.okio:okio:1.16.0
 commons-beanutils:commons-beanutils:1.8.0
