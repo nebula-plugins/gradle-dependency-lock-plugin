@@ -79,7 +79,8 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         !cleanBuildResults.output.contains('FAILURE')
     }
 
-    def 'run the build with core lock file when newer dependency versions exist'() {
+    @Unroll
+    def 'run the build with core lock file when newer dependency versions exist with #lockingTask'() {
         given:
         buildFile.text = """\
             plugins {
@@ -121,7 +122,10 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         depInsightCompileWithLockedDeps.output.contains('test.nebula:a:1.1.0')
 
         when:
-        def result = runTasks('dependencies', '--write-locks')
+        def updateLockTasks = lockingTask == 'write-locks'
+                ? ['--write-locks']
+                : ['--update-locks', 'test.nebula:a']
+        def result = runTasks('dependencies', *updateLockTasks)
 
         then:
         !result.output.contains('FAILED')
@@ -131,6 +135,13 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         lockfileDir.listFiles().each { lockFile ->
             if (lockFile.text.contains('test.nebula:a')) {
                 assert lockFile.text.contains('test.nebula:a:1.2.0')
+            }
+            if (lockFile.text.contains('test.nebula:b')) {
+                if (lockingTask == 'write-locks') {
+                    assert lockFile.text.contains('test.nebula:b:1.2.0') // write-locks updates all deps
+                } else {
+                    assert lockFile.text.contains('test.nebula:b:1.1.0') // update-locks only updates the deps passed in
+                }
             }
         }
 
@@ -142,6 +153,9 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         actualLocks.each {
             assert updatedLocks.contains(it)
         }
+
+        where:
+        lockingTask << ['write-locks', 'update-locks']
     }
 
     def 'fails to use same versions across configurations when newer dependency versions exist AND only the end result configurations are locked'() {
