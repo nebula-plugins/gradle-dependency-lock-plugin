@@ -19,6 +19,7 @@ import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.utils.CoreLocking
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
+import nebula.plugin.dependencylock.utils.DependencyResolutionVerifier
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -76,6 +77,13 @@ class DependencyLockPlugin : Plugin<Project> {
             LOGGER.warn("${project.name}: coreLockingSupport feature enabled")
             val coreLockingHelper = CoreLockingHelper(project)
             coreLockingHelper.lockSelectedConfigurations(extension.configurationNames)
+
+            if (!project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)) {
+                /* MigrateToCoreLocks can be involved with migrating dependencies that were previously unlocked.
+                   Verifying resolution based on the base lockfiles causes a `LockOutOfDateException` from the initial DependencyLockingArtifactVisitor state
+                */
+                DependencyResolutionVerifier.verifySuccessfulResolution(project)
+            }
 
             val lockFile = File(project.projectDir, extension.lockFile)
 

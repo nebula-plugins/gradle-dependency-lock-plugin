@@ -113,27 +113,12 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
 
     def 'updating migrated locks'() {
         given:
-        def depLocksDirectory = new File(projectDir, '/gradle/dependency-locks/')
-        if (!depLocksDirectory.mkdirs()) {
-            throw new Exception("failed to create directory at ${depLocksDirectory}")
-        }
-        expectedLocks.each {
-            def confLockFile = new File("${depLocksDirectory.path}/${it}")
-            confLockFile.createNewFile()
-            if (it.contains("compile") || it.contains("runtime")) {
-                confLockFile.text = """
-                    # This is a file for dependency locking, migrated from Nebula locks.
-                    test.nebula:a:1.0.0
-                    test.nebula:b:1.1.0
-                    """.stripIndent()
-            } else {
-                confLockFile.text = """
-                    # This is a file for dependency locking, migrated from Nebula locks.
-                    """.stripIndent()
-            }
-        }
+        def graph = new DependencyGraphBuilder()
+                .addModule('test.nebula:f:1.0.0')
+                .build()
+        mavenrepo = new GradleDependencyGenerator(graph, "${projectDir}/testrepogen")
+        mavenrepo.generateTestMavenRepo()
 
-        // update build file, so it no longer matches locks
         buildFile.text = """\
             plugins {
                 id 'nebula.dependency-lock'
@@ -145,25 +130,42 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
             }
             
             dependencies {
-                compile 'test.nebula:a:1.1.0'
                 compile 'test.nebula:b:1.+'
+                compile 'test.nebula:f:1.+'
             }
         """.stripIndent()
 
         when:
+        def lockResults = runTasks('dependencies', '--write-locks')
+
+        then:
+        !lockResults.output.contains('FAIL')
+
+        when:
+        def updatedGraph = new DependencyGraphBuilder()
+                .addModule('test.nebula:f:1.1.0')
+                .build()
+        mavenrepo = new GradleDependencyGenerator(updatedGraph, "${projectDir}/testrepogen")
+        mavenrepo.generateTestMavenRepo()
+
         def mismatchedDependenciesResult = runTasks('dependencies')
 
         then:
-        mismatchedDependenciesResult.output.contains('FAILED')
+        !mismatchedDependenciesResult.output.contains('FAIL')
 
         when:
-        runTasks('dependencies', '--update-locks', 'test.nebula:a')
+        def updateLocksResult = runTasks('dependencies', '--update-locks', 'test.nebula:f')
+
+        then:
+        !updateLocksResult.output.contains('FAIL')
+
+        when:
         def updatedDependencies = runTasks('dependencies')
 
         then:
-        updatedDependencies.output.contains('a:1.1.0')
+        updatedDependencies.output.contains('test.nebula:f:1.+ -> 1.1.0')
         updatedDependencies.output.contains('dependency constraint')
-        !updatedDependencies.output.contains('FAILED')
+        !updatedDependencies.output.contains('FAIL')
     }
 
     def 'migration with transitives'() {
