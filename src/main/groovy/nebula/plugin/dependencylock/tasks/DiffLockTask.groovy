@@ -21,7 +21,7 @@ class DiffLockTask extends AbstractLockTask {
     @Optional
     File existingLockFile
 
-    @Input
+    @InputFile
     @Optional
     File updatedLockFile
 
