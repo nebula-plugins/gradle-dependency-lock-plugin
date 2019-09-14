@@ -58,8 +58,7 @@ class GenerateLockTask extends AbstractLockTask {
     @Optional
     Set<String> skippedDependencies = []
 
-    @InputFile
-    @Optional
+    @Internal
     File dependenciesLock
 
     @Input

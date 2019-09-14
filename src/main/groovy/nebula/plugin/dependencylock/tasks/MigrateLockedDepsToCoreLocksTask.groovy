@@ -26,6 +26,7 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 
 class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
@@ -35,7 +36,7 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
 
     private static final Logger LOGGER = Logging.getLogger(MigrateLockedDepsToCoreLocksTask)
 
-    @InputFile
+    @Internal
     File inputLockFile
 
     @TaskAction
