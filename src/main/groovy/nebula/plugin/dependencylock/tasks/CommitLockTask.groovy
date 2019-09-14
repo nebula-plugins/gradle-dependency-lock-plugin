@@ -18,19 +18,42 @@ package nebula.plugin.dependencylock.tasks
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.scm.providers.ScmFactory
 import nebula.plugin.scm.providers.ScmProvider
-
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.TaskExecutionException
 
 class CommitLockTask extends AbstractLockTask {
+    @Internal
     String description = 'Commit the lock files if an gradle-scm-plugin implementation is applied'
+
+    @Internal
     ScmFactory scmFactory
+
+    @Input
+    @Optional
     String branch
+
+    @Input
+    @Optional
     String commitMessage
+
+    @Input
+    @Optional
     List<String> patternsToCommit
-    boolean shouldCreateTag = false
+
+    @Input
+    @Optional
+    Boolean shouldCreateTag = false
+
+    @Input
+    @Optional
     String tag
-    int remoteRetries = 3
+
+    @Input
+    @Optional
+    Integer remoteRetries = 3
 
     @TaskAction
     void commit() {

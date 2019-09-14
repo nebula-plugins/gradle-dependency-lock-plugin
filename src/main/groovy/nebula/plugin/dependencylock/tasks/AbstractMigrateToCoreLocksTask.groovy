@@ -17,14 +17,18 @@ package nebula.plugin.dependencylock.tasks
 
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 
 abstract class AbstractMigrateToCoreLocksTask extends DefaultTask {
+    @Internal
     String group = 'Locking'
 
     @OutputDirectory
     File outputLocksDirectory
 
+    @Input
     Set<String> configurationNames
 
 }

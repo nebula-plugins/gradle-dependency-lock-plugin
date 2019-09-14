@@ -24,12 +24,19 @@ import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 
 class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
+
+    @Internal
     String description = "Migrates Nebula-locked dependencies to use core Gradle locks"
+
     private static final Logger LOGGER = Logging.getLogger(MigrateLockedDepsToCoreLocksTask)
 
+    @Internal
     File inputLockFile
 
     @TaskAction

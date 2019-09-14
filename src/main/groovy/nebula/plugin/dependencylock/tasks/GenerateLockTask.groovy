@@ -30,20 +30,44 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 
 class GenerateLockTask extends AbstractLockTask {
     private String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
     private String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
 
+    @Internal
     String description = 'Create a lock file in build/<configured name>'
+
+    @Internal
     Collection<Configuration> configurations = []
+
+    @Internal
     Set<String> configurationNames
+
+    @Internal
     Closure filter = { group, name, version -> true }
+
+    @Input
+    @Optional
     Set<String> skippedDependencies = []
+
+    @Internal
     File dependenciesLock
+
+    @Internal
     Map<String, String> overrides
-    boolean includeTransitives = false
+
+    @Input
+    @Optional
+    Boolean includeTransitives = false
+
+    @Input
+    @Optional
     WaybackProvider waybackProvider
 
     @TaskAction

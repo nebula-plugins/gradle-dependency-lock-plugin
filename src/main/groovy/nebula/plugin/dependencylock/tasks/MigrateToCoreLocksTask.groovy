@@ -23,9 +23,11 @@ import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolveException
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 
 class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
+    @Internal
     String description = 'Migrates all dependencies to use core Gradle locks'
 
     @TaskAction
