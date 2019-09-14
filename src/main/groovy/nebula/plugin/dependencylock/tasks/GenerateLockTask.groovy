@@ -66,7 +66,8 @@ class GenerateLockTask extends AbstractLockTask {
     Map<String, String> overrides
 
     @Input
-    boolean includeTransitives = false
+    @Optional
+    Boolean includeTransitives = false
 
     @Input
     @Optional
