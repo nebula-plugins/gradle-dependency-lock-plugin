@@ -43,12 +43,10 @@ class GenerateLockTask extends AbstractLockTask {
     @Internal
     String description = 'Create a lock file in build/<configured name>'
 
-    @Input
-    @Optional
+    @Internal
     Collection<Configuration> configurations = []
 
-    @Input
-    @Optional
+    @Internal
     Set<String> configurationNames
 
     @Internal
@@ -61,8 +59,7 @@ class GenerateLockTask extends AbstractLockTask {
     @Internal
     File dependenciesLock
 
-    @Input
-    @Optional
+    @Internal
     Map<String, String> overrides
 
     @Input
