@@ -32,12 +32,15 @@ class CommitLockTask extends AbstractLockTask {
     ScmFactory scmFactory
 
     @Input
+    @Optional
     String branch
 
     @Input
+    @Optional
     String commitMessage
 
     @Input
+    @Optional
     List<String> patternsToCommit
 
     @Input
