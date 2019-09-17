@@ -24,6 +24,5 @@ class DependencyLockExtension {
     Set<String> skippedDependencies = [] as Set
     boolean includeTransitives = false
     boolean lockAfterEvaluating = true
-    Object waybackProvider
     Set<String> additionalConfigurationsToLock = [] as Set
 }

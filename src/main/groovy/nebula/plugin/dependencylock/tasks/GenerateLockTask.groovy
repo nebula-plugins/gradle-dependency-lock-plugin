@@ -16,14 +16,12 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.DependencyLockExtension
-import nebula.plugin.dependencylock.DependencyLockReader
 import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
 import nebula.plugin.dependencylock.DependencyLockWriter
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
 import nebula.plugin.dependencylock.utils.CoreLocking
-import nebula.plugin.dependencylock.wayback.WaybackProvider
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -31,7 +29,6 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
@@ -66,9 +63,6 @@ class GenerateLockTask extends AbstractLockTask {
     @Optional
     Boolean includeTransitives = false
 
-    @Input
-    @Optional
-    WaybackProvider waybackProvider
 
     @TaskAction
     void lock() {
@@ -89,9 +83,7 @@ class GenerateLockTask extends AbstractLockTask {
             throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
         }
         Collection<Configuration> confs = getConfigurations() ?: lockableConfigurations(project, project, getConfigurationNames())
-        Map dependencyMap = project.hasProperty('waybackTo') ?
-                new GenerateLockFromWayback().lock(confs) :
-                new GenerateLockFromConfigurations().lock(confs)
+        Map dependencyMap = new GenerateLockFromConfigurations().lock(confs)
         new DependencyLockWriter(getDependenciesLock(), getSkippedDependencies()).writeLock(dependencyMap)
     }
 
@@ -230,33 +222,6 @@ class GenerateLockTask extends AbstractLockTask {
             return peers.any {
                 it.group == lockKey.group && it.artifact == lockKey.artifact
             }
-        }
-    }
-
-    class GenerateLockFromWayback {
-        Map<LockKey, LockValue> lock(Collection<Configuration> confs) {
-            if (!waybackProvider) {
-                throw new DependencyLockException("In order to use wayback, you must configure a provider")
-            }
-
-            DependencyLockReader reader = new DependencyLockReader(project)
-
-            def updateLocks = confs.collectEntries { conf ->
-                [(conf.name): reader.readLocks(conf, getDependenciesLock(), [])?.collectEntries { k, v ->
-                    // parse the string representation returned by readLocks into (LockKey, LockValue) entries
-                    def (group, artifact) = (k as String).split(':')
-                    [(new LockKey(group, artifact, conf.name)): v as LockValue]
-                }]
-            }
-
-            confs.each { conf ->
-                def wayback = waybackProvider.wayback(project.property('waybackTo') as String, conf)
-                // we only override or create a new configuration to lock if wayback has some advice about it
-                if (!wayback.isEmpty())
-                    updateLocks[conf.name] = wayback.collectEntries { dep -> [(new LockKey(dep.group, dep.name, conf.name)): new LockValue(locked: dep.version)] }
-            }
-
-            return updateLocks.values().findAll { it }.sum() as Map<LockKey, LockValue>
         }
     }
 }

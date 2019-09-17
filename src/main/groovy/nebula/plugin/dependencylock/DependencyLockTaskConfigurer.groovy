@@ -22,8 +22,6 @@ import nebula.plugin.dependencylock.tasks.MigrateLockedDepsToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.plugin.dependencylock.tasks.UpdateLockTask
-import nebula.plugin.dependencylock.wayback.WaybackProvider
-import nebula.plugin.dependencylock.wayback.WaybackProviderFactory
 import nebula.plugin.scm.ScmPlugin
 import org.gradle.api.GradleException
 import org.gradle.api.Project
@@ -202,19 +200,6 @@ class DependencyLockTaskConfigurer {
     private GenerateLockTask configureGenerateLockTask(GenerateLockTask lockTask, String clLockFileName, DependencyLockExtension extension, Map overrides) {
         setupLockConventionMapping(lockTask, extension, overrides)
         lockTask.conventionMapping.with {
-            waybackProvider = {
-                def impl = null
-                switch (extension.waybackProvider) {
-                    case WaybackProvider:
-                        impl = extension.waybackProvider
-                        break
-                    case String:
-                        impl = new WaybackProviderFactory(project, getClass().classLoader).build(extension.waybackProvider as String)
-                        break
-                }
-                impl
-            }
-
             dependenciesLock = {
                 new File(project.buildDir, clLockFileName ?: extension.lockFile)
             }
