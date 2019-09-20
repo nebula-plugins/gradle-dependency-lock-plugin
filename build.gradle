@@ -48,6 +48,8 @@ dependencies {
     implementation 'com.netflix.nebula:gradle-scm-plugin:latest.release'
     implementation 'com.netflix.nebula:gradle-metrics-plugin:8.+', optional
 
+    implementation platform("com.fasterxml.jackson:jackson-bom:2.9.9.20190807")
+
     testImplementation 'com.netflix.nebula:gradle-git-scm-plugin:latest.release'
     testImplementation 'com.netflix.nebula:nebula-test:latest.release'
     testImplementation gradleTestKit()
