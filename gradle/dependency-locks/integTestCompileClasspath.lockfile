@@ -13,7 +13,7 @@ com.google.guava:guava:19.0
 com.googlecode.javaewah:JavaEWAH:1.1.6
 com.jcraft:jsch:0.1.54
 com.jcraft:jzlib:1.1.1
-com.netflix.nebula:gradle-git-scm-plugin:4.1.6
+com.netflix.nebula:gradle-git-scm-plugin:4.2.0
 com.netflix.nebula:gradle-metrics-plugin:8.4.1
 com.netflix.nebula:gradle-scm-plugin:5.1.0
 com.netflix.nebula:nebula-gradle-interop:1.0.11
