@@ -56,10 +56,6 @@ dependencies {
     testImplementation('org.ajoberstar.grgit:grgit-core:3.0.0-beta.1') {
         exclude group: 'org.codehaus.groovy', module: 'groovy'
     }
-
-    // resolution rules requires at least 2.8.1, and currently DependencyLockLauncherSpec resolution-rules integration
-    // test will fail without this
-    testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.8.+'
 }
 
 gradlePlugin {
