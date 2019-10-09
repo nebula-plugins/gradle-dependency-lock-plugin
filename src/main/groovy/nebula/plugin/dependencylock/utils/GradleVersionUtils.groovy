@@ -24,17 +24,31 @@ import org.gradle.util.GradleVersion
 
 
 class GradleVersionUtils {
-    private static final List<String> configurationsThatShouldNotBeResolvedAfterGradle60 = ['compile', 'compileOnly', 'runtime']
-
     static boolean currentGradleVersionIsLessThan(String version) {
         GradleVersion.current().baseVersion < GradleVersion.version(version)
     }
 
-    static Collection<Configuration> findAllConfigurationsThatShouldNotBeResolvedAfterGradle60(Project project) {
-        ConfigurationFilter.findAllConfigurationsThatMatchSuffixes(project.configurations, configurationsThatShouldNotBeResolvedAfterGradle60)
+    static Collection<Configuration> findAllConfigurationsThatResolveButHaveAlternatives(Project project) {
+        project
+                .configurations
+                .stream()
+                .filter {
+                    shouldThisConfigurationBeResolvedAfterGradle60(it)
+                }
+                .collect()
     }
 
     static boolean shouldThisConfigurationBeResolvedAfterGradle60(Configuration configuration) {
-        ConfigurationFilter.configurationMatchesSuffixes(configuration, configurationsThatShouldNotBeResolvedAfterGradle60)
+        boolean hasAResolutionAlternative = false
+
+        def method = configuration.metaClass.getMetaMethod('getResolutionAlternatives')
+        if (method != null) {
+            def alternatives = configuration.getResolutionAlternatives()
+            if (alternatives != null && alternatives.size > 0) {
+                hasAResolutionAlternative = true
+            }
+        }
+
+        configuration.isCanBeResolved() && hasAResolutionAlternative
     }
 }

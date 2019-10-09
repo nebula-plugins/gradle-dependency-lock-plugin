@@ -29,18 +29,22 @@ class GradleVersionUtilsProjectSpec extends ProjectSpec {
 
     def "compile, compileOnly, runtime, testCompile, testCompileOnly, and testRuntime should not be resolved after Gradle 6.0"() {
         when:
-        def results = GradleVersionUtils.findAllConfigurationsThatShouldNotBeResolvedAfterGradle60(project)
+        def results = GradleVersionUtils.findAllConfigurationsThatResolveButHaveAlternatives(project)
 
         then:
-        assert results.size() == 6
+        if (GradleVersionUtils.currentGradleVersionIsLessThan('6.0')) {
+            assert results.size() == 0
+        } else {
+            assert results.size() == 6
 
-        Collection<String> configurationNames = results.collect { (it as Configuration).name }
-        assert configurationNames.contains('compile')
-        assert configurationNames.contains('compileOnly')
-        assert configurationNames.contains('runtime')
-        assert configurationNames.contains('testCompile')
-        assert configurationNames.contains('testCompileOnly')
-        assert configurationNames.contains('testRuntime')
+            Collection<String> configurationNames = results.collect { (it as Configuration).name }
+            assert configurationNames.contains('compile')
+            assert configurationNames.contains('compileOnly')
+            assert configurationNames.contains('runtime')
+            assert configurationNames.contains('testCompile')
+            assert configurationNames.contains('testCompileOnly')
+            assert configurationNames.contains('testRuntime')
+        }
     }
 
     def "facets with similar configurations should not be resolved after Gradle 6.0"() {
@@ -53,20 +57,24 @@ class GradleVersionUtilsProjectSpec extends ProjectSpec {
         }
 
         when:
-        def results = GradleVersionUtils.findAllConfigurationsThatShouldNotBeResolvedAfterGradle60(project)
+        def results = GradleVersionUtils.findAllConfigurationsThatResolveButHaveAlternatives(project)
 
         then:
-        assert results.size() == 9
+        if (GradleVersionUtils.currentGradleVersionIsLessThan('6.0')) {
+            assert results.size() == 0
+        } else {
+            assert results.size() == 9
 
-        Collection<String> configurationNames = results.collect { (it as Configuration).name }
-        assert configurationNames.contains('compile')
-        assert configurationNames.contains('compileOnly')
-        assert configurationNames.contains('runtime')
-        assert configurationNames.contains('testCompile')
-        assert configurationNames.contains('testCompileOnly')
-        assert configurationNames.contains('testRuntime')
-        assert configurationNames.contains('integTestCompile')
-        assert configurationNames.contains('integTestCompileOnly')
-        assert configurationNames.contains('integTestRuntime')
+            Collection<String> configurationNames = results.collect { (it as Configuration).name }
+            assert configurationNames.contains('compile')
+            assert configurationNames.contains('compileOnly')
+            assert configurationNames.contains('runtime')
+            assert configurationNames.contains('testCompile')
+            assert configurationNames.contains('testCompileOnly')
+            assert configurationNames.contains('testRuntime')
+            assert configurationNames.contains('integTestCompile')
+            assert configurationNames.contains('integTestCompileOnly')
+            assert configurationNames.contains('integTestRuntime')
+        }
     }
 }
