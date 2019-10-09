@@ -19,6 +19,7 @@
 package nebula.plugin.dependencylock
 
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
+import nebula.plugin.dependencylock.utils.ConfigurationFilter
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.logging.Logger
@@ -51,12 +52,10 @@ class ConfigurationsToLockFinder {
 
         configurationsToLock.addAll(baseConfigurations)
 
-        def confSuffix = 'CompileClasspath'
-        def configurationsWithPrefix = project.configurations.findAll { it.name.contains(confSuffix) }
-        configurationsWithPrefix.each {
-            def confPrefix = it.name.replace(confSuffix, '')
-            configurationsToLock.addAll(returnConfigurationNamesWithPrefix(confPrefix, baseConfigurations))
+        def configurationsThatMatchSuffixes = ConfigurationFilter.findAllConfigurationsThatMatchSuffixes(project.configurations, baseConfigurations).collect {
+            it.name
         }
+        configurationsToLock.addAll(configurationsThatMatchSuffixes)
 
         def originatingConfigurationsToAlsoLock = new HashSet<String>()
         configurationsToLock.each { nameOfConfToLock ->
@@ -99,13 +98,5 @@ class ConfigurationsToLockFinder {
                 return []
             }
         }
-    }
-
-    private static Collection<String> returnConfigurationNamesWithPrefix(String prefix, Collection<String> baseConfigurations) {
-        def configurationNamesWithPrefix = []
-        baseConfigurations.each { baseConfig ->
-            configurationNamesWithPrefix.add("${prefix}${baseConfig.capitalize()}".toString())
-        }
-        return configurationNamesWithPrefix
     }
 }
