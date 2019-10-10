@@ -16,7 +16,7 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
-import nebula.plugin.dependencylock.exceptions.DependencyLockException
+import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.ProjectSpec
 import org.gradle.testfixtures.ProjectBuilder
 
@@ -32,13 +32,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         project.repositories { maven { url Fixture.repo } }
         project.dependencies {
-            compile 'test.example:foo:2.+'
-            testCompile 'test.example:baz:1.+'
+            implementation 'test.example:foo:2.+'
+            testImplementation 'test.example:baz:1.+'
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
-        task.configurationNames = [ 'testRuntime' ]
+        task.configurationNames = ['testRuntimeClasspath']
 
         when:
         task.lock()
@@ -46,7 +46,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-                "testRuntime": {
+                "testRuntimeClasspath": {
                     "test.example:baz": {
                         "locked": "1.1.0",
                         "requested": "1.+"
@@ -60,22 +60,51 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.text == lockText
     }
 
-    def 'skip dependencies via transitives when configured'() {
+    def 'simple lock for all lockable configurations'() {
         project.apply plugin: 'java'
+
         project.repositories { maven { url Fixture.repo } }
         project.dependencies {
-            compile 'test.example:foobaz:1.+'
+            implementation 'test.example:foo:2.+'
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
-        task.configurationNames = [ 'testRuntime' ]
-        task.skippedDependencies = [ 'test.example:foo' ]
+        task.configurationNames = project.configurations
+                .stream()
+                .filter { it.isCanBeResolved() }
+                .collect { it.name }
+                .toSet()
+
+        when:
+        task.lock()
+
+        then:
+        String lockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
+                '''\
+                    "test.example:foo": {
+                        "locked": "2.0.1",
+                        "requested": "2.+"
+                    }'''.stripIndent())
+        task.dependenciesLock.text == lockText
+    }
+
+    def 'skip dependencies via transitives when configured'() {
+        project.apply plugin: 'java'
+        project.repositories { maven { url Fixture.repo } }
+        project.dependencies {
+            implementation 'test.example:foobaz:1.+'
+        }
+
+        GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
+        task.configurationNames = ['testRuntimeClasspath']
+        task.skippedDependencies = ['test.example:foo']
         task.includeTransitives = true
 
         String lockText = '''\
             {
-                "testRuntime": {
+                "testRuntimeClasspath": {
                     "test.example:baz": {
                         "locked": "1.0.0",
                         "transitive": [
@@ -109,13 +138,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         app.dependencies {
-            compile app.project(':common')
-            compile 'test.example:foo:2.+'
+            implementation app.project(':common')
+            implementation 'test.example:foo:2.+'
         }
 
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock = new File(app.buildDir, 'dependencies.lock')
-        task.configurationNames= [ 'testRuntime' ]
+        task.configurationNames = ['testRuntimeClasspath']
 
         when:
         task.lock()
@@ -123,7 +152,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-                "testRuntime": {
+                "testRuntimeClasspath": {
                     "test.example:foo": {
                         "locked": "2.0.1",
                         "requested": "2.+"
@@ -151,16 +180,16 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         lib.dependencies {
-            compile lib.project(':common')
+            implementation lib.project(':common')
         }
 
         app.dependencies {
-            compile app.project(':lib')
+            implementation app.project(':lib')
         }
 
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock = new File(app.buildDir, 'dependencies.lock')
-        task.configurationNames= [ 'testRuntime' ]
+        task.configurationNames = ['testRuntimeClasspath']
         task.includeTransitives = true
 
         when:
@@ -169,7 +198,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-                "testRuntime": {
+                "testRuntimeClasspath": {
                     "test.nebula:common": {
                         "project": true,
                         "transitive": [
@@ -199,22 +228,22 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         common.dependencies {
-            compile 'test.example:foo:2.+'
-            compile 'test.example:baz:2.+'
+            implementation 'test.example:foo:2.+'
+            implementation 'test.example:baz:2.+'
         }
 
         lib.dependencies {
-            compile lib.project(':common')
-            compile 'test.example:baz:1.+'
+            implementation lib.project(':common')
+            implementation 'test.example:baz:1.+'
         }
 
         app.dependencies {
-            compile app.project(':lib')
+            implementation app.project(':lib')
         }
 
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock = new File(app.buildDir, 'dependencies.lock')
-        task.configurationNames= [ 'testRuntime' ]
+        task.configurationNames = ['testRuntimeClasspath']
 
         when:
         task.lock()
@@ -222,7 +251,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-                "testRuntime": {
+                "testRuntimeClasspath": {
                     "test.example:baz": {
                         "firstLevelTransitive": [
                             "test.nebula:common",
@@ -268,27 +297,27 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         model.dependencies {
-            compile 'test.example:foo:2.+'
+            implementation 'test.example:foo:2.+'
         }
 
         common.dependencies {
-            compile common.project(':model')
+            implementation common.project(':model')
         }
 
         lib.dependencies {
-            compile lib.project(':model')
-            compile lib.project(':common')
+            implementation lib.project(':model')
+            implementation lib.project(':common')
         }
 
         app.dependencies {
-            compile app.project(':model')
-            compile app.project(':common')
-            compile app.project(':lib')
+            implementation app.project(':model')
+            implementation app.project(':common')
+            implementation app.project(':lib')
         }
 
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock = new File(app.buildDir, 'dependencies.lock')
-        task.configurationNames= [ 'testRuntime' ]
+        task.configurationNames = ['testRuntimeClasspath']
 
         when:
         task.lock()
@@ -296,7 +325,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-                "testRuntime": {
+                "testRuntimeClasspath": {
                     "test.example:foo": {
                         "firstLevelTransitive": [
                             "test.nebula:model"
@@ -329,12 +358,12 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         project.repositories { maven { url Fixture.repo } }
         project.dependencies {
-            compile 'test.example:bar:1.+'
+            implementation 'test.example:bar:1.+'
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
-        task.configurationNames= [ 'testRuntime' ]
+        task.configurationNames = ['testRuntimeClasspath']
         task.includeTransitives = true
 
         when:
@@ -343,7 +372,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-                "testRuntime": {
+                "testRuntimeClasspath": {
                     "test.example:bar": {
                         "locked": "1.1.0",
                         "requested": "1.+"
@@ -364,12 +393,12 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         project.repositories { maven { url Fixture.repo } }
         project.dependencies {
-            compile 'circular:a:1.+'
+            implementation 'circular:a:1.+'
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
-        task.configurationNames= [ 'testRuntime' ]
+        task.configurationNames = ['testRuntimeClasspath']
         task.includeTransitives = true
 
         when:
@@ -378,7 +407,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-                "testRuntime": {
+                "testRuntimeClasspath": {
                     "circular:a": {
                         "locked": "1.0.0",
                         "requested": "1.+",
@@ -402,12 +431,12 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         project.repositories { maven { url Fixture.repo } }
         project.dependencies {
-            compile 'circular:oneleveldeep:1.+'
+            implementation 'circular:oneleveldeep:1.+'
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
-        task.configurationNames= [ 'testRuntime' ]
+        task.configurationNames = ['testRuntimeClasspath']
         task.includeTransitives = true
 
         when:
@@ -416,7 +445,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-                "testRuntime": {
+                "testRuntimeClasspath": {
                     "circular:a": {
                         "locked": "1.0.0",
                         "transitive": [
@@ -444,13 +473,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         project.repositories { maven { url Fixture.repo } }
         project.dependencies {
-            compile 'test.example:bar:1.+'
-            compile 'test.example:foobaz:1.+'
+            implementation 'test.example:bar:1.+'
+            implementation 'test.example:foobaz:1.+'
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
-        task.configurationNames= [ 'testRuntime' ]
+        task.configurationNames = ['testRuntimeClasspath']
         task.includeTransitives = true
 
         when:
@@ -459,7 +488,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-                "testRuntime": {
+                "testRuntimeClasspath": {
                     "test.example:bar": {
                         "locked": "1.1.0",
                         "requested": "1.+"
@@ -491,12 +520,12 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         project.repositories { maven { url Fixture.repo } }
         project.dependencies {
-            compile 'test.example:transitive:1.0.0'
+            implementation 'test.example:transitive:1.0.0'
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
-        task.configurationNames= [ 'testRuntime' ]
+        task.configurationNames = ['testRuntimeClasspath']
         task.includeTransitives = true
 
         when:
@@ -505,7 +534,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         then:
         String lockText = '''\
             {
-                "testRuntime": {
+                "testRuntimeClasspath": {
                     "test.example:bar": {
                         "locked": "1.0.0",
                         "transitive": [
@@ -545,13 +574,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         project.repositories { maven { url Fixture.repo } }
         project.dependencies {
-            compile 'test.example:foo:2.+'
-            testCompile 'test.example:baz:1.+'
+            implementation 'test.example:foo:2.+'
+            testImplementation 'test.example:baz:1.+'
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
-        task.configurationNames = [ 'testRuntime' ]
+        task.configurationNames = ['testRuntimeClasspath']
         task.filter = filter as Closure
 
         when:
@@ -561,11 +590,11 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.text == lockText
 
         where:
-        filter                                            || lockText
-        { group, artifact, version -> false }             || '{\n    \n}'
-        { group, artifact, version -> artifact == 'foo' } || '''\
+        filter || lockText
+                { group, artifact, version -> false } || '{\n    \n}'
+                { group, artifact, version -> artifact == 'foo' } || '''\
             {
-                "testRuntime": {
+                "testRuntimeClasspath": {
                     "test.example:foo": {
                         "locked": "2.0.1",
                         "requested": "2.+"

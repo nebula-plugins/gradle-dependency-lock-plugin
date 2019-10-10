@@ -41,8 +41,8 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.apply plugin: 'java'
         project.repositories { maven { url Fixture.repo } }
         project.dependencies {
-            compile 'test.example:foo:1.0.0'
-            testCompile 'test.example:foo:1.0.1'
+            implementation 'test.example:foo:1.0.0'
+            testImplementation 'test.example:foo:1.0.1'
         }
 
         when:
@@ -51,11 +51,13 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         then:
         def findFoo = { String confName ->
-            project.configurations[confName].resolvedConfiguration.firstLevelModuleDependencies.find { it.moduleName == 'foo'}
+            project.configurations[confName].resolvedConfiguration.firstLevelModuleDependencies.find {
+                it.moduleName == 'foo'
+            }
         }
 
-        findFoo('compile').moduleVersion == '1.0.0'
-        findFoo('testCompile').moduleVersion == '1.0.1'
+        findFoo('compileClasspath').moduleVersion == '1.0.0'
+        findFoo('testCompileClasspath').moduleVersion == '1.0.1'
     }
 
     def 'read in dependencies.lock'() {
@@ -64,7 +66,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         when:
         project.apply plugin: pluginName
         triggerAfterEvaluate()
-        def resolved = project.configurations.compile.resolvedConfiguration
+        def resolved = project.configurations.compileClasspath.resolvedConfiguration
 
         then:
         def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
@@ -78,7 +80,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
 
         when:
         project.apply plugin: pluginName
-        def resolved = project.configurations.compile.resolvedConfiguration
+        def resolved = project.configurations.compileClasspath.resolvedConfiguration
 
         then:
         def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
@@ -90,7 +92,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.ext.set('dependencyLock.ignore', ignore)
         project.apply plugin: pluginName
         triggerAfterEvaluate()
-        def resolved = project.configurations.compile.resolvedConfiguration
+        def resolved = project.configurations.compileClasspath.resolvedConfiguration
 
         expect:
         def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
@@ -113,7 +115,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         when:
         project.apply plugin: pluginName
         triggerAfterEvaluate()
-        def resolved = project.configurations.compile.resolvedConfiguration
+        def resolved = project.configurations.compileClasspath.resolvedConfiguration
 
         then:
         def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
@@ -134,7 +136,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         when:
         project.apply plugin: pluginName
         triggerAfterEvaluate()
-        def resolved = project.configurations.compile.resolvedConfiguration
+        def resolved = project.configurations.compileClasspath.resolvedConfiguration
 
         then:
         def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
@@ -145,7 +147,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.apply plugin: 'java'
         project.repositories { maven { url Fixture.repo } }
         project.dependencies {
-            compile 'test.example:foo:1.+'
+            implementation 'test.example:foo:1.+'
         }
 
         project.ext.set('dependencyLock.override', 'test.example:foo:1.0.0')
@@ -155,7 +157,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         triggerAfterEvaluate()
 
         then:
-        def resolved = project.configurations.compile.resolvedConfiguration
+        def resolved = project.configurations.compileClasspath.resolvedConfiguration
         def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
         foo.moduleVersion == '1.0.0'
     }
@@ -168,7 +170,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         when:
         project.apply plugin: pluginName
         triggerAfterEvaluate()
-        def resolved = project.configurations.compile.resolvedConfiguration
+        def resolved = project.configurations.compileClasspath.resolvedConfiguration
 
         then:
         def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
@@ -179,7 +181,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         stockTestSetup()
 
         project.dependencies {
-            compile 'test.example:baz:1.+'
+            implementation 'test.example:baz:1.+'
         }
 
         project.configurations.all {
@@ -193,7 +195,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         when:
         project.apply plugin: pluginName
         triggerAfterEvaluate()
-        def resolved = project.configurations.compile.resolvedConfiguration
+        def resolved = project.configurations.compileClasspath.resolvedConfiguration
 
         then:
         def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
@@ -206,7 +208,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << '''\
             {
-                "compile": {
+                "compileClasspath": {
                     "test.example:foo": {
                         "locked": "1.0.0",
                         "requested": "1.+"
@@ -222,8 +224,8 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.apply plugin: 'java'
         project.repositories { maven { url Fixture.repo } }
         project.dependencies {
-            compile 'test.example:foo:1.0.1'
-            compile 'test.example:baz:2.+'
+            implementation 'test.example:foo:1.0.1'
+            implementation 'test.example:baz:2.+'
         }
 
         project.ext.set('dependencyLock.override', 'test.example:foo:2.0.1,test.example:baz:1.1.0')
@@ -231,7 +233,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         when:
         project.apply plugin: pluginName
         triggerAfterEvaluate()
-        def resolved = project.configurations.compile.resolvedConfiguration
+        def resolved = project.configurations.compileClasspath.resolvedConfiguration
 
         then:
         def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
@@ -250,10 +252,10 @@ class DependencyLockPluginSpec extends ProjectSpec {
         triggerAfterEvaluate()
 
         then:
-        def resolved1 = sub1.configurations.compile.resolvedConfiguration
+        def resolved1 = sub1.configurations.compileClasspath.resolvedConfiguration
         def foo1 = resolved1.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
         foo1.moduleVersion == '1.0.0'
-        def resolved2 = sub2.configurations.compile.resolvedConfiguration
+        def resolved2 = sub2.configurations.compileClasspath.resolvedConfiguration
         def foo2 = resolved2.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
         foo2.moduleVersion == '2.0.0'
     }
@@ -277,10 +279,10 @@ class DependencyLockPluginSpec extends ProjectSpec {
         triggerAfterEvaluate()
 
         then:
-        def resolved1 = sub1.configurations.compile.resolvedConfiguration
+        def resolved1 = sub1.configurations.compileClasspath.resolvedConfiguration
         def foo1 = resolved1.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
         foo1.moduleVersion == '2.0.1'
-        def resolved2 = sub2.configurations.compile.resolvedConfiguration
+        def resolved2 = sub2.configurations.compileClasspath.resolvedConfiguration
         def foo2 = resolved2.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
         foo2.moduleVersion == '2.0.1'
     }
@@ -288,11 +290,11 @@ class DependencyLockPluginSpec extends ProjectSpec {
     def 'multiproject unused libraries in overrideFile'() {
         def (Project sub1, Project sub2) = multiProjectSetup()
         sub1.dependencies {
-            compile 'test.example:bar:1.+'
+            implementation 'test.example:bar:1.+'
         }
 
         sub2.dependencies {
-            compile 'test.example:baz:1.+'
+            implementation 'test.example:baz:1.+'
         }
 
         def override = new File(projectDir, 'override.lock')
@@ -313,14 +315,14 @@ class DependencyLockPluginSpec extends ProjectSpec {
         triggerAfterEvaluate()
 
         then:
-        def resolved1 = sub1.configurations.compile.resolvedConfiguration
+        def resolved1 = sub1.configurations.compileClasspath.resolvedConfiguration
         def foo1 = resolved1.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
         foo1.moduleVersion == '1.0.0'
         def bar1 = resolved1.firstLevelModuleDependencies.find { it.moduleName == 'bar' }
         bar1.moduleVersion == '1.0.0'
         def baz1 = resolved1.firstLevelModuleDependencies.find { it.moduleName == 'baz' }
         baz1 == null
-        def resolved2 = sub2.configurations.compile.resolvedConfiguration
+        def resolved2 = sub2.configurations.compileClasspath.resolvedConfiguration
         def foo2 = resolved2.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
         foo2.moduleVersion == '1.0.0'
         def bar2 = resolved2.firstLevelModuleDependencies.find { it.moduleName == 'bar' }
@@ -336,7 +338,13 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def sub1DependenciesLock = new File(sub1Folder, 'dependencies.lock')
         sub1DependenciesLock << '''\
             {
-                "compile": {
+                "compileClasspath": {
+                    "test.example:baz": {
+                        "locked": "1.0.0",
+                        "requested": "1.+"
+                    }
+                },
+                "runtimeClasspath": {
                     "test.example:baz": {
                         "locked": "1.0.0",
                         "requested": "1.+"
@@ -351,7 +359,17 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def sub2DependenciesLock = new File(sub2Folder, 'dependencies.lock')
         sub2DependenciesLock << '''\
             {
-                "compile": {
+                "compileClasspath": {
+                    "test.example:foo": {
+                        "locked": "2.0.0",
+                        "requested": "2.+"
+                    },
+                    "test.nebula:sub1": {
+                        "project": true,
+                        "firstLevelTransitive": [ "test.nebula:sub2" ]
+                    }
+                },
+                "runtimeClasspath": {
                     "test.example:baz": {
                         "locked": "1.0.0",
                         "firstLevelTransitive": [ "test.nebula:sub1" ]
@@ -375,12 +393,12 @@ class DependencyLockPluginSpec extends ProjectSpec {
         }
 
         sub1.dependencies {
-            compile 'test.example:baz:1.+'
+            implementation 'test.example:baz:1.+'
         }
 
         sub2.dependencies {
-            compile project.project(':sub1')
-            compile 'test.example:foo:2.+'
+            implementation project.project(':sub1')
+            implementation 'test.example:foo:2.+'
         }
 
         when:
@@ -390,9 +408,13 @@ class DependencyLockPluginSpec extends ProjectSpec {
         triggerAfterEvaluate()
 
         then:
-        def resolved2 = sub2.configurations.compile.resolvedConfiguration
-        def baz = resolved2.resolvedArtifacts.find { it.name == 'baz' }
-        baz.moduleVersion.id.version == '1.0.0'
+        def resolvedRuntimeClasspath = sub2.configurations.runtimeClasspath.resolvedConfiguration
+        def bazRuntimeClasspath = resolvedRuntimeClasspath.resolvedArtifacts.find { it.name == 'baz' }
+        bazRuntimeClasspath.moduleVersion.id.version == '1.0.0'
+
+        def resolvedCompileClasspath = sub2.configurations.compileClasspath.resolvedConfiguration
+        def bazCompileClasspath = resolvedCompileClasspath.resolvedArtifacts.find { it.name == 'baz' }
+        bazCompileClasspath == null // because the project dependency needs to be an `api` rather than `implementation`
     }
 
     def 'use global lock'() {
@@ -416,8 +438,12 @@ class DependencyLockPluginSpec extends ProjectSpec {
         triggerAfterEvaluate()
 
         then:
-        def foo1 = sub1.configurations.compile.resolvedConfiguration.resolvedArtifacts.find { it.name == 'foo'}
-        def foo2 = sub2.configurations.compile.resolvedConfiguration.resolvedArtifacts.find { it.name == 'foo'}
+        def foo1 = sub1.configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.find {
+            it.name == 'foo'
+        }
+        def foo2 = sub2.configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.find {
+            it.name == 'foo'
+        }
         foo1.moduleVersion.id.version == '1.0.1'
         foo2.moduleVersion.id.version == '1.0.1'
     }
@@ -429,7 +455,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def sub1DependenciesLock = new File(sub1Folder, 'dependencies.lock')
         sub1DependenciesLock << '''\
             {
-                "compile": {
+                "compileClasspath": {
                     "test.example:foo": {
                         "locked": "1.0.0",
                         "requested": "1.+"
@@ -444,7 +470,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def sub2DependenciesLock = new File(sub2Folder, 'dependencies.lock')
         sub2DependenciesLock << '''\
             {
-                "compile": {
+                "compileClasspath": {
                     "test.example:foo": {
                         "locked": "2.0.0",
                         "requested": "2.+"
@@ -459,11 +485,11 @@ class DependencyLockPluginSpec extends ProjectSpec {
         }
 
         sub1.dependencies {
-            compile 'test.example:foo:1.+'
+            implementation 'test.example:foo:1.+'
         }
 
         sub2.dependencies {
-            compile 'test.example:foo:2.+'
+            implementation 'test.example:foo:2.+'
         }
 
         [sub1, sub2]
@@ -480,7 +506,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << '''\
             {
-                "compile": {
+                "compileClasspath": {
                     "test.example:foo": {
                         "locked": "1.0.0",
                         "requested": "1.+"
@@ -498,7 +524,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         project.apply plugin: 'java'
         project.repositories { maven { url Fixture.repo } }
         project.dependencies {
-            compile 'test.example:foo:1.0.1'
+            implementation 'test.example:foo:1.0.1'
         }
     }
 }

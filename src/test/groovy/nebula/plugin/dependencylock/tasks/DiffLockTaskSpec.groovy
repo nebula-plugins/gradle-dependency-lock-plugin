@@ -2,6 +2,7 @@ package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.ProjectSpec
+import spock.lang.Unroll
 
 class DiffLockTaskSpec extends ProjectSpec {
     def 'should diff single project no skew between configurations'() {
@@ -202,10 +203,11 @@ class DiffLockTaskSpec extends ProjectSpec {
             '''.stripIndent()
     }
 
+    @Unroll
     def 'should handle inconsistent configurations'() {
         given:
         def existingLock = new File(projectDir, 'dependencies.lock')
-        existingLock.text = LockGenerator.duplicateIntoConfigs(
+        existingLock.text = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                 "test.nebula:a": {
                     "locked": "1.0.0",
@@ -222,13 +224,13 @@ class DiffLockTaskSpec extends ProjectSpec {
                     "locked": "1.1.0",
                     "requested": "1.+"
                 }
-                '''.stripIndent(), ['compile', 'compileClasspath', 'default', 'runtime', 'runtimeClasspath'],
+                '''.stripIndent(), ['compileClasspath', 'default', 'runtimeClasspath'],
                 '''\
                 "test.nebula:a": {
                     "locked": "1.1.1",
                     "requested": "1.+"
                 }
-                '''.stripIndent(), ['testCompile', 'testCompileClasspath', 'testRuntime', 'testRuntimeClasspath'])
+                '''.stripIndent(), ['testCompileClasspath', 'testRuntimeClasspath'])
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
             it.existingLockFile = existingLock
@@ -243,8 +245,8 @@ class DiffLockTaskSpec extends ProjectSpec {
         String expected = '''\
             inconsistent:
               test.nebula:a:
-                1.0.0 -> 1.1.0 [compile,compileClasspath,default,runtime,runtimeClasspath]
-                1.0.0 -> 1.1.1 [testCompile,testCompileClasspath,testRuntime,testRuntimeClasspath]
+                1.0.0 -> 1.1.0 [compileClasspath,default,runtimeClasspath]
+                1.0.0 -> 1.1.1 [testCompileClasspath,testRuntimeClasspath]
             '''.stripIndent()
         realizedTask.diffFile.text == expected
     }

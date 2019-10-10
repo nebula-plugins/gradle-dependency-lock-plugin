@@ -17,6 +17,7 @@ import com.google.common.base.Throwables
 import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.plugin.dependencylock.util.LockGenerator
+import nebula.plugin.dependencylock.utils.GradleVersionUtils
 import nebula.test.IntegrationSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
@@ -35,8 +36,8 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         apply plugin: 'nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
-            compile 'test.example:foo:1.0.1'
-            compile 'test.example:baz:1.0.0'
+            implementation 'test.example:foo:1.0.1'
+            implementation 'test.example:baz:1.0.0'
         }
     """.stripIndent()
 
@@ -45,7 +46,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         apply plugin: 'nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
-            compile 'test.example:foo:1.+'
+            implementation 'test.example:foo:1.+'
         }
     """.stripIndent()
 
@@ -54,13 +55,13 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         apply plugin: 'nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
-            compile 'test.example:foo:2.+'
+            implementation 'test.example:foo:2.+'
         }
     """.stripIndent()
 
     static final String OLD_FOO_LOCK = '''\
         {
-            "compile": {
+            "compileClasspath": {
                 "test.example:foo": {
                     "locked": "1.0.0",
                     "requested": "1.+"
@@ -75,21 +76,21 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         }
     '''.stripIndent()
 
-    static final String PRE_DIFF_FOO_LOCK = LockGenerator.duplicateIntoConfigs('''\
+    static final String PRE_DIFF_FOO_LOCK = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
                     "locked": "1.0.0",
                     "requested": "1.+"
                 }
                 '''.stripIndent())
 
-    static final String FOO_LOCK = LockGenerator.duplicateIntoConfigs('''\
+    static final String FOO_LOCK = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
                     "locked": "1.0.1",
                     "requested": "1.+"
                 }
                 '''.stripIndent())
 
-    static final String NEW_FOO_LOCK = LockGenerator.duplicateIntoConfigs('''\
+    static final String NEW_FOO_LOCK = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
                     "locked": "2.0.1",
                     "requested": "1.+",
@@ -97,7 +98,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 }
                 '''.stripIndent())
 
-    static final String REMOVE_UPDATE_LOCK = LockGenerator.duplicateIntoConfigs('''\
+    static final String REMOVE_UPDATE_LOCK = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:baz": {
                     "locked": "1.1.0",
                     "requested": "1.+"
@@ -148,14 +149,14 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo')
+        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'foo')
 
         then:
         fooResult.standardOutput.contains 'locked to 1.0.0'
         fooResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
 
         when:
-        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'baz')
+        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'baz')
 
         then:
         !bazResult.standardOutput.contains('locked')
@@ -175,7 +176,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo', '-PdependencyLock.overrideFile=override.lock')
+        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'foo', '-PdependencyLock.overrideFile=override.lock')
 
         then:
         fooResult.standardOutput.contains 'locked to 2.0.0'
@@ -183,7 +184,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         fooResult.standardOutput.contains('nebula.dependency-lock using override file: override.lock')
 
         when:
-        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'baz', '-PdependencyLock.overrideFile=override.lock')
+        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'baz', '-PdependencyLock.overrideFile=override.lock')
 
         then:
         !bazResult.standardOutput.contains('locked')
@@ -199,7 +200,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'foo', '-PdependencyLock.override=test.example:foo:2.0.1')
+        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'foo', '-PdependencyLock.override=test.example:foo:2.0.1')
 
         then:
         fooResult.standardOutput.contains 'locked to 2.0.1'
@@ -207,7 +208,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         fooResult.standardOutput.contains('nebula.dependency-lock using override: test.example:foo:2.0.1')
 
         when:
-        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compile', '--dependency', 'baz', '-PdependencyLock.override=test.example:foo:2.0.1')
+        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'baz', '-PdependencyLock.override=test.example:foo:2.0.1')
 
         then:
         !bazResult.standardOutput.contains('locked')
@@ -279,7 +280,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(sub0Dir, 'build.gradle').text = """\
             apply plugin: 'java'
             dependencies {
-                compile 'test.example:foo:2.0.0'
+                implementation 'test.example:foo:2.0.0'
             }
         """.stripIndent()
         new File(sub0Dir, 'dependencies.lock').text = PRE_DIFF_FOO_LOCK
@@ -288,7 +289,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(sub1Dir, 'build.gradle').text = """\
             apply plugin: 'java'
             dependencies {
-                compile 'test.example:foo:1.+'
+                implementation 'test.example:foo:1.+'
             }
         """.stripIndent()
 
@@ -372,12 +373,12 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 skippedDependencies = [ 'test.example:foo' ]
             }
             dependencies {
-                compile 'test.example:foo:2.+'
-                compile 'test.example:baz:1.+'
+                implementation 'test.example:foo:2.+'
+                implementation 'test.example:baz:1.+'
             }
         """.stripIndent()
 
-        def lockWithSkips = LockGenerator.duplicateIntoConfigs('''\
+        def lockWithSkips = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:baz": {
                     "locked": "1.1.0",
                     "requested": "1.+"
@@ -409,7 +410,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        def result = runTasksSuccessfully('generateLock', 'diffLock')
+        runTasksSuccessfully('generateLock', 'diffLock')
 
         then:
         final String MY_DIFF = '''\
@@ -630,13 +631,13 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         new File(sub1, 'build.gradle') << '''\
             dependencies {
-                compile 'test.example:foo:2.+'
+                implementation 'test.example:foo:2.+'
             }
         '''.stripIndent()
 
         new File(sub2, 'build.gradle') << '''\
             dependencies {
-                compile 'test.example:baz:1.+'
+                implementation 'test.example:baz:1.+'
             }
         '''.stripIndent()
 
@@ -652,7 +653,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         runTasksSuccessfully('-PdependencyLock.overrideFile=override.lock', 'generateLock', 'saveLock')
 
         then:
-        String lockText1 = LockGenerator.duplicateIntoConfigs('''\
+        String lockText1 = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
                     "locked": "2.0.0",
                     "requested": "2.+",
@@ -660,7 +661,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 }
             '''.stripIndent())
         new File(sub1, 'dependencies.lock').text == lockText1
-        String lockText2 = LockGenerator.duplicateIntoConfigs('''\
+        String lockText2 = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:baz": {
                     "locked": "1.0.0",
                     "requested": "1.+",
@@ -699,13 +700,13 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
     def 'create global lock in multiproject'() {
         addSubproject('sub1', """\
             dependencies {
-                compile 'test.example:bar:1.1.0'
-                compile 'test.example:foo:2.0.0'
+                implementation 'test.example:bar:1.1.0'
+                implementation 'test.example:foo:2.0.0'
             }
         """.stripIndent())
         addSubproject('sub2', """\
             dependencies {
-                compile 'test.example:transitive:1.+'
+                implementation 'test.example:transitive:1.+'
             }
         """.stripIndent())
 
@@ -782,13 +783,13 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
     def 'create global lock in multiproject with force in subproject'() {
         addSubproject('sub1', """\
             dependencies {
-                compile 'test.example:bar:1.1.0'
-                compile 'test.example:foo:2.0.0'
+                implementation 'test.example:bar:1.1.0'
+                implementation 'test.example:foo:2.0.0'
             }
         """.stripIndent())
         addSubproject('sub2', """\
             dependencies {
-                compile 'test.example:transitive:1.+'
+                implementation 'test.example:transitive:1.+'
             }
             configurations.all {
                 resolutionStrategy {
@@ -868,10 +869,10 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 special
             }
             dependencies {
-                compile 'test.example:bar:1.1.0'
+                implementation 'test.example:bar:1.1.0'
                 special 'test.example:foo:2.0.0'
             }
-            dependencyLock.configurationNames = ['testRuntime', 'special']
+            dependencyLock.configurationNames = ['default', 'runtimeElements', 'apiElements', 'special']
         """.stripIndent())
 
         buildFile << """\
@@ -889,7 +890,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         """.stripIndent()
 
         when:
-        runTasksSuccessfully('generateGlobalLock')
+        runTasksSuccessfully('generateGlobalLock', '--warning-mode', 'all')
 
         then:
         String globalLockText = '''\
@@ -914,6 +915,53 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 }
             }'''.stripIndent()
         new File(projectDir, 'build/global.lock').text == globalLockText
+    }
+
+    def 'fail the build and warn the user when configurations for creating global lock in multiproject are no longer resolvable, thus no longer lockable'() {
+        addSubproject('sub1', """\
+            configurations {
+                special
+            }
+            dependencies {
+                implementation 'test.example:bar:1.1.0'
+                special 'test.example:foo:2.0.0'
+            }
+            dependencyLock.configurationNames = ['testRuntime', 'compile', 'special', 'compileClasspath']
+        """.stripIndent())
+
+        buildFile << """\
+            allprojects {
+                ${applyPlugin(DependencyLockPlugin)}
+                group = 'test'
+            }
+            subprojects {
+                apply plugin: 'java'
+                repositories { maven { url '${Fixture.repo}' } }
+            }
+            dependencyLock {
+                includeTransitives = true
+            }
+        """.stripIndent()
+
+        when:
+        def result
+        if (GradleVersionUtils.currentGradleVersionIsLessThan("6.0")) {
+            result = runTasksSuccessfully('generateGlobalLock', '--warning-mode', 'all')
+        } else {
+            result = runTasks('generateGlobalLock', '--warning-mode', 'all')
+        }
+
+        then:
+        if (!GradleVersionUtils.currentGradleVersionIsLessThan("6.0")) {
+            assert result.standardError.contains('Global lock: requested configuration compileClasspath cannot be consumed and will not be locked')
+            assert result.standardError.contains('Global lock: requested configuration compile cannot be locked')
+            assert result.standardError.contains('Global lock: requested configuration testRuntime cannot be locked')
+            assert result.standardError.contains('If you wish to lock only specific configurations, please update \'dependencyLock.configurationNames\' ' +
+                    'to use consumable configurations such as \'apiElements\', \'runtimeElements\', and/or \'default\' configurations ' +
+                    'instead of the non-consumable configuration(s) described above')
+        } else {
+            assert new File(projectDir, 'build/global.lock').exists()
+        }
     }
 
     def 'save global lock in multiproject'() {
@@ -958,14 +1006,14 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
             }'''.stripIndent()
         new File(projectDir, 'dependencies.lock').text.replaceAll(' ', '') == lockText
-        String lockText1 = LockGenerator.duplicateIntoConfigs('''\
+        String lockText1 = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
                     "locked": "2.0.0",
                     "requested": "2.0.0"
                 }
             '''.stripIndent())
         new File(projectDir, 'sub1/dependencies.lock').text == lockText1
-        String lockText2 = LockGenerator.duplicateIntoConfigs('''\
+        String lockText2 = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
                     "locked": "1.0.1",
                     "requested": "1.+"
@@ -977,14 +1025,14 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
     def 'diffLock in multiproject'() {
         setupCommonMultiproject()
         new File(projectDir, 'dependencies.lock').text = '{}'
-        new File(projectDir, 'sub1/dependencies.lock').text = LockGenerator.duplicateIntoConfigs('''\
+        new File(projectDir, 'sub1/dependencies.lock').text = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
                     "locked": "2.0.0",
                     "requested": "2.0.0"
                 }
             '''.stripIndent())
 
-        new File(projectDir, 'sub2/dependencies.lock').text = LockGenerator.duplicateIntoConfigs('''\
+        new File(projectDir, 'sub2/dependencies.lock').text = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
                     "locked": "1.0.0",
                     "requested": "1.+"
@@ -1126,13 +1174,13 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 includeTransitives = true
             }
             dependencies {
-                compile 'test.example:bar:1.+'
-                compile 'test.example:qux:latest.release'
+                implementation 'test.example:bar:1.+'
+                implementation 'test.example:qux:latest.release'
             }
         """.stripIndent()
 
         def lockFile = new File(projectDir, 'dependencies.lock')
-        def lockText = LockGenerator.duplicateIntoConfigs(
+        def lockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                     "test.example:bar": {
                         "locked": "1.0.0",
@@ -1152,7 +1200,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         )
         lockFile.text = lockText
 
-        def updatedLock = LockGenerator.duplicateIntoConfigs(
+        def updatedLock = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                     "test.example:bar": {
                         "locked": "1.1.0",
@@ -1172,7 +1220,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         )
 
         when:
-        def results = runTasksSuccessfully('updateLock', '-PdependencyLock.updateDependencies=test.example:bar')
+        runTasksSuccessfully('updateLock', '-PdependencyLock.updateDependencies=test.example:bar')
 
         then:
         new File(projectDir, 'build/dependencies.lock').text == updatedLock
@@ -1194,13 +1242,13 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 }
             }
             dependencies {
-                compile 'test.example:bar'
-                compile 'test.example:qux:latest.release'
+                implementation 'test.example:bar'
+                implementation 'test.example:qux:latest.release'
             }
         """.stripIndent()
 
         def lockFile = new File(projectDir, 'dependencies.lock')
-        def lockText = LockGenerator.duplicateIntoConfigs(
+        def lockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                     "test.example:bar": {
                         "locked": "1.0.0"
@@ -1219,7 +1267,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         )
         lockFile.text = lockText
 
-        def updatedLock = LockGenerator.duplicateIntoConfigs(
+        def updatedLock = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                     "test.example:bar": {
                         "locked": "1.1.0"
@@ -1244,21 +1292,92 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'build/dependencies.lock').text == updatedLock
     }
 
-    def 'project first level transitives are kept locked during update'() {
+    def 'project first level transitives are kept locked during update, using "implementation" configuration'() {
         setupCommonMultiproject()
         addSubproject('sub3', """\
             dependencies {
-                compile project(':sub4')
+                implementation project(':sub4')
             }
         """.stripIndent())
 
         addSubproject('sub4', """\
             dependencies {
-                compile project(':sub2')
+                implementation project(':sub2')
             }
         """.stripIndent())
         def lockFile = new File(new File(projectDir, 'sub3'), 'dependencies.lock')
         def lockText = LockGenerator.duplicateIntoConfigs('''\
+        "test.example:foo": {
+            "locked": "1.0.0",
+            "transitive": [
+                "test:sub2"
+            ],
+            "viaOverride": "1.0.0"
+        },
+        "test:sub2": {
+            "project": true,
+            "transitive": [
+                "test:sub4"
+            ]
+        },
+        "test:sub4": {
+            "project": true
+        }
+        '''.stripIndent(), ['default', 'runtimeClasspath', 'testRuntimeClasspath'], '''\
+        "test:sub4": {
+            "project": true
+        }
+        '''.stripIndent(), ['compileClasspath', 'testCompileClasspath'])
+
+        when:
+        runTasksSuccessfully('generateLock', 'saveLock', '-PdependencyLock.override=test.example:foo:1.0.0')
+
+        then:
+        lockFile.text == lockText
+
+        when:
+        runTasksSuccessfully('updateLock', 'saveLock', '-PdependencyLock.updateDependencies=test.example:qux')
+
+        then:
+        def updateLockText = LockGenerator.duplicateIntoConfigs('''\
+        "test.example:foo": {
+            "locked": "1.0.0",
+            "transitive": [
+                "test:sub2"
+            ]
+        },
+        "test:sub2": {
+            "project": true,
+            "transitive": [
+                "test:sub4"
+            ]
+        },
+        "test:sub4": {
+            "project": true
+        }
+        '''.stripIndent(), ['default', 'runtimeClasspath', 'testRuntimeClasspath'], '''\
+        "test:sub4": {
+            "project": true
+        }
+        '''.stripIndent(), ['compileClasspath', 'testCompileClasspath'])
+        lockFile.text == updateLockText
+    }
+
+    def 'project first level transitives are kept locked during update, using "api" configuration'() {
+        setupCommonMultiprojectWithJavaLibraryPlugin()
+        addSubproject('sub3', """\
+            dependencies {
+                api project(':sub4')
+            }
+        """.stripIndent())
+
+        addSubproject('sub4', """\
+            dependencies {
+                api project(':sub2')
+            }
+        """.stripIndent())
+        def lockFile = new File(new File(projectDir, 'sub3'), 'dependencies.lock')
+        def lockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
         "test.example:foo": {
             "locked": "1.0.0",
             "transitive": [
@@ -1287,7 +1406,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         runTasksSuccessfully('updateLock', 'saveLock', '-PdependencyLock.updateDependencies=test.example:qux')
 
         then:
-        def updateLockText = LockGenerator.duplicateIntoConfigs('''\
+        def updateLockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
         "test.example:foo": {
             "locked": "1.0.0",
             "transitive": [
@@ -1317,7 +1436,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         Throwables.getRootCause(result.failure).message == 'Dependency locks cannot be updated. An update was requested for a project dependency (test:sub1)'
     }
 
-    // TODO: update gradle-resolution-rules and this test
     def 'generateLock interacts well with resolution rules'() {
         buildFile << """\
             buildscript {
@@ -1325,7 +1443,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                     jcenter()
                 }
                 dependencies {
-                    classpath "com.netflix.nebula:gradle-resolution-rules-plugin:6.0.0-rc.1"
+                    classpath "com.netflix.nebula:gradle-resolution-rules-plugin:latest.release"
                 }
             }
 
@@ -1340,7 +1458,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             dependencies {
                 resolutionRules 'com.netflix.nebula:gradle-resolution-rules:latest.release'
 
-                compile 'commons-io:commons-io:2.4'
+                implementation 'commons-io:commons-io:2.4'
             }
         """.stripIndent()
 
@@ -1372,12 +1490,12 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             }
 
             dependencies {
-                compile     ('com.hazelcast:hazelcast:3.6-RC1')
-                compile     ('com.hazelcast:hazelcast-spring:3.6-RC1')
-                compile     ('org.mariadb.jdbc:mariadb-java-client:1.1.7')
-                compile     ('org.flywaydb:flyway-core')
+                implementation     ('com.hazelcast:hazelcast:3.6-RC1')
+                implementation     ('com.hazelcast:hazelcast-spring:3.6-RC1')
+                implementation     ('org.mariadb.jdbc:mariadb-java-client:1.1.7')
+                implementation     ('org.flywaydb:flyway-core')
 
-                testCompile ('org.springframework.boot:spring-boot-starter-test')
+                testImplementation ('org.springframework.boot:spring-boot-starter-test')
             }
         """.stripIndent()
 
@@ -1444,7 +1562,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             })
 
             dependencies {
-                compile 'commons-io:commons-io:2.4'
+                implementation 'commons-io:commons-io:2.4'
             }
         """.stripIndent()
 
@@ -1519,13 +1637,13 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             """.stripIndent()
 
         when:
-        def result = runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock', 'dependencyReport')
+        runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock', 'dependencyReport')
 
         then:
         noExceptionThrown()
 
         where:
-        plugin << ['id \'checkstyle\'',  'id \'jacoco\''] // removed 'id \'net.saliman.cobertura\' version \'2.5.0\'', because it isn't gradle 5.1 compatible yet
+        plugin << ['id \'checkstyle\'', 'id \'jacoco\''] // removed 'id \'net.saliman.cobertura\' version \'2.5.0\'', because it isn't gradle 5.1 compatible yet
     }
 
     def 'handle generating a lock with circular dependencies depending on a jar that depends on us'() {
@@ -1558,7 +1676,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             '''.stripIndent()
 
         when:
-        def result = runTasksSuccessfully('generateLock')
+        runTasksSuccessfully('generateLock')
 
         then:
         noExceptionThrown()
@@ -1629,12 +1747,12 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
     private void setupCommonMultiproject() {
         addSubproject('sub1', """\
             dependencies {
-                compile 'test.example:foo:2.0.0'
+                implementation 'test.example:foo:2.0.0'
             }
         """.stripIndent())
         addSubproject('sub2', """\
             dependencies {
-                compile 'test.example:foo:1.+'
+                implementation 'test.example:foo:1.+'
             }
         """.stripIndent())
 
@@ -1649,6 +1767,34 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             }
             subprojects {
                 apply plugin: 'java'
+                repositories { maven { url '${Fixture.repo}' } }
+            }
+        """.stripIndent()
+    }
+
+    private void setupCommonMultiprojectWithJavaLibraryPlugin() {
+        addSubproject('sub1', """\
+            dependencies {
+                api 'test.example:foo:2.0.0'
+            }
+        """.stripIndent())
+        addSubproject('sub2', """\
+            dependencies {
+                api 'test.example:foo:1.+'
+            }
+        """.stripIndent())
+
+        buildFile << """\
+            allprojects {
+                ${applyPlugin(DependencyLockPlugin)}
+                group = 'test'
+
+                dependencyLock {
+                    includeTransitives = true
+                }
+            }
+            subprojects {
+                apply plugin: 'java-library'
                 repositories { maven { url '${Fixture.repo}' } }
             }
         """.stripIndent()
@@ -1683,7 +1829,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             '''.stripIndent())
 
         when:
-        def result = runTasks('updateLock', 'saveLock', '-PdependencyLock.updateDependencies=test.nebula:bar')
+        runTasks('updateLock', 'saveLock', '-PdependencyLock.updateDependencies=test.nebula:bar')
 
         then:
         def newLock = new File(projectDir, 'build/dependencies.lock').text
@@ -1723,7 +1869,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             '''.stripIndent())
 
         when:
-        def result = runTasks('updateLock', 'saveLock', '-PdependencyLock.updateDependencies=test.nebula:bar')
+        runTasks('updateLock', 'saveLock', '-PdependencyLock.updateDependencies=test.nebula:bar')
 
         then:
         def newLock = new File(projectDir, 'build/dependencies.lock').text

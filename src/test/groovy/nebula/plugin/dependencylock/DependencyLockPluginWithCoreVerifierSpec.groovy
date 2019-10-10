@@ -15,11 +15,11 @@ test.nebula:b:1.1.0
 
     private static final String MIX_OF_RESOLVABLE_AND_UNRESOLVABLE_DEPENDENCIES = """ \
         dependencies {
-            compile 'test.nebula:d:1.0.0'
-            testCompile 'test.nebula:c' // missing from a BOM, for example
-            testRuntime 'test.nebula:e' // missing from a BOM, for example
-            testRuntime 'has.missing.transitive:a:1.0.0' // transitive dep not found
-            testRuntime 'not.available:a:1.0.0' // has version number, but not found
+            implementation 'test.nebula:d:1.0.0'
+            testImplementation 'test.nebula:c' // missing from a BOM, for example
+            testRuntimeOnly 'test.nebula:e' // missing from a BOM, for example
+            testRuntimeOnly 'has.missing.transitive:a:1.0.0' // transitive dep not found
+            testRuntimeOnly 'not.available:a:1.0.0' // has version number, but not found
         }
         """.stripIndent()
 
@@ -79,7 +79,7 @@ test.nebula:b:1.1.0
         when:
         buildFile << """ \
         dependencies {
-            compile 'test.nebula:d:1.0.0'
+            implementation 'test.nebula:d:1.0.0'
         }
         """.stripIndent()
 
@@ -122,12 +122,12 @@ test.nebula:b:1.1.0
         when:
         new File(projectDir, 'sub1/build.gradle') << """ \
         dependencies {
-            compile 'test.nebula:d:1.0.0'
+            implementation 'test.nebula:d:1.0.0'
         }
         """.stripIndent()
         new File(projectDir, 'sub2/build.gradle') << """ \
         dependencies {
-            compile 'test.nebula:e:1.0.0'
+            implementation 'test.nebula:e:1.0.0'
         }
         """.stripIndent()
 
@@ -203,7 +203,7 @@ test.nebula:b:1.1.0
         when:
         buildFile << MIX_OF_RESOLVABLE_AND_UNRESOLVABLE_DEPENDENCIES
 
-        def results = runTasksAndFail(*tasks(lockArg))
+        runTasksAndFail(*tasks(lockArg))
 
         then:
         def secondRunCompileLockfile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
@@ -226,7 +226,7 @@ test.nebula:b:1.1.0
         new File(projectDir, 'sub1/build.gradle') << MIX_OF_RESOLVABLE_AND_UNRESOLVABLE_DEPENDENCIES
         new File(projectDir, 'sub2/build.gradle') << MIX_OF_RESOLVABLE_AND_UNRESOLVABLE_DEPENDENCIES
 
-        def results = runTasksAndFail(*tasks(lockArg, true))
+        runTasksAndFail(*tasks(lockArg, true))
 
         then:
         def secondRunCompileLockfile = new File(projectDir, 'sub1/gradle/dependency-locks/compileClasspath.lockfile')
@@ -417,10 +417,10 @@ test.nebula:b:1.1.0
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
         expectedLocks.each {
-            assert actualLocks.contains(it)
+            assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
         actualLocks.each {
-            assert expectedLocks.contains(it)
+            assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
         def firstRunCompileLockfile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
         assert firstRunCompileLockfile.text == BASELINE_LOCKFILE_CONTENTS
@@ -455,8 +455,8 @@ test.nebula:b:1.1.0
                     ${mavenrepo.mavenRepositoryBlock}
                 }
                 dependencies {
-                    compile 'test.nebula:a:1.+'
-                    compile 'test.nebula:b:1.+'
+                    implementation 'test.nebula:a:1.+'
+                    implementation 'test.nebula:b:1.+'
                 }
                 """.stripIndent()
 
@@ -473,8 +473,8 @@ test.nebula:b:1.1.0
                         ${mavenrepo.mavenRepositoryBlock}
                     }
                     dependencies {
-                        compile 'test.nebula:a:1.+'
-                        compile 'test.nebula:b:1.+'
+                        implementation 'test.nebula:a:1.+'
+                        implementation 'test.nebula:b:1.+'
                     }
                 }
                 """.stripIndent()
@@ -492,19 +492,19 @@ test.nebula:b:1.1.0
         def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
 
         expectedLocks.each {
-            assert sub1ActualLocks.contains(it)
+            assert sub1ActualLocks.contains(it): "There is a missing lockfile: $it"
         }
         sub1ActualLocks.each {
-            assert expectedLocks.contains(it)
+            assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
         def sub2ActualLocks = new File(projectDir, 'sub2/gradle/dependency-locks/').list().toList()
 
         expectedLocks.each {
-            assert sub2ActualLocks.contains(it)
+            assert sub2ActualLocks.contains(it): "There is a missing lockfile: $it"
         }
         sub2ActualLocks.each {
-            assert expectedLocks.contains(it)
+            assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
         def firstRunCompileLockfile = new File(projectDir, 'sub1/gradle/dependency-locks/compileClasspath.lockfile')
@@ -522,8 +522,8 @@ test.nebula:b:1.1.0
                 ${mavenrepo.mavenRepositoryBlock}
             }
             dependencies {
-                compile 'test.nebula:a:1.+'
-                compile 'test.nebula:b:1.+'
+                implementation 'test.nebula:a:1.+'
+                implementation 'test.nebula:b:1.+'
             }
             """.stripIndent()
 
@@ -532,10 +532,10 @@ test.nebula:b:1.1.0
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
         expectedLocks.each {
-            assert actualLocks.contains(it)
+            assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
         actualLocks.each {
-            assert expectedLocks.contains(it)
+            assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
         def firstRunCompileLockfile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
         assert firstRunCompileLockfile.text ==
@@ -584,8 +584,8 @@ test.nebula:b:1.1.0
                     mavenCentral()
                 }
                 dependencies {
-                    compile 'test.nebula:a:1.+'
-                    compile 'test.nebula:b:1.+'
+                    implementation 'test.nebula:a:1.+'
+                    implementation 'test.nebula:b:1.+'
                 }
                 """.stripIndent()
         System.setProperty("ignoreDeprecations", "true")
@@ -595,10 +595,10 @@ test.nebula:b:1.1.0
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
         expectedLocks.each {
-            assert actualLocks.contains(it)
+            assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
         actualLocks.each {
-            assert expectedLocks.contains(it)
+            assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
         def firstRunCompileLockfile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
         def lockfileContents = """# This is a Gradle generated file for dependency locking.
@@ -638,9 +638,9 @@ test.nebula:b:1.1.0
                     mavenCentral()
                 }
                 dependencies {
-                    compile 'org.clojure:clojure:1.8.0'
-                    compile 'test.nebula:a:1.+'
-                    compile 'test.nebula:b:1.+'
+                    implementation 'org.clojure:clojure:1.8.0'
+                    implementation 'test.nebula:a:1.+'
+                    implementation 'test.nebula:b:1.+'
                 }
                 """.stripIndent()
         System.setProperty("ignoreDeprecations", "true")
@@ -650,10 +650,10 @@ test.nebula:b:1.1.0
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
         expectedLocks.each {
-            assert actualLocks.contains(it)
+            assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
         actualLocks.each {
-            assert expectedLocks.contains(it)
+            assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
         def firstRunCompileLockfile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
         def lockfileContents = """# This is a Gradle generated file for dependency locking.
@@ -697,8 +697,8 @@ test.nebula:b:1.1.0
                 ${mavenrepo.mavenRepositoryBlock}
             }
             dependencies {
-                compile 'test.nebula:a:1.+'
-                compile 'test.nebula:b:1.+'
+                implementation 'test.nebula:a:1.+'
+                implementation 'test.nebula:b:1.+'
             }
         """.stripIndent()
     }

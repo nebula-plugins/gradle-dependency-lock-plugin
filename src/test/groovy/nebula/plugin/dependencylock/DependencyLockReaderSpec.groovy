@@ -25,7 +25,7 @@ class DependencyLockReaderSpec extends ProjectSpec {
             '''.stripIndent()
 
         when:
-        def map = reader.readLocks(project.configurations.compile, globalLock, ['test:baz'])
+        reader.readLocks(project.configurations.compileClasspath, globalLock, ['test:baz'])
 
         then:
         noExceptionThrown()

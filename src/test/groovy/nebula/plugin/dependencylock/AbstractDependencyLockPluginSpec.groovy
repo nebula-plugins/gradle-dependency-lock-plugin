@@ -1,12 +1,14 @@
 package nebula.plugin.dependencylock
 
+import nebula.plugin.dependencylock.utils.GradleVersionUtils
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
 
 class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
-    def expectedLocks = [
+    def expectedLocks = GradleVersionUtils.currentGradleVersionIsLessThan("6.0")
+            ? [
             'annotationProcessor.lockfile',
             'compile.lockfile',
             'compileClasspath.lockfile',
@@ -19,6 +21,15 @@ class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
             'testCompileClasspath.lockfile',
             'testCompileOnly.lockfile',
             'testRuntime.lockfile',
+            'testRuntimeClasspath.lockfile'
+    ] as String[]
+            : [
+            'annotationProcessor.lockfile',
+            'compileClasspath.lockfile',
+            'default.lockfile',
+            'runtimeClasspath.lockfile',
+            'testAnnotationProcessor.lockfile',
+            'testCompileClasspath.lockfile',
             'testRuntimeClasspath.lockfile'
     ] as String[]
     def mavenrepo
@@ -55,8 +66,8 @@ class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
                 ${mavenrepo.mavenRepositoryBlock}
             }
             dependencies {
-                compile 'test.nebula:a:1.+'
-                compile 'test.nebula:b:1.+'
+                implementation 'test.nebula:a:1.+'
+                implementation 'test.nebula:b:1.+'
             }
         """.stripIndent()
 

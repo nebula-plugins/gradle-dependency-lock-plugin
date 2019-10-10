@@ -23,6 +23,10 @@ import org.ajoberstar.grgit.operation.ResetOp
 class DependencyLockCommitLauncherSpec extends IntegrationSpec {
     def setup() {
         fork = true
+
+        def gradleProperties = new File(projectDir, "gradle.properties")
+        gradleProperties.createNewFile()
+        gradleProperties << "systemProp.nebula.features.coreLockingSupport=false"
     }
 
     def setupSpec() {
@@ -45,9 +49,10 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         buildFile << 'apply plugin: \'nebula.gradle-scm\''
 
         when:
-        runTasksSuccessfully('generateLock', 'saveLock', 'commitLock')
+        def result = runTasks('generateLock', 'saveLock', 'commitLock')
 
         then:
+        result.failure == null
         noExceptionThrown()
     }
 
@@ -65,8 +70,9 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         git.reset(commit: 'HEAD', mode: ResetOp.Mode.HARD)
 
         then:
-        //new File(gitDir, 'dependencies.lock').exists()
-        new File(gitDir, 'dependencies.lock').text == DependencyLockLauncherSpec.FOO_LOCK
+        def lockFile = new File(gitDir, 'dependencies.lock')
+        lockFile.exists()
+        lockFile.text == DependencyLockLauncherSpec.FOO_LOCK
     }
 
 
@@ -92,13 +98,13 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
 
         new File(sub1, 'build.gradle') << '''\
             dependencies {
-                compile 'test.example:foo:2.+'
+                implementation 'test.example:foo:2.+'
             }
         '''.stripIndent()
 
         new File(sub2, 'build.gradle') << '''\
             dependencies {
-                compile 'test.example:baz:1.+'
+                implementation 'test.example:baz:1.+'
             }
         '''.stripIndent()
 
@@ -134,13 +140,13 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
 
         new File(sub1, 'build.gradle') << '''\
             dependencies {
-                compile 'test.example:foo:2.+'
+                implementation 'test.example:foo:2.+'
             }
         '''.stripIndent()
 
         new File(sub2, 'build.gradle') << '''\
             dependencies {
-                compile 'test.example:baz:1.+'
+                implementation 'test.example:baz:1.+'
             }
         '''.stripIndent()
 
@@ -181,13 +187,13 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
 
         new File(sub1, 'build.gradle') << '''\
             dependencies {
-                compile 'test.example:foo:2.+'
+                implementation 'test.example:foo:2.+'
             }
         '''.stripIndent()
 
         new File(sub2, 'build.gradle') << '''\
             dependencies {
-                compile 'test.example:baz:1.+'
+                implementation 'test.example:baz:1.+'
             }
         '''.stripIndent()
 
@@ -201,17 +207,17 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         new File(gitDir, 'global.lock').exists()
     }
 
-    private Grgit commonGitSetup(File gitDir) {        
+    private Grgit commonGitSetup(File gitDir) {
         gitDir.mkdirs()
         def git = Grgit.init(dir: gitDir)
         new File(gitDir, '.placeholder').text = ''
         git.add(patterns: ['.placeholder'])
         git.commit(message: 'initial test')
 
-        def tempProject = Grgit.clone(dir: new File(projectDir, 'tempgit'), uri: "file://${gitDir.absolutePath}").close()
+        Grgit.clone(dir: new File(projectDir, 'tempgit'), uri: "file://${gitDir.absolutePath}").close()
 
         new AntBuilder().copy(todir: new File(projectDir, '.git').absolutePath) {
-            fileset(dir: new File(projectDir,'tempgit/.git').absolutePath)
+            fileset(dir: new File(projectDir, 'tempgit/.git').absolutePath)
         }
 
         git
