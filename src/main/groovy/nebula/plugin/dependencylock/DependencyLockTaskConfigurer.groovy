@@ -25,13 +25,14 @@ import nebula.plugin.dependencylock.tasks.UpdateLockTask
 import nebula.plugin.scm.ScmPlugin
 import org.gradle.api.GradleException
 import org.gradle.api.Project
-import org.gradle.api.Task
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
 
+import static nebula.plugin.dependencylock.tasks.GenerateLockTask.filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject
 import static nebula.plugin.dependencylock.tasks.GenerateLockTask.lockableConfigurations
 
 class DependencyLockTaskConfigurer {
@@ -233,7 +234,9 @@ class DependencyLockTaskConfigurer {
                 def subprojects = project.subprojects.collect { subproject ->
                     def ext = subproject.getExtensions().findByType(DependencyLockExtension)
                     if (ext != null) {
-                        def configurations = lockableConfigurations(project, subproject, ext.configurationNames)
+                        Collection<Configuration> lockableConfigurations = lockableConfigurations(project, subproject, ext.configurationNames)
+                        Collection<Configuration> configurations = filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(subproject, ext.configurationNames, lockableConfigurations)
+
                         configurations
                                 .findAll { configuration ->
                             !configurationsToSkipForGlobalLock.contains(configuration.name)

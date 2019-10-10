@@ -917,7 +917,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'build/global.lock').text == globalLockText
     }
 
-    def 'fail the build and warn the user when configurations for creating global lock in multiproject are no longer resolvable, thus no longer lockable'() {
+    def 'warn the user when configurations for creating global lock in multiproject are no longer resolvable, thus no longer lockable'() {
         addSubproject('sub1', """\
             configurations {
                 special
@@ -952,15 +952,23 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         }
 
         then:
+        assert result.standardOutput.contains('Global lock warning: project \'sub1\' requested locking a configuration which cannot be consumed: \'compileClasspath\'')
+        assert result.standardOutput.contains('Requested configurations for global locks must be resolvable, consumable, and without resolution alternatives.')
+        assert result.standardOutput.contains('You can remove the configuration \'dependencyLock.configurationNames\' to stop this customization.')
+        assert result.standardOutput.contains('If you wish to lock only specific configurations, please update \'dependencyLock.configurationNames\' to ' +
+                'use consumable configurations such as \'apiElements\', \'runtimeElements\', and/or \'default\' configurations ' +
+                'instead of the non-consumable configuration(s) described above. ')
+
+        def globalLockFile = new File(projectDir, 'build/global.lock')
+        assert globalLockFile.exists()
+        assert globalLockFile.text.contains('test.example:foo')
+        assert globalLockFile.text.contains('test:sub1')
+
         if (!GradleVersionUtils.currentGradleVersionIsLessThan("6.0")) {
-            assert result.standardError.contains('Global lock: requested configuration compileClasspath cannot be consumed and will not be locked')
-            assert result.standardError.contains('Global lock: requested configuration compile cannot be locked')
-            assert result.standardError.contains('Global lock: requested configuration testRuntime cannot be locked')
-            assert result.standardError.contains('If you wish to lock only specific configurations, please update \'dependencyLock.configurationNames\' ' +
-                    'to use consumable configurations such as \'apiElements\', \'runtimeElements\', and/or \'default\' configurations ' +
-                    'instead of the non-consumable configuration(s) described above')
-        } else {
-            assert new File(projectDir, 'build/global.lock').exists()
+            assert result.standardOutput.contains('Global lock warning: project \'sub1\' requested locking a deprecated configuration \'compile\' which has resolution alternatives: [compileClasspath]')
+            assert result.standardOutput.contains('Global lock warning: project \'sub1\' requested locking a deprecated configuration \'testRuntime\' which has resolution alternatives: [testRuntimeClasspath]')
+
+            assert !globalLockFile.text.contains('test.example:bar')
         }
     }
 

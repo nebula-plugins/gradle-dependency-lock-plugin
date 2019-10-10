@@ -29,6 +29,8 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
@@ -37,6 +39,7 @@ import org.gradle.api.tasks.TaskAction
 class GenerateLockTask extends AbstractLockTask {
     private String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
     private String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
+    private static final Logger LOGGER = Logging.getLogger(GenerateLockTask)
 
     @Internal
     String description = 'Create a lock file in build/<configured name>'
@@ -103,6 +106,61 @@ class GenerateLockTask extends AbstractLockTask {
         } else {
             configurationNames.collect { project.configurations.getByName(it) }
         }
+    }
+
+    static Collection<Configuration> filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(Project subproject, Set<String> configurationNames, Collection<Configuration> lockableConfigurations) {
+        if (configurationNames.size() > 0) {
+            Collection<String> errorMessages = new HashSet<>()
+
+            Collection<Configuration> consumableLockableConfigurations = new ArrayList<>()
+            lockableConfigurations.each { conf ->
+                boolean confHasError = false
+                if (!ConfigurationFilters.canSafelyBeConsumed(conf)) {
+                    String message = "Global lock warning: project '${subproject.name}' requested locking a configuration which cannot be consumed: '${conf.name}'"
+                    errorMessages.add(message)
+                    confHasError = true
+                }
+                if (!ConfigurationFilters.canSafelyBeResolved(conf)) {
+                    String message = "Global lock warning: project '${subproject.name}' requested locking a configuration which cannot be resolved: '${conf.name}'"
+                    errorMessages.add(message)
+                    confHasError = true
+                }
+                if (ConfigurationFilters.safelyHasAResolutionAlternative(conf)) {
+                    String message = "Global lock warning: project '${subproject.name}' requested locking a deprecated configuration '${conf.name}' " +
+                            "which has resolution alternatives: ${conf.getResolutionAlternatives()}"
+                    errorMessages.add(message)
+                    confHasError = true
+                }
+                if (!confHasError) {
+                    consumableLockableConfigurations.add(conf)
+                }
+            }
+
+            configurationNames.each { nameToLock ->
+                if (!lockableConfigurations.collect { it.name }.contains(nameToLock)) {
+                    Configuration confThatWillNotBeLocked = subproject.configurations.findByName(nameToLock)
+                    if (confThatWillNotBeLocked == null) {
+                        String message = "Global lock warning: project '${subproject.name}' requested locking a configuration which cannot be locked: '${nameToLock}'"
+                        errorMessages.add(message)
+                    }
+                }
+            }
+
+            if (errorMessages.size() > 0) {
+                errorMessages.add("Requested configurations for global locks must be resolvable, consumable, and without resolution alternatives.\n" +
+                        "You can remove the configuration 'dependencyLock.configurationNames' to stop this customization.\n" +
+                        "If you wish to lock only specific configurations, please update 'dependencyLock.configurationNames' " +
+                        "to use consumable configurations such as 'apiElements', 'runtimeElements', and/or 'default' configurations " +
+                        "instead of the non-consumable configuration(s) described above. \n" +
+                        "Please read more about this at:\n" +
+                        "- https://docs.gradle.org/current/userguide/java_plugin.html#sec:java_plugin_and_dependency_management and " +
+                        "- https://docs.gradle.org/current/userguide/java_library_plugin.html#sec:java_library_configurations_graph")
+                LOGGER.warn('--------------------\n' + errorMessages.sort().join("\n") + '\n--------------------')
+            }
+            return consumableLockableConfigurations
+        }
+
+        return lockableConfigurations
     }
 
     class GenerateLockFromConfigurations {
