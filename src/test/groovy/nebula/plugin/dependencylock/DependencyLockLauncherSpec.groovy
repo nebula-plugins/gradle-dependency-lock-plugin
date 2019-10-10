@@ -955,9 +955,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         assert result.standardOutput.contains('Global lock warning: project \'sub1\' requested locking a configuration which cannot be consumed: \'compileClasspath\'')
         assert result.standardOutput.contains('Requested configurations for global locks must be resolvable, consumable, and without resolution alternatives.')
         assert result.standardOutput.contains('You can remove the configuration \'dependencyLock.configurationNames\' to stop this customization.')
-        assert result.standardOutput.contains('If you wish to lock only specific configurations, please update \'dependencyLock.configurationNames\' to ' +
-                'use consumable configurations such as \'apiElements\', \'runtimeElements\', and/or \'default\' configurations ' +
-                'instead of the non-consumable configuration(s) described above. ')
+        assert result.standardOutput.contains('If you wish to lock only specific configurations, please update \'dependencyLock.configurationNames\' with other configurations.')
 
         def globalLockFile = new File(projectDir, 'build/global.lock')
         assert globalLockFile.exists()

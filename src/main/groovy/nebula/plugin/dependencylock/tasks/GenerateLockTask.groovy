@@ -110,28 +110,13 @@ class GenerateLockTask extends AbstractLockTask {
 
     static Collection<Configuration> filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(Project subproject, Set<String> configurationNames, Collection<Configuration> lockableConfigurations) {
         if (configurationNames.size() > 0) {
-            Collection<String> errorMessages = new HashSet<>()
+            Collection<String> warnings = new HashSet<>()
 
             Collection<Configuration> consumableLockableConfigurations = new ArrayList<>()
             lockableConfigurations.each { conf ->
-                boolean confHasError = false
-                if (!ConfigurationFilters.canSafelyBeConsumed(conf)) {
-                    String message = "Global lock warning: project '${subproject.name}' requested locking a configuration which cannot be consumed: '${conf.name}'"
-                    errorMessages.add(message)
-                    confHasError = true
-                }
-                if (!ConfigurationFilters.canSafelyBeResolved(conf)) {
-                    String message = "Global lock warning: project '${subproject.name}' requested locking a configuration which cannot be resolved: '${conf.name}'"
-                    errorMessages.add(message)
-                    confHasError = true
-                }
-                if (ConfigurationFilters.safelyHasAResolutionAlternative(conf)) {
-                    String message = "Global lock warning: project '${subproject.name}' requested locking a deprecated configuration '${conf.name}' " +
-                            "which has resolution alternatives: ${conf.getResolutionAlternatives()}"
-                    errorMessages.add(message)
-                    confHasError = true
-                }
-                if (!confHasError) {
+                Collection<String> warningsForConfiguration = provideWarningsForConfiguration(conf, subproject)
+                warnings.addAll(warningsForConfiguration)
+                if (warningsForConfiguration.isEmpty()) {
                     consumableLockableConfigurations.add(conf)
                 }
             }
@@ -141,26 +126,46 @@ class GenerateLockTask extends AbstractLockTask {
                     Configuration confThatWillNotBeLocked = subproject.configurations.findByName(nameToLock)
                     if (confThatWillNotBeLocked == null) {
                         String message = "Global lock warning: project '${subproject.name}' requested locking a configuration which cannot be locked: '${nameToLock}'"
-                        errorMessages.add(message)
+                        warnings.add(message)
+                    } else {
+                        warnings.addAll(provideWarningsForConfiguration(confThatWillNotBeLocked, subproject))
                     }
                 }
             }
 
-            if (errorMessages.size() > 0) {
-                errorMessages.add("Requested configurations for global locks must be resolvable, consumable, and without resolution alternatives.\n" +
+            if (warnings.size() > 0) {
+                warnings.add("Requested configurations for global locks must be resolvable, consumable, and without resolution alternatives.\n" +
                         "You can remove the configuration 'dependencyLock.configurationNames' to stop this customization.\n" +
-                        "If you wish to lock only specific configurations, please update 'dependencyLock.configurationNames' " +
-                        "to use consumable configurations such as 'apiElements', 'runtimeElements', and/or 'default' configurations " +
-                        "instead of the non-consumable configuration(s) described above. \n" +
+                        "If you wish to lock only specific configurations, please update 'dependencyLock.configurationNames' with other configurations.\n" +
                         "Please read more about this at:\n" +
-                        "- https://docs.gradle.org/current/userguide/java_plugin.html#sec:java_plugin_and_dependency_management and " +
+                        "- https://docs.gradle.org/current/userguide/java_plugin.html#sec:java_plugin_and_dependency_management\n" +
                         "- https://docs.gradle.org/current/userguide/java_library_plugin.html#sec:java_library_configurations_graph")
-                LOGGER.warn('--------------------\n' + errorMessages.sort().join("\n") + '\n--------------------')
+                LOGGER.warn('--------------------\n' + warnings.sort().join("\n") + '\n--------------------')
             }
             return consumableLockableConfigurations
         }
 
         return lockableConfigurations
+    }
+
+    private static Collection<String> provideWarningsForConfiguration(Configuration conf, Project subproject) {
+        Collection<String> errorMessages = new HashSet<>()
+
+        if (!ConfigurationFilters.canSafelyBeConsumed(conf)) {
+            String message = "Global lock warning: project '${subproject.name}' requested locking a configuration which cannot be consumed: '${conf.name}'"
+            errorMessages.add(message)
+        }
+        if (!ConfigurationFilters.canSafelyBeResolved(conf)) {
+            String message = "Global lock warning: project '${subproject.name}' requested locking a configuration which cannot be resolved: '${conf.name}'"
+            errorMessages.add(message)
+        }
+        if (ConfigurationFilters.safelyHasAResolutionAlternative(conf)) {
+            String message = "Global lock warning: project '${subproject.name}' requested locking a deprecated configuration '${conf.name}' " +
+                    "which has resolution alternatives: ${conf.getResolutionAlternatives()}"
+            errorMessages.add(message)
+        }
+
+        return errorMessages
     }
 
     class GenerateLockFromConfigurations {
