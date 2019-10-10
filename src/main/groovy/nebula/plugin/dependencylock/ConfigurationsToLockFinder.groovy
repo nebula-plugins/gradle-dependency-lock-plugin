@@ -19,7 +19,7 @@
 package nebula.plugin.dependencylock
 
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
-import nebula.plugin.dependencylock.utils.ConfigurationFilter
+import nebula.plugin.dependencylock.utils.ConfigurationFilters
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.logging.Logger
@@ -52,7 +52,7 @@ class ConfigurationsToLockFinder {
 
         configurationsToLock.addAll(baseConfigurations)
 
-        def configurationsThatMatchSuffixes = ConfigurationFilter.findAllConfigurationsThatMatchSuffixes(project.configurations, baseConfigurations).collect {
+        def configurationsThatMatchSuffixes = ConfigurationFilters.findAllConfigurationsThatMatchSuffixes(project.configurations, baseConfigurations).collect {
             it.name
         }
         configurationsToLock.addAll(configurationsThatMatchSuffixes)

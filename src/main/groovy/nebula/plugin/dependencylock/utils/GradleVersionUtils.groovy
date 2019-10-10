@@ -18,37 +18,12 @@
 
 package nebula.plugin.dependencylock.utils
 
-import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
-import org.gradle.util.GradleVersion
 
+import org.gradle.util.GradleVersion
 
 class GradleVersionUtils {
     static boolean currentGradleVersionIsLessThan(String version) {
         GradleVersion.current().baseVersion < GradleVersion.version(version)
     }
 
-    static Collection<Configuration> findAllConfigurationsThatResolveButHaveAlternatives(Project project) {
-        project
-                .configurations
-                .stream()
-                .filter {
-                    shouldThisConfigurationBeResolvedAfterGradle60(it)
-                }
-                .collect()
-    }
-
-    static boolean shouldThisConfigurationBeResolvedAfterGradle60(Configuration configuration) {
-        boolean hasAResolutionAlternative = false
-
-        def method = configuration.metaClass.getMetaMethod('getResolutionAlternatives')
-        if (method != null) {
-            def alternatives = configuration.getResolutionAlternatives()
-            if (alternatives != null && alternatives.size > 0) {
-                hasAResolutionAlternative = true
-            }
-        }
-
-        configuration.isCanBeResolved() && hasAResolutionAlternative
-    }
 }

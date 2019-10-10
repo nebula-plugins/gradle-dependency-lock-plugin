@@ -22,14 +22,14 @@ import nebula.plugin.responsible.NebulaIntegTestPlugin
 import nebula.test.ProjectSpec
 import org.gradle.api.artifacts.Configuration
 
-class GradleVersionUtilsProjectSpec extends ProjectSpec {
+class ConfigurationFiltersProjectSpec extends ProjectSpec {
     def setup() {
         project.apply plugin: 'java-library'
     }
 
     def "compile, compileOnly, runtime, testCompile, testCompileOnly, and testRuntime should not be resolved after Gradle 6.0"() {
         when:
-        def results = GradleVersionUtils.findAllConfigurationsThatResolveButHaveAlternatives(project)
+        def results = ConfigurationFilters.findAllConfigurationsThatResolveButHaveAlternatives(project)
 
         then:
         if (GradleVersionUtils.currentGradleVersionIsLessThan('6.0')) {
@@ -57,7 +57,7 @@ class GradleVersionUtilsProjectSpec extends ProjectSpec {
         }
 
         when:
-        def results = GradleVersionUtils.findAllConfigurationsThatResolveButHaveAlternatives(project)
+        def results = ConfigurationFilters.findAllConfigurationsThatResolveButHaveAlternatives(project)
 
         then:
         if (GradleVersionUtils.currentGradleVersionIsLessThan('6.0')) {

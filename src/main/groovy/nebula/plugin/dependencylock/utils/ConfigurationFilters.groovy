@@ -18,11 +18,12 @@
 
 package nebula.plugin.dependencylock.utils
 
+import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ConfigurationContainer
 
 
-class ConfigurationFilter {
+class ConfigurationFilters {
     static Collection<Configuration> findAllConfigurationsThatMatchSuffixes(ConfigurationContainer configurations, Collection<String> suffixesToMatch) {
         configurations
                 .stream()
@@ -34,5 +35,36 @@ class ConfigurationFilter {
 
     static boolean configurationMatchesSuffixes(Configuration configuration, Collection<String> suffixesToMatch) {
         return configuration.name.toLowerCase().endsWithAny(*suffixesToMatch.collect { it.toLowerCase() })
+    }
+
+    static Collection<Configuration> findAllConfigurationsThatResolveButHaveAlternatives(Project project) {
+        project
+                .configurations
+                .stream()
+                .filter {
+                    if (Configuration.class.declaredMethods.any { it.name == 'isCanBeResolved' }) {
+                        return it.canBeResolved
+                    }
+                    return true
+                }
+                .filter {
+                    hasAResolutionAlternative(it)
+                }
+                .collect()
+    }
+
+    static boolean hasAResolutionAlternative(Configuration configuration) {
+        boolean hasAResolutionAlternative = false
+
+        // 'getResolutionAlternatives' is a method on DefaultConfiguration as of Gradle 6.0
+        def method = configuration.metaClass.getMetaMethod('getResolutionAlternatives')
+        if (method != null) {
+            def alternatives = configuration.getResolutionAlternatives()
+            if (alternatives != null && alternatives.size > 0) {
+                hasAResolutionAlternative = true
+            }
+        }
+
+        hasAResolutionAlternative
     }
 }
