@@ -1477,6 +1477,9 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
     @Issue('#86')
     def 'locks win over Spring dependency management'() {
+        System.setProperty("ignoreDeprecations", "true")
+        // Deprecation: The classifier property has been deprecated. This is scheduled to be removed in Gradle 7.0. Please use the archiveClassifier property instead.
+
         buildFile << """\
             buildscript {
                 repositories {
@@ -1516,6 +1519,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         when:
         def result = runTasksSuccessfully('dependencies')
+        System.setProperty("ignoreDeprecations", "false")
 
         then:
         result.standardOutput.contains('\\--- com.hazelcast:hazelcast:3.6-RC1\n')
