@@ -29,7 +29,16 @@ class ConfigurationFiltersProjectSpec extends ProjectSpec {
 
     def "compile, compileOnly, runtime, testCompile, testCompileOnly, and testRuntime should not be resolved after Gradle 6.0"() {
         when:
-        def results = ConfigurationFilters.findAllConfigurationsThatResolveButHaveAlternatives(project)
+        def results = project
+                .configurations
+                .stream()
+                .filter {
+                    ConfigurationFilters.canSafelyBeResolved(it)
+                }
+                .filter {
+                    ConfigurationFilters.safelyHasAResolutionAlternative(it)
+                }
+                .collect()
 
         then:
         if (GradleVersionUtils.currentGradleVersionIsLessThan('6.0')) {
@@ -57,7 +66,16 @@ class ConfigurationFiltersProjectSpec extends ProjectSpec {
         }
 
         when:
-        def results = ConfigurationFilters.findAllConfigurationsThatResolveButHaveAlternatives(project)
+        def results = project
+                .configurations
+                .stream()
+                .filter {
+                    ConfigurationFilters.canSafelyBeResolved(it)
+                }
+                .filter {
+                    ConfigurationFilters.safelyHasAResolutionAlternative(it)
+                }
+                .collect()
 
         then:
         if (GradleVersionUtils.currentGradleVersionIsLessThan('6.0')) {
@@ -76,5 +94,117 @@ class ConfigurationFiltersProjectSpec extends ProjectSpec {
             assert configurationNames.contains('integTestCompileOnly')
             assert configurationNames.contains('integTestRuntime')
         }
+    }
+
+    def 'verifies that a configuration can be consumed'() {
+        given:
+        project.configurations {
+            readyToBeConsumed
+            doNotConsume
+
+            readyToBeConsumed.setCanBeConsumed(true)
+            doNotConsume.setCanBeConsumed(false)
+        }
+
+        when:
+        def canBeSafelyConsumed = ConfigurationFilters.canSafelyBeConsumed(project.configurations.findByName('readyToBeConsumed'))
+
+        then:
+        canBeSafelyConsumed
+    }
+
+    def 'verifies that a configuration cannot be consumed'() {
+        given:
+        project.configurations {
+            readyToBeConsumed
+            doNotConsume
+
+            readyToBeConsumed.setCanBeConsumed(true)
+            doNotConsume.setCanBeConsumed(false)
+        }
+
+        when:
+        def canBeSafelyConsumed = ConfigurationFilters.canSafelyBeConsumed(project.configurations.findByName('doNotConsume'))
+
+        then:
+        !canBeSafelyConsumed
+    }
+
+    def 'verifies that a configuration can be resolved'() {
+        given:
+        project.configurations {
+            readyToBeResolved
+            doNotResolve
+
+            readyToBeResolved.setCanBeResolved(true)
+            doNotResolve.setCanBeResolved(false)
+        }
+
+        when:
+        def canBeSafelyResolved = ConfigurationFilters.canSafelyBeResolved(project.configurations.findByName('readyToBeResolved'))
+
+        then:
+        canBeSafelyResolved
+    }
+
+    def 'verifies that a configuration cannot be resolved'() {
+        given:
+        project.configurations {
+            readyToBeResolved
+            doNotResolve
+
+            readyToBeResolved.setCanBeResolved(true)
+            doNotResolve.setCanBeResolved(false)
+        }
+
+        when:
+        def canBeSafelyResolved = ConfigurationFilters.canSafelyBeResolved(project.configurations.findByName('doNotResolve'))
+
+        then:
+        !canBeSafelyResolved
+    }
+
+    def 'verifies that a configuration has resolution alternatives'() {
+        given:
+        project.configurations {
+            deprecatedConfig
+            nonDeprecatedConfig
+        }
+
+        if (!GradleVersionUtils.currentGradleVersionIsLessThan("6.0")) {
+            project.configurations {
+                deprecatedConfig.deprecateForResolution('nonDeprecatedConfig')
+            }
+        }
+
+        when:
+        def hasAResolutionAlternative = ConfigurationFilters.safelyHasAResolutionAlternative(project.configurations.findByName('deprecatedConfig'))
+
+        then:
+        if (!GradleVersionUtils.currentGradleVersionIsLessThan("6.0")) {
+            assert hasAResolutionAlternative
+        } else {
+            assert !hasAResolutionAlternative
+        }
+    }
+
+    def 'verifies that a configuration does not have resolution alternatives'() {
+        given:
+        project.configurations {
+            deprecatedConfig
+            nonDeprecatedConfig
+        }
+
+        if (!GradleVersionUtils.currentGradleVersionIsLessThan("6.0")) {
+            project.configurations {
+                deprecatedConfig.deprecateForResolution('nonDeprecatedConfig')
+            }
+        }
+
+        when:
+        def hasAResolutionAlternative = ConfigurationFilters.safelyHasAResolutionAlternative(project.configurations.findByName('nonDeprecatedConfig'))
+
+        then:
+        !hasAResolutionAlternative
     }
 }

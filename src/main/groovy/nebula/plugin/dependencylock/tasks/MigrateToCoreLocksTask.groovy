@@ -90,7 +90,7 @@ class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
     private static Set<String> findUnlockedDependencies(Configuration conf) {
         def unlockedDependencies = new HashSet<String>()
 
-        if (!ConfigurationFilters.hasAResolutionAlternative(conf)) {
+        if (!ConfigurationFilters.safelyHasAResolutionAlternative(conf)) {
             try {
                 conf.resolvedConfiguration.firstLevelModuleDependencies
             } catch (ResolveException re) {
