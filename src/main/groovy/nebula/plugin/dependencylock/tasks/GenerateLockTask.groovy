@@ -21,6 +21,7 @@ import nebula.plugin.dependencylock.DependencyLockWriter
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
+import nebula.plugin.dependencylock.utils.ConfigurationFilters
 import nebula.plugin.dependencylock.utils.CoreLocking
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Project
@@ -63,7 +64,6 @@ class GenerateLockTask extends AbstractLockTask {
     @Optional
     Boolean includeTransitives = false
 
-
     @TaskAction
     void lock() {
         if (CoreLocking.isCoreLockingEnabled()) {
@@ -92,9 +92,9 @@ class GenerateLockTask extends AbstractLockTask {
             if (Configuration.class.declaredMethods.any { it.name == 'isCanBeResolved' }) {
                 project.configurations.findAll {
                     if (taskProject == project) {
-                        it.canBeResolved
+                        it.canBeResolved && !ConfigurationFilters.safelyHasAResolutionAlternative(it)
                     } else {
-                        it.canBeResolved && it.canBeConsumed
+                        it.canBeResolved && it.canBeConsumed && !ConfigurationFilters.safelyHasAResolutionAlternative(it)
                     }
                 }
             } else {
