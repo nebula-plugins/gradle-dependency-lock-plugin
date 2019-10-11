@@ -95,7 +95,7 @@ class GenerateLockTask extends AbstractLockTask {
     }
 
     static Collection<Configuration> lockableConfigurations(Project taskProject, Project project, Set<String> configurationNames, Set<String> skippedConfigurationNamesPrefixes = []) {
-        List<Configuration> lockableConfigurations = []
+        Set<Configuration> lockableConfigurations = []
         if (configurationNames.empty) {
             if (Configuration.class.declaredMethods.any { it.name == 'isCanBeResolved' }) {
                 lockableConfigurations = project.configurations.findAll {
