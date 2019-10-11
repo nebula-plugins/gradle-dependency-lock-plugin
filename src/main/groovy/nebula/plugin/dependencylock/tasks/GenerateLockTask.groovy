@@ -98,7 +98,7 @@ class GenerateLockTask extends AbstractLockTask {
         Set<Configuration> lockableConfigurations = []
         if (configurationNames.empty) {
             if (Configuration.class.declaredMethods.any { it.name == 'isCanBeResolved' }) {
-                lockableConfigurations = project.configurations.findAll {
+                lockableConfigurations.addAll project.configurations.findAll {
                     if (taskProject == project) {
                         it.canBeResolved && !ConfigurationFilters.safelyHasAResolutionAlternative(it)
                     } else {
@@ -106,10 +106,10 @@ class GenerateLockTask extends AbstractLockTask {
                     }
                 }
             } else {
-                lockableConfigurations = project.configurations.asList()
+                lockableConfigurations.addAll project.configurations.asList()
             }
         } else {
-            lockableConfigurations =  configurationNames.collect { project.configurations.getByName(it) }
+            lockableConfigurations.addAll configurationNames.collect { project.configurations.getByName(it) }
         }
 
         lockableConfigurations.removeAll {
