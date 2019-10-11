@@ -15,8 +15,14 @@
  */
 package nebula.plugin.dependencylock.util
 
+import nebula.plugin.dependencylock.utils.GradleVersionUtils
+
 class LockGenerator {
-    static final Collection<String> DEFAULT_CONFIG_NAMES = ['compile', 'compileClasspath', 'default', 'runtime', 'runtimeClasspath', 'testCompile', 'testCompileClasspath', 'testRuntime', 'testRuntimeClasspath']
+    static final Collection<String> DEFAULT_CONFIG_NAMES = GradleVersionUtils.currentGradleVersionIsLessThan("6.0")
+            ? ['compile', 'compileClasspath', 'default', 'runtime', 'runtimeClasspath', 'testCompile', 'testCompileClasspath', 'testRuntime', 'testRuntimeClasspath']
+            : ['compileClasspath', 'default', 'runtimeClasspath', 'testCompileClasspath', 'testRuntimeClasspath']
+    static final Collection<String> DEFAULT_CONFIG_NAMES_POPULATED_BY_IMPLEMENTATION_SCOPE =
+            ['compileClasspath', 'default', 'runtimeClasspath', 'testCompileClasspath', 'testRuntimeClasspath']
 
     /**
      * Helper to copy the exact same lock block multiple times into different configurations
@@ -43,8 +49,34 @@ class LockGenerator {
     }
 
     /**
+     * Helper to copy the exact same lock block multiple times into different configurations
+     * and used when dependencies are defined on the implementation configuration only, so that it aligns with
+     * the dependency configurations from https://docs.gradle.org/current/userguide/java_plugin.html
+     * @param deps the String of dependencies, indentation should be what you want if that was the only thing going in the file
+     * @param configs configurations to duplicate into, defaults to the 4 standard java DEFAULT_CONFIG_NAMES
+     * @return the String to put into the file
+     */
+    static String duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(String deps, Collection<String> configs = DEFAULT_CONFIG_NAMES_POPULATED_BY_IMPLEMENTATION_SCOPE) {
+        def indentedDeps = deps.readLines().collect { "|        $it" }.join('\n')
+
+        def pieces = configs.collect { config ->
+            """\
+            |    "${config}": {
+            ${indentedDeps}
+            |    }"""
+        }
+
+        def builder = new StringBuilder()
+        builder.append('|{\n')
+        builder.append(pieces.join(',\n'))
+        builder.append('\n|}')
+
+        return builder.toString().stripMargin()
+    }
+
+    /**
      * Helper to copy the same lock block multiple times into different configurations, that takes two sets of dependencies
-     * and two sets of configurations
+     * and two sets of configurations. The dependency blocks will be sorted by configuration name.
      * @param firstDeps the String of dependencies, indentation should be what you want if that was the only thing going in the file
      * @param firstConfigs configurations to duplicate into
      * @param secondDeps the String of the second set of dependencies, indentation should be what you want if that was the only thing going in the file
@@ -52,29 +84,29 @@ class LockGenerator {
      * @return the String to put into the file
      */
     static String duplicateIntoConfigs(String firstDeps, Collection<String> firstConfigs, String secondDeps, Collection<String> secondConfigs) {
-        def indentedFirstDeps = firstDeps.readLines().collect { "|        $it" }.join('\n')
+        Map<String, String> configNameToDependencyContents = new HashMap<String, String>()
 
-        def firstPieces = firstConfigs.collect { config ->
-            """\
-            |    "${config}": {
-            ${indentedFirstDeps}
+        firstConfigs.each { configName ->
+            configNameToDependencyContents.put(configName, firstDeps)
+        }
+        secondConfigs.each { configName ->
+            configNameToDependencyContents.put(configName, secondDeps)
+        }
+        def sortedConfigNameToDependencyContents = configNameToDependencyContents.sort()
+
+        List<String> configBlocks = new ArrayList<String>()
+        sortedConfigNameToDependencyContents.each { configName, deps ->
+            def indentedDeps = deps.readLines().collect { "|        $it" }.join('\n')
+            def configAndDep = """\
+            |    "${configName}": {
+            ${indentedDeps}
             |    }"""
+            configBlocks.add(configAndDep.toString())
         }
 
-        def indentedSecondDeps = secondDeps.readLines().collect { "|        $it" }.join('\n')
-
-        def secondPieces = secondConfigs.collect { config ->
-            """\
-            |    "${config}": {
-            ${indentedSecondDeps}
-            |    }"""
-        }
-
-        def builder = new StringBuilder()
+        StringBuilder builder = new StringBuilder()
         builder.append('|{\n')
-        builder.append(firstPieces.join(',\n'))
-        builder.append(',\n')
-        builder.append(secondPieces.join(',\n'))
+        builder.append(configBlocks.join(',\n'))
         builder.append('\n|}')
 
         return builder.toString().stripMargin()

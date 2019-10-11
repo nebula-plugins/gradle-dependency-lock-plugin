@@ -1,82 +1,31 @@
 package nebula.plugin.dependencylock.tasks
 
+import nebula.plugin.dependencylock.AbstractDependencyLockPluginSpec
 import nebula.plugin.dependencylock.util.LockGenerator
-import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
+import org.gradle.util.GradleVersion
 import spock.lang.Unroll
 
-class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
-    def expectedLocks = [
-            'annotationProcessor.lockfile',
-            'compile.lockfile',
-            'compileClasspath.lockfile',
-            'compileOnly.lockfile',
-            'default.lockfile',
-            'runtime.lockfile',
-            'runtimeClasspath.lockfile',
-            'testAnnotationProcessor.lockfile',
-            'testCompile.lockfile',
-            'testCompileClasspath.lockfile',
-            'testCompileOnly.lockfile',
-            'testRuntime.lockfile',
-            'testRuntimeClasspath.lockfile'
-    ] as String[]
-    def mavenrepo
-    def projectName
-
+class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
     def setup() {
-        keepFiles = true
-        new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.coreLockingSupport=true"
-
-        projectName = getProjectDir().getName().replaceAll(/_\d+/, '')
-        settingsFile << """\
-            rootProject.name = '${projectName}'
-        """.stripIndent()
-
         def graph = new DependencyGraphBuilder()
-                .addModule('test.nebula:a:1.0.0')
-                .addModule('test.nebula:a:1.1.0')
-                .addModule('test.nebula:b:1.0.0')
-                .addModule('test.nebula:b:1.1.0')
-                .addModule('test.nebula:d:1.0.0')
-                .addModule('test.nebula:d:1.1.0')
                 .addModule('third-party:a:1.0.0')
                 .addModule('third-party:b:1.0.0')
                 .addModule(new ModuleBuilder('test.nebula:some-dep:1.0.0').addDependency('third-party:a:1.0.0').build())
                 .addModule(new ModuleBuilder('test.nebula:some-other-dep:1.0.0').addDependency('third-party:b:1.0.0').build())
-                .addModule(new ModuleBuilder('test.nebula:c:1.0.0').addDependency('test.nebula:d:1.0.0').build())
-                .addModule(new ModuleBuilder('test.nebula:c:1.1.0').addDependency('test.nebula:d:1.1.0').build())
                 .addModule(new ModuleBuilder('test.nebula:e:1.0.0').addDependency('test.nebula:some-dep:1.0.0').build())
                 .addModule(new ModuleBuilder('test.nebula:e:1.1.0').addDependency('test.nebula:some-other-dep:1.0.0').build())
                 .build()
         mavenrepo = new GradleDependencyGenerator(graph, "${projectDir}/testrepogen")
         mavenrepo.generateTestMavenRepo()
-
-        buildFile << """\
-            plugins {
-                id 'nebula.dependency-lock'
-                id 'java'
-            }
-            
-            repositories {
-                ${mavenrepo.mavenRepositoryBlock}
-            }
-            
-            dependencies {
-                compile 'test.nebula:a:1.+'
-                compile 'test.nebula:b:1.+'
-            }
-        """.stripIndent()
-
-        debug = true // if you want to debug with IntegrationTestKit, this is needed
     }
 
     def 'migration to core locks'() {
         given:
         def legacyLockFile = new File(projectDir, 'dependencies.lock')
-        legacyLockFile.text = LockGenerator.duplicateIntoConfigs(
+        legacyLockFile.text = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                 "test.nebula:a": {
                     "locked": "1.0.0",
@@ -88,7 +37,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                 }'''.stripIndent())
 
         when:
-        def result = runTasks('migrateToCoreLocks')
+        def result = runTasks('migrateToCoreLocks', '--warning-mode', 'all')
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
@@ -130,8 +79,8 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
             }
             
             dependencies {
-                compile 'test.nebula:b:1.+'
-                compile 'test.nebula:f:1.+'
+                implementation 'test.nebula:b:1.+'
+                implementation 'test.nebula:f:1.+'
             }
         """.stripIndent()
 
@@ -172,7 +121,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         given:
         buildFile << """
             dependencies {
-                compile 'test.nebula:c:1.+'
+                implementation 'test.nebula:c:1.+'
             }""".stripIndent()
         def legacyLockFile = new File(projectDir, 'dependencies.lock')
         def expectedNebulaLockText = LockGenerator.duplicateIntoConfigs(
@@ -220,11 +169,11 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         given:
         buildFile << """
             dependencies {
-                compile 'test.nebula:c:1.+'
-                compile 'test.nebula:e:1.+'
+                implementation 'test.nebula:c:1.+'
+                implementation 'test.nebula:e:1.+'
             }""".stripIndent()
         def legacyLockFile = new File(projectDir, 'dependencies.lock')
-        def expectedNebulaLockText = LockGenerator.duplicateIntoConfigs(
+        def expectedNebulaLockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                 "test.nebula:a": {
                     "locked": "1.0.0",
@@ -286,7 +235,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                 ${mavenrepo.mavenRepositoryBlock}
             }
             dependencies {
-                compile 'test.nebula:a:1.0.0'
+                implementation 'test.nebula:a:1.0.0'
             }
         """.stripIndent())
 
@@ -299,7 +248,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                 ${mavenrepo.mavenRepositoryBlock}
             }
             dependencies {
-                compile 'test.nebula:c:1.0.0'
+                implementation 'test.nebula:c:1.0.0'
             }
         """.stripIndent())
 
@@ -363,7 +312,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                 ${mavenrepo.mavenRepositoryBlock}
             }
             dependencies {
-                compile 'test.nebula:a:1.0.0'
+                implementation 'test.nebula:a:1.0.0'
             }
         """.stripIndent())
 
@@ -376,8 +325,8 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                 ${mavenrepo.mavenRepositoryBlock}
             }
             dependencies {
-                compile 'test.nebula:c:1.0.0'
-                compile project(":sub1") 
+                implementation 'test.nebula:c:1.0.0'
+                implementation project(":sub1") 
             }
         """.stripIndent())
 
@@ -452,7 +401,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                 ${mavenrepo.mavenRepositoryBlock}
             }
             dependencies {
-                compile 'test.nebula:a:1.0.0'
+                implementation 'test.nebula:a:1.0.0'
             }
         """.stripIndent())
 
@@ -465,9 +414,9 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                 ${mavenrepo.mavenRepositoryBlock}
             }
             dependencies {
-                compile 'test.nebula:a:1.0.0'
-                compile 'test.nebula:c:1.0.0'
-                compile project(":sub1") 
+                implementation 'test.nebula:a:1.0.0'
+                implementation 'test.nebula:c:1.0.0'
+                implementation project(":sub1") 
             }
         """.stripIndent())
 
@@ -586,8 +535,8 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                 mavenCentral()
             }
             dependencies {
-                compile 'test.nebula:a:1.+'
-                testCompile 'junit:junit:4.12'
+                implementation 'test.nebula:a:1.+'
+                testImplementation 'junit:junit:4.12'
             }
             facets {
                 $facet $sourceSetConfig
@@ -621,7 +570,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         ]
         def updatedExpectedLocks = expectedLocks + facetLockfiles
         updatedExpectedLocks.each {
-            assert actualLocks.contains(it)
+            assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
 
         def lockFile = new File(projectDir, "/gradle/dependency-locks/${facet}CompileClasspath.lockfile")
@@ -677,7 +626,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                 mavenCentral()
             }
             dependencies {
-                compile 'test.nebula:a:1.+'
+                implementation 'test.nebula:a:1.+'
             }
             facets {
                 $facet $sourceSetConfig
@@ -700,12 +649,12 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         ]
         def updatedExpectedLocks = expectedLocks + facetLockfiles
         updatedExpectedLocks.each {
-            assert actualLocks.contains(it)
+            assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
 
-        // compile lock came from json lockfile
-        def compileLockFile = new File(projectDir, "/gradle/dependency-locks/compileClasspath.lockfile")
-        compileLockFile.text.contains('test.nebula:a:1.0.0')
+        // implementation lock came from json lockfile
+        def compileClasspathLockFile = new File(projectDir, "/gradle/dependency-locks/compileClasspath.lockfile")
+        compileClasspathLockFile.text.contains('test.nebula:a:1.0.0')
 
         // facet lock had been unlocked & resolved to different version
         def facetLockFile = new File(projectDir, "/gradle/dependency-locks/${facet}CompileClasspath.lockfile")
@@ -743,8 +692,8 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                 mavenCentral()
             }
             dependencies {
-                compile 'test.nebula:a:1.+'
-                compile 'test.nebula:b:1.+'
+                implementation 'test.nebula:a:1.+'
+                implementation 'test.nebula:b:1.+'
             }
         """.stripIndent()
 
@@ -792,8 +741,8 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                 mavenCentral()
             }
             dependencies {
-                compile 'test.nebula:a:1.+'
-                compile 'test.nebula:b:1.+'
+                implementation 'test.nebula:a:1.+'
+                implementation 'test.nebula:b:1.+'
             }
         """.stripIndent()
 
@@ -813,6 +762,18 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
 
         then:
         !cleanBuildResults.output.contains('FAILURE')
+    }
+
+    def 'migration fails when there is no lockfile to migrate from'() {
+        given:
+        def legacyLockFile = new File(projectDir, 'dependencies.lock')
+        legacyLockFile.delete()
+
+        when:
+        def result = runTasksAndFail('migrateToCoreLocks')
+
+        then:
+        result.output.contains('Stopping migration')
     }
 
     def 'fails migrating global locks'() {
@@ -835,7 +796,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                   ${mavenrepo.mavenRepositoryBlock}
             }
             dependencies {
-                compile 'test.nebula:a:1.0.0'
+                implementation 'test.nebula:a:1.0.0'
             }
             """.stripIndent())
         addSubproject('sub2', """\
@@ -847,7 +808,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                   ${mavenrepo.mavenRepositoryBlock}
             }
             dependencies {
-                compile 'test.nebula:c:1.0.0'
+                implementation 'test.nebula:c:1.0.0'
             }
             """.stripIndent())
 
@@ -886,18 +847,6 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
         legacyGlobalLockFile.exists()
     }
 
-    def 'migration fails when there is no lockfile to migrate from'() {
-        given:
-        def legacyLockFile = new File(projectDir, 'dependencies.lock')
-        legacyLockFile.delete()
-
-        when:
-        def result = runTasksAndFail('migrateToCoreLocks')
-
-        then:
-        result.output.contains('Stopping migration')
-    }
-
     def 'task appears'() {
         when:
         def result = runTasks('tasks')
@@ -907,10 +856,17 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
     }
 
     private static String createFacetLockfileText(String facet) {
-        def configsBasedOnCompile = ['compile', 'compileClasspath', 'default', 'runtime', 'runtimeClasspath']
-        def configsBasedOnTestCompile = [
+        def compileBasedConfigs = GradleVersion.current().baseVersion < GradleVersion.version("6.0")
+                ? ['compile', 'compileClasspath', 'default', 'runtime', 'runtimeClasspath']
+                : ['compileClasspath', 'default', 'runtimeClasspath']
+        def testCompileBaseConfigs = GradleVersion.current().baseVersion < GradleVersion.version("6.0")
+                ? [
                 "testCompile", "testCompileClasspath", "testDefault", "testRuntime", "testRuntimeClasspath",
                 "${facet}Compile".toString(), "${facet}CompileClasspath".toString(), "${facet}Default".toString(), "${facet}Runtime".toString(), "${facet}RuntimeClasspath".toString()
+        ]
+                : [
+                "testCompileClasspath", "testDefault", "testRuntimeClasspath",
+                "${facet}CompileClasspath".toString(), "${facet}Default".toString(), "${facet}RuntimeClasspath".toString()
         ]
         def locks = LockGenerator.duplicateIntoConfigs(
                 '''\
@@ -918,7 +874,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                     "locked": "1.0.0",
                     "requested": "1.0.0"
                 }'''.stripIndent(),
-                configsBasedOnCompile,
+                compileBasedConfigs,
                 '''\
                 "junit:junit": {
                     "locked": "4.12",
@@ -934,7 +890,7 @@ class MigrateToCoreLocksTaskSpec extends IntegrationTestKitSpec {
                     "locked": "1.0.0",
                     "requested": "1.0.0"
                 }'''.stripIndent(),
-                configsBasedOnTestCompile)
+                testCompileBaseConfigs)
         return locks
     }
 

@@ -80,21 +80,6 @@ class CoreLockingHelper {
             runClosureOnConfigurations(configurationNames, closure, new ArrayList<String>())
             findAndLockAdditionalConfigurations(configurationNames, closure)
         }
-        project.plugins.withId("scala") {
-            // the configurations `incrementalScalaAnalysisFor_x_ extend from `compile` and `implementation` rather than `compileClasspath`
-            def scalaConfigurationsToLock = []
-            project.configurations
-                    .findAll { it.name == 'compile' }
-                    .each { it.isCanBeResolved() }
-                    .each {
-                        scalaConfigurationsToLock.add(it.name)
-                    }
-
-            // we cannot resolve the 'implementation' configuration to determine if there are dependencies on here. Providing warning instead:
-            LOGGER.warn("Locking warning: Cannot lock scala configurations based on the 'implementation' configuration. Please define dependencies on the 'compile' configuration, if needed")
-
-            runClosureOnConfigurations(configurationNames, closure, scalaConfigurationsToLock)
-        }
         findAndLockAdditionalConfigurations(configurationNames, closure)
     }
 

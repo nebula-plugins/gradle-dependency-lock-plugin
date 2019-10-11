@@ -51,6 +51,7 @@ dependencies {
     implementation platform("com.fasterxml.jackson:jackson-bom:2.9.9.20190807")
 
     testImplementation 'com.netflix.nebula:gradle-git-scm-plugin:latest.release'
+    testImplementation 'com.netflix.nebula:nebula-project-plugin:latest.release'
     testImplementation 'com.netflix.nebula:nebula-test:latest.release'
     testImplementation gradleTestKit()
     testImplementation('org.ajoberstar.grgit:grgit-core:3.0.0-beta.1') {

@@ -40,12 +40,12 @@ class UpdateLockTaskSpec extends ProjectSpec {
 
     def 'transitives are automatically updated'() {
         project.dependencies {
-            compile 'test.example:bar:1.+'
-            compile 'test.example:qux:1.0.0'
+            implementation 'test.example:bar:1.+'
+            implementation 'test.example:qux:1.0.0'
         }
 
         def lockFile = new File(project.projectDir, 'dependencies.lock')
-        def lockText = LockGenerator.duplicateIntoConfigs(
+        def lockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                     "test.example:bar": {
                         "locked": "1.0.0",
@@ -68,7 +68,7 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def task = createTask()
         task.includeTransitives = true
 
-        def updatedLock = LockGenerator.duplicateIntoConfigs(
+        def updatedLock = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                     "test.example:bar": {
                         "locked": "1.1.0",

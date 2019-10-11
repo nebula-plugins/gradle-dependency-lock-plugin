@@ -50,7 +50,11 @@ class DependencyResolutionVerifier {
             Task lastTask
             if (projectExecutionEnabled) {
                 lastTask = tasks
-                        .groupBy { task -> task.project }
+                        .groupBy { task ->
+                            GradleVersionUtils.currentGradleVersionIsLessThan("6.0")
+                                    ? task.project // the method name before Gradle 6.0
+                                    : task.owningProject // the method name as of Gradle 6.0
+                        }
                         .find { proj, tasksForProj -> proj == project }
                         .value
                         .last()

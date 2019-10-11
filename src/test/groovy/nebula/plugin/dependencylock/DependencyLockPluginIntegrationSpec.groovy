@@ -13,7 +13,7 @@ class DependencyLockPluginIntegrationSpec extends IntegrationSpec {
             repositories { maven { url '${Fixture.repo}' } }
 
             dependencies {
-                compile 'test.example:foo:latest.release'
+                implementation 'test.example:foo:latest.release'
             }
 
             configurations.all {
@@ -61,8 +61,8 @@ class DependencyLockPluginIntegrationSpec extends IntegrationSpec {
             }
 
             dependencies {
-                compile 'test.example:foo:latest.release'
-                compile 'test.example:bar:latest.release'
+                implementation 'test.example:foo:latest.release'
+                implementation 'test.example:bar:latest.release'
             }
             """.stripIndent()
 

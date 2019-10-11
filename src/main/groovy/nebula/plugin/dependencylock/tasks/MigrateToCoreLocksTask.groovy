@@ -18,6 +18,7 @@
 
 package nebula.plugin.dependencylock.tasks
 
+import nebula.plugin.dependencylock.utils.ConfigurationFilters
 import nebula.plugin.dependencylock.utils.CoreLocking
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import org.gradle.api.BuildCancelledException
@@ -88,19 +89,22 @@ class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
 
     private static Set<String> findUnlockedDependencies(Configuration conf) {
         def unlockedDependencies = new HashSet<String>()
-        try {
-            conf.resolvedConfiguration.firstLevelModuleDependencies
-        } catch (ResolveException re) {
-            re.causes.each {
-                def unlockedDep
-                try {
-                    def matcher = it.getMessage() =~ /.*'(.*)'.*/
-                    def results = matcher[0] as List
-                    unlockedDep = results[1] as String
-                } catch (Exception e) {
-                    throw new BuildCancelledException("Error finding unlocked dependency from '${it.getMessage()}'", e)
+
+        if (!ConfigurationFilters.safelyHasAResolutionAlternative(conf)) {
+            try {
+                conf.resolvedConfiguration.firstLevelModuleDependencies
+            } catch (ResolveException re) {
+                re.causes.each {
+                    def unlockedDep
+                    try {
+                        def matcher = it.getMessage() =~ /.*'(.*)'.*/
+                        def results = matcher[0] as List
+                        unlockedDep = results[1] as String
+                    } catch (Exception e) {
+                        throw new BuildCancelledException("Error finding unlocked dependency from '${it.getMessage()}'", e)
+                    }
+                    unlockedDependencies.add(unlockedDep)
                 }
-                unlockedDependencies.add(unlockedDep)
             }
         }
         unlockedDependencies
