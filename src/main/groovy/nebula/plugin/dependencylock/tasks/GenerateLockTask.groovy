@@ -40,6 +40,7 @@ class GenerateLockTask extends AbstractLockTask {
     private String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
     private String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
     private static final Logger LOGGER = Logging.getLogger(GenerateLockTask)
+    private static final List<String> DEFAULT_NON_LOCKABLE_CONFIGURATIONS = ['zinc']
 
     @Internal
     String description = 'Create a lock file in build/<configured name>'
@@ -49,6 +50,9 @@ class GenerateLockTask extends AbstractLockTask {
 
     @Internal
     Set<String> configurationNames
+
+    @Internal
+    Set<String> skippedConfigurationNames
 
     @Internal
     Closure filter = { group, name, version -> true }
@@ -85,15 +89,16 @@ class GenerateLockTask extends AbstractLockTask {
         if (DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
             throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
         }
-        Collection<Configuration> confs = getConfigurations() ?: lockableConfigurations(project, project, getConfigurationNames())
+        Collection<Configuration> confs = getConfigurations() ?: lockableConfigurations(project, project, getConfigurationNames(), getSkippedConfigurationNames())
         Map dependencyMap = new GenerateLockFromConfigurations().lock(confs)
         new DependencyLockWriter(getDependenciesLock(), getSkippedDependencies()).writeLock(dependencyMap)
     }
 
-    static Collection<Configuration> lockableConfigurations(Project taskProject, Project project, Set<String> configurationNames) {
+    static Collection<Configuration> lockableConfigurations(Project taskProject, Project project, Set<String> configurationNames, Set<String> skippedConfigurationNamesPrefixes = []) {
+        List<Configuration> lockableConfigurations = []
         if (configurationNames.empty) {
             if (Configuration.class.declaredMethods.any { it.name == 'isCanBeResolved' }) {
-                project.configurations.findAll {
+                lockableConfigurations = project.configurations.findAll {
                     if (taskProject == project) {
                         it.canBeResolved && !ConfigurationFilters.safelyHasAResolutionAlternative(it)
                     } else {
@@ -101,11 +106,18 @@ class GenerateLockTask extends AbstractLockTask {
                     }
                 }
             } else {
-                project.configurations.asList()
+                lockableConfigurations = project.configurations.asList()
             }
         } else {
-            configurationNames.collect { project.configurations.getByName(it) }
+            lockableConfigurations =  configurationNames.collect { project.configurations.getByName(it) }
         }
+
+        lockableConfigurations.removeAll {
+            Configuration configuration -> skippedConfigurationNamesPrefixes.any {
+                String prefix -> configuration.name.startsWith(prefix)
+            }
+        }
+        return lockableConfigurations
     }
 
     static Collection<Configuration> filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(Project subproject, Set<String> configurationNames, Collection<Configuration> lockableConfigurations) {

@@ -89,6 +89,44 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.text == lockText
     }
 
+    def 'simple lock for all lockable configurations - without skippedConfigurationsPrefixes'() {
+        project.apply plugin: 'java'
+
+        project.repositories { maven { url Fixture.repo } }
+        project.configurations {
+            zinc
+            incrementalAnalysisTest
+        }
+        project.dependencies {
+            zinc 'test.example:foo:2.+'
+            incrementalAnalysisTest 'test.example:foo:2.+'
+            implementation 'test.example:foo:2.+'
+        }
+
+        GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
+        task.configurationNames = project.configurations
+                .stream()
+                .filter { it.isCanBeResolved() }
+                .collect { it.name }
+                .toSet()
+        task.skippedConfigurationNames = ['zinc', 'incrementalAnalysis']
+
+        when:
+        task.lock()
+
+        then:
+        String lockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
+                '''\
+                    "test.example:foo": {
+                        "locked": "2.0.1",
+                        "requested": "2.+"
+                    }'''.stripIndent())
+        task.dependenciesLock.text == lockText
+        !task.dependenciesLock.text.contains('"zinc"')
+        !task.dependenciesLock.text.contains('"incrementalAnalysisTest"')
+    }
+
     def 'skip dependencies via transitives when configured'() {
         project.apply plugin: 'java'
         project.repositories { maven { url Fixture.repo } }
