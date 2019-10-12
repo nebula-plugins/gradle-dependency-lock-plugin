@@ -19,6 +19,7 @@ class DependencyLockExtension {
     String lockFile = 'dependencies.lock'
     String globalLockFile = 'global.lock'
     Set<String> configurationNames = [] as Set
+    Set<String> skippedConfigurationNamesPrefixes = [] as Set
     Closure dependencyFilter = { String group, String name, String version -> true }
     Set<String> updateDependencies = [] as Set
     Set<String> skippedDependencies = [] as Set

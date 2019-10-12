@@ -205,6 +205,7 @@ class DependencyLockTaskConfigurer {
                 new File(project.buildDir, clLockFileName ?: extension.lockFile)
             }
             configurationNames = { extension.configurationNames }
+            skippedConfigurationNames = { extension.skippedConfigurationNamesPrefixes }
         }
 
         lockTask
@@ -234,7 +235,7 @@ class DependencyLockTaskConfigurer {
                 def subprojects = project.subprojects.collect { subproject ->
                     def ext = subproject.getExtensions().findByType(DependencyLockExtension)
                     if (ext != null) {
-                        Collection<Configuration> lockableConfigurations = lockableConfigurations(project, subproject, ext.configurationNames)
+                        Collection<Configuration> lockableConfigurations = lockableConfigurations(project, subproject, ext.configurationNames, extension.skippedConfigurationNamesPrefixes)
                         Collection<Configuration> configurations = filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(subproject, ext.configurationNames, lockableConfigurations)
 
                         configurations
@@ -252,7 +253,7 @@ class DependencyLockTaskConfigurer {
                 def conf = project.configurations.detachedConfiguration(subprojectsArray)
                 project.allprojects.each { it.configurations.add(conf) }
 
-                [conf] + lockableConfigurations(project, project, extension.configurationNames)
+                [conf] + lockableConfigurations(project, project, extension.configurationNames, extension.skippedConfigurationNamesPrefixes)
             }
         }
 
