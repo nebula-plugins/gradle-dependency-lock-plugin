@@ -40,7 +40,6 @@ class GenerateLockTask extends AbstractLockTask {
     private String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
     private String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
     private static final Logger LOGGER = Logging.getLogger(GenerateLockTask)
-    private static final List<String> DEFAULT_NON_LOCKABLE_CONFIGURATIONS = ['zinc']
 
     @Internal
     String description = 'Create a lock file in build/<configured name>'
