@@ -749,7 +749,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         !cleanBuildResults.output.contains('FAILURE')
     }
 
-    def 'generate core lock should lock delete stale lockfiles when regenerating'() {
+    def 'generate core lock should ignore extra lockfiles and then delete stale lockfiles when regenerating'() {
         given:
         buildFile.text = """\
             plugins {
@@ -787,6 +787,15 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         lockFile.exists()
 
         when:
+        def buildResult = runTasks('clean', 'build')
+
+        then:
+        !buildResult.output.contains('FAIL')
+
+        def customConfigurationLockFile = new File(projectDir, '/gradle/dependency-locks/customConfiguration.lockfile')
+        assert customConfigurationLockFile.exists()
+
+        when:
         runTasks('dependencies', '--write-locks')
 
         then:
@@ -798,11 +807,11 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             assert expectedLocks.contains(actual)
         }
 
-        def customConfigurationLockFile = new File(projectDir, '/gradle/dependency-locks/customConfiguration.lockfile')
-        assert !customConfigurationLockFile.exists()
+        def customConfigurationLockFileAfterWriteLocks = new File(projectDir, '/gradle/dependency-locks/customConfiguration.lockfile')
+        assert !customConfigurationLockFileAfterWriteLocks.exists()
     }
 
-    def 'generate core lock should lock delete stale lockfiles when regenerating - multiproject setup'() {
+    def 'generate core lock should ignore extra lockfiles and then delete stale lockfiles when regenerating - multiproject setup'() {
         given:
         definePluginOutsideOfPluginBlock = true
         buildFile.text = """\
@@ -855,6 +864,15 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         lockFile.exists()
 
         when:
+        def buildResult = runTasks('clean', 'build')
+
+        then:
+        !buildResult.output.contains('FAIL')
+
+        def customConfigurationLockFile = new File(projectDir, 'sub1/gradle/dependency-locks/customConfiguration.lockfile')
+        assert customConfigurationLockFile.exists()
+
+        when:
         runTasks('dependenciesForAll', '--write-locks')
 
         then:
@@ -866,8 +884,8 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             assert expectedLocks.contains(actual)
         }
 
-        def customConfigurationLockFile = new File(projectDir, 'sub1/gradle/dependency-locks/customConfiguration.lockfile')
-        assert !customConfigurationLockFile.exists()
+        def customConfigurationLockFileAfterWriteLocks = new File(projectDir, 'sub1/gradle/dependency-locks/customConfiguration.lockfile')
+        assert !customConfigurationLockFileAfterWriteLocks.exists()
     }
 
     @Unroll
