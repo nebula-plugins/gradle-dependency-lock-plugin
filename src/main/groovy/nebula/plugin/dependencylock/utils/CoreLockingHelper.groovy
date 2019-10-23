@@ -130,8 +130,12 @@ class CoreLockingHelper {
     }
 
     private void removeLockfilesForUnlockedConfigurations() {
-        def migrationTaskWasRequested = project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)
-        if (!shouldLockAllConfigurations && !migrationTaskWasRequested) {
+        boolean migrationTaskWasRequested = project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)
+        boolean hasWriteLocksFlag = project.gradle.startParameter.isWriteDependencyLocks()
+        boolean hasDependenciesToUpdate = !project.gradle.startParameter.getLockedDependenciesToUpdate().isEmpty()
+        boolean isUpdatingDependencies = hasWriteLocksFlag || hasDependenciesToUpdate
+
+        if (!shouldLockAllConfigurations && !migrationTaskWasRequested && isUpdatingDependencies) {
             project.gradle.taskGraph.whenReady { taskGraph ->
                 LinkedList tasks = taskGraph.executionPlan.executionQueue
                 Task lastTask = tasks.last?.task
