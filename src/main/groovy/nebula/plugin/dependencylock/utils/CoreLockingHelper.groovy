@@ -40,6 +40,11 @@ class CoreLockingHelper {
     private Boolean shouldLockAllConfigurations
     private synchronized Set<Configuration> configsWithActivatedDependencyLocking
 
+    boolean migrationTaskWasRequested = project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)
+    boolean hasWriteLocksFlag = project.gradle.startParameter.isWriteDependencyLocks()
+    boolean hasDependenciesToUpdate = !project.gradle.startParameter.getLockedDependenciesToUpdate().isEmpty()
+    boolean isUpdatingDependencies = hasWriteLocksFlag || hasDependenciesToUpdate
+
     CoreLockingHelper(Project project) {
         this.project = project
         shouldLockAllConfigurations = project.hasProperty("lockAllConfigurations") && (project.property("lockAllConfigurations") as String).toBoolean()
@@ -130,11 +135,6 @@ class CoreLockingHelper {
     }
 
     private void removeLockfilesForUnlockedConfigurations() {
-        boolean migrationTaskWasRequested = project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)
-        boolean hasWriteLocksFlag = project.gradle.startParameter.isWriteDependencyLocks()
-        boolean hasDependenciesToUpdate = !project.gradle.startParameter.getLockedDependenciesToUpdate().isEmpty()
-        boolean isUpdatingDependencies = hasWriteLocksFlag || hasDependenciesToUpdate
-
         if (!shouldLockAllConfigurations && !migrationTaskWasRequested && isUpdatingDependencies) {
             project.gradle.taskGraph.whenReady { taskGraph ->
                 LinkedList tasks = taskGraph.executionPlan.executionQueue
@@ -171,6 +171,19 @@ class CoreLockingHelper {
                     }
                 })
             }
+        }
+    }
+
+    void configureChangingModules() {
+        if (isUpdatingDependencies) {
+            project.configurations.all({ Configuration configuration ->
+                if (configuration.state == Configuration.State.UNRESOLVED) {
+                    configuration.resolutionStrategy {
+//                        cacheDynamicVersionsFor(0, "seconds")
+                        cacheChangingModulesFor(0, "seconds")
+                    }
+                }
+            })
         }
     }
 }
