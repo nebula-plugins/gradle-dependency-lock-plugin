@@ -174,7 +174,7 @@ class CoreLockingHelper {
         }
     }
 
-    void configureCachingForModulesWhenLocking() {
+    void disableCachingWhenUpdatingDependencies() {
         if (isUpdatingDependencies) {
             project.configurations.all({ Configuration configuration ->
                 if (configuration.state == Configuration.State.UNRESOLVED) {
