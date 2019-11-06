@@ -79,7 +79,15 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
                 id 'java'
             }
             repositories {
-                maven { url "$serverUrl" }
+                maven { 
+                    url "$serverUrl"
+                    setAllowInsecureProtocol(true)
+                    metadataSources {
+                        mavenPom()
+                        artifact()
+                        ignoreGradleMetadataRedirection()
+                    }
+                }
             }
             """.stripIndent()
 
