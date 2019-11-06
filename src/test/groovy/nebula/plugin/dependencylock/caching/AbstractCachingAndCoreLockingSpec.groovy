@@ -93,16 +93,18 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
         WireMock.resetToDefault()
     }
 
-    void setupChangingDependencyAndMockedResponses(String uniqueId) {
+    void setupBaseDependencyAndMockedResponses(String uniqueId, String groupIdentifier) {
         DependencyGraph graph = new DependencyGraphBuilder()
-                .addModule(new ModuleBuilder("test.changing:z-$uniqueId:1.0.0").addDependency("test.nebula:a-$uniqueId:1.0.0").build())
+                .addModule(new ModuleBuilder("test.$groupIdentifier:z-$uniqueId:1.0.0").addDependency("test.nebula:a-$uniqueId:1.0.0").build())
                 .build()
         mavenrepo = new GradleDependencyGenerator(graph, "${projectDir}/testrepogen")
         mavenrepo.generateTestMavenRepo()
 
 
-        serveMockedArtifactMetadataResponse('test.changing', "z-$uniqueId", '1.0.0')
-        serveMockedJar_Head_Response('test.changing', "z-$uniqueId", '1.0.0')
+        serveMockedArtifactMavenMetadataResponse("test.$groupIdentifier", "z-$uniqueId")
+
+        serveMockedArtifactMetadataResponse("test.$groupIdentifier", "z-$uniqueId", '1.0.0')
+        serveMockedJar_Head_Response("test.$groupIdentifier", "z-$uniqueId", '1.0.0')
 
         serveMockedArtifactMetadataResponse('test.nebula', "a-$uniqueId", '1.0.0')
         serveMockedJar_Head_Response('test.nebula', "a-$uniqueId", '1.0.0')
@@ -115,11 +117,27 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
         mavenrepo = new GradleDependencyGenerator(updatedGraph, "${projectDir}/testrepogen")
         mavenrepo.generateTestMavenRepo()
 
-
         serveMockedArtifactMetadata_Head_Response('test.changing', "z-$uniqueId", '1.0.0')
         serveMockedArtifactMetadataSha1Response('test.changing', "z-$uniqueId", '1.0.0')
         serveMockedArtifactMetadataResponse('test.changing', "z-$uniqueId", '1.0.0')
         serveMockedJar_Head_Response('test.changing', "z-$uniqueId", '1.0.0')
+
+        serveMockedArtifactMetadataResponse('test.nebula', "a-$uniqueId", '1.1.1')
+        serveMockedJar_Head_Response('test.nebula', "a-$uniqueId", '1.1.1')
+    }
+
+    void updateDynamicDependencyAndMockedResponses(String uniqueId) {
+        DependencyGraph updatedGraph = new DependencyGraphBuilder()
+                .addModule(new ModuleBuilder("test.dynamic:z-$uniqueId:2.0.0").addDependency("test.nebula:a-$uniqueId:1.1.1").build())
+                .build()
+        mavenrepo = new GradleDependencyGenerator(updatedGraph, "${projectDir}/testrepogen")
+        mavenrepo.generateTestMavenRepo()
+
+        serveMockedArtifactMavenMetadata_Head_Response("test.dynamic", "z-$uniqueId")
+        serveMockedArtifactMavenMetadataResponse("test.dynamic", "z-$uniqueId")
+
+        serveMockedArtifactMetadataResponse('test.dynamic', "z-$uniqueId", '2.0.0')
+        serveMockedJar_Head_Response('test.dynamic', "z-$uniqueId", '2.0.0')
 
         serveMockedArtifactMetadataResponse('test.nebula', "a-$uniqueId", '1.1.1')
         serveMockedJar_Head_Response('test.nebula', "a-$uniqueId", '1.1.1')
@@ -130,6 +148,30 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
         assert body != null && body != ''
 
         WireMock.stubFor(WireMock.get('/' + filePathFor(group, artifactName, version, 'pom'))
+                .willReturn(
+                        WireMock.aResponse()
+                                .withStatus(200)
+                                .withHeader("Content-Type", "application/xml")
+                                .withBody(body)))
+    }
+
+    void serveMockedArtifactMavenMetadataResponse(String group, String artifactName) {
+        String body = mavenMetadataFileContents(group, artifactName)
+        assert body != null && body != ''
+
+        WireMock.stubFor(WireMock.get("/${parseGroup(group)}/${artifactName}/maven-metadata.xml")
+                .willReturn(
+                        WireMock.aResponse()
+                                .withStatus(200)
+                                .withHeader("Content-Type", "application/xml")
+                                .withBody(body)))
+    }
+
+    void serveMockedArtifactMavenMetadata_Head_Response(String group, String artifactName) {
+        String body = mavenMetadataFileContents(group, artifactName)
+        assert body != null && body != ''
+
+        WireMock.stubFor(WireMock.head(WireMock.urlEqualTo("/${parseGroup(group)}/${artifactName}/maven-metadata.xml"))
                 .willReturn(
                         WireMock.aResponse()
                                 .withStatus(200)
@@ -191,8 +233,18 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
         file
     }
 
+    private String mavenMetadataFileContents(String group, String artifactName) {
+        File file = new File("${projectDir}/testrepogen/mavenrepo/${parseGroup(group)}/${artifactName}/maven-metadata.xml")
+        assert file.exists()
+
+        file.text
+    }
+
     String filePathFor(String group, String artifactName, String version, String extension) {
-        String groupSection = group.replace('.', '/')
-        return "${groupSection}/${artifactName}/$version/$artifactName-${version}.${extension}"
+        return "${parseGroup(group)}/${artifactName}/$version/$artifactName-${version}.${extension}"
+    }
+
+    static String parseGroup(String group) {
+        group.replace('.', '/')
     }
 }

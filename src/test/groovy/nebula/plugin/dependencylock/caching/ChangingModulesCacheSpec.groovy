@@ -37,7 +37,7 @@ class ChangingModulesCacheSpec extends AbstractCachingAndCoreLockingSpec {
 
     def 'changing modules should cache for 0 seconds when resolving and locking'() {
         given:
-        setupChangingDependencyAndMockedResponses(uniqueId)
+        setupBaseDependencyAndMockedResponses(uniqueId, "changing")
 
         when:
         def result = runTasks('dependencies', '--write-locks', '--configuration', 'compileClasspath',)
@@ -65,7 +65,7 @@ class ChangingModulesCacheSpec extends AbstractCachingAndCoreLockingSpec {
 
     def 'changing modules with updated transitive dependencies cause resolution failure until dependencies are updated'() {
         given:
-        setupChangingDependencyAndMockedResponses(uniqueId)
+        setupBaseDependencyAndMockedResponses(uniqueId, "changing")
 
         when:
         def result = runTasks('dependencies', '--write-locks', '--configuration', 'compileClasspath')

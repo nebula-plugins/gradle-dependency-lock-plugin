@@ -174,13 +174,13 @@ class CoreLockingHelper {
         }
     }
 
-    void configureChangingModules() {
+    void configureCachingForModulesWhenLocking() {
         if (isUpdatingDependencies) {
             project.configurations.all({ Configuration configuration ->
                 if (configuration.state == Configuration.State.UNRESOLVED) {
                     configuration.resolutionStrategy {
-//                        cacheDynamicVersionsFor(0, "seconds")
-                        cacheChangingModulesFor(0, "seconds")
+                        cacheDynamicVersionsFor(0, 'seconds')
+                        cacheChangingModulesFor(0, 'seconds')
                     }
                 }
             })

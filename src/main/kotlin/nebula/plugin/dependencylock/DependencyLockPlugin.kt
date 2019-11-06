@@ -84,7 +84,7 @@ class DependencyLockPlugin : Plugin<Project> {
                 */
                 DependencyResolutionVerifier.verifySuccessfulResolution(project)
             }
-            coreLockingHelper.configureChangingModules()
+            coreLockingHelper.configureCachingForModulesWhenLocking()
 
             val lockFile = File(project.projectDir, extension.lockFile)
 
