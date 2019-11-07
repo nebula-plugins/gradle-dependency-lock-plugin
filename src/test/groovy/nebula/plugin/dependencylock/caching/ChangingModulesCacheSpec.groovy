@@ -20,6 +20,8 @@ package nebula.plugin.dependencylock.caching
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
 
 /**
  * Tests resolution of changing modules when used with Gradle core locking
@@ -27,6 +29,8 @@ import com.github.tomakehurst.wiremock.stubbing.ServeEvent
  * These tests resolve dependencies via HTTP to verify caching behavior, such as cacheChangingModulesFor
  */
 class ChangingModulesCacheSpec extends AbstractCachingAndCoreLockingSpec {
+    private static final Logger LOGGER = Logging.getLogger(ChangingModulesCacheSpec.class)
+
     def setup() {
         buildFile << """
             dependencies {
@@ -68,6 +72,7 @@ class ChangingModulesCacheSpec extends AbstractCachingAndCoreLockingSpec {
         setupBaseDependencyAndMockedResponses(uniqueId, "changing")
 
         when:
+        LOGGER.warn('============ List dependencies and write initial locks ============')
         def result = runTasks('dependencies', '--write-locks', '--configuration', 'compileClasspath')
 
         then:
@@ -76,15 +81,30 @@ class ChangingModulesCacheSpec extends AbstractCachingAndCoreLockingSpec {
         when:
         updateChangingDependencyAndMockedResponses(uniqueId)
 
+        LOGGER.warn('============ List dependencies ============')
         def dependenciesResult = runTasks('dependencies', '--configuration', 'compileClasspath')
 
         then:
         dependenciesResult.output.contains("\\--- test.nebula:a-$uniqueId:1.0.0")
 
         when:
-        def refreshDependenciesResult = runTasksAndFail('dependencies', '--configuration', 'compileClasspath', '--refresh-dependencies')
+        setupMockedResponsesForRefreshingDependencies(uniqueId)
+
+        LOGGER.warn('============ List dependencies with refresh ============')
+        def refreshDependenciesResult = runTasksAndFail('dependencyInsight', '--dependency', 'test.nebula', '--refresh-dependencies') // this shows unexpected changes from Gradle 5.6.4 to 6.0.0-rc.x
+//        def refreshDependenciesResult = runTasksAndFail('dependencies', '--configuration', 'compileClasspath', '--refresh-dependencies')
 
         then:
+        List<ServeEvent> allServeEvents = WireMock.getAllServeEvents()
+        WireMock.verify(WireMock.exactly(2), WireMock.getRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.changing', "z-$uniqueId", '1.0.0', 'pom'))))
+        WireMock.verify(WireMock.exactly(1), WireMock.getRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.changing', "z-$uniqueId", '1.0.0', 'pom.sha1'))))
+        WireMock.verify(WireMock.exactly(1), WireMock.headRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.changing', "z-$uniqueId", '1.0.0', 'pom'))))
+
+        WireMock.verify(WireMock.exactly(1), WireMock.getRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.nebula', "a-$uniqueId", '1.0.0', 'pom'))))
+        WireMock.verify(WireMock.exactly(1), WireMock.getRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.nebula', "a-$uniqueId", '1.1.1', 'pom'))))
+        assert allServeEvents.size() == 6
+
+
         refreshDependenciesResult.output.contains("""
 Execution failed for task ':dependencies'.
 > Failed to resolve the following dependencies:

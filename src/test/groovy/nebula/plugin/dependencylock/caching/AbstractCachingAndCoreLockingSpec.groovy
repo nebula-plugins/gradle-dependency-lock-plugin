@@ -134,6 +134,11 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
         serveMockedJar_Head_Response('test.nebula', "a-$uniqueId", '1.1.1')
     }
 
+    void setupMockedResponsesForRefreshingDependencies(String uniqueId) {
+        serveMockedArtifactMetadata_Head_Response('test.nebula', "a-$uniqueId", '1.0.0')
+        serveMockedArtifactMetadataSha1Response('test.nebula', "a-$uniqueId", '1.0.0')
+    }
+
     void updateDynamicDependencyAndMockedResponses(String uniqueId) {
         DependencyGraph updatedGraph = new DependencyGraphBuilder()
                 .addModule(new ModuleBuilder("test.dynamic:z-$uniqueId:2.0.0").addDependency("test.nebula:a-$uniqueId:1.1.1").build())
@@ -219,7 +224,7 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
                         WireMock.aResponse()
                                 .withStatus(200)
                                 .withHeader("Content-Type", "application/java-archive")
-                                .withBodyFile(pathToFile)))
+                                .withBody('<fakeJarContent></fakeJarContent>')))
     }
 
     private String dependencyMetadata(String group, String artifactName, String version) {
