@@ -137,6 +137,9 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
     void setupMockedResponsesForRefreshingDependencies(String uniqueId) {
         serveMockedArtifactMetadata_Head_Response('test.nebula', "a-$uniqueId", '1.0.0')
         serveMockedArtifactMetadataSha1Response('test.nebula', "a-$uniqueId", '1.0.0')
+
+        serveMockedArtifactMetadata_Head_Response('test.nebula', "a-$uniqueId", '1.1.1')
+        serveMockedArtifactMetadataSha1Response('test.nebula', "a-$uniqueId", '1.1.1')
     }
 
     void updateDynamicDependencyAndMockedResponses(String uniqueId) {

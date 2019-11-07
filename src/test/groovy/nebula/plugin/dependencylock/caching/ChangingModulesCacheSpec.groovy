@@ -91,18 +91,28 @@ class ChangingModulesCacheSpec extends AbstractCachingAndCoreLockingSpec {
         setupMockedResponsesForRefreshingDependencies(uniqueId)
 
         LOGGER.warn('============ List dependencies with refresh ============')
-        def refreshDependenciesResult = runTasksAndFail('dependencyInsight', '--dependency', 'test.nebula', '--refresh-dependencies') // this shows unexpected changes from Gradle 5.6.4 to 6.0.0-rc.x
-//        def refreshDependenciesResult = runTasksAndFail('dependencies', '--configuration', 'compileClasspath', '--refresh-dependencies')
+        def refreshDependenciesDependencyInsightResult = runTasksAndFail('dependencyInsight', '--dependency', 'test.nebula', '--refresh-dependencies')
+
+        then:
+        refreshDependenciesDependencyInsightResult.output.contains('Task :dependencyInsight FAILED')
+        refreshDependenciesDependencyInsightResult.output.contains('dependency was locked to version \'1.0.0\'')
+        refreshDependenciesDependencyInsightResult.output.contains("Cannot find a version of 'test.nebula:a-$uniqueId' that satisfies the version constraints")
+
+        when:
+        def refreshDependenciesResult = runTasksAndFail('dependencies', '--configuration', 'compileClasspath', '--refresh-dependencies')
 
         then:
         List<ServeEvent> allServeEvents = WireMock.getAllServeEvents()
-        WireMock.verify(WireMock.exactly(2), WireMock.getRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.changing', "z-$uniqueId", '1.0.0', 'pom'))))
-        WireMock.verify(WireMock.exactly(1), WireMock.getRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.changing', "z-$uniqueId", '1.0.0', 'pom.sha1'))))
-        WireMock.verify(WireMock.exactly(1), WireMock.headRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.changing', "z-$uniqueId", '1.0.0', 'pom'))))
+        WireMock.verify(WireMock.exactly(3), WireMock.getRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.changing', "z-$uniqueId", '1.0.0', 'pom'))))
+        WireMock.verify(WireMock.exactly(2), WireMock.getRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.changing', "z-$uniqueId", '1.0.0', 'pom.sha1'))))
+        WireMock.verify(WireMock.exactly(2), WireMock.headRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.changing', "z-$uniqueId", '1.0.0', 'pom'))))
 
         WireMock.verify(WireMock.exactly(1), WireMock.getRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.nebula', "a-$uniqueId", '1.0.0', 'pom'))))
-        WireMock.verify(WireMock.exactly(1), WireMock.getRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.nebula', "a-$uniqueId", '1.1.1', 'pom'))))
-        assert allServeEvents.size() == 6
+        WireMock.verify(WireMock.exactly(2), WireMock.getRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.nebula', "a-$uniqueId", '1.1.1', 'pom'))))
+
+        WireMock.verify(WireMock.exactly(1), WireMock.getRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.nebula', "a-$uniqueId", '1.1.1', 'pom.sha1'))))
+        WireMock.verify(WireMock.exactly(1), WireMock.headRequestedFor(WireMock.urlEqualTo('/' + filePathFor('test.nebula', "a-$uniqueId", '1.1.1', 'pom'))))
+        assert allServeEvents.size() == 12
 
 
         refreshDependenciesResult.output.contains("""
