@@ -46,6 +46,9 @@ dependencies {
     implementation 'joda-time:joda-time:2.10'
     implementation 'com.netflix.nebula:nebula-gradle-interop:latest.release'
     implementation 'com.netflix.nebula:gradle-scm-plugin:latest.release'
+    implementation('com.netflix.nebula:nebula-dependencies-comparison:latest.release') {
+        exclude module: 'groovy-all'
+    }
     implementation 'com.netflix.nebula:gradle-metrics-plugin:8.+', optional
 
     implementation platform("com.fasterxml.jackson:jackson-bom:2.9.9.20190807")
