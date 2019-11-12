@@ -42,6 +42,7 @@ class CoreLockingHelper {
 
     boolean migrationTaskWasRequested = project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)
     boolean hasWriteLocksFlag = project.gradle.startParameter.isWriteDependencyLocks()
+    boolean projectIsOffline = project.gradle.startParameter.isOffline()
     boolean hasDependenciesToUpdate = !project.gradle.startParameter.getLockedDependenciesToUpdate().isEmpty()
     boolean isUpdatingDependencies = hasWriteLocksFlag || hasDependenciesToUpdate
 
@@ -184,6 +185,12 @@ class CoreLockingHelper {
                     }
                 }
             })
+        }
+    }
+
+    void notifyWhenUsingOfflineMode() {
+        if (projectIsOffline) {
+            LOGGER.lifecycle("${project.name}: offline mode enabled. Using cached dependencies")
         }
     }
 }
