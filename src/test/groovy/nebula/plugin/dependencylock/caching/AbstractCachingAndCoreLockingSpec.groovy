@@ -79,7 +79,15 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
                 id 'java'
             }
             repositories {
-                maven { url "$serverUrl" }
+                maven { 
+                  url "$serverUrl"
+                  allowInsecureProtocol = true
+                  metadataSources {
+                      mavenPom()
+                      artifact()
+                      ignoreGradleMetadataRedirection()
+                  }
+                }
             }
             """.stripIndent()
 
@@ -124,6 +132,10 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
 
         serveMockedArtifactMetadataResponse('test.nebula', "a-$uniqueId", '1.1.1')
         serveMockedJar_Head_Response('test.nebula', "a-$uniqueId", '1.1.1')
+        serveMockedArtifactMetadata_Head_Response('test.nebula', "a-$uniqueId", '1.0.0')
+        serveMockedArtifactMetadataSha1Response('test.nebula', "a-$uniqueId", '1.0.0')
+        serveMockedArtifactMetadataResponse('test.nebula', "a-$uniqueId", '1.0.0')
+        serveMockedJar_Head_Response('test.nebula', "a-$uniqueId", '1.0.0')
     }
 
     void updateDynamicDependencyAndMockedResponses(String uniqueId) {
