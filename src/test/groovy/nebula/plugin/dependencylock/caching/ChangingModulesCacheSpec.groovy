@@ -64,10 +64,7 @@ class ChangingModulesCacheSpec extends AbstractCachingAndCoreLockingSpec {
 
         updatedLockedResults.output.contains("\\--- test.nebula:a-$uniqueId:1.1.1")
     }
-
-    //Earlier versions of Gradle have different behavior. We are not using core lock yet so it stops making sense to test old behavior
-    //Test will be enable only for newer Gradle versions.
-    @IgnoreIf( { GradleVersion.current().baseVersion < GradleVersion.version("6.0") } )
+    
     def 'changing modules with updated transitive dependencies cause resolution failure until dependencies are updated'() {
         given:
         setupBaseDependencyAndMockedResponses(uniqueId, "changing")

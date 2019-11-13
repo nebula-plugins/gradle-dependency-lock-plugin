@@ -27,7 +27,6 @@ import nebula.test.dependencies.DependencyGraph
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
-import org.gradle.util.GradleVersion
 
 class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
     static WireMockServer wireMockServer
@@ -82,11 +81,11 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
             repositories {
                 maven { 
                   url "$serverUrl"
-                  ${GradleVersion.current().getBaseVersion() >= GradleVersion.version("6.0") ? "allowInsecureProtocol = true": ""}
+                  allowInsecureProtocol = true
                   metadataSources {
                       mavenPom()
                       artifact()
-                      ${GradleVersion.current().getBaseVersion() >= GradleVersion.version("6.0") ? "ignoreGradleMetadataRedirection()": ""}
+                      ignoreGradleMetadataRedirection()
                   }
                 }
             }
