@@ -27,6 +27,7 @@ import nebula.test.dependencies.DependencyGraph
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
+import org.gradle.util.GradleVersion
 
 class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
     static WireMockServer wireMockServer
@@ -79,7 +80,15 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
                 id 'java'
             }
             repositories {
-                maven { url "$serverUrl" }
+                maven { 
+                  url "$serverUrl"
+                  ${GradleVersion.current().getBaseVersion() >= GradleVersion.version("6.0") ? "allowInsecureProtocol = true": ""}
+                  metadataSources {
+                      mavenPom()
+                      artifact()
+                      ${GradleVersion.current().getBaseVersion() >= GradleVersion.version("6.0") ? "ignoreGradleMetadataRedirection()": ""}
+                  }
+                }
             }
             """.stripIndent()
 
@@ -124,6 +133,10 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
 
         serveMockedArtifactMetadataResponse('test.nebula', "a-$uniqueId", '1.1.1')
         serveMockedJar_Head_Response('test.nebula', "a-$uniqueId", '1.1.1')
+        serveMockedArtifactMetadata_Head_Response('test.nebula', "a-$uniqueId", '1.0.0')
+        serveMockedArtifactMetadataSha1Response('test.nebula', "a-$uniqueId", '1.0.0')
+        serveMockedArtifactMetadataResponse('test.nebula', "a-$uniqueId", '1.0.0')
+        serveMockedJar_Head_Response('test.nebula', "a-$uniqueId", '1.0.0')
     }
 
     void updateDynamicDependencyAndMockedResponses(String uniqueId) {
