@@ -572,7 +572,7 @@ test.nebula:b:1.1.0
                 buildscript {
                     repositories { maven { url "https://plugins.gradle.org/m2/" } }
                     dependencies {
-                        classpath "com.netflix.nebula:nebula-kotlin-plugin:latest.release"
+                        classpath "com.netflix.nebula:nebula-kotlin-plugin:1.3.+"
                     }
                 }
                 plugins {
@@ -590,7 +590,16 @@ test.nebula:b:1.1.0
                 """.stripIndent()
         System.setProperty("ignoreDeprecations", "true")
 
-        runTasks('dependencies', '--write-locks') // baseline dependency locks
+        def results = runTasks('dependencies', '--write-locks') // baseline dependency locks
+
+        def kotlinVersion
+        def jetbrainsAnnotationsVersion
+        try {
+            kotlinVersion = results.output.findAll("org.jetbrains.kotlin:kotlin-stdlib-common.*").first().split(':')[2]
+            jetbrainsAnnotationsVersion = results.output.findAll("org.jetbrains:annotations.*").first().split(':')[2]
+        } catch (Exception e) {
+            throw new Exception("Could not find needed version(s) for this test", e)
+        }
 
         def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
 
@@ -604,11 +613,11 @@ test.nebula:b:1.1.0
         def lockfileContents = """# This is a Gradle generated file for dependency locking.
 # Manual edits can break the build and are not advised.
 # This file is expected to be part of source control.
-org.jetbrains.kotlin:kotlin-stdlib-common:1.3.50
-org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.3.50
-org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.50
-org.jetbrains.kotlin:kotlin-stdlib:1.3.50
-org.jetbrains:annotations:13.0
+org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion
+org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion
+org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion
+org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion
+org.jetbrains:annotations:$jetbrainsAnnotationsVersion
 test.nebula:a:1.1.0
 test.nebula:b:1.1.0
 """

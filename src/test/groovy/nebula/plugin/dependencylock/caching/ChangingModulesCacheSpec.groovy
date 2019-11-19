@@ -20,8 +20,6 @@ package nebula.plugin.dependencylock.caching
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent
-import org.gradle.util.GradleVersion
-import spock.lang.IgnoreIf
 
 /**
  * Tests resolution of changing modules when used with Gradle core locking
@@ -64,7 +62,7 @@ class ChangingModulesCacheSpec extends AbstractCachingAndCoreLockingSpec {
 
         updatedLockedResults.output.contains("\\--- test.nebula:a-$uniqueId:1.1.1")
     }
-    
+
     def 'changing modules with updated transitive dependencies cause resolution failure until dependencies are updated'() {
         given:
         setupBaseDependencyAndMockedResponses(uniqueId, "changing")
