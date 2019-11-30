@@ -1,0 +1,483 @@
+{
+    "compileClasspath": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.9.9.20190807",
+            "requested": "2.9.9.20190807"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "8.4.1",
+            "requested": "8.+"
+        },
+        "com.netflix.nebula:gradle-scm-plugin": {
+            "locked": "5.1.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.1.8",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "1.0.11",
+            "requested": "latest.release"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.8.0",
+            "requested": "1.8.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10",
+            "requested": "2.10"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+            "locked": "1.3.61",
+            "requested": "1.3.61"
+        }
+    },
+    "default": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.9.9.20190807",
+            "requested": "2.9.9.20190807"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "8.4.1",
+            "requested": "8.+"
+        },
+        "com.netflix.nebula:gradle-scm-plugin": {
+            "locked": "5.1.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.1.8",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "1.0.11",
+            "requested": "latest.release"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.8.0",
+            "requested": "1.8.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10",
+            "requested": "2.10"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+            "locked": "1.3.61",
+            "requested": "1.3.61"
+        }
+    },
+    "implementationDependenciesMetadata": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.9.9.20190807",
+            "requested": "2.9.9.20190807"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "8.4.1",
+            "requested": "8.+"
+        },
+        "com.netflix.nebula:gradle-scm-plugin": {
+            "locked": "5.1.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.1.8",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "1.0.11",
+            "requested": "latest.release"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.8.0",
+            "requested": "1.8.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10",
+            "requested": "2.10"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+            "locked": "1.3.61",
+            "requested": "1.3.61"
+        }
+    },
+    "integTestCompileClasspath": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.9.9.20190807",
+            "requested": "2.9.9.20190807"
+        },
+        "com.github.tomakehurst:wiremock": {
+            "locked": "2.17.0",
+            "requested": "2.17.0"
+        },
+        "com.netflix.nebula:gradle-git-scm-plugin": {
+            "locked": "4.2.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "8.4.1",
+            "requested": "8.+"
+        },
+        "com.netflix.nebula:gradle-scm-plugin": {
+            "locked": "5.1.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.1.8",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "1.0.11",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-project-plugin": {
+            "locked": "7.0.4",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-test": {
+            "locked": "7.6.0",
+            "requested": "latest.release"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.8.0",
+            "requested": "1.8.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10",
+            "requested": "2.10"
+        },
+        "org.ajoberstar.grgit:grgit-core": {
+            "locked": "3.0.0-beta.1",
+            "requested": "3.0.0-beta.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+            "locked": "1.3.61",
+            "requested": "1.3.61"
+        }
+    },
+    "integTestImplementationDependenciesMetadata": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.9.9.20190807",
+            "requested": "2.9.9.20190807"
+        },
+        "com.github.tomakehurst:wiremock": {
+            "locked": "2.17.0",
+            "requested": "2.17.0"
+        },
+        "com.netflix.nebula:gradle-git-scm-plugin": {
+            "locked": "4.2.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "8.4.1",
+            "requested": "8.+"
+        },
+        "com.netflix.nebula:gradle-scm-plugin": {
+            "locked": "5.1.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.1.8",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "1.0.11",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-project-plugin": {
+            "locked": "7.0.4",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-test": {
+            "locked": "7.6.0",
+            "requested": "latest.release"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.8.0",
+            "requested": "1.8.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10",
+            "requested": "2.10"
+        },
+        "org.ajoberstar.grgit:grgit-core": {
+            "locked": "3.0.0-beta.1",
+            "requested": "3.0.0-beta.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+            "locked": "1.3.61",
+            "requested": "1.3.61"
+        }
+    },
+    "integTestRuntimeClasspath": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.9.9.20190807",
+            "requested": "2.9.9.20190807"
+        },
+        "com.github.tomakehurst:wiremock": {
+            "locked": "2.17.0",
+            "requested": "2.17.0"
+        },
+        "com.netflix.nebula:gradle-git-scm-plugin": {
+            "locked": "4.2.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "8.4.1",
+            "requested": "8.+"
+        },
+        "com.netflix.nebula:gradle-scm-plugin": {
+            "locked": "5.1.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.1.8",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "1.0.11",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-project-plugin": {
+            "locked": "7.0.4",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-test": {
+            "locked": "7.6.0",
+            "requested": "latest.release"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.8.0",
+            "requested": "1.8.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10",
+            "requested": "2.10"
+        },
+        "org.ajoberstar.grgit:grgit-core": {
+            "locked": "3.0.0-beta.1",
+            "requested": "3.0.0-beta.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+            "locked": "1.3.61",
+            "requested": "1.3.61"
+        }
+    },
+    "jacocoAgent": {
+        "org.jacoco:org.jacoco.agent": {
+            "locked": "0.8.5"
+        }
+    },
+    "jacocoAnt": {
+        "org.jacoco:org.jacoco.ant": {
+            "locked": "0.8.5"
+        }
+    },
+    "kotlinCompilerClasspath": {
+        "org.jetbrains.kotlin:kotlin-compiler-embeddable": {
+            "locked": "1.3.61"
+        }
+    },
+    "kotlinCompilerPluginClasspath": {
+        "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable": {
+            "locked": "1.3.61",
+            "requested": "1.3.61"
+        }
+    },
+    "runtimeClasspath": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.9.9.20190807",
+            "requested": "2.9.9.20190807"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "8.4.1",
+            "requested": "8.+"
+        },
+        "com.netflix.nebula:gradle-scm-plugin": {
+            "locked": "5.1.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.1.8",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "1.0.11",
+            "requested": "latest.release"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.8.0",
+            "requested": "1.8.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10",
+            "requested": "2.10"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+            "locked": "1.3.61",
+            "requested": "1.3.61"
+        }
+    },
+    "testCompileClasspath": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.9.9.20190807",
+            "requested": "2.9.9.20190807"
+        },
+        "com.github.tomakehurst:wiremock": {
+            "locked": "2.17.0",
+            "requested": "2.17.0"
+        },
+        "com.netflix.nebula:gradle-git-scm-plugin": {
+            "locked": "4.2.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "8.4.1",
+            "requested": "8.+"
+        },
+        "com.netflix.nebula:gradle-scm-plugin": {
+            "locked": "5.1.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.1.8",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "1.0.11",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-project-plugin": {
+            "locked": "7.0.4",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-test": {
+            "locked": "7.6.0",
+            "requested": "latest.release"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.8.0",
+            "requested": "1.8.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10",
+            "requested": "2.10"
+        },
+        "org.ajoberstar.grgit:grgit-core": {
+            "locked": "3.0.0-beta.1",
+            "requested": "3.0.0-beta.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+            "locked": "1.3.61",
+            "requested": "1.3.61"
+        }
+    },
+    "testImplementationDependenciesMetadata": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.9.9.20190807",
+            "requested": "2.9.9.20190807"
+        },
+        "com.github.tomakehurst:wiremock": {
+            "locked": "2.17.0",
+            "requested": "2.17.0"
+        },
+        "com.netflix.nebula:gradle-git-scm-plugin": {
+            "locked": "4.2.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "8.4.1",
+            "requested": "8.+"
+        },
+        "com.netflix.nebula:gradle-scm-plugin": {
+            "locked": "5.1.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.1.8",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "1.0.11",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-project-plugin": {
+            "locked": "7.0.4",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-test": {
+            "locked": "7.6.0",
+            "requested": "latest.release"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.8.0",
+            "requested": "1.8.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10",
+            "requested": "2.10"
+        },
+        "org.ajoberstar.grgit:grgit-core": {
+            "locked": "3.0.0-beta.1",
+            "requested": "3.0.0-beta.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+            "locked": "1.3.61",
+            "requested": "1.3.61"
+        }
+    },
+    "testRuntimeClasspath": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.9.9.20190807",
+            "requested": "2.9.9.20190807"
+        },
+        "com.github.tomakehurst:wiremock": {
+            "locked": "2.17.0",
+            "requested": "2.17.0"
+        },
+        "com.netflix.nebula:gradle-git-scm-plugin": {
+            "locked": "4.2.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:gradle-metrics-plugin": {
+            "locked": "8.4.1",
+            "requested": "8.+"
+        },
+        "com.netflix.nebula:gradle-scm-plugin": {
+            "locked": "5.1.0",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.1.8",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "1.0.11",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-project-plugin": {
+            "locked": "7.0.4",
+            "requested": "latest.release"
+        },
+        "com.netflix.nebula:nebula-test": {
+            "locked": "7.6.0",
+            "requested": "latest.release"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.8.0",
+            "requested": "1.8.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10",
+            "requested": "2.10"
+        },
+        "org.ajoberstar.grgit:grgit-core": {
+            "locked": "3.0.0-beta.1",
+            "requested": "3.0.0-beta.1"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+            "locked": "1.3.61",
+            "requested": "1.3.61"
+        }
+    }
+}
