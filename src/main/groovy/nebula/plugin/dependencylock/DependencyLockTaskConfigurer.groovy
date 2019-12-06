@@ -240,11 +240,11 @@ class DependencyLockTaskConfigurer {
 
                         configurations
                                 .findAll { configuration ->
-                            !configurationsToSkipForGlobalLock.contains(configuration.name)
-                        }
-                        .collect { configuration ->
-                            project.dependencies.create(project.dependencies.project(path: subproject.path, configuration: configuration.name))
-                        }
+                                    !configurationsToSkipForGlobalLock.contains(configuration.name)
+                                }
+                                .collect { configuration ->
+                                    project.dependencies.create(project.dependencies.project(path: subproject.path, configuration: configuration.name))
+                                }
                     } else {
                         [project.dependencies.create(subproject)]
                     }
@@ -260,24 +260,28 @@ class DependencyLockTaskConfigurer {
         globalLockTask
     }
 
-    private MigrateToCoreLocksTask configureMigrateToCoreLocksTask(DependencyLockExtension extension) {
-        def migrateLockedDepsToCoreLocksTask = project.tasks.create(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME, MigrateLockedDepsToCoreLocksTask)
-        def migrateToCoreLocksTask = project.tasks.create(MIGRATE_TO_CORE_LOCKS_TASK_NAME, MigrateToCoreLocksTask)
+    private TaskProvider<MigrateToCoreLocksTask> configureMigrateToCoreLocksTask(DependencyLockExtension extension) {
+        def migrateLockedDepsToCoreLocksTask = project.tasks.register(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME, MigrateLockedDepsToCoreLocksTask)
+        def migrateToCoreLocksTask = project.tasks.register(MIGRATE_TO_CORE_LOCKS_TASK_NAME, MigrateToCoreLocksTask)
         def lockFile = new File(project.projectDir, extension.lockFile)
         def dependencyLockDirectory = new File(project.projectDir, "/gradle/dependency-locks")
 
-        migrateLockedDepsToCoreLocksTask.conventionMapping.with {
-            configurationNames = { extension.configurationNames }
-            inputLockFile = { lockFile }
-            outputLocksDirectory = { dependencyLockDirectory }
-        }
-        
-        migrateToCoreLocksTask.conventionMapping.with {
-            configurationNames = { extension.configurationNames }
-            outputLocksDirectory = { dependencyLockDirectory }
+        migrateLockedDepsToCoreLocksTask.configure {
+            it.conventionMapping.with {
+                configurationNames = { extension.configurationNames }
+                inputLockFile = { lockFile }
+                outputLocksDirectory = { dependencyLockDirectory }
+            }
         }
 
-        migrateToCoreLocksTask.dependsOn(migrateLockedDepsToCoreLocksTask)
+        migrateToCoreLocksTask.configure {
+            it.conventionMapping.with {
+                configurationNames = { extension.configurationNames }
+                outputLocksDirectory = { dependencyLockDirectory }
+            }
+            it.dependsOn project.tasks.named(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME)
+        }
+
         migrateToCoreLocksTask
     }
 
@@ -303,7 +307,9 @@ class DependencyLockTaskConfigurer {
     }
 
     private TaskProvider<DiffLockTask> configureDiffLockTask(String lockFileName, DependencyLockExtension extension) {
-        TaskProvider<DiffLockTask> diffLockTask = project.tasks.register(DIFF_LOCK_TASK_NAME, DiffLockTask) { diffTask ->
+        TaskProvider<DiffLockTask> diffLockTask = project.tasks.register(DIFF_LOCK_TASK_NAME, DiffLockTask)
+        
+        diffLockTask.configure { diffTask ->
             diffTask.mustRunAfter(project.tasks.named(GENERATE_LOCK_TASK_NAME), project.tasks.named(UPDATE_LOCK_TASK_NAME))
             def existing = new File(project.projectDir, lockFileName ?: extension.lockFile)
             if (existing.exists()) {
@@ -315,5 +321,7 @@ class DependencyLockTaskConfigurer {
         project.tasks.named('saveLock').configure { save ->
             save.mustRunAfter(diffLockTask)
         }
+
+        diffLockTask
     }
 }
