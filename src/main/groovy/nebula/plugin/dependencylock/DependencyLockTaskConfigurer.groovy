@@ -297,14 +297,18 @@ class DependencyLockTaskConfigurer {
     }
 
     private void createDeleteLock(SaveLockTask saveLock) {
-        project.tasks.create('deleteLock', Delete) {
-            delete saveLock.outputLock
+        TaskProvider<Delete> deleteLockTask = project.tasks.register('deleteLock', Delete)
+        
+        deleteLockTask.configure { it ->
+            it.delete saveLock.outputLock
         }
     }
 
     private void createDeleteGlobalLock(SaveLockTask saveGlobalLock) {
-        project.tasks.create('deleteGlobalLock', Delete) {
-            delete saveGlobalLock.outputLock
+        TaskProvider<Delete> deleteGlobalLockTask = project.tasks.register('deleteGlobalLock', Delete)
+
+        deleteGlobalLockTask.configure { it ->
+            it.delete saveGlobalLock.outputLock
         }
     }
 
