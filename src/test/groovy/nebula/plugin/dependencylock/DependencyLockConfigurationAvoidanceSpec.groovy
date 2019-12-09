@@ -3,6 +3,7 @@ package nebula.plugin.dependencylock
 import nebula.plugin.dependencylock.tasks.CommitLockTask
 import nebula.plugin.dependencylock.tasks.MigrateLockedDepsToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
+import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.test.IntegrationTestKitSpec
 import org.gradle.api.tasks.Delete
 
@@ -21,7 +22,7 @@ class DependencyLockConfigurationAvoidanceSpec extends IntegrationTestKitSpec {
 
         then:
         result.output.contains('class org.gradle.configuration.Help 1')
-//        !result.output.contains("class ${SaveLockTask.class.name}")
+        !result.output.contains("class ${SaveLockTask.class.name}")
 //        !result.output.contains("class ${GenerateLockTask.class.name}")
 //        !result.output.contains("class ${UpdateLockTask.class.name}")
         !result.output.contains("class ${MigrateToCoreLocksTask.class.name}")
@@ -45,7 +46,7 @@ class DependencyLockConfigurationAvoidanceSpec extends IntegrationTestKitSpec {
 
         then:
         result.output.contains('class org.gradle.configuration.Help 1')
-//        !result.output.contains("class ${SaveLockTask.class.name}")
+        !result.output.contains("class ${SaveLockTask.class.name}")
 //        !result.output.contains("class ${GenerateLockTask.class.name}")
 //        !result.output.contains("class ${UpdateLockTask.class.name}")
         !result.output.contains("class ${MigrateToCoreLocksTask.class.name}")
