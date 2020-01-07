@@ -1,10 +1,13 @@
 package nebula.plugin.dependencylock
 
+import nebula.plugin.dependencyverifier.DependencyResolutionVerifier
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
+import spock.lang.Subject
 import spock.lang.Unroll
 
+@Subject(DependencyResolutionVerifier)
 class DependencyLockPluginWithCoreVerifierSpec extends AbstractDependencyLockPluginSpec {
     private static final String BASELINE_LOCKFILE_CONTENTS = """# This is a Gradle generated file for dependency locking.
 # Manual edits can break the build and are not advised.
@@ -254,11 +257,11 @@ test.nebula:b:1.1.0
         then:
         results.output.contains('FAILURE: Build completed with 2 failures.')
 
-        results.output.findAll("Caused by: nebula.plugin.dependencylock.exceptions.DependencyLockException: Failed to resolve the following dependencies:\n" +
-                "  1. Failed to resolve 'not.available:a:1.0.0' for project 'sub1'").size() == 1
+        results.output.contains("Failed to resolve the following dependencies:\n" +
+                "  1. Failed to resolve 'not.available:a:1.0.0' for project 'sub1'")
 
-        results.output.findAll("Caused by: nebula.plugin.dependencylock.exceptions.DependencyLockException: Failed to resolve the following dependencies:\n" +
-                "  1. Failed to resolve 'not.available:a:1.0.0' for project 'sub2'").size() == 1
+        results.output.contains("Failed to resolve the following dependencies:\n" +
+                "  1. Failed to resolve 'not.available:a:1.0.0' for project 'sub2'")
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -281,11 +284,11 @@ test.nebula:b:1.1.0
         then:
         results.output.contains('FAILURE: Build completed with 2 failures.')
 
-        results.output.findAll("Caused by: nebula.plugin.dependencylock.exceptions.DependencyLockException: Failed to resolve the following dependencies:\n" +
-                "  1. Failed to resolve 'not.available:a:1.0.0' for project 'sub1'").size() == 1
+        results.output.contains("Failed to resolve the following dependencies:\n" +
+                "  1. Failed to resolve 'not.available:a:1.0.0' for project 'sub1'")
 
-        results.output.findAll("Caused by: nebula.plugin.dependencylock.exceptions.DependencyLockException: Failed to resolve the following dependencies:\n" +
-                "  1. Failed to resolve 'not.available:a:1.0.0' for project 'sub2'").size() == 1
+        results.output.contains("Failed to resolve the following dependencies:\n" +
+                "  1. Failed to resolve 'not.available:a:1.0.0' for project 'sub2'")
 
         where:
         lockArg << ['write-locks', 'update-locks']
