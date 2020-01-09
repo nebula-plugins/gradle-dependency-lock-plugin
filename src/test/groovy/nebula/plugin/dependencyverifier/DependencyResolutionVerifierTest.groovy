@@ -264,6 +264,47 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         ['dependencies', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
     }
 
+    @Unroll
+    def 'with Gradle version #gradleVersionToTest - expecting #expecting'() {
+        given:
+        gradleVersion = gradleVersionToTest
+        setupSingleProject()
+
+        if (expecting == 'error') {
+            buildFile << """
+                dependencies {
+                    implementation 'not.available:a:1.0.0' // dependency is not found
+                }
+                """.stripIndent()
+        }
+
+        when:
+        def results
+        def tasks = ['dependencies']
+
+        if (expecting == 'error') {
+            results = runTasksAndFail(*tasks)
+        } else {
+            results = runTasks(*tasks)
+        }
+
+        then:
+        results.output.contains('Task :dependencies')
+
+        where:
+        gradleVersionToTest | expecting
+        '6.0.1'             | 'error'
+        '6.0.1'             | 'no error'
+        '5.6.4'             | 'error'
+        '5.6.4'             | 'no error'
+        '5.1'               | 'error'
+        '5.1'               | 'no error'
+        '4.10.3'            | 'error'
+        '4.10.3'            | 'no error'
+        '4.9'               | 'error'
+        '4.9'               | 'no error'
+    }
+
     def setupSingleProject() {
         buildFile << """\
             plugins {

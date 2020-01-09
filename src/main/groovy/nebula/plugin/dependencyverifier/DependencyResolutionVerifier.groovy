@@ -47,7 +47,9 @@ class DependencyResolutionVerifier {
         boolean parallelProjectExecutionEnabled = project.gradle.startParameter.isParallelProjectExecutionEnabled()
 
         project.gradle.taskGraph.whenReady { taskGraph ->
-            LinkedList tasks = taskGraph.executionPlan.executionQueue
+            LinkedList tasks = GradleVersionUtils.currentGradleVersionIsLessThan("5.0")
+                    ? taskGraph.taskExecutionPlan.executionQueue // the method name before Gradle 5.0
+                    : taskGraph.executionPlan.executionQueue // the method name as of Gradle 5.0
 
             List<Task> safeTasks
             if (parallelProjectExecutionEnabled) {
