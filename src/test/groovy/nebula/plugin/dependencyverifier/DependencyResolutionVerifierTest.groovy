@@ -265,6 +265,43 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     }
 
     @Unroll
+    def 'specify configurations to ignore via property via #setupStyle'() {
+        given:
+        setupSingleProject()
+
+        if (setupStyle == 'properties file') {
+            def file = new File("${projectDir}/gradle.properties")
+            file << """
+                dependencyResolutionVerifier.configurationsToExclude=specialConfig,otherSpecialConfig
+                """.stripIndent()
+        }
+
+        buildFile << """
+            configurations {
+                specialConfig
+                otherSpecialConfig
+            }
+            dependencies {
+                specialConfig 'not.available:apricot:1.0.0' // not available
+                otherSpecialConfig 'not.available:banana-leaf:2.0.0' // not available
+            }
+            """.stripIndent()
+
+        when:
+        def tasks = ['dependencies']
+        if (setupStyle == 'command line') {
+            tasks += '-PdependencyResolutionVerifier.configurationsToExclude=specialConfig,otherSpecialConfig'
+        }
+        def results = runTasks(*tasks)
+
+        then:
+        !results.output.contains('> Failed to resolve the following dependencies:')
+
+        where:
+        setupStyle << ['command line', 'properties file']
+    }
+
+    @Unroll
     def 'with Gradle version #gradleVersionToTest - expecting #expecting'() {
         given:
         gradleVersion = gradleVersionToTest

@@ -35,11 +35,15 @@ import org.gradle.internal.resolve.ModuleVersionResolveException
 class DependencyResolutionVerifier {
     private static final Logger LOGGER = Logging.getLogger(DependencyResolutionVerifier.class)
     private static final String UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD = 'dependencyResolutionVerifier.unresolvedDependenciesFailTheBuild'
+    private static final String CONFIGURATIONS_TO_EXCLUDE = 'dependencyResolutionVerifier.configurationsToExclude'
 
     static void verifySuccessfulResolution(Project project) {
         Boolean unresolvedDependenciesShouldFailTheBuild = project.hasProperty(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD)
                 ? (project.property(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD) as String).toBoolean()
                 : true
+        Set<String> configurationsToExclude = project.hasProperty(CONFIGURATIONS_TO_EXCLUDE)
+                ? (project.property(CONFIGURATIONS_TO_EXCLUDE) as String).split(",") as Set<String>
+                : []
 
         Map<String, Set<Configuration>> failedDepsByConf = new HashMap<String, Set<Configuration>>()
         Set<String> lockedDepsOutOfDate = new HashSet<>()
@@ -99,7 +103,8 @@ class DependencyResolutionVerifier {
                             project.configurations.matching { // returns a live collection
                                 (it as Configuration).state != Configuration.State.UNRESOLVED &&
                                         // the configurations `incrementalScalaAnalysisFor_x_` are resolvable only from a scala context
-                                        !(it as Configuration).name.startsWith('incrementalScala')
+                                        !(it as Configuration).name.startsWith('incrementalScala') &&
+                                        !configurationsToExclude.contains((it as Configuration).name)
                             }.all { conf ->
                                 assert conf instanceof Configuration
 
