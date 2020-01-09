@@ -299,6 +299,9 @@ test.nebula:b:1.1.0
         // the configurations `incrementalScalaAnalysisFor_x_` are resolvable only from a scala context, and extend from `compile` and `implementation`
         // https://github.com/gradle/gradle/blob/master/subprojects/scala/src/main/java/org/gradle/api/plugins/scala/ScalaBasePlugin.java#L143
         given:
+        if (conf == 'compile') {
+            System.setProperty("ignoreDeprecations", "true")
+        }
         createSingleProjectBaseline('scala', conf)
 
         when:
@@ -316,6 +319,10 @@ test.nebula:b:1.1.0
         results.output.contains("> Failed to resolve the following dependencies")
         results.output.contains(failedResolutionDependencies())
 
+        if (conf == 'compile') {
+            System.setProperty("ignoreDeprecations", "false")
+        }
+        
         where:
         conf             | lockArg
         'compile'        | "write-locks"
