@@ -19,7 +19,7 @@ import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.utils.CoreLocking
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
-import nebula.plugin.dependencylock.utils.DependencyResolutionVerifier
+import nebula.plugin.dependencyverifier.DependencyResolutionVerifier
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -65,6 +65,13 @@ class DependencyLockPlugin : Plugin<Project> {
         this.project = project
         this.lockReader = DependencyLockReader(project)
 
+        if (!project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)) {
+            /* MigrateToCoreLocks can be involved with migrating dependencies that were previously unlocked.
+               Verifying resolution based on the base lockfiles causes a `LockOutOfDateException` from the initial DependencyLockingArtifactVisitor state
+            */
+            DependencyResolutionVerifier.verifySuccessfulResolution(project)
+        }
+
         val extension = project.extensions.create(EXTENSION_NAME, DependencyLockExtension::class.java)
         var commitExtension = project.rootProject.extensions.findByType(DependencyLockCommitExtension::class.java)
         if (commitExtension == null) {
@@ -78,12 +85,6 @@ class DependencyLockPlugin : Plugin<Project> {
             val coreLockingHelper = CoreLockingHelper(project)
             coreLockingHelper.lockSelectedConfigurations(extension.configurationNames)
 
-            if (!project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)) {
-                /* MigrateToCoreLocks can be involved with migrating dependencies that were previously unlocked.
-                   Verifying resolution based on the base lockfiles causes a `LockOutOfDateException` from the initial DependencyLockingArtifactVisitor state
-                */
-                DependencyResolutionVerifier.verifySuccessfulResolution(project)
-            }
             coreLockingHelper.disableCachingWhenUpdatingDependencies()
             coreLockingHelper.notifyWhenUsingOfflineMode()
 
