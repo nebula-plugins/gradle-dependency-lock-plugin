@@ -64,7 +64,7 @@ test.nebula:b:1.1.0
         when:
         buildFile << MIX_OF_RESOLVABLE_AND_UNRESOLVABLE_DEPENDENCIES
 
-        def results = runTasks(*tasks(lockArg), '-PdependencyLock.unresolvedDependenciesFailTheBuild=false')
+        def results = runTasks(*tasks(lockArg), '-PdependencyResolutionVerifier.unresolvedDependenciesFailTheBuild=false')
 
         then:
         results.output.contains("Failed to resolve the following dependencies")

@@ -34,7 +34,7 @@ import org.gradle.internal.resolve.ModuleVersionResolveException
 
 class DependencyResolutionVerifier {
     private static final Logger LOGGER = Logging.getLogger(DependencyResolutionVerifier.class)
-    private static final String UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD = 'dependencyLock.unresolvedDependenciesFailTheBuild'
+    private static final String UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD = 'dependencyResolutionVerifier.unresolvedDependenciesFailTheBuild'
 
     static void verifySuccessfulResolution(Project project) {
         Boolean unresolvedDependenciesShouldFailTheBuild = project.hasProperty(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD)
