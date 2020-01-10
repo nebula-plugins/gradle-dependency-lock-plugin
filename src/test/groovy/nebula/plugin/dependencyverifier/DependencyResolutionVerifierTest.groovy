@@ -125,6 +125,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         buildFile << """
             dependencies {
                 implementation 'test.nebula:c' // version is missing
+                implementation 'test.nebula:d' // version is missing
             }
             """.stripIndent()
 
@@ -136,6 +137,9 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         results.output.contains('Execution failed for task')
         results.output.contains('> Failed to resolve the following dependencies:')
         results.output.contains("1. Failed to resolve 'test.nebula:c' for project")
+        results.output.contains("2. Failed to resolve 'test.nebula:d' for project")
+        results.output.contains("The following dependencies are missing a version: test.nebula:c, test.nebula:d")
+        results.output.contains("If you have been using a BOM")
 
         where:
         tasks                                         | description
