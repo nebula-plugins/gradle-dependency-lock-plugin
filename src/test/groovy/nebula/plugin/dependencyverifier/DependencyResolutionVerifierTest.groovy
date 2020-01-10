@@ -306,6 +306,44 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     }
 
     @Unroll
+    def 'displays error once with finalizers - #tasks'() {
+        given:
+        setupSingleProject()
+
+        buildFile << """
+            dependencies {
+                implementation 'not.available:a'
+            }
+            task myFinalizingTask {
+                println "Here's a great finalizing message"
+            }
+            task goodbye {
+                println "Goodbye!"
+            }
+            project.tasks.configureEach { Task task ->
+                if (task.name != 'myFinalizingTask' && task.name != 'clean') {
+                    task.finalizedBy project.tasks.named('myFinalizingTask')
+                }
+                if (task.name != 'myFinalizingTask' && task.name != 'goodbye' && task.name != 'clean') {
+                    task.finalizedBy project.tasks.named('goodbye')
+                }
+            }
+            """.stripIndent()
+
+        when:
+        def results = runTasksAndFail(*tasks)
+
+        then:
+        results.output.contains('FAILURE')
+        results.output.contains('Execution failed for task')
+        results.output.findAll("> Failed to resolve the following dependencies:\n" +
+                "    1. Failed to resolve 'not.available:a' for project").size() == 1
+
+        where:
+        tasks << [['build'], ['build', '--parallel']]
+    }
+
+    @Unroll
     def 'with Gradle version #gradleVersionToTest - expecting #expecting'() {
         given:
         gradleVersion = gradleVersionToTest

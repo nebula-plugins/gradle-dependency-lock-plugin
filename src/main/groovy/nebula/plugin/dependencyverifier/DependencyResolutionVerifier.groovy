@@ -30,6 +30,7 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.TaskState
 import org.gradle.internal.locking.LockOutOfDateException
+import org.gradle.internal.resolve.ArtifactResolveException
 import org.gradle.internal.resolve.ModuleVersionResolveException
 
 class DependencyResolutionVerifier {
@@ -49,6 +50,8 @@ class DependencyResolutionVerifier {
         Set<String> lockedDepsOutOfDate = new HashSet<>()
 
         boolean parallelProjectExecutionEnabled = project.gradle.startParameter.isParallelProjectExecutionEnabled()
+
+        boolean providedErrorMessageForThisProject = false
 
         project.gradle.taskGraph.whenReady { taskGraph ->
             LinkedList tasks = GradleVersionUtils.currentGradleVersionIsLessThan("5.0")
@@ -72,7 +75,6 @@ class DependencyResolutionVerifier {
 
             Map tasksGroupedByTaskIdentityAcrossProjects = tasks.groupBy { task -> task.toString().split(':').last() }
 
-
             taskGraph.addTaskExecutionListener(new TaskExecutionListener() {
                 @Override
                 void beforeExecute(Task task) {
@@ -83,7 +85,7 @@ class DependencyResolutionVerifier {
                 void afterExecute(Task task, TaskState taskState) {
                     boolean taskIsSafeToAccess = safeTasks.contains(task)
 
-                    if (taskIsSafeToAccess) {
+                    if (taskIsSafeToAccess && !providedErrorMessageForThisProject) {
                         String simpleTaskName = task.toString().replace("'", '').split(':').last()
                         Task lastTaskEvaluatedWithSameName = tasksGroupedByTaskIdentityAcrossProjects
                                 .get(simpleTaskName)
@@ -111,7 +113,7 @@ class DependencyResolutionVerifier {
                                 LOGGER.debug("$conf has state ${conf.state}. Starting dependency resolution verification.")
                                 try {
                                     conf.resolvedConfiguration.resolvedArtifacts
-                                } catch (ResolveException | ModuleVersionResolveException e) {
+                                } catch (ResolveException | ModuleVersionResolveException | ArtifactResolveException e) {
                                     e.causes.each {
                                         if (LockOutOfDateException.class == it.class) {
                                             lockedDepsOutOfDate.add(it.getMessage())
@@ -172,6 +174,8 @@ class DependencyResolutionVerifier {
                                 } catch (Exception e) {
                                     throw new BuildCancelledException("Error creating message regarding failed dependencies", e)
                                 }
+
+                                providedErrorMessageForThisProject = true
                                 if (unresolvedDependenciesShouldFailTheBuild) {
                                     LOGGER.debug(debugMessage.join('\n'))
                                     throw new DependencyResolutionException(message.join('\n'))
