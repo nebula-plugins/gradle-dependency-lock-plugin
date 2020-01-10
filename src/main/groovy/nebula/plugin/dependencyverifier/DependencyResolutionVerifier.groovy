@@ -133,6 +133,7 @@ class DependencyResolutionVerifier {
                             if (failedDepsByConf.size() != 0 || lockedDepsOutOfDate.size() != 0) {
                                 List<String> message = new ArrayList<>()
                                 List<String> debugMessage = new ArrayList<>()
+                                List<String> depsMissingVersions = new ArrayList<>()
                                 try {
                                     if (failedDepsByConf.size() > 0) {
                                         message.add("Failed to resolve the following dependencies:")
@@ -149,6 +150,9 @@ class DependencyResolutionVerifier {
                                                         .each { failedConf ->
                                                             debugMessage.add("  - $failedConf")
                                                         }
+                                                if (dep.split(':').size() < 3) {
+                                                    depsMissingVersions.add(dep)
+                                                }
                                             }
 
                                     if (lockedDepsOutOfDate.size() > 0) {
@@ -159,6 +163,11 @@ class DependencyResolutionVerifier {
                                             .eachWithIndex { outOfDateMessage, index ->
                                                 message.add("  ${index + 1}. $outOfDateMessage for project '${project.name}'")
                                             }
+
+                                    if (depsMissingVersions.size() > 0) {
+                                        message.add("The following dependencies are missing a version: ${depsMissingVersions.join(', ')}\n" +
+                                                "Please add a version to fix this. If you have been using a BOM, perhaps these dependencies are no longer managed.")
+                                    }
 
                                 } catch (Exception e) {
                                     throw new BuildCancelledException("Error creating message regarding failed dependencies", e)
