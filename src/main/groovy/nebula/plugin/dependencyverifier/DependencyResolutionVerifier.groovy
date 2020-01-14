@@ -67,8 +67,8 @@ class DependencyResolutionVerifier {
                                     : task.owningProject // the method name as of Gradle 6.0
                         }
                         .find { proj, tasksForProj -> proj == project }
-                        .value
-                        .collect { it -> it.task }
+                        ?.value
+                        ?.collect { it -> it.task }
             } else {
                 safeTasks = tasks.collect { it -> it.task }
             }
