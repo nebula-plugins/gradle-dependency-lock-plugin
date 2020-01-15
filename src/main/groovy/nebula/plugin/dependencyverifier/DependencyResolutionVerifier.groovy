@@ -75,6 +75,10 @@ class DependencyResolutionVerifier {
 
             Map tasksGroupedByTaskIdentityAcrossProjects = tasks.groupBy { task -> task.toString().split(':').last() }
 
+            if(!safeTasks) {
+                return
+            }
+
             taskGraph.addTaskExecutionListener(new TaskExecutionListener() {
                 @Override
                 void beforeExecute(Task task) {
