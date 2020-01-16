@@ -384,7 +384,139 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         '4.9'               | 'no error'
     }
 
-    def setupSingleProject() {
+    @Unroll
+    def 'handles task configuration issue due to #failureType'() {
+        given:
+        setupSingleProject()
+        setupTaskThatRequiresResolvedConfiguration(buildFile)
+        forwardOutput = true
+
+        buildFile << """
+            dependencies {
+                implementation '$dependency'
+            }
+            """.stripIndent()
+
+        when:
+        def results = runTasksAndFail('build')
+
+        then:
+        assert results.output.contains('FAILURE')
+        assert results.output.contains('> Failed to resolve the following dependencies:')
+        assert results.output.contains("1. Failed to resolve '${actualMissingDep ?: dependency}' for project")
+
+        where:
+        failureType                | dependency                       | actualMissingDep
+        'missing version'          | 'not.available:a'                | null
+        'direct dep not found'     | 'not.available:a:1.0.0'          | null
+        'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
+    }
+
+    @Unroll
+    def 'handles task configuration issue due to #failureType - multiproject'() {
+        given:
+        setupMultiProject()
+
+        def sub1BuildFile = new File(projectDir, 'sub1/build.gradle')
+        def sub2BuildFile = new File(projectDir, 'sub2/build.gradle')
+
+        setupTaskThatRequiresResolvedConfiguration(sub1BuildFile)
+        setupTaskThatRequiresResolvedConfiguration(sub2BuildFile)
+
+        sub1BuildFile << """ \
+        dependencies {
+            implementation '$dependency'
+        }
+        """.stripIndent()
+
+        def sub2Dependency = dependency.replace(':a', ':b')
+        sub2BuildFile << """
+        dependencies {
+            implementation '$sub2Dependency'
+        }
+        """.stripIndent()
+
+        when:
+        def results = runTasksAndFail('build')
+
+        then:
+        assert results.output.contains('FAILURE')
+        assert results.output.contains('> Failed to resolve the following dependencies:')
+        assert results.output.contains("1. Failed to resolve '${actualMissingDep ?: dependency}' for project 'sub1'")
+        assert !results.output.contains("for project 'sub2'")
+
+        where:
+        failureType                | dependency                       | actualMissingDep
+        'missing version'          | 'not.available:a'                | null
+        'direct dep not found'     | 'not.available:a:1.0.0'          | null
+        'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
+    }
+
+    @Unroll
+    def 'handles task configuration issue due to #failureType - multiproject and parallel'() {
+        given:
+        setupMultiProject()
+
+        def sub1BuildFile = new File(projectDir, 'sub1/build.gradle')
+        def sub2BuildFile = new File(projectDir, 'sub2/build.gradle')
+
+        setupTaskThatRequiresResolvedConfiguration(sub1BuildFile)
+        setupTaskThatRequiresResolvedConfiguration(sub2BuildFile)
+
+        sub1BuildFile << """ 
+        dependencies {
+            implementation '$dependency'
+        }
+        """.stripIndent()
+
+        def sub2Dependency = dependency.replace(':a', ':b')
+        sub2BuildFile << """
+        dependencies {
+            implementation '$sub2Dependency'
+        }
+        """.stripIndent()
+
+        when:
+        def results = runTasksAndFail('build')
+
+        then:
+        assert results.output.contains('FAILURE')
+        assert results.output.contains('> Failed to resolve the following dependencies:')
+        assert results.output.contains("1. Failed to resolve '${actualMissingDep ?: dependency}' for project 'sub1'")
+        assert !results.output.contains("for project 'sub2'")
+
+        where:
+        failureType                | dependency                       | actualMissingDep
+        'missing version'          | 'not.available:a'                | null
+        'direct dep not found'     | 'not.available:a:1.0.0'          | null
+        'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
+    }
+
+    private static void setupTaskThatRequiresResolvedConfiguration(File specificBuildFile) {
+        assert specificBuildFile != null
+
+        specificBuildFile << """
+            class MyTask extends DefaultTask {
+                @Input
+                List<String> dependenciesAsStrings = new ArrayList<>()
+                public List<String> dependenciesAsStrings() {
+                    return this.dependenciesAsStrings
+                }
+            }
+            TaskProvider<MyTask> myTask = tasks.register('myTask', MyTask)
+            myTask.configure { task ->
+                doLast {
+                    def resolvedArtifacts = project.configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.collect { it.toString() }
+                    task.dependenciesAsStrings = resolvedArtifacts
+                    
+                    println("Resolved artifacts: \${resolvedArtifacts.join(', ')}")
+                }
+            }
+            project.tasks.named('build').get().dependsOn(myTask)
+            """.stripIndent()
+    }
+
+    private void setupSingleProject() {
         buildFile << """\
             plugins {
                 id 'nebula.dependency-lock'
@@ -402,7 +534,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         writeHelloWorld()
     }
 
-    def setupMultiProject() {
+    private void setupMultiProject() {
         buildFile.delete()
         buildFile.createNewFile()
         buildFile << """

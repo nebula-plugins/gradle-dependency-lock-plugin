@@ -20,6 +20,7 @@ package nebula.plugin.dependencyverifier
 
 import nebula.plugin.dependencylock.utils.GradleVersionUtils
 import nebula.plugin.dependencyverifier.exceptions.DependencyResolutionException
+import org.gradle.BuildResult
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -29,8 +30,10 @@ import org.gradle.api.execution.TaskExecutionListener
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.TaskState
+import org.gradle.internal.exceptions.DefaultMultiCauseException
 import org.gradle.internal.locking.LockOutOfDateException
 import org.gradle.internal.resolve.ArtifactResolveException
+import org.gradle.internal.resolve.ModuleVersionNotFoundException
 import org.gradle.internal.resolve.ModuleVersionResolveException
 
 class DependencyResolutionVerifier {
@@ -52,6 +55,112 @@ class DependencyResolutionVerifier {
         boolean parallelProjectExecutionEnabled = project.gradle.startParameter.isParallelProjectExecutionEnabled()
 
         boolean providedErrorMessageForThisProject = false
+
+        Closure logOrThrowOnFailedDependencies = { from ->
+            if (failedDepsByConf.size() != 0 || lockedDepsOutOfDate.size() != 0) {
+                List<String> message = new ArrayList<>()
+                List<String> debugMessage = new ArrayList<>()
+                List<String> depsMissingVersions = new ArrayList<>()
+                try {
+                    if (failedDepsByConf.size() > 0) {
+                        message.add("Failed to resolve the following dependencies:")
+                    }
+                    failedDepsByConf
+                            .sort()
+                            .eachWithIndex { kv, index ->
+                                def dep = kv.key
+                                def failedConfs = kv.value
+                                message.add("  ${index + 1}. Failed to resolve '$dep' for project '${project.name}'")
+                                debugMessage.add("Failed to resolve $dep on:")
+                                failedConfs
+                                        .sort { a, b -> a.name <=> b.name }
+                                        .each { failedConf ->
+                                            debugMessage.add("  - $failedConf")
+                                        }
+                                if (dep.split(':').size() < 3) {
+                                    depsMissingVersions.add(dep)
+                                }
+                            }
+
+                    if (lockedDepsOutOfDate.size() > 0) {
+                        message.add('Resolved dependencies were missing from the lock state:')
+                    }
+                    lockedDepsOutOfDate
+                            .sort()
+                            .eachWithIndex { outOfDateMessage, index ->
+                                message.add("  ${index + 1}. $outOfDateMessage for project '${project.name}'")
+                            }
+
+                    if (depsMissingVersions.size() > 0) {
+                        message.add("The following dependencies are missing a version: ${depsMissingVersions.join(', ')}\n" +
+                                "Please add a version to fix this. If you have been using a BOM, perhaps these dependencies are no longer managed.")
+                    }
+
+                } catch (Exception e) {
+                    throw new BuildCancelledException("Error creating message regarding failed dependencies", e)
+                }
+
+                providedErrorMessageForThisProject = true
+                debugMessage.add("Dependency resolution verification triggered from $from")
+                if (unresolvedDependenciesShouldFailTheBuild) {
+                    LOGGER.debug(debugMessage.join('\n'))
+                    throw new DependencyResolutionException(message.join('\n'))
+                } else {
+                    LOGGER.debug(debugMessage.join('\n'))
+                    LOGGER.warn(message.join('\n'))
+                }
+            }
+        }
+
+        project.gradle.buildFinished() { buildResult ->
+            assert buildResult instanceof BuildResult
+            boolean buildFailed = buildResult.failure != null
+            if (!providedErrorMessageForThisProject && buildFailed) {
+                def failureCause = buildResult.failure?.cause?.cause
+                if (failureCause == null || !(failureCause instanceof DefaultMultiCauseException)) {
+                    return
+                }
+                def moduleVersionNotFoundCauses = failureCause.causes.findAll {
+                    it.class == ModuleVersionNotFoundException
+                }
+                if (moduleVersionNotFoundCauses.size() > 0) {
+                    String buildResultFailureMessage = failureCause.message
+                    def split = buildResultFailureMessage.split(':')
+                    String projectNameFromFailure = ''
+                    if (split.size() == 3) {
+                        projectNameFromFailure = split[1]
+                    }
+                    if (project.name == projectNameFromFailure) {
+                        LOGGER.debug("Starting dependency resolution verification after the build has completed: ${buildResultFailureMessage}")
+
+                        Configuration conf = null
+                        try {
+                            def confName = buildResultFailureMessage.replace('.', '').split('for ')[1]
+                            conf = project.configurations
+                                    .findAll { it.toString() == confName }
+                                    .first()
+                            LOGGER.debug("Found $conf from $confName")
+                        } catch (Exception e) {
+                            throw new BuildCancelledException("Error finding configuration associated with build failure from '${buildResultFailureMessage}'", e)
+                        }
+
+                        moduleVersionNotFoundCauses.each { it ->
+                            def dep = it.selector.toString()
+                            if (failedDepsByConf.containsKey(dep)) {
+                                failedDepsByConf.get(dep).add(conf as Configuration)
+                            } else {
+                                Set<Configuration> failedConfs = new HashSet<Configuration>()
+                                failedConfs.add(conf as Configuration)
+
+                                failedDepsByConf.put(dep, failedConfs)
+                            }
+                        }
+
+                        logOrThrowOnFailedDependencies("buildFinished event")
+                    }
+                }
+            }
+        }
 
         project.gradle.taskGraph.whenReady { taskGraph ->
             LinkedList tasks = GradleVersionUtils.currentGradleVersionIsLessThan("5.0")
@@ -107,14 +216,12 @@ class DependencyResolutionVerifier {
 
                         if (lastChanceToThrowExceptionWithTaskOfThisIdentity || taskHasFailed) {
                             project.configurations.matching { // returns a live collection
-                                (it as Configuration).state != Configuration.State.UNRESOLVED &&
-                                        // the configurations `incrementalScalaAnalysisFor_x_` are resolvable only from a scala context
-                                        !(it as Configuration).name.startsWith('incrementalScala') &&
-                                        !configurationsToExclude.contains((it as Configuration).name)
+                                assert it instanceof Configuration
+                                configurationIsResolvedAndMatches(it, configurationsToExclude)
                             }.all { conf ->
                                 assert conf instanceof Configuration
 
-                                LOGGER.debug("$conf has state ${conf.state}. Starting dependency resolution verification.")
+                                LOGGER.debug("$conf in ${project.name} has state ${conf.state}. Starting dependency resolution verification.")
                                 try {
                                     conf.resolvedConfiguration.resolvedArtifacts
                                 } catch (ResolveException | ModuleVersionResolveException | ArtifactResolveException e) {
@@ -136,58 +243,7 @@ class DependencyResolutionVerifier {
                                 }
                             }
 
-                            if (failedDepsByConf.size() != 0 || lockedDepsOutOfDate.size() != 0) {
-                                List<String> message = new ArrayList<>()
-                                List<String> debugMessage = new ArrayList<>()
-                                List<String> depsMissingVersions = new ArrayList<>()
-                                try {
-                                    if (failedDepsByConf.size() > 0) {
-                                        message.add("Failed to resolve the following dependencies:")
-                                    }
-                                    failedDepsByConf
-                                            .sort()
-                                            .eachWithIndex { it, index ->
-                                                def dep = it.key
-                                                def failedConfs = it.value
-                                                message.add("  ${index + 1}. Failed to resolve '$dep' for project '${project.name}'")
-                                                debugMessage.add("Failed to resolve $dep on:")
-                                                failedConfs
-                                                        .sort { a, b -> a.name <=> b.name }
-                                                        .each { failedConf ->
-                                                            debugMessage.add("  - $failedConf")
-                                                        }
-                                                if (dep.split(':').size() < 3) {
-                                                    depsMissingVersions.add(dep)
-                                                }
-                                            }
-
-                                    if (lockedDepsOutOfDate.size() > 0) {
-                                        message.add('Resolved dependencies were missing from the lock state:')
-                                    }
-                                    lockedDepsOutOfDate
-                                            .sort()
-                                            .eachWithIndex { outOfDateMessage, index ->
-                                                message.add("  ${index + 1}. $outOfDateMessage for project '${project.name}'")
-                                            }
-
-                                    if (depsMissingVersions.size() > 0) {
-                                        message.add("The following dependencies are missing a version: ${depsMissingVersions.join(', ')}\n" +
-                                                "Please add a version to fix this. If you have been using a BOM, perhaps these dependencies are no longer managed.")
-                                    }
-
-                                } catch (Exception e) {
-                                    throw new BuildCancelledException("Error creating message regarding failed dependencies", e)
-                                }
-
-                                providedErrorMessageForThisProject = true
-                                if (unresolvedDependenciesShouldFailTheBuild) {
-                                    LOGGER.debug(debugMessage.join('\n'))
-                                    throw new DependencyResolutionException(message.join('\n'))
-                                } else {
-                                    LOGGER.debug(debugMessage.join('\n'))
-                                    LOGGER.warn(message.join('\n'))
-                                }
-                            }
+                            logOrThrowOnFailedDependencies("${task}")
                         }
                     }
                 }
@@ -195,5 +251,12 @@ class DependencyResolutionVerifier {
 
             )
         }
+    }
+
+    private static boolean configurationIsResolvedAndMatches(Configuration conf, Set<String> configurationsToExclude) {
+        return (conf as Configuration).state != Configuration.State.UNRESOLVED &&
+                // the configurations `incrementalScalaAnalysisFor_x_` are resolvable only from a scala context
+                !(conf as Configuration).name.startsWith('incrementalScala') &&
+                !configurationsToExclude.contains((conf as Configuration).name)
     }
 }
