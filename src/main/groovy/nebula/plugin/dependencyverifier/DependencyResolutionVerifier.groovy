@@ -20,6 +20,7 @@ package nebula.plugin.dependencyverifier
 
 import nebula.plugin.dependencylock.utils.GradleVersionUtils
 import nebula.plugin.dependencyverifier.exceptions.DependencyResolutionException
+import org.gradle.BuildResult
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -29,8 +30,10 @@ import org.gradle.api.execution.TaskExecutionListener
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.TaskState
+import org.gradle.internal.exceptions.DefaultMultiCauseException
 import org.gradle.internal.locking.LockOutOfDateException
 import org.gradle.internal.resolve.ArtifactResolveException
+import org.gradle.internal.resolve.ModuleVersionNotFoundException
 import org.gradle.internal.resolve.ModuleVersionResolveException
 
 class DependencyResolutionVerifier {
@@ -105,6 +108,56 @@ class DependencyResolutionVerifier {
                 } else {
                     LOGGER.debug(debugMessage.join('\n'))
                     LOGGER.warn(message.join('\n'))
+                }
+            }
+        }
+
+        project.gradle.buildFinished() { buildResult ->
+            assert buildResult instanceof BuildResult
+            boolean buildFailed = buildResult.failure != null
+            if (!providedErrorMessageForThisProject && buildFailed) {
+                def failureCause = buildResult.failure?.cause?.cause
+                if (failureCause == null || !(failureCause instanceof DefaultMultiCauseException)) {
+                    return
+                }
+                def moduleVersionNotFoundCauses = failureCause.causes.findAll {
+                    it.class == ModuleVersionNotFoundException
+                }
+                if (moduleVersionNotFoundCauses.size() > 0) {
+                    String buildResultFailureMessage = failureCause.message
+                    def split = buildResultFailureMessage.split(':')
+                    String projectNameFromFailure = ''
+                    if (split.size() == 3) {
+                        projectNameFromFailure = split[1]
+                    }
+                    if (project.name == projectNameFromFailure) {
+                        LOGGER.debug("Starting dependency resolution verification after the build has completed: ${buildResultFailureMessage}")
+
+                        Configuration conf = null
+                        try {
+                            def confName = buildResultFailureMessage.replace('.', '').split('for ')[1]
+                            conf = project.configurations
+                                    .findAll { it.toString() == confName }
+                                    .first()
+                            LOGGER.debug("Found $conf from $confName")
+                        } catch (Exception e) {
+                            throw new BuildCancelledException("Error finding configuration associated with build failure from '${buildResultFailureMessage}'", e)
+                        }
+
+                        moduleVersionNotFoundCauses.each { it ->
+                            def dep = it.selector.toString()
+                            if (failedDepsByConf.containsKey(dep)) {
+                                failedDepsByConf.get(dep).add(conf as Configuration)
+                            } else {
+                                Set<Configuration> failedConfs = new HashSet<Configuration>()
+                                failedConfs.add(conf as Configuration)
+
+                                failedDepsByConf.put(dep, failedConfs)
+                            }
+                        }
+
+                        logOrThrowOnFailedDependencies("buildFinished event")
+                    }
                 }
             }
         }
