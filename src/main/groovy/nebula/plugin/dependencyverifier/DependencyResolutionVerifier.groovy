@@ -42,13 +42,7 @@ class DependencyResolutionVerifier {
     private static final String CONFIGURATIONS_TO_EXCLUDE = 'dependencyResolutionVerifier.configurationsToExclude'
 
     static void verifySuccessfulResolution(Project project) {
-        Boolean unresolvedDependenciesShouldFailTheBuild = project.hasProperty(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD)
-                ? (project.property(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD) as String).toBoolean()
-                : true
-        Set<String> configurationsToExclude = project.hasProperty(CONFIGURATIONS_TO_EXCLUDE)
-                ? (project.property(CONFIGURATIONS_TO_EXCLUDE) as String).split(",") as Set<String>
-                : []
-
+        def extension = project.rootProject.extensions.findByType(DependencyResolutionVerifierExtension)
         Map<String, Set<Configuration>> failedDepsByConf = new HashMap<String, Set<Configuration>>()
         Set<String> lockedDepsOutOfDate = new HashSet<>()
 
@@ -93,7 +87,8 @@ class DependencyResolutionVerifier {
 
                     if (depsMissingVersions.size() > 0) {
                         message.add("The following dependencies are missing a version: ${depsMissingVersions.join(', ')}\n" +
-                                "Please add a version to fix this. If you have been using a BOM, perhaps these dependencies are no longer managed.")
+                                "Please add a version to fix this. If you have been using a BOM, perhaps these dependencies are no longer managed. \n"
+                                + extension.missingVersionsMessageAddition)
                     }
 
                 } catch (Exception e) {
@@ -102,6 +97,10 @@ class DependencyResolutionVerifier {
 
                 providedErrorMessageForThisProject = true
                 debugMessage.add("Dependency resolution verification triggered from $from")
+
+                Boolean unresolvedDependenciesShouldFailTheBuild = project.hasProperty(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD)
+                        ? (project.property(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD) as String).toBoolean()
+                        : (extension.shouldFailTheBuild as String).toBoolean()
                 if (unresolvedDependenciesShouldFailTheBuild) {
                     LOGGER.debug(debugMessage.join('\n'))
                     throw new DependencyResolutionException(message.join('\n'))
@@ -184,7 +183,7 @@ class DependencyResolutionVerifier {
 
             Map tasksGroupedByTaskIdentityAcrossProjects = tasks.groupBy { task -> task.toString().split(':').last() }
 
-            if(!safeTasks) {
+            if (!safeTasks) {
                 return
             }
 
@@ -197,8 +196,9 @@ class DependencyResolutionVerifier {
                 @Override
                 void afterExecute(Task task, TaskState taskState) {
                     boolean taskIsSafeToAccess = safeTasks.contains(task)
+                    boolean taskIsNotExcluded = !extension.tasksToExclude.contains(task.name)
 
-                    if (taskIsSafeToAccess && !providedErrorMessageForThisProject) {
+                    if (taskIsSafeToAccess && taskIsNotExcluded && !providedErrorMessageForThisProject) {
                         String simpleTaskName = task.toString().replace("'", '').split(':').last()
                         Task lastTaskEvaluatedWithSameName = tasksGroupedByTaskIdentityAcrossProjects
                                 .get(simpleTaskName)
@@ -215,6 +215,10 @@ class DependencyResolutionVerifier {
                         boolean taskHasFailed = taskState.failure
 
                         if (lastChanceToThrowExceptionWithTaskOfThisIdentity || taskHasFailed) {
+                            Set<String> configurationsToExclude = project.hasProperty(CONFIGURATIONS_TO_EXCLUDE)
+                                    ? (project.property(CONFIGURATIONS_TO_EXCLUDE) as String).split(",") as Set<String>
+                                    : extension.configurationsToExclude
+
                             project.configurations.matching { // returns a live collection
                                 assert it instanceof Configuration
                                 configurationIsResolvedAndMatches(it, configurationsToExclude)

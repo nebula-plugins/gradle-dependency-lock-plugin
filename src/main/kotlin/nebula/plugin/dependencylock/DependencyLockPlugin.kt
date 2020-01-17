@@ -20,6 +20,7 @@ import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.utils.CoreLocking
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifier
+import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -36,6 +37,7 @@ class DependencyLockPlugin : Plugin<Project> {
     companion object {
         const val EXTENSION_NAME = "dependencyLock"
         const val COMMIT_EXTENSION_NAME = "commitDependencyLock"
+        const val DEPENDENCY_RESOLTION_VERIFIER_EXTENSION = "dependencyResolutionVerifierExtension"
         const val GLOBAL_LOCK_FILE = "dependencyLock.globalLockFile"
         const val LOCK_AFTER_EVALUATING = "dependencyLock.lockAfterEvaluating"
         const val UPDATE_DEPENDENCIES = "dependencyLock.updateDependencies"
@@ -65,6 +67,10 @@ class DependencyLockPlugin : Plugin<Project> {
         this.project = project
         this.lockReader = DependencyLockReader(project)
 
+        var dependencyResolutionVerifierExtension = project.rootProject.extensions.findByType(DependencyResolutionVerifierExtension::class.java)
+        if (dependencyResolutionVerifierExtension == null) {
+            dependencyResolutionVerifierExtension = project.rootProject.extensions.create(DEPENDENCY_RESOLTION_VERIFIER_EXTENSION, DependencyResolutionVerifierExtension::class.java)
+        }
         if (!project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)) {
             /* MigrateToCoreLocks can be involved with migrating dependencies that were previously unlocked.
                Verifying resolution based on the base lockfiles causes a `LockOutOfDateException` from the initial DependencyLockingArtifactVisitor state

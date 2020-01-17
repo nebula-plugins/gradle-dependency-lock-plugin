@@ -492,6 +492,52 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
     }
 
+    @Unroll
+    def 'uses extension for #description'() {
+        given:
+        setupSingleProject()
+        forwardOutput = true
+
+        def configurationName = description == 'configurationsToExclude'
+                ? 'myConfig' : 'implementation'
+
+        buildFile << """
+            configurations { myConfig }
+            dependencies {
+                $configurationName 'not.available:a'
+            }
+            import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension 
+            plugins.withId('nebula.dependency-lock') {
+                def extension = extensions.getByType(DependencyResolutionVerifierExtension.class)
+                def list = new ArrayList<>()
+                $extensionSetting
+            }
+            """.stripIndent()
+
+        when:
+        def results
+        if (willFail) {
+            results = runTasksAndFail('dependencies')
+        } else {
+            results = runTasks('dependencies')
+        }
+
+        then:
+        if (seeErrors) {
+            assert results.output.contains('Failed to resolve the following dependencies:')
+            assert results.output.contains("1. Failed to resolve 'not.available:a' for project")
+        } else {
+            assert !results.output.contains('Failed to resolve the following dependencies:')
+        }
+
+        where:
+        extensionSetting                                                                  | description                      | willFail | seeErrors
+        'extension.missingVersionsMessageAddition = "You can find additional help at..."' | 'missingVersionsMessageAddition' | true     | true
+        'extension.shouldFailTheBuild = false'                                            | 'shouldFailTheBuild'             | false    | true
+        "list.addAll('myConfig')\n\textension.configurationsToExclude = list"             | 'configurationsToExclude'        | false    | false
+        "list.addAll('dependencies')\n\textension.tasksToExclude = list"                  | 'tasksToExclude'                 | false    | false
+    }
+
     private static void setupTaskThatRequiresResolvedConfiguration(File specificBuildFile) {
         assert specificBuildFile != null
 
