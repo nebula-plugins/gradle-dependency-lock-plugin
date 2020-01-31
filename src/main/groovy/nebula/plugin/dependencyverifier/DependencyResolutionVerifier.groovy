@@ -18,6 +18,7 @@
 
 package nebula.plugin.dependencyverifier
 
+import nebula.plugin.dependencylock.utils.ConfigurationFilters
 import nebula.plugin.dependencylock.utils.GradleVersionUtils
 import nebula.plugin.dependencyverifier.exceptions.DependencyResolutionException
 import org.gradle.BuildResult
@@ -261,6 +262,7 @@ class DependencyResolutionVerifier {
         return (conf as Configuration).state != Configuration.State.UNRESOLVED &&
                 // the configurations `incrementalScalaAnalysisFor_x_` are resolvable only from a scala context
                 !(conf as Configuration).name.startsWith('incrementalScala') &&
-                !configurationsToExclude.contains((conf as Configuration).name)
+                !configurationsToExclude.contains((conf as Configuration).name) &&
+                !ConfigurationFilters.safelyHasAResolutionAlternative(conf as Configuration)
     }
 }
