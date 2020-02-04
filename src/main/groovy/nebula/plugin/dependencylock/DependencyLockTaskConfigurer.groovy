@@ -57,7 +57,7 @@ class DependencyLockTaskConfigurer {
     public static final String SAVE_LOCK_TASK_NAME = 'saveLock'
     public static final String SAVE_GLOBAL_LOCK_TASK_NAME = 'saveGlobalLock'
 
-    final Set<String> configurationsToSkipForGlobalLock = ['checkstyle', 'findbugs', 'findbugsPlugins', 'jacocoAgent', 'jacocoAnt']
+    final Set<String> configurationsToSkipForGlobalLock = ['checkstyle', 'findbugs', 'findbugsPlugins', 'jacocoAgent', 'jacocoAnt', 'spotbugs', 'spotbugsPlugins', 'zinc']
 
     Project project
 
