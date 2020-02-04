@@ -177,9 +177,12 @@ class DependencyResolutionVerifier {
                         }
                         .find { proj, tasksForProj -> proj == project }
                         ?.value
+                        ?.findAll { it -> it.metaClass.getMetaMethod('getTask') != null }
                         ?.collect { it -> it.task }
             } else {
-                safeTasks = tasks.collect { it -> it.task }
+                safeTasks = tasks
+                        .findAll { it -> it.metaClass.getMetaMethod('getTask') != null }
+                        .collect { it -> it.task }
             }
 
             Map tasksGroupedByTaskIdentityAcrossProjects = tasks.groupBy { task -> task.toString().split(':').last() }
