@@ -1782,6 +1782,49 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         """.stripIndent()
     }
 
+    private void setupCommonMultiprojectWithPlugins() {
+        addSubproject('sub1', """\
+            dependencies {
+                implementation 'test.example:foo:2.0.0'
+            }
+        """.stripIndent())
+        addSubproject('sub2', """\
+            dependencies {
+                implementation 'test.example:foo:1.+'
+            }
+        """.stripIndent())
+
+        buildFile << """\
+            buildscript {
+              repositories {
+                maven {
+                  url "https://plugins.gradle.org/m2/"
+                }
+              }
+              dependencies {
+                classpath "com.github.spotbugs:spotbugs-gradle-plugin:3.0.0"
+              }
+            }
+
+            allprojects {
+                ${applyPlugin(DependencyLockPlugin)}
+                group = 'test'
+
+                dependencyLock {
+                    includeTransitives = true
+                }
+            }
+            subprojects {
+                apply plugin: 'scala'
+                apply plugin: "com.github.spotbugs"
+                repositories { 
+                    maven { url '${Fixture.repo}' } 
+                    mavenCentral()
+                }
+            }
+        """.stripIndent()
+    }
+
     private void setupCommonMultiprojectWithJavaLibraryPlugin() {
         addSubproject('sub1', """\
             dependencies {
@@ -1886,4 +1929,40 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         println newLock
         !newLock.contains('"test.nebula:bar"')
     }
+
+    def 'save global lock in multiproject - do not lock excluded configurations'() {
+        setupCommonMultiprojectWithPlugins()
+
+        when:
+        def zincDependencyInsight = runTasksSuccessfully(':sub1:dI', '--dependency', 'scala', '--configuration', 'zinc')
+
+        then:
+        zincDependencyInsight.standardOutput.contains('org.scala-sbt:zinc_2.12')
+
+        when:
+        runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock')
+
+        then:
+        String globalLockText = '''\
+            {
+                "_global_": {
+                    "test.example:foo": {
+                        "locked": "2.0.0",
+                        "transitive": [
+                            "test:sub1",
+                            "test:sub2"
+                        ]
+                    },
+                    "test:sub1": {
+                        "project": true
+                    },
+                    "test:sub2": {
+                        "project": true
+                    }
+                }
+            }'''.stripIndent()
+
+        new File(projectDir, 'global.lock').text == globalLockText
+    }
+
 }
