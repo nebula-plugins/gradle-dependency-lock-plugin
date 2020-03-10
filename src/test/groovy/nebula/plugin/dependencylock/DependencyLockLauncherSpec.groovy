@@ -872,7 +872,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 implementation 'test.example:bar:1.1.0'
                 special 'test.example:foo:2.0.0'
             }
-            dependencyLock.configurationNames = ['default', 'runtimeElements', 'apiElements', 'special']
+            dependencyLock.configurationNames = ['runtimeElements', 'apiElements', 'special']
         """.stripIndent())
 
         buildFile << """\
@@ -1329,7 +1329,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         "test:sub4": {
             "project": true
         }
-        '''.stripIndent(), ['default', 'runtimeClasspath', 'testRuntimeClasspath'], '''\
+        '''.stripIndent(), ['runtimeClasspath', 'testRuntimeClasspath'], '''\
         "test:sub4": {
             "project": true
         }
@@ -1361,7 +1361,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         "test:sub4": {
             "project": true
         }
-        '''.stripIndent(), ['default', 'runtimeClasspath', 'testRuntimeClasspath'], '''\
+        '''.stripIndent(), ['runtimeClasspath', 'testRuntimeClasspath'], '''\
         "test:sub4": {
             "project": true
         }
