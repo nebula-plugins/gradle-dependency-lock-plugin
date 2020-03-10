@@ -866,10 +866,9 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
     def 'uses chosen subproject configurations when creating global lock in multiproject'() {
         addSubproject('sub1', """\
             configurations {
-                special
+                special 
             }
             dependencies {
-                implementation 'test.example:bar:1.1.0'
                 special 'test.example:foo:2.0.0'
             }
             dependencyLock.configurationNames = ['runtimeElements', 'apiElements', 'special']
@@ -884,6 +883,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 apply plugin: 'java'
                 repositories { maven { url '${Fixture.repo}' } }
             }
+            
             dependencyLock {
                 includeTransitives = true
             }
@@ -896,16 +896,9 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         String globalLockText = '''\
             {
                 "_global_": {
-                    "test.example:bar": {
-                        "locked": "1.1.0",
-                        "transitive": [
-                            "test:sub1"
-                        ]
-                    },
                     "test.example:foo": {
                         "locked": "2.0.0",
                         "transitive": [
-                            "test.example:bar",
                             "test:sub1"
                         ]
                     },
