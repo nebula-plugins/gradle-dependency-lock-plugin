@@ -190,10 +190,10 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         def results = runTasks('dependencies')
 
         then:
-        results.output.contains('test.nebula:a:1.+ -> 1.1.0')
+        results.output.contains('test.nebula:a:1.+ -> 1.0.0')
         results.output.contains('test.nebula:a:{strictly 1.0.0} -> 1.0.0 ')
 
-        results.output.contains('test.nebula:b:1.+ -> 1.1.0')
+        results.output.contains('test.nebula:b:1.+ -> 1.0.0')
         results.output.contains('test.nebula:b:{strictly 1.0.0} -> 1.0.0 ')
     }
 
@@ -226,7 +226,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
         assert actualLocks.size() > expectedLocks.size()
-        def allExpectedLocks = ["archives.lockfile", "testCompileClasspath.lockfile",
+        def allExpectedLocks = ["testCompileClasspath.lockfile",
                                 "annotationProcessor.lockfile",
                                 "compileClasspath.lockfile", "jacocoAnt.lockfile", "testAnnotationProcessor.lockfile",
                                 "jacocoAgent.lockfile", "testRuntimeClasspath.lockfile",
