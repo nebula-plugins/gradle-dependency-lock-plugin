@@ -228,8 +228,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         assert actualLocks.size() > expectedLocks.size()
         def allExpectedLocks = ["archives.lockfile", "testCompileClasspath.lockfile",
                                 "annotationProcessor.lockfile",
-                                "compileClasspath.lockfile", "jacocoAnt.lockfile",
-                                "default.lockfile", "testAnnotationProcessor.lockfile",
+                                "compileClasspath.lockfile", "jacocoAnt.lockfile", "testAnnotationProcessor.lockfile",
                                 "jacocoAgent.lockfile", "testRuntimeClasspath.lockfile",
                                 "runtimeClasspath.lockfile"]
         allExpectedLocks.each {
