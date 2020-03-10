@@ -20,9 +20,9 @@ import nebula.plugin.dependencylock.utils.GradleVersionUtils
 class LockGenerator {
     static final Collection<String> DEFAULT_CONFIG_NAMES = GradleVersionUtils.currentGradleVersionIsLessThan("6.0")
             ? ['compile', 'compileClasspath', 'default', 'runtime', 'runtimeClasspath', 'testCompile', 'testCompileClasspath', 'testRuntime', 'testRuntimeClasspath']
-            : ['compileClasspath', 'default', 'runtimeClasspath', 'testCompileClasspath', 'testRuntimeClasspath']
+            : ['compileClasspath', 'runtimeClasspath', 'testCompileClasspath', 'testRuntimeClasspath']
     static final Collection<String> DEFAULT_CONFIG_NAMES_POPULATED_BY_IMPLEMENTATION_SCOPE =
-            ['compileClasspath', 'default', 'runtimeClasspath', 'testCompileClasspath', 'testRuntimeClasspath']
+            ['compileClasspath', 'runtimeClasspath', 'testCompileClasspath', 'testRuntimeClasspath']
 
     /**
      * Helper to copy the exact same lock block multiple times into different configurations
