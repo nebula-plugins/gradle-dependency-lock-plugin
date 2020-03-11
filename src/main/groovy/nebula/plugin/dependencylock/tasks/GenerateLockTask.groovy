@@ -101,7 +101,8 @@ class GenerateLockTask extends AbstractLockTask {
                     if (taskProject == project) {
                         it.canBeResolved && !ConfigurationFilters.safelyHasAResolutionAlternative(it)
                     } else {
-                        it.canBeResolved && it.canBeConsumed && !ConfigurationFilters.safelyHasAResolutionAlternative(it)
+                        //TODO: we need a better approach for global locks because `default` is going away
+                        it.canBeResolved && it.canBeConsumed && (!ConfigurationFilters.safelyHasAResolutionAlternative(it) || it.name == 'default')
                     }
                 }
             } else {

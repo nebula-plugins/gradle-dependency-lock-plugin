@@ -72,7 +72,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
         task.configurationNames = project.configurations
                 .stream()
-                .filter { it.isCanBeResolved() }
+                .filter { it.isCanBeResolved() && (it?.getResolutionAlternatives()?.isEmpty() || !it?.getResolutionAlternatives()) }
                 .collect { it.name }
                 .toSet()
 
@@ -107,7 +107,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
         task.configurationNames = project.configurations
                 .stream()
-                .filter { it.isCanBeResolved() }
+                .filter { it.isCanBeResolved() && (it?.getResolutionAlternatives()?.isEmpty() || !it?.getResolutionAlternatives()) }
                 .collect { it.name }
                 .toSet()
         task.skippedConfigurationNames = ['zinc', 'incrementalAnalysis']

@@ -27,7 +27,7 @@ class ConfigurationFiltersProjectSpec extends ProjectSpec {
         project.apply plugin: 'java-library'
     }
 
-    def "compile, compileOnly, runtime, testCompile, testCompileOnly, and testRuntime should not be resolved after Gradle 6.0"() {
+    def "archives, default, compile, compileOnly, runtime, testCompile, testCompileOnly, and testRuntime should not be resolved after Gradle 6.2"() {
         when:
         def results = project
                 .configurations
@@ -43,10 +43,14 @@ class ConfigurationFiltersProjectSpec extends ProjectSpec {
         then:
         if (GradleVersionUtils.currentGradleVersionIsLessThan('6.0')) {
             assert results.size() == 0
-        } else {
+        } else if (GradleVersionUtils.currentGradleVersionIsLessThan('6.3')) {
             assert results.size() == 6
+        } else {
+            assert results.size() == 8
 
             Collection<String> configurationNames = results.collect { (it as Configuration).name }
+            assert configurationNames.contains('default')
+            assert configurationNames.contains('archives')
             assert configurationNames.contains('compile')
             assert configurationNames.contains('compileOnly')
             assert configurationNames.contains('runtime')
@@ -56,7 +60,7 @@ class ConfigurationFiltersProjectSpec extends ProjectSpec {
         }
     }
 
-    def "facets with similar configurations should not be resolved after Gradle 6.0"() {
+    def "facets with similar configurations should not be resolved after Gradle 6.2"() {
         given:
         project.apply plugin: NebulaIntegTestPlugin.class
         project.facets {
@@ -80,10 +84,14 @@ class ConfigurationFiltersProjectSpec extends ProjectSpec {
         then:
         if (GradleVersionUtils.currentGradleVersionIsLessThan('6.0')) {
             assert results.size() == 0
-        } else {
+        }  else if (GradleVersionUtils.currentGradleVersionIsLessThan('6.3')) {
             assert results.size() == 9
+        } else {
+            assert results.size() == 11
 
             Collection<String> configurationNames = results.collect { (it as Configuration).name }
+            assert configurationNames.contains('default')
+            assert configurationNames.contains('archives')
             assert configurationNames.contains('compile')
             assert configurationNames.contains('compileOnly')
             assert configurationNames.contains('runtime')

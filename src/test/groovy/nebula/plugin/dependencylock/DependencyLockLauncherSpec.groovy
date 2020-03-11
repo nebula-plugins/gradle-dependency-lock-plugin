@@ -866,13 +866,12 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
     def 'uses chosen subproject configurations when creating global lock in multiproject'() {
         addSubproject('sub1', """\
             configurations {
-                special
+                special 
             }
             dependencies {
-                implementation 'test.example:bar:1.1.0'
                 special 'test.example:foo:2.0.0'
             }
-            dependencyLock.configurationNames = ['default', 'runtimeElements', 'apiElements', 'special']
+            dependencyLock.configurationNames = ['runtimeElements', 'apiElements', 'special']
         """.stripIndent())
 
         buildFile << """\
@@ -884,6 +883,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 apply plugin: 'java'
                 repositories { maven { url '${Fixture.repo}' } }
             }
+            
             dependencyLock {
                 includeTransitives = true
             }
@@ -896,16 +896,9 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         String globalLockText = '''\
             {
                 "_global_": {
-                    "test.example:bar": {
-                        "locked": "1.1.0",
-                        "transitive": [
-                            "test:sub1"
-                        ]
-                    },
                     "test.example:foo": {
                         "locked": "2.0.0",
                         "transitive": [
-                            "test.example:bar",
                             "test:sub1"
                         ]
                     },
@@ -1329,7 +1322,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         "test:sub4": {
             "project": true
         }
-        '''.stripIndent(), ['default', 'runtimeClasspath', 'testRuntimeClasspath'], '''\
+        '''.stripIndent(), ['runtimeClasspath', 'testRuntimeClasspath'], '''\
         "test:sub4": {
             "project": true
         }
@@ -1361,7 +1354,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         "test:sub4": {
             "project": true
         }
-        '''.stripIndent(), ['default', 'runtimeClasspath', 'testRuntimeClasspath'], '''\
+        '''.stripIndent(), ['runtimeClasspath', 'testRuntimeClasspath'], '''\
         "test:sub4": {
             "project": true
         }

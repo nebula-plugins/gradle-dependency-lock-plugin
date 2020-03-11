@@ -224,7 +224,7 @@ class DiffLockTaskSpec extends ProjectSpec {
                     "locked": "1.1.0",
                     "requested": "1.+"
                 }
-                '''.stripIndent(), ['compileClasspath', 'default', 'runtimeClasspath'],
+                '''.stripIndent(), ['compileClasspath', 'runtimeClasspath'],
                 '''\
                 "test.nebula:a": {
                     "locked": "1.1.1",
@@ -245,7 +245,7 @@ class DiffLockTaskSpec extends ProjectSpec {
         String expected = '''\
             inconsistent:
               test.nebula:a:
-                1.0.0 -> 1.1.0 [compileClasspath,default,runtimeClasspath]
+                1.0.0 -> 1.1.0 [compileClasspath,runtimeClasspath]
                 1.0.0 -> 1.1.1 [testCompileClasspath,testRuntimeClasspath]
             '''.stripIndent()
         realizedTask.diffFile.text == expected

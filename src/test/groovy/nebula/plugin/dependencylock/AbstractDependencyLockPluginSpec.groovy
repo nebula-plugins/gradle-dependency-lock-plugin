@@ -26,7 +26,6 @@ class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
             : [
             'annotationProcessor.lockfile',
             'compileClasspath.lockfile',
-            'default.lockfile',
             'runtimeClasspath.lockfile',
             'testAnnotationProcessor.lockfile',
             'testCompileClasspath.lockfile',
