@@ -42,7 +42,7 @@ contacts {
 }
 
 dependencies {
-    implementation 'com.squareup.moshi:moshi:1.8.0'
+    implementation 'com.squareup.moshi:moshi:1.+'
     implementation 'joda-time:joda-time:2.10'
     implementation 'com.netflix.nebula:nebula-gradle-interop:latest.release'
     implementation 'com.netflix.nebula:gradle-scm-plugin:latest.release'
