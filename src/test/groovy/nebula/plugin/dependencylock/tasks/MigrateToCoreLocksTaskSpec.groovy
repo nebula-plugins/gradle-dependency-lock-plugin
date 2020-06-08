@@ -895,6 +895,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
     }
 
     private static void assertFailureOccursAtPluginLevel(String text) {
-        assert text.contains("Failed to apply plugin [id 'nebula.dependency-lock']")
+        assert text.contains("Failed to apply plugin [id 'nebula.dependency-lock']") ||
+                text.contains("Failed to apply plugin 'nebula.dependency-lock'")
     }
 }
