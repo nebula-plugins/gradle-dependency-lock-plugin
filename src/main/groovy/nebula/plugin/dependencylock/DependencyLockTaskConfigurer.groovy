@@ -67,9 +67,9 @@ class DependencyLockTaskConfigurer {
 
     String configureTasks(String globalLockFilename, DependencyLockExtension extension, DependencyLockCommitExtension commitExtension, Map overrides) {
         String lockFilename = project.hasProperty(LOCK_FILE) ? project[LOCK_FILE] : null
+        File dependenciesLockFile = new File(project.buildDir, lockFilename ?: extension.lockFile)
 
         TaskProvider<GenerateLockTask> genLockTask = project.tasks.register(GENERATE_LOCK_TASK_NAME, GenerateLockTask)
-        File dependenciesLockFile = new File(project.buildDir, lockFilename ?: extension.lockFile)
 
         configureGenerateLockTask(genLockTask, dependenciesLockFile, extension, overrides)
         if (project.hasProperty(USE_GENERATED_LOCK)) {
@@ -79,7 +79,7 @@ class DependencyLockTaskConfigurer {
         TaskProvider<UpdateLockTask> updateLockTask = project.tasks.register(UPDATE_LOCK_TASK_NAME, UpdateLockTask)
         configureGenerateLockTask(updateLockTask, dependenciesLockFile, extension, overrides)
 
-        TaskProvider<SaveLockTask> saveTask = configureSaveTask(lockFilename, genLockTask.get(), updateLockTask.get(), extension)
+        TaskProvider<SaveLockTask> saveTask = configureSaveTask(lockFilename, dependenciesLockFile, genLockTask, updateLockTask, extension)
         createDeleteLock(saveTask)
 
         configureMigrateToCoreLocksTask(extension)
@@ -165,7 +165,7 @@ class DependencyLockTaskConfigurer {
         }
     }
 
-    private TaskProvider<SaveLockTask> configureSaveTask(String lockFileName, GenerateLockTask lockTask, UpdateLockTask updateTask, DependencyLockExtension extension) {
+    private TaskProvider<SaveLockTask> configureSaveTask(String lockFileName, File dependenciesLockFile, TaskProvider<GenerateLockTask> lockTask, TaskProvider<UpdateLockTask> updateTask, DependencyLockExtension extension) {
         TaskProvider<SaveLockTask> saveLockTask = project.tasks.register(SAVE_LOCK_TASK_NAME, SaveLockTask)
 
         saveLockTask.configure { saveTask ->
@@ -176,11 +176,11 @@ class DependencyLockTaskConfigurer {
                 }
             }
             saveTask.conventionMapping.with {
-                generatedLock = { lockTask.dependenciesLock }
+                generatedLock = { dependenciesLockFile }
                 outputLock = { new File(project.projectDir, lockFileName ?: extension.lockFile) }
             }
         }
-        configureCommonSaveTask(saveLockTask, lockTask, updateTask)
+        configureCommonSaveTask(saveLockTask, lockTask.get(), updateTask.get())
 
         saveLockTask
     }
@@ -226,7 +226,7 @@ class DependencyLockTaskConfigurer {
         setupLockConventionMapping(lockTask.get(), extension, overrides)
         lockTask.configure {
             it.conventionMapping.with {
-                dependenciesLock = dependenciesLockFile
+                dependenciesLock = { dependenciesLockFile }
                 configurationNames = { extension.configurationNames }
                 skippedConfigurationNames = { extension.skippedConfigurationNamesPrefixes }
             }
