@@ -67,19 +67,19 @@ class DependencyLockTaskConfigurer {
 
     String configureTasks(String globalLockFilename, DependencyLockExtension extension, DependencyLockCommitExtension commitExtension, Map overrides) {
         String lockFilename = project.hasProperty(LOCK_FILE) ? project[LOCK_FILE] : null
-        File dependenciesLockFile = new File(project.buildDir, lockFilename ?: extension.lockFile)
+        File lockFileInBuildDir = new File(project.buildDir, lockFilename ?: extension.lockFile)
+        if (project.hasProperty(USE_GENERATED_LOCK)) {
+            lockFilename = lockFileInBuildDir.path
+        }
+        File lockFileInProjectDir = new File(project.projectDir, lockFilename ?: extension.lockFile)
 
         TaskProvider<GenerateLockTask> genLockTask = project.tasks.register(GENERATE_LOCK_TASK_NAME, GenerateLockTask)
-
-        configureGenerateLockTask(genLockTask, dependenciesLockFile, extension, overrides)
-        if (project.hasProperty(USE_GENERATED_LOCK)) {
-            lockFilename = dependenciesLockFile.path
-        }
+        configureGenerateLockTask(genLockTask, lockFileInBuildDir, extension, overrides)
 
         TaskProvider<UpdateLockTask> updateLockTask = project.tasks.register(UPDATE_LOCK_TASK_NAME, UpdateLockTask)
-        configureGenerateLockTask(updateLockTask, dependenciesLockFile, extension, overrides)
+        configureGenerateLockTask(updateLockTask, lockFileInBuildDir, extension, overrides)
 
-        TaskProvider<SaveLockTask> saveTask = configureSaveTask(lockFilename, dependenciesLockFile, genLockTask, updateLockTask, extension)
+        TaskProvider<SaveLockTask> saveTask = configureSaveTask(lockFileInBuildDir, lockFileInProjectDir, genLockTask, updateLockTask, extension)
         createDeleteLock(saveTask)
 
         configureMigrateToCoreLocksTask(extension)
@@ -165,7 +165,7 @@ class DependencyLockTaskConfigurer {
         }
     }
 
-    private TaskProvider<SaveLockTask> configureSaveTask(String lockFileName, File dependenciesLockFile, TaskProvider<GenerateLockTask> lockTask, TaskProvider<UpdateLockTask> updateTask, DependencyLockExtension extension) {
+    private TaskProvider<SaveLockTask> configureSaveTask(File lockfileInBuildDir, File lockfileInProjectDir, TaskProvider<GenerateLockTask> lockTask, TaskProvider<UpdateLockTask> updateTask, DependencyLockExtension extension) {
         TaskProvider<SaveLockTask> saveLockTask = project.tasks.register(SAVE_LOCK_TASK_NAME, SaveLockTask)
 
         saveLockTask.configure { saveTask ->
@@ -176,8 +176,8 @@ class DependencyLockTaskConfigurer {
                 }
             }
             saveTask.conventionMapping.with {
-                generatedLock = { dependenciesLockFile }
-                outputLock = { new File(project.projectDir, lockFileName ?: extension.lockFile) }
+                generatedLock = { lockfileInBuildDir }
+                outputLock = { lockfileInProjectDir }
             }
         }
         configureCommonSaveTask(saveLockTask, lockTask.get(), updateTask.get())
