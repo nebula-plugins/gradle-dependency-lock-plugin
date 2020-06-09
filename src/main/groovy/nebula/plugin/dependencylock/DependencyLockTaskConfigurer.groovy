@@ -171,7 +171,8 @@ class DependencyLockTaskConfigurer {
         }
     }
 
-    private TaskProvider<SaveLockTask> configureSaveTask(File lockfileInBuildDir, File lockfileInProjectDir, TaskProvider<GenerateLockTask> lockTask, TaskProvider<UpdateLockTask> updateTask, DependencyLockExtension extension) {
+    private TaskProvider<SaveLockTask> configureSaveTask(File lockfileInBuildDir, File lockfileInProjectDir, TaskProvider<GenerateLockTask> lockTask,
+                                                         TaskProvider<UpdateLockTask> updateTask, DependencyLockExtension extension) {
         TaskProvider<SaveLockTask> saveLockTask = project.tasks.register(SAVE_LOCK_TASK_NAME, SaveLockTask)
 
         saveLockTask.configure { saveTask ->
@@ -254,7 +255,8 @@ class DependencyLockTaskConfigurer {
         }
     }
 
-    private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateLockTask> globalLockTask, File globalLockFileInBuildDir, DependencyLockExtension extension, Map overrides) {
+    private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateLockTask> globalLockTask, File globalLockFileInBuildDir,
+                                                                   DependencyLockExtension extension, Map overrides) {
         setupLockConventionMapping(globalLockTask, extension, overrides)
         globalLockTask.configure { globalGenerateTask ->
             globalGenerateTask.doFirst {
