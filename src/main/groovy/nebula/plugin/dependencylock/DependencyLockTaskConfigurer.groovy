@@ -186,13 +186,13 @@ class DependencyLockTaskConfigurer {
                 outputLock = { lockfileInProjectDir }
             }
         }
-        configureCommonSaveTask(saveLockTask, lockTask.get(), updateTask.get())
+        configureCommonSaveTask(saveLockTask, lockTask, updateTask)
 
         saveLockTask
     }
 
-    private static void configureCommonSaveTask(TaskProvider<SaveLockTask> saveLockTask, GenerateLockTask lockTask,
-                                                UpdateLockTask updateTask) {
+    private static void configureCommonSaveTask(TaskProvider<SaveLockTask> saveLockTask, TaskProvider<GenerateLockTask> lockTask,
+                                                TaskProvider<UpdateLockTask> updateTask) {
         saveLockTask.configure { saveTask ->
             saveTask.mustRunAfter lockTask, updateTask
             saveTask.outputs.upToDateWhen {
@@ -223,13 +223,13 @@ class DependencyLockTaskConfigurer {
                 outputLock = { globalLockFileInProjectDir }
             }
         }
-        configureCommonSaveTask(globalSaveLockTask, globalLockTask.get(), globalUpdateLockTask.get())
+        configureCommonSaveTask(globalSaveLockTask, globalLockTask, globalUpdateLockTask)
 
         globalSaveLockTask
     }
 
     private TaskProvider<GenerateLockTask> configureGenerateLockTask(TaskProvider<GenerateLockTask> lockTask, File dependenciesLockFile, DependencyLockExtension extension, Map overrides) {
-        setupLockConventionMapping(lockTask.get(), extension, overrides)
+        setupLockConventionMapping(lockTask, extension, overrides)
         lockTask.configure {
             it.conventionMapping.with {
                 dependenciesLock = { dependenciesLockFile }
@@ -241,19 +241,21 @@ class DependencyLockTaskConfigurer {
         lockTask
     }
 
-    private void setupLockConventionMapping(GenerateLockTask task, DependencyLockExtension extension, Map overrideMap) {
-        task.conventionMapping.with {
-            skippedDependencies = { extension.skippedDependencies }
-            includeTransitives = {
-                project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives'] as String) : extension.includeTransitives
+    private void setupLockConventionMapping(TaskProvider<GenerateLockTask> task, DependencyLockExtension extension, Map overrideMap) {
+        task.configure { generateTask ->
+            generateTask.conventionMapping.with {
+                skippedDependencies = { extension.skippedDependencies }
+                includeTransitives = {
+                    project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives'] as String) : extension.includeTransitives
+                }
+                filter = { extension.dependencyFilter }
+                overrides = { overrideMap }
             }
-            filter = { extension.dependencyFilter }
-            overrides = { overrideMap }
         }
     }
 
     private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateLockTask> globalLockTask, File globalLockFileInBuildDir, DependencyLockExtension extension, Map overrides) {
-        setupLockConventionMapping(globalLockTask.get(), extension, overrides)
+        setupLockConventionMapping(globalLockTask, extension, overrides)
         globalLockTask.configure { globalGenerateTask ->
             globalGenerateTask.doFirst {
                 project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
