@@ -444,6 +444,30 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         result1.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
     }
 
+    def 'run with generated global lock'() {
+        def globalLock = new File(projectDir, 'global.lock')
+        globalLock << OLD_FOO_LOCK
+        buildFile << BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('generateGlobalLock')
+
+        then:
+        new File(projectDir, 'build/global.lock').text == FOO_LOCK
+
+        when:
+        def result0 = runTasksSuccessfully('dependencies')
+
+        then:
+        result0.standardOutput.contains 'test.example:foo:1.+ -> 1.0.0'
+
+        when:
+        def result1 = runTasksSuccessfully('-PdependencyLock.useGeneratedGlobalLock=true', 'dependencies')
+
+        then:
+        result1.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
+    }
+
     def 'generateLock with deprecated format existing causes no issues'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << DEPRECATED_LOCK_FORMAT

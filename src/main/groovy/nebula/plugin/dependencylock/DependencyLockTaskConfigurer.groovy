@@ -88,17 +88,17 @@ class DependencyLockTaskConfigurer {
 
         // configure global lock only on rootProject
         TaskProvider<SaveLockTask> globalSave = null
-        GenerateLockTask globalLockTask
-        UpdateLockTask globalUpdateLock
+        TaskProvider<GenerateLockTask> globalLockTask
+        TaskProvider<UpdateLockTask> globalUpdateLock
         if (project == project.rootProject) {
-            globalLockTask = project.tasks.create(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateLockTask)
+            globalLockTask = project.tasks.register(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateLockTask)
             if (project.hasProperty(USE_GENERATED_GLOBAL_LOCK)) {
-                globalLockFilename = globalLockTask.getDependenciesLock().path
+                globalLockFilename = lockFileInBuildDir.path
             }
             configureGlobalLockTask(globalLockTask, globalLockFilename, extension, overrides)
-            globalUpdateLock = project.tasks.create(UPDATE_GLOBAL_LOCK_TASK_NAME, UpdateLockTask)
+            globalUpdateLock = project.tasks.register(UPDATE_GLOBAL_LOCK_TASK_NAME, UpdateLockTask)
             configureGlobalLockTask(globalUpdateLock, globalLockFilename, extension, overrides)
-            globalSave = configureGlobalSaveTask(globalLockFilename, globalLockTask, globalUpdateLock, extension)
+            globalSave = configureGlobalSaveTask(globalLockFilename, globalLockTask.get(), globalUpdateLock.get(), extension)
             createDeleteGlobalLock(globalSave)
         }
 
@@ -246,38 +246,40 @@ class DependencyLockTaskConfigurer {
         }
     }
 
-    private GenerateLockTask configureGlobalLockTask(GenerateLockTask globalLockTask, String globalLockFileName, DependencyLockExtension extension, Map overrides) {
-        setupLockConventionMapping(globalLockTask, extension, overrides)
-        globalLockTask.doFirst {
-            project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
-        }
-        globalLockTask.conventionMapping.with {
-            dependenciesLock = {
-                new File(project.buildDir, globalLockFileName ?: extension.globalLockFile)
+    private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateLockTask> globalLockTask, String globalLockFileName, DependencyLockExtension extension, Map overrides) {
+        setupLockConventionMapping(globalLockTask.get(), extension, overrides)
+        globalLockTask.configure { globalGenerateTask ->
+            globalGenerateTask.doFirst {
+                project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
             }
-            configurations = {
-                def subprojects = project.subprojects.collect { subproject ->
-                    def ext = subproject.getExtensions().findByType(DependencyLockExtension)
-                    if (ext != null) {
-                        Collection<Configuration> lockableConfigurations = lockableConfigurations(project, subproject, ext.configurationNames, extension.skippedConfigurationNamesPrefixes)
-                        Collection<Configuration> configurations = filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(subproject, ext.configurationNames, lockableConfigurations)
+            globalGenerateTask.conventionMapping.with {
+                dependenciesLock = {
+                    new File(project.buildDir, globalLockFileName ?: extension.globalLockFile)
+                }
+                configurations = {
+                    def subprojects = project.subprojects.collect { subproject ->
+                        def ext = subproject.getExtensions().findByType(DependencyLockExtension)
+                        if (ext != null) {
+                            Collection<Configuration> lockableConfigurations = lockableConfigurations(project, subproject, ext.configurationNames, extension.skippedConfigurationNamesPrefixes)
+                            Collection<Configuration> configurations = filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(subproject, ext.configurationNames, lockableConfigurations)
 
-                        configurations
+                            configurations
                                 .findAll { configuration ->
                                     !configurationsToSkipForGlobalLock.contains(configuration.name)
                                 }
                                 .collect { configuration ->
                                     project.dependencies.create(project.dependencies.project(path: subproject.path, configuration: configuration.name))
                                 }
-                    } else {
-                        [project.dependencies.create(subproject)]
-                    }
-                }.flatten()
-                def subprojectsArray = subprojects.toArray(new Dependency[subprojects.size()])
-                def conf = project.configurations.detachedConfiguration(subprojectsArray)
-                project.allprojects.each { it.configurations.add(conf) }
+                        } else {
+                            [project.dependencies.create(subproject)]
+                        }
+                    }.flatten()
+                    def subprojectsArray = subprojects.toArray(new Dependency[subprojects.size()])
+                    def conf = project.configurations.detachedConfiguration(subprojectsArray)
+                    project.allprojects.each { it.configurations.add(conf) }
 
-                [conf] + lockableConfigurations(project, project, extension.configurationNames, extension.skippedConfigurationNamesPrefixes)
+                    [conf] + lockableConfigurations(project, project, extension.configurationNames, extension.skippedConfigurationNamesPrefixes)
+                }
             }
         }
 
