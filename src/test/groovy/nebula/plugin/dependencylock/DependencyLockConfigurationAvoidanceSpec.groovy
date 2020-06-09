@@ -1,6 +1,7 @@
 package nebula.plugin.dependencylock
 
 import nebula.plugin.dependencylock.tasks.CommitLockTask
+import nebula.plugin.dependencylock.tasks.DiffLockTask
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import nebula.plugin.dependencylock.tasks.MigrateLockedDepsToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
@@ -30,6 +31,7 @@ class DependencyLockConfigurationAvoidanceSpec extends IntegrationTestKitSpec {
         !result.output.contains("class ${MigrateToCoreLocksTask.class.name}")
         !result.output.contains("class ${MigrateLockedDepsToCoreLocksTask.class.name}")
         !result.output.contains("class ${CommitLockTask.class.name}")
+        !result.output.contains("class ${DiffLockTask.class.name}")
         !result.output.contains("class ${Delete.class.name}")
     }
 
@@ -54,6 +56,7 @@ class DependencyLockConfigurationAvoidanceSpec extends IntegrationTestKitSpec {
         !result.output.contains("class ${MigrateToCoreLocksTask.class.name}")
         !result.output.contains("class ${MigrateLockedDepsToCoreLocksTask.class.name}")
         !result.output.contains("class ${CommitLockTask.class.name}")
+        !result.output.contains("class ${DiffLockTask.class.name}")
         !result.output.contains("class ${Delete.class.name}")
     }
 }
