@@ -95,6 +95,7 @@ class DependencyLockTaskConfigurer {
                 globalLockFilename = lockFileInBuildDir.path
             }
             File globalLockFileInBuildDir = new File(project.buildDir, globalLockFilename ?: extension.globalLockFile)
+            File globalLockFileInProjectDir = new File(project.projectDir, globalLockFilename ?: extension.globalLockFile)
 
             globalLockTask = project.tasks.register(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateLockTask)
             configureGlobalLockTask(globalLockTask, globalLockFileInBuildDir, extension, overrides)
@@ -102,7 +103,7 @@ class DependencyLockTaskConfigurer {
             globalUpdateLock = project.tasks.register(UPDATE_GLOBAL_LOCK_TASK_NAME, UpdateLockTask)
             configureGlobalLockTask(globalUpdateLock, globalLockFileInBuildDir, extension, overrides)
 
-            globalSave = configureGlobalSaveTask(globalLockFilename, globalLockFileInBuildDir, globalLockTask, globalUpdateLock, extension)
+            globalSave = configureGlobalSaveTask(globalLockFileInBuildDir, globalLockFileInProjectDir, globalLockTask, globalUpdateLock, extension)
 
             createDeleteGlobalLock(globalSave)
         }
@@ -204,7 +205,7 @@ class DependencyLockTaskConfigurer {
         }
     }
 
-    private TaskProvider<SaveLockTask> configureGlobalSaveTask(String globalLockFileName, File globalLockFileInBuildDir, TaskProvider<GenerateLockTask> globalLockTask,
+    private TaskProvider<SaveLockTask> configureGlobalSaveTask(File globalLockFileInBuildDir, File globalLockFileInProjectDir, TaskProvider<GenerateLockTask> globalLockTask,
                                                                TaskProvider<UpdateLockTask> globalUpdateLockTask, DependencyLockExtension extension) {
         TaskProvider<SaveLockTask> globalSaveLockTask = project.tasks.register(SAVE_GLOBAL_LOCK_TASK_NAME, SaveLockTask)
 
@@ -219,7 +220,7 @@ class DependencyLockTaskConfigurer {
             }
             globalSaveTask.conventionMapping.with {
                 generatedLock = { globalLockFileInBuildDir }
-                outputLock = { new File(project.projectDir, globalLockFileName ?: extension.globalLockFile) }
+                outputLock = { globalLockFileInProjectDir }
             }
         }
         configureCommonSaveTask(globalSaveLockTask, globalLockTask.get(), globalUpdateLockTask.get())
