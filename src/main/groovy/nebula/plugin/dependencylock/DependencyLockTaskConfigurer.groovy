@@ -91,14 +91,19 @@ class DependencyLockTaskConfigurer {
         TaskProvider<GenerateLockTask> globalLockTask
         TaskProvider<UpdateLockTask> globalUpdateLock
         if (project == project.rootProject) {
-            globalLockTask = project.tasks.register(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateLockTask)
             if (project.hasProperty(USE_GENERATED_GLOBAL_LOCK)) {
                 globalLockFilename = lockFileInBuildDir.path
             }
-            configureGlobalLockTask(globalLockTask, globalLockFilename, extension, overrides)
+            File globalLockFileInBuildDir = new File(project.buildDir, globalLockFilename ?: extension.globalLockFile)
+
+            globalLockTask = project.tasks.register(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateLockTask)
+            configureGlobalLockTask(globalLockTask, globalLockFileInBuildDir, extension, overrides)
+
             globalUpdateLock = project.tasks.register(UPDATE_GLOBAL_LOCK_TASK_NAME, UpdateLockTask)
-            configureGlobalLockTask(globalUpdateLock, globalLockFilename, extension, overrides)
-            globalSave = configureGlobalSaveTask(globalLockFilename, globalLockTask.get(), globalUpdateLock.get(), extension)
+            configureGlobalLockTask(globalUpdateLock, globalLockFileInBuildDir, extension, overrides)
+
+            globalSave = configureGlobalSaveTask(globalLockFilename, globalLockFileInBuildDir, globalLockTask, globalUpdateLock, extension)
+
             createDeleteGlobalLock(globalSave)
         }
 
@@ -199,8 +204,8 @@ class DependencyLockTaskConfigurer {
         }
     }
 
-    private TaskProvider<SaveLockTask> configureGlobalSaveTask(String globalLockFileName, GenerateLockTask globalLockTask,
-                                                               UpdateLockTask globalUpdateLockTask, DependencyLockExtension extension) {
+    private TaskProvider<SaveLockTask> configureGlobalSaveTask(String globalLockFileName, File globalLockFileInBuildDir, TaskProvider<GenerateLockTask> globalLockTask,
+                                                               TaskProvider<UpdateLockTask> globalUpdateLockTask, DependencyLockExtension extension) {
         TaskProvider<SaveLockTask> globalSaveLockTask = project.tasks.register(SAVE_GLOBAL_LOCK_TASK_NAME, SaveLockTask)
 
         globalSaveLockTask.configure { globalSaveTask ->
@@ -213,11 +218,11 @@ class DependencyLockTaskConfigurer {
                 }
             }
             globalSaveTask.conventionMapping.with {
-                generatedLock = { globalLockTask.dependenciesLock }
+                generatedLock = { globalLockFileInBuildDir }
                 outputLock = { new File(project.projectDir, globalLockFileName ?: extension.globalLockFile) }
             }
         }
-        configureCommonSaveTask(globalSaveLockTask, globalLockTask, globalUpdateLockTask)
+        configureCommonSaveTask(globalSaveLockTask, globalLockTask.get(), globalUpdateLockTask.get())
 
         globalSaveLockTask
     }
@@ -246,16 +251,14 @@ class DependencyLockTaskConfigurer {
         }
     }
 
-    private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateLockTask> globalLockTask, String globalLockFileName, DependencyLockExtension extension, Map overrides) {
+    private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateLockTask> globalLockTask, File globalLockFileInBuildDir, DependencyLockExtension extension, Map overrides) {
         setupLockConventionMapping(globalLockTask.get(), extension, overrides)
         globalLockTask.configure { globalGenerateTask ->
             globalGenerateTask.doFirst {
                 project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
             }
             globalGenerateTask.conventionMapping.with {
-                dependenciesLock = {
-                    new File(project.buildDir, globalLockFileName ?: extension.globalLockFile)
-                }
+                dependenciesLock = { globalLockFileInBuildDir }
                 configurations = {
                     def subprojects = project.subprojects.collect { subproject ->
                         def ext = subproject.getExtensions().findByType(DependencyLockExtension)
