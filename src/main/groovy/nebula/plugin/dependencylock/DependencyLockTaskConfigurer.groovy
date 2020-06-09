@@ -68,16 +68,18 @@ class DependencyLockTaskConfigurer {
     String configureTasks(String globalLockFilename, DependencyLockExtension extension, DependencyLockCommitExtension commitExtension, Map overrides) {
         String lockFilename = project.hasProperty(LOCK_FILE) ? project[LOCK_FILE] : null
 
-        GenerateLockTask genLockTask = project.tasks.create(GENERATE_LOCK_TASK_NAME, GenerateLockTask)
-        configureGenerateLockTask(genLockTask, lockFilename, extension, overrides)
+        TaskProvider<GenerateLockTask> genLockTask = project.tasks.register(GENERATE_LOCK_TASK_NAME, GenerateLockTask)
+        File dependenciesLockFile = new File(project.buildDir, lockFilename ?: extension.lockFile)
+
+        configureGenerateLockTask(genLockTask, dependenciesLockFile, extension, overrides)
         if (project.hasProperty(USE_GENERATED_LOCK)) {
-            lockFilename = genLockTask.getDependenciesLock().path
+            lockFilename = dependenciesLockFile.path
         }
 
-        UpdateLockTask updateLockTask = project.tasks.create(UPDATE_LOCK_TASK_NAME, UpdateLockTask)
-        configureGenerateLockTask(updateLockTask, lockFilename, extension, overrides)
+        TaskProvider<UpdateLockTask> updateLockTask = project.tasks.register(UPDATE_LOCK_TASK_NAME, UpdateLockTask)
+        configureGenerateLockTask(updateLockTask, dependenciesLockFile, extension, overrides)
 
-        TaskProvider<SaveLockTask> saveTask = configureSaveTask(lockFilename, genLockTask, updateLockTask, extension)
+        TaskProvider<SaveLockTask> saveTask = configureSaveTask(lockFilename, genLockTask.get(), updateLockTask.get(), extension)
         createDeleteLock(saveTask)
 
         configureMigrateToCoreLocksTask(extension)
@@ -220,14 +222,14 @@ class DependencyLockTaskConfigurer {
         globalSaveLockTask
     }
 
-    private GenerateLockTask configureGenerateLockTask(GenerateLockTask lockTask, String clLockFileName, DependencyLockExtension extension, Map overrides) {
-        setupLockConventionMapping(lockTask, extension, overrides)
-        lockTask.conventionMapping.with {
-            dependenciesLock = {
-                new File(project.buildDir, clLockFileName ?: extension.lockFile)
+    private TaskProvider<GenerateLockTask> configureGenerateLockTask(TaskProvider<GenerateLockTask> lockTask, File dependenciesLockFile, DependencyLockExtension extension, Map overrides) {
+        setupLockConventionMapping(lockTask.get(), extension, overrides)
+        lockTask.configure {
+            it.conventionMapping.with {
+                dependenciesLock = dependenciesLockFile
+                configurationNames = { extension.configurationNames }
+                skippedConfigurationNames = { extension.skippedConfigurationNamesPrefixes }
             }
-            configurationNames = { extension.configurationNames }
-            skippedConfigurationNames = { extension.skippedConfigurationNamesPrefixes }
         }
 
         lockTask
