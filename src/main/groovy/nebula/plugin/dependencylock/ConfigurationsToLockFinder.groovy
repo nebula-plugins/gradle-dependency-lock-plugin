@@ -59,7 +59,7 @@ class ConfigurationsToLockFinder {
         def originatingConfigurationsToAlsoLock = new HashSet<String>()
         configurationsToLock.each { nameOfConfToLock ->
             originatingConfigurationsToAlsoLock.addAll(
-                    findOriginatingConfigurationsOf(nameOfConfToLock, originatingConfigurationsToAlsoLock).collect { it -> it.name }
+                    findOriginatingConfigurationsOf(nameOfConfToLock, originatingConfigurationsToAlsoLock)
             )
         }
         configurationsToLock.addAll(originatingConfigurationsToAlsoLock)
@@ -79,23 +79,23 @@ class ConfigurationsToLockFinder {
         lockableConfigsToLock
     }
 
-    private Collection<Configuration> findOriginatingConfigurationsOf(String nameOfConfToLock, Collection<String> accumulator) {
-        accumulator.add(nameOfConfToLock)
-        project.configurations.findAll { conf ->
-            conf.name == nameOfConfToLock
-        }.each { conf ->
-            if (conf.extendsFrom.size() != 0) {
-                def newConfigs = new HashSet<Configuration>()
-                conf.extendsFrom.each { newConf ->
-                    if (!accumulator.contains(newConf.name)) {
-                        newConfigs.addAll(findOriginatingConfigurationsOf(newConf.name, accumulator))
-                    }
+    private Collection<String> findOriginatingConfigurationsOf(String nameOfConfToLock, Set<String> accumulator) {
+        def conf = project.configurations.findByName(nameOfConfToLock)
+        if (conf == null) {
+            return []
+        }
+        accumulator.add(conf.name)
+        if (conf.extendsFrom.size() != 0) {
+            def parentConfigs = new HashSet<String>()
+            conf.extendsFrom.each { parentConf ->
+                if (!accumulator.contains(parentConf.name)) {
+                    parentConfigs.addAll(findOriginatingConfigurationsOf(parentConf.name, accumulator))
                 }
-                accumulator.addAll(newConfigs.collect { it -> it.name })
-                return accumulator
-            } else {
-                return []
             }
+            accumulator.addAll(parentConfigs)
+            return accumulator
+        } else {
+            return []
         }
     }
 }
