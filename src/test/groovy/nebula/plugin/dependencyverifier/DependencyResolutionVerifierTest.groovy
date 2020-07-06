@@ -201,18 +201,18 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         results.output.contains('> Failed to resolve the following dependencies:')
         results.output.contains("1. Failed to resolve 'not.available:apricot:1.0.0' for project 'sub1'")
 
-        if (tasks != ['build']) {
-            // the `dependencies` task does not normally fail on resolution failures
-            // the `build` task will fail on resolution failures
-            // when a task fails, then the project will not continue to a subsequent task
-            results.output.contains("1. Failed to resolve 'not.available:banana-leaf:2.0.0' for project 'sub2'")
-        }
+//        if (tasks != ['build']) {
+//            // the `dependencies` task does not normally fail on resolution failures
+//            // the `build` task will fail on resolution failures
+//            // when a task fails, then the project will not continue to a subsequent task
+//            assert results.output.contains("1. Failed to resolve 'not.available:banana-leaf:2.0.0' for project 'sub2'")
+//        }
 
         where:
-        tasks                                               | description
+        tasks                                                         | description
         ['build']                                           | 'resolve dependencies naturally'
-        ['dependenciesForAll']                              | 'explicitly resolve dependencies'
-        ['dependenciesForAll', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
+        ['dependenciesForAll', '--configuration', 'compileClasspath'] | 'explicitly resolve dependencies'
+        ['dependenciesForAll', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
     }
 
     @Unroll
@@ -243,10 +243,10 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         results.output.contains("1. Failed to resolve 'not.available:banana-leaf:2.0.0' for project 'sub2'")
 
         where:
-        tasks                                               | description
-        ['build']                                           | 'resolve dependencies naturally'
-        ['dependenciesForAll']                              | 'explicitly resolve dependencies'
-        ['dependenciesForAll', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
+        tasks                                                                                      | description
+        ['build']                                                                                  | 'resolve dependencies naturally'
+        ['dependenciesForAll', '--configuration', 'compileClasspath']                              | 'explicitly resolve dependencies'
+        ['dependenciesForAll', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
     }
 
     @Unroll
@@ -463,7 +463,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         setupTaskThatRequiresResolvedConfiguration(sub1BuildFile)
         setupTaskThatRequiresResolvedConfiguration(sub2BuildFile)
 
-        sub1BuildFile << """ 
+        sub1BuildFile << """
         dependencies {
             implementation '$dependency'
         }
@@ -506,7 +506,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
             dependencies {
                 $configurationName 'not.available:a'
             }
-            import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension 
+            import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
             plugins.withId('nebula.dependency-lock') {
                 def extension = extensions.getByType(DependencyResolutionVerifierExtension.class)
                 def list = new ArrayList<>()

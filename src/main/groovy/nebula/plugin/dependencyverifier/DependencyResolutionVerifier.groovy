@@ -199,31 +199,19 @@ class DependencyResolutionVerifier {
 
                 @Override
                 void afterExecute(Task task, TaskState taskState) {
+                    if (task.project != project) {
+                        return
+                    }
+
                     boolean taskIsSafeToAccess = safeTasks.contains(task)
                     boolean taskIsNotExcluded = !extension.tasksToExclude.contains(task.name)
 
                     if (taskIsSafeToAccess && taskIsNotExcluded && !providedErrorMessageForThisProject) {
-                        String simpleTaskName = task.toString().replace("'", '').split(':').last()
-                        Task lastTaskEvaluatedWithSameName = tasksGroupedByTaskIdentityAcrossProjects
-                                .get(simpleTaskName)
-                                .last()
-                                ?.task
+                        Set<String> configurationsToExclude = project.hasProperty(CONFIGURATIONS_TO_EXCLUDE)
+                                ? (project.property(CONFIGURATIONS_TO_EXCLUDE) as String).split(",") as Set<String>
+                                : extension.configurationsToExclude
 
-                        boolean lastChanceToThrowExceptionWithTaskOfThisIdentity
-                        if (parallelProjectExecutionEnabled) {
-                            lastChanceToThrowExceptionWithTaskOfThisIdentity = true
-                        } else {
-                            lastChanceToThrowExceptionWithTaskOfThisIdentity = task.path == lastTaskEvaluatedWithSameName.path
-                        }
-
-                        boolean taskHasFailed = taskState.failure
-
-                        if (lastChanceToThrowExceptionWithTaskOfThisIdentity || taskHasFailed) {
-                            Set<String> configurationsToExclude = project.hasProperty(CONFIGURATIONS_TO_EXCLUDE)
-                                    ? (project.property(CONFIGURATIONS_TO_EXCLUDE) as String).split(",") as Set<String>
-                                    : extension.configurationsToExclude
-
-                            project.configurations.matching { // returns a live collection
+                        project.configurations.matching { // returns a live collection
                                 assert it instanceof Configuration
                                 configurationIsResolvedAndMatches(it, configurationsToExclude)
                             }.all { conf ->
@@ -251,8 +239,7 @@ class DependencyResolutionVerifier {
                                 }
                             }
 
-                            logOrThrowOnFailedDependencies("${task}")
-                        }
+                        logOrThrowOnFailedDependencies("${task}")
                     }
                 }
             }
