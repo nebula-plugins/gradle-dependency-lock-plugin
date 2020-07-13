@@ -1,13 +1,13 @@
 package nebula.plugin.dependencylock
 
-import nebula.plugin.dependencyverifier.DependencyResolutionVerifier
+import nebula.plugin.dependencyverifier.DependencyResolutionVerifierKt
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
 import spock.lang.Subject
 import spock.lang.Unroll
 
-@Subject(DependencyResolutionVerifier)
+@Subject(DependencyResolutionVerifierKt)
 class DependencyLockPluginWithCoreVerifierSpec extends AbstractDependencyLockPluginSpec {
     private static final String BASELINE_LOCKFILE_CONTENTS = """# This is a Gradle generated file for dependency locking.
 # Manual edits can break the build and are not advised.
@@ -140,7 +140,6 @@ test.nebula:b:1.1.0
         results.output.contains('FAILURE')
         results.output.contains('Resolved dependencies were missing from the lock state')
         results.output.contains('Resolved \'test.nebula:d:1.0.0\' which is not part of the dependency lock state')
-//        results.output.contains('Resolved \'test.nebula:e:1.0.0\' which is not part of the dependency lock state')
     }
 
     @Unroll
@@ -187,12 +186,6 @@ test.nebula:b:1.1.0
 
         results.output.contains("> Failed to resolve the following dependencies")
         results.output.contains(failedResolutionDependencies('sub1'))
-
-//        results.output.contains("""
-//       1. Failed to resolve 'not.available:a:1.0.0' for project 'sub2'
-//       2. Failed to resolve 'test.nebula:c' for project 'sub2'
-//       3. Failed to resolve 'test.nebula:e' for project 'sub2'
-//       4. Failed to resolve 'transitive.not.available:a:1.0.0' for project 'sub2'""")
 
         where:
         lockArg << ['write-locks', 'update-locks']

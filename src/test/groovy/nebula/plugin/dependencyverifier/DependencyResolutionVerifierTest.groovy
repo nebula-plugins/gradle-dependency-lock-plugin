@@ -25,7 +25,7 @@ import nebula.test.dependencies.ModuleBuilder
 import spock.lang.Subject
 import spock.lang.Unroll
 
-@Subject(DependencyResolutionVerifier)
+@Subject(DependencyResolutionVerifierKt)
 class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     def mavenrepo
 
@@ -600,32 +600,32 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         assert !results.output.contains('FAILURE')
     }
 
-//    @Unroll
-//    def 'handles task that requires resolved configuration with an issue due to #failureType'() {
-//        given:
-//        setupSingleProject()
-//
-//        buildFile << """
-//            dependencies {
-//                implementation '$dependency'
-//            }
-//            ${taskThatRequiresConfigurationDependencies()}
-//            """.stripIndent()
-//
-//        when:
-//        def results = runTasksAndFail('build')
-//
-//        then:
-//        assert results.output.contains('FAILURE')
-//        assert results.output.contains('Failed to resolve the following dependencies:')
-//        assert results.output.contains("1. Failed to resolve '${actualMissingDep ?: dependency}' for project")
-//
-//        where:
-//        failureType                | dependency                       | actualMissingDep
-//        'missing version'          | 'not.available:a'                | null
-//        'direct dep not found'     | 'not.available:a:1.0.0'          | null
-//        'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
-//    }
+    @Unroll
+    def 'handles task that requires resolved configuration with an issue due to #failureType'() {
+        given:
+        setupSingleProject()
+
+        buildFile << """
+            dependencies {
+                implementation '$dependency'
+            }
+            ${taskThatRequiresConfigurationDependencies()}
+            """.stripIndent()
+
+        when:
+        def results = runTasksAndFail('build')
+
+        then:
+        assert results.output.contains('FAILURE')
+        assert results.output.contains('Failed to resolve the following dependencies:')
+        assert results.output.contains("1. Failed to resolve '${actualMissingDep ?: dependency}' for project")
+
+        where:
+        failureType                | dependency                       | actualMissingDep
+        'missing version'          | 'not.available:a'                | null
+        'direct dep not found'     | 'not.available:a:1.0.0'          | null
+        'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
+    }
 
     @Unroll
     def 'handles task that requires resolved configuration with an issue due to #failureType - multiproject'() {
@@ -705,53 +705,53 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
     }
 
-//    @Unroll
-//    def 'with Gradle version #gradleVersionToTest - expecting #expecting - using task with configuration dependencies'() {
-//        given:
-//        gradleVersion = gradleVersionToTest
-//        setupSingleProject()
-//
-//        buildFile << taskThatRequiresConfigurationDependencies()
-//
-//        if (expecting == 'error') {
-//            buildFile << """
-//                dependencies {
-//                    implementation 'not.available:a:1.0.0' // dependency is not found
-//                }
-//                """.stripIndent()
-//        }
-//
-//        when:
-//        def results
-//        def tasks = ['dependencies', '--configuration', 'compileClasspath']
-//
-//        if (expecting == 'error') {
-//            results = runTasksAndFail(*tasks)
-//        } else {
-//            results = runTasks(*tasks)
-//        }
-//
-//        then:
-//        if (expecting == 'error') {
-//            assert results.output.contains('Could not determine the dependencies of task')
-//            assert results.output.contains("1. Failed to resolve 'not.available:a:1.0.0' for project")
-//        } else {
-//            assert results.output.contains('Task :dependencies')
-//        }
-//
-//        where:
-//        gradleVersionToTest | expecting
-//        '6.0.1'             | 'error'
-//        '6.0.1'             | 'no error'
-//        '5.6.4'             | 'error'
-//        '5.6.4'             | 'no error'
-//        '5.1'               | 'error'
-//        '5.1'               | 'no error'
-//        '4.10.3'            | 'error'
-//        '4.10.3'            | 'no error'
-//        '4.9'               | 'error'
-//        '4.9'               | 'no error'
-//    }
+    @Unroll
+    def 'with Gradle version #gradleVersionToTest - expecting #expecting - using task with configuration dependencies'() {
+        given:
+        gradleVersion = gradleVersionToTest
+        setupSingleProject()
+
+        buildFile << taskThatRequiresConfigurationDependencies()
+
+        if (expecting == 'error') {
+            buildFile << """
+                dependencies {
+                    implementation 'not.available:a:1.0.0' // dependency is not found
+                }
+                """.stripIndent()
+        }
+
+        when:
+        def results
+        def tasks = ['dependencies', '--configuration', 'compileClasspath']
+
+        if (expecting == 'error') {
+            results = runTasksAndFail(*tasks)
+        } else {
+            results = runTasks(*tasks)
+        }
+
+        then:
+        if (expecting == 'error') {
+            assert results.output.contains('Could not determine the dependencies of task')
+            assert results.output.contains("1. Failed to resolve 'not.available:a:1.0.0' for project")
+        } else {
+            assert results.output.contains('Task :dependencies')
+        }
+
+        where:
+        gradleVersionToTest | expecting
+        '6.0.1'             | 'error'
+        '6.0.1'             | 'no error'
+        '5.6.4'             | 'error'
+        '5.6.4'             | 'no error'
+        '5.1'               | 'error'
+        '5.1'               | 'no error'
+        '4.10.3'            | 'error'
+        '4.10.3'            | 'no error'
+        '4.9'               | 'error'
+        '4.9'               | 'no error'
+    }
 
     private static String taskThatRequiresConfigurationDependencies() {
         return """
