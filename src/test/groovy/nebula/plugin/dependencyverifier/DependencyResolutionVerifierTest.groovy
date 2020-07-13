@@ -59,8 +59,8 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         !results.output.contains('FAILURE')
 
         where:
-        tasks            | description
-        ['dependencies'] | 'explicitly resolve dependencies'
+        tasks                                                   | description
+        ['dependencies', '--configuration', 'compileClasspath'] | 'explicitly resolve dependencies'
     }
 
     @Unroll
@@ -84,10 +84,10 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         results.output.contains("1. Failed to resolve 'not.available:a:1.0.0' for project")
 
         where:
-        tasks                                         | description
-        ['build']                                     | 'resolve dependencies naturally'
-        ['dependencies']                              | 'explicitly resolve dependencies'
-        ['dependencies', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
+        tasks                                                                                | description
+        ['build']                                                                            | 'resolve dependencies naturally'
+        ['dependencies', '--configuration', 'compileClasspath']                              | 'explicitly resolve dependencies'
+        ['dependencies', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
     }
 
     @Unroll
@@ -111,10 +111,10 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         results.output.contains("1. Failed to resolve 'transitive.not.available:a:1.0.0' for project")
 
         where:
-        tasks                                         | description
-        ['build']                                     | 'resolve dependencies naturally'
-        ['dependencies']                              | 'explicitly resolve dependencies'
-        ['dependencies', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
+        tasks                                                                                | description
+        ['build']                                                                            | 'resolve dependencies naturally'
+        ['dependencies', '--configuration', 'compileClasspath']                              | 'explicitly resolve dependencies'
+        ['dependencies', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
     }
 
     @Unroll
@@ -142,10 +142,10 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         results.output.contains("If you have been using a BOM")
 
         where:
-        tasks                                         | description
-        ['build']                                     | 'resolve dependencies naturally'
-        ['dependencies']                              | 'explicitly resolve dependencies'
-        ['dependencies', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
+        tasks                                                                                | description
+        ['build']                                                                            | 'resolve dependencies naturally'
+        ['dependencies', '--configuration', 'compileClasspath']                              | 'explicitly resolve dependencies'
+        ['dependencies', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
     }
 
     @Unroll
@@ -154,7 +154,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         setupSingleProject()
         buildFile << """
             dependencies {
-                testImplementation 'junit:junit:999.99.9' // version is invalid yet needed for compilation
+                implementation 'junit:junit:999.99.9' // version is invalid yet needed for compilation
             }
             """.stripIndent()
         writeUnitTest() // valid version of the junit library is not in the dependency declaration
@@ -169,10 +169,10 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         results.output.contains("1. Failed to resolve 'junit:junit:999.99.9' for project")
 
         where:
-        tasks                                         | description
-        ['build']                                     | 'resolve dependencies naturally'
-        ['dependencies']                              | 'explicitly resolve dependencies'
-        ['dependencies', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
+        tasks                                                                                | description
+        ['build']                                                                            | 'resolve dependencies naturally'
+        ['dependencies', '--configuration', 'compileClasspath']                              | 'explicitly resolve dependencies'
+        ['dependencies', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
     }
 
     @Unroll
@@ -201,17 +201,10 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         results.output.contains('> Failed to resolve the following dependencies:')
         results.output.contains("1. Failed to resolve 'not.available:apricot:1.0.0' for project 'sub1'")
 
-//        if (tasks != ['build']) {
-//            // the `dependencies` task does not normally fail on resolution failures
-//            // the `build` task will fail on resolution failures
-//            // when a task fails, then the project will not continue to a subsequent task
-//            assert results.output.contains("1. Failed to resolve 'not.available:banana-leaf:2.0.0' for project 'sub2'")
-//        }
-
         where:
-        tasks                                                         | description
-        ['build']                                           | 'resolve dependencies naturally'
-        ['dependenciesForAll', '--configuration', 'compileClasspath'] | 'explicitly resolve dependencies'
+        tasks                                                                                      | description
+        ['build']                                                                                  | 'resolve dependencies naturally'
+        ['dependenciesForAll', '--configuration', 'compileClasspath']                              | 'explicitly resolve dependencies'
         ['dependenciesForAll', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
     }
 
@@ -263,9 +256,9 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         !results.output.contains('> Failed to resolve the following dependencies:')
 
         where:
-        tasks                                         | description
-        ['build']                                     | 'resolve dependencies naturally'
-        ['dependencies', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
+        tasks                                                                                | description
+        ['build']                                                                            | 'resolve dependencies naturally'
+        ['dependencies', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
     }
 
     @Unroll
@@ -292,7 +285,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
             """.stripIndent()
 
         when:
-        def tasks = ['dependencies']
+        def tasks = ['dependencies', '--configuration', 'compileClasspath']
         if (setupStyle == 'command line') {
             tasks += '-PdependencyResolutionVerifier.configurationsToExclude=specialConfig,otherSpecialConfig'
         }
@@ -359,7 +352,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
 
         when:
         def results
-        def tasks = ['dependencies']
+        def tasks = ['dependencies', '--configuration', 'compileClasspath']
 
         if (expecting == 'error') {
             results = runTasksAndFail(*tasks)
@@ -496,7 +489,6 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     def 'uses extension for #description'() {
         given:
         setupSingleProject()
-        forwardOutput = true
 
         def configurationName = description == 'configurationsToExclude'
                 ? 'myConfig' : 'implementation'
