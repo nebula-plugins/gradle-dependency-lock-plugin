@@ -530,6 +530,243 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         "list.addAll('dependencies')\n\textension.tasksToExclude = list"                  | 'tasksToExclude'                 | false    | false
     }
 
+    def 'handles root and subproject of the same name'() {
+        given:
+        setupMultiProject()
+
+        def sub1BuildFile = new File(projectDir, 'sub1/build.gradle')
+        sub1BuildFile << """
+        dependencies {
+            implementation 'not.available:a:1.0.0' // dependency is not found
+        }
+        """.stripIndent()
+
+        settingsFile.createNewFile()
+        settingsFile.text = """
+            rootProject.name='sub1'
+            include "sub1"
+            include "sub2"
+            """.stripIndent()
+
+        when:
+        def results = runTasksAndFail('build')
+
+        then:
+        results.output.contains('FAILURE')
+        results.output.contains('Execution failed for task')
+        results.output.contains('> Failed to resolve the following dependencies:')
+        results.output.findAll('> Failed to resolve the following dependencies:').size() == 1
+        results.output.contains("1. Failed to resolve 'not.available:a:1.0.0' for project 'sub1'")
+    }
+
+    def 'handles build failure from task configuration issue'() {
+        given:
+        setupSingleProject()
+        buildFile << """
+            dependencies {
+                implementation 'not.available:a:1.0.0' // dependency is not found
+            }
+            task goodbye {
+                println "Goodbye!"
+            }
+            build.finalizedBy project.tasks.named('goodbye') onlyIf {
+                project.configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.collect {it.name}.contains('bananan')
+            }
+            """.stripIndent()
+
+        when:
+        def results = runTasksAndFail('build')
+
+        then:
+        results.output.contains('FAILURE')
+        results.output.contains('Execution failed for task')
+        results.output.contains('> Failed to resolve the following dependencies:')
+        results.output.findAll('> Failed to resolve the following dependencies:').size() == 1
+        results.output.contains("1. Failed to resolve 'not.available:a:1.0.0' for project")
+    }
+
+    def 'handles task that requires resolved configuration with no issues'() {
+        given:
+        setupSingleProject()
+
+        buildFile << """
+            ${taskThatRequiresConfigurationDependencies()}
+            """.stripIndent()
+
+        when:
+        def results = runTasks('build')
+
+        then:
+        assert !results.output.contains('FAILURE')
+    }
+
+//    @Unroll
+//    def 'handles task that requires resolved configuration with an issue due to #failureType'() {
+//        given:
+//        setupSingleProject()
+//
+//        buildFile << """
+//            dependencies {
+//                implementation '$dependency'
+//            }
+//            ${taskThatRequiresConfigurationDependencies()}
+//            """.stripIndent()
+//
+//        when:
+//        def results = runTasksAndFail('build')
+//
+//        then:
+//        assert results.output.contains('FAILURE')
+//        assert results.output.contains('Failed to resolve the following dependencies:')
+//        assert results.output.contains("1. Failed to resolve '${actualMissingDep ?: dependency}' for project")
+//
+//        where:
+//        failureType                | dependency                       | actualMissingDep
+//        'missing version'          | 'not.available:a'                | null
+//        'direct dep not found'     | 'not.available:a:1.0.0'          | null
+//        'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
+//    }
+
+    @Unroll
+    def 'handles task that requires resolved configuration with an issue due to #failureType - multiproject'() {
+        given:
+        setupMultiProject()
+
+        def sub1BuildFile = new File(projectDir, 'sub1/build.gradle')
+        def sub2BuildFile = new File(projectDir, 'sub2/build.gradle')
+
+        sub1BuildFile << """ \
+        dependencies {
+            implementation '$dependency'
+        }
+        ${taskThatRequiresConfigurationDependencies()}
+        """.stripIndent()
+
+        def sub2Dependency = dependency.replace(':a', ':b')
+        sub2BuildFile << """
+        dependencies {
+            implementation '$sub2Dependency'
+        }
+        ${taskThatRequiresConfigurationDependencies()}
+        """.stripIndent()
+
+        when:
+        def results = runTasksAndFail('build')
+
+        then:
+        assert results.output.contains('FAILURE')
+        assert results.output.contains('Failed to resolve the following dependencies:')
+        assert results.output.contains("1. Failed to resolve '${actualMissingDep ?: dependency}' for project 'sub1'")
+        assert !results.output.contains("for project 'sub2'")
+
+        where:
+        failureType                | dependency                       | actualMissingDep
+        'missing version'          | 'not.available:a'                | null
+        'direct dep not found'     | 'not.available:a:1.0.0'          | null
+        'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
+    }
+
+    @Unroll
+    def 'handles task that requires resolved configuration with an issue due to #failureType - multiproject and parallel'() {
+        given:
+        setupMultiProject()
+
+        def sub1BuildFile = new File(projectDir, 'sub1/build.gradle')
+        def sub2BuildFile = new File(projectDir, 'sub2/build.gradle')
+
+        sub1BuildFile << """
+        dependencies {
+            implementation '$dependency'
+        }
+        ${taskThatRequiresConfigurationDependencies()}
+        """.stripIndent()
+
+        def sub2Dependency = dependency.replace(':a', ':b')
+        sub2BuildFile << """
+        dependencies {
+            implementation '$sub2Dependency'
+        }
+        ${taskThatRequiresConfigurationDependencies()}
+        """.stripIndent()
+
+        when:
+        def results = runTasksAndFail('build')
+
+        then:
+        assert results.output.contains('FAILURE')
+        assert results.output.contains('Failed to resolve the following dependencies:')
+        assert results.output.contains("1. Failed to resolve '${actualMissingDep ?: dependency}' for project 'sub1'")
+        assert !results.output.contains("for project 'sub2'")
+
+        where:
+        failureType                | dependency                       | actualMissingDep
+        'missing version'          | 'not.available:a'                | null
+        'direct dep not found'     | 'not.available:a:1.0.0'          | null
+        'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
+    }
+
+//    @Unroll
+//    def 'with Gradle version #gradleVersionToTest - expecting #expecting - using task with configuration dependencies'() {
+//        given:
+//        gradleVersion = gradleVersionToTest
+//        setupSingleProject()
+//
+//        buildFile << taskThatRequiresConfigurationDependencies()
+//
+//        if (expecting == 'error') {
+//            buildFile << """
+//                dependencies {
+//                    implementation 'not.available:a:1.0.0' // dependency is not found
+//                }
+//                """.stripIndent()
+//        }
+//
+//        when:
+//        def results
+//        def tasks = ['dependencies', '--configuration', 'compileClasspath']
+//
+//        if (expecting == 'error') {
+//            results = runTasksAndFail(*tasks)
+//        } else {
+//            results = runTasks(*tasks)
+//        }
+//
+//        then:
+//        if (expecting == 'error') {
+//            assert results.output.contains('Could not determine the dependencies of task')
+//            assert results.output.contains("1. Failed to resolve 'not.available:a:1.0.0' for project")
+//        } else {
+//            assert results.output.contains('Task :dependencies')
+//        }
+//
+//        where:
+//        gradleVersionToTest | expecting
+//        '6.0.1'             | 'error'
+//        '6.0.1'             | 'no error'
+//        '5.6.4'             | 'error'
+//        '5.6.4'             | 'no error'
+//        '5.1'               | 'error'
+//        '5.1'               | 'no error'
+//        '4.10.3'            | 'error'
+//        '4.10.3'            | 'no error'
+//        '4.9'               | 'error'
+//        '4.9'               | 'no error'
+//    }
+
+    private static String taskThatRequiresConfigurationDependencies() {
+        return """
+            task taskWithConfigurationDependencies {
+                inputs.files configurations.compileClasspath.incoming.artifacts
+                doLast { configurations.compileClasspath.each { } }
+            }
+            if(project.tasks.findByName('dependenciesForAll') != null) {
+                project.tasks.getByName('dependenciesForAll').dependsOn project.tasks.named('taskWithConfigurationDependencies')
+            }
+            project.tasks.getByName('dependencies').dependsOn project.tasks.named('taskWithConfigurationDependencies')
+            project.tasks.getByName('build').dependsOn project.tasks.named('taskWithConfigurationDependencies')
+            """.stripIndent()
+    }
+
     private static void setupTaskThatRequiresResolvedConfiguration(File specificBuildFile) {
         assert specificBuildFile != null
 
