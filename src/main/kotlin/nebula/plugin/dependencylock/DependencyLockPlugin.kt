@@ -75,7 +75,7 @@ class DependencyLockPlugin : Plugin<Project> {
             /* MigrateToCoreLocks can be involved with migrating dependencies that were previously unlocked.
                Verifying resolution based on the base lockfiles causes a `LockOutOfDateException` from the initial DependencyLockingArtifactVisitor state
             */
-            DependencyResolutionVerifier.verifySuccessfulResolution(project)
+            DependencyResolutionVerifier().verifySuccessfulResolution(project)
         }
 
         val extension = project.extensions.create(EXTENSION_NAME, DependencyLockExtension::class.java)
