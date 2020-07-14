@@ -19,5 +19,5 @@ class DependencyResolutionVerifierExtension {
     boolean shouldFailTheBuild = true
     Set<String> configurationsToExclude = [] as Set
     String missingVersionsMessageAddition = ''
-    Set<String> tasksToExclude = ['clean', 'help'] as Set
+    Set<String> tasksToExclude = [] as Set
 }

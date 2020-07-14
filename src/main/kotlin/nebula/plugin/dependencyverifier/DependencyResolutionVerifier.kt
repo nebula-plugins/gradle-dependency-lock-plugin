@@ -28,6 +28,9 @@ import org.gradle.api.artifacts.ResolveException
 import org.gradle.api.execution.TaskExecutionListener
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.TaskState
+import org.gradle.api.tasks.compile.AbstractCompile
+import org.gradle.api.tasks.diagnostics.DependencyInsightReportTask
+import org.gradle.api.tasks.diagnostics.DependencyReportTask
 import org.gradle.internal.exceptions.DefaultMultiCauseException
 import org.gradle.internal.locking.LockOutOfDateException
 import org.gradle.internal.resolve.ModuleVersionNotFoundException
@@ -92,7 +95,10 @@ class DependencyResolutionVerifier {
                     if (providedErrorMessageForThisProject) {
                         return
                     }
-                    collectDependencyResolutionErrorsAfterExecute()
+                    if(task !is DependencyReportTask && task !is DependencyInsightReportTask && task !is AbstractCompile) {
+                        return
+                    }
+                    collectDependencyResolutionErrorsAfterExecute(task)
                     logOrThrowOnFailedDependencies()
                 }
 
@@ -144,15 +150,15 @@ class DependencyResolutionVerifier {
         }
     }
 
-    private fun collectDependencyResolutionErrorsAfterExecute() {
+    private fun collectDependencyResolutionErrorsAfterExecute(task: Task) {
         val failedDepsByConf = failedDependenciesPerProjectForConfigurations[uniqueProjectKey(project)]
         val lockedDepsOutOfDate = lockedDepsOutOfDatePerProject[uniqueProjectKey(project)]
-        val configurationsToExclude = if(configurationsToExcludeOverride.isNotEmpty()) configurationsToExcludeOverride else extension.configurationsToExclude
+        val configurationsToExclude = if (configurationsToExcludeOverride.isNotEmpty()) configurationsToExcludeOverride else extension.configurationsToExclude
 
-        project.configurations.matching { // returns a live collection
+        task.project.configurations.matching { // returns a live collection
             configurationIsResolvedAndMatches(it, configurationsToExclude)
         }.all { conf ->
-            logger.debug("$conf in ${project.name} has state ${conf.state}. Starting dependency resolution verification.")
+            logger.debug("$conf in ${project.name} has state ${conf.state}. Starting dependency resolution verification after task '${task.name}'.")
             try {
                 conf.resolvedConfiguration.resolvedArtifacts
             } catch (e: Exception) {

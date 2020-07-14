@@ -209,6 +209,53 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     }
 
     @Unroll
+    def 'multiproject: handles worker threads from spotbugs - #description'() {
+        given:
+        buildFile << """
+            buildscript {
+                repositories { maven { url "https://plugins.gradle.org/m2/" } }
+                dependencies {
+                    classpath "gradle.plugin.com.github.spotbugs.snom:spotbugs-gradle-plugin:4.4.4"
+                }
+            }            
+            """.stripIndent()
+        setupMultiProject()
+        buildFile << """
+            subprojects {
+                apply plugin: "com.github.spotbugs"
+                repositories {
+                    mavenCentral()
+                }
+            }
+            """.stripIndent()
+
+        new File(projectDir, 'sub1/build.gradle') << """ \
+            dependencies {
+                testImplementation 'junit:junit:4.12'
+            }
+            """.stripIndent()
+
+        new File(projectDir, 'sub2/build.gradle') << """ \
+            dependencies {
+                testImplementation 'junit:junit:4.12'
+            }
+            """.stripIndent()
+
+        when:
+        def results = runTasks(*tasks, '--warning-mode', 'all')
+
+        then:
+        !results.output.contains('FAILURE')
+        !results.output.contains('was resolved without accessing the project in a safe manner')
+
+        where:
+        tasks                                                         | description
+        ['spotbugsMain']                                              | 'calling spotbugsMain'
+        ['build']                                                     | 'resolve dependencies naturally'
+        ['dependenciesForAll', '--configuration', 'compileClasspath'] | 'explicitly resolve dependencies'
+    }
+
+    @Unroll
     def 'multiproject: works for parallel builds - #description'() {
         given:
         setupMultiProject()
@@ -382,7 +429,6 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         given:
         setupSingleProject()
         setupTaskThatRequiresResolvedConfiguration(buildFile)
-        forwardOutput = true
 
         buildFile << """
             dependencies {
@@ -810,8 +856,6 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     }
 
     private void setupMultiProject() {
-        buildFile.delete()
-        buildFile.createNewFile()
         buildFile << """
             plugins {
                 id 'java'
