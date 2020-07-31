@@ -270,7 +270,7 @@ class DependencyLockPlugin : Plugin<Project> {
             if (module != null) {
                 details.because("${moduleKey.toModuleString()} locked to ${module.version}\n" +
                         "\twith reasons: ${reasons.joinToString()}")
-                        .useTarget(module.toMap())
+                        .useVersion(module.version!!)
             }
         }
     }
