@@ -245,6 +245,9 @@ class DependencyLockTaskConfigurer {
     private void setupLockConventionMapping(TaskProvider<GenerateLockTask> task, DependencyLockExtension extension, Map overrideMap) {
         task.configure { generateTask ->
             generateTask.conventionMapping.with {
+                ignoreDependencyLock = shouldIgnoreDependencyLock(project)
+                projectDir = project.projectDir
+                dependencyLockExtension = extension
                 skippedDependencies = { extension.skippedDependencies }
                 includeTransitives = {
                     project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives'] as String) : extension.includeTransitives
@@ -263,6 +266,9 @@ class DependencyLockTaskConfigurer {
                 project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
             }
             globalGenerateTask.conventionMapping.with {
+                ignoreDependencyLock = shouldIgnoreDependencyLock(project)
+                projectDir = project.projectDir
+                dependencyLockExtension = extension
                 dependenciesLock = { globalLockFileInBuildDir }
                 configurations = {
                     def subprojects = project.subprojects.collect { subproject ->

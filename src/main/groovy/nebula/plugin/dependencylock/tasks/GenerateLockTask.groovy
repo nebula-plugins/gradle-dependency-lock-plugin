@@ -32,6 +32,7 @@ import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
@@ -70,11 +71,19 @@ class GenerateLockTask extends AbstractLockTask {
     @Optional
     Boolean includeTransitives = false
 
+    @Internal
+    DependencyLockExtension dependencyLockExtension
+
+    @InputFiles
+    File projectDir
+
+    @Input
+    Boolean ignoreDependencyLock
+
     @TaskAction
     void lock() {
         if (CoreLocking.isCoreLockingEnabled()) {
-            def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
-            def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile)
+            def globalLockFile = new File(projectDir, dependencyLockExtension.globalLockFile)
             if (globalLockFile.exists()) {
                 throw new BuildCancelledException("Legacy global locks are not supported with core locking.\n" +
                         "Please remove global locks.\n" +
@@ -85,7 +94,7 @@ class GenerateLockTask extends AbstractLockTask {
                     "Please use $WRITE_CORE_LOCK_TASK_TO_RUN\n" +
                     "or do a one-time migration with `./gradlew $MIGRATE_TO_CORE_LOCK_TASK_NAME` to preserve the current lock state")
         }
-        if (DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
+        if (ignoreDependencyLock) {
             throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
         }
         Collection<Configuration> confs = getConfigurations() ?: lockableConfigurations(project, project, getConfigurationNames(), getSkippedConfigurationNames())

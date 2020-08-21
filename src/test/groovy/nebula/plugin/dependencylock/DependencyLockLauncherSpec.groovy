@@ -1982,4 +1982,18 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'global.lock').text == globalLockText
     }
 
+    @Ignore
+    def 'works with configuration cache'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << OLD_FOO_LOCK
+
+        buildFile << SPECIFIC_BUILD_GRADLE
+
+        when:
+        def result = runTasksSuccessfully('--configuration-cache', 'generateLock', 'saveLock')
+
+        then:
+        result.standardOutput
+    }
+
 }
