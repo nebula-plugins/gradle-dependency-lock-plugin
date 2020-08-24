@@ -38,6 +38,7 @@ class DependencyLockPlugin : Plugin<Project> {
         const val EXTENSION_NAME = "dependencyLock"
         const val COMMIT_EXTENSION_NAME = "commitDependencyLock"
         const val DEPENDENCY_RESOLTION_VERIFIER_EXTENSION = "dependencyResolutionVerifierExtension"
+        const val LOCK_FILE = "dependencyLock.lockFile"
         const val GLOBAL_LOCK_FILE = "dependencyLock.globalLockFile"
         const val LOCK_AFTER_EVALUATING = "dependencyLock.lockAfterEvaluating"
         const val UPDATE_DEPENDENCIES = "dependencyLock.updateDependencies"
@@ -85,7 +86,8 @@ class DependencyLockPlugin : Plugin<Project> {
         }
         val overrides = lockReader.readOverrides()
         val globalLockFilename = project.findStringProperty(GLOBAL_LOCK_FILE)
-        val lockFilename = DependencyLockTaskConfigurer(project).configureTasks(globalLockFilename, extension, commitExtension, overrides)
+        val lockFilename = project.findStringProperty(LOCK_FILE)
+        DependencyLockTaskConfigurer(project).configureTasks(globalLockFilename, lockFilename, extension, commitExtension, overrides)
         if (CoreLocking.isCoreLockingEnabled()) {
             LOGGER.warn("${project.name}: coreLockingSupport feature enabled")
             val coreLockingHelper = CoreLockingHelper(project)
