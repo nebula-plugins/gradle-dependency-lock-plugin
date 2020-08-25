@@ -315,6 +315,22 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         !result.standardOutput.contains('test.example:foo:2.0.0 -> 1.0.0')
     }
 
+    def 'lock file name can be customized'() {
+        buildFile << BUILD_GRADLE
+        buildFile << """
+        dependencyLock {
+            lockFile = "custom.lock"
+        }
+        """
+
+        when:
+        def result = runTasksSuccessfully('generateLock', 'saveLock')
+
+        then:
+        def dependenciesLock = new File(projectDir, 'custom.lock')
+        dependenciesLock.exists()
+    }
+
     def 'override lock file is applied'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << OLD_FOO_LOCK
@@ -418,78 +434,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
               test.example:foo: 1.0.0 -> 1.0.1
             '''.stripIndent()
         new File(projectDir, 'build/dependency-lock/lockdiff.txt').text == MY_DIFF
-    }
-
-    def 'run with generated lock'() {
-        def dependenciesLock = new File(projectDir, 'dependencies.lock')
-        dependenciesLock << OLD_FOO_LOCK
-        buildFile << BUILD_GRADLE
-
-        when:
-        runTasksSuccessfully('generateLock')
-
-        then:
-        new File(projectDir, 'build/dependencies.lock').text == FOO_LOCK
-
-        when:
-        def result0 = runTasksSuccessfully('dependencies')
-
-        then:
-        result0.standardOutput.contains 'test.example:foo:1.+ -> 1.0.0'
-
-        when:
-        def result1 = runTasksSuccessfully('-PdependencyLock.useGeneratedLock=true', 'dependencies')
-
-        then:
-        result1.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
-    }
-
-    def 'run with generated global lock'() {
-        def globalLock = new File(projectDir, 'global.lock')
-        globalLock << OLD_FOO_LOCK
-        buildFile << BUILD_GRADLE
-
-        when:
-        runTasksSuccessfully('generateGlobalLock')
-
-        then:
-        new File(projectDir, 'build/global.lock').text == FOO_LOCK
-
-        when:
-        def result0 = runTasksSuccessfully('dependencies')
-
-        then:
-        result0.standardOutput.contains 'test.example:foo:1.+ -> 1.0.0'
-
-        when:
-        def result1 = runTasksSuccessfully('-PdependencyLock.useGeneratedGlobalLock=true', 'dependencies')
-
-        then:
-        result1.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
-    }
-
-    def 'generateLock with deprecated format existing causes no issues'() {
-        def dependenciesLock = new File(projectDir, 'dependencies.lock')
-        dependenciesLock << DEPRECATED_LOCK_FORMAT
-        buildFile << BUILD_GRADLE
-
-        when:
-        runTasksSuccessfully('generateLock')
-
-        then:
-        new File(projectDir, 'build/dependencies.lock').text == FOO_LOCK
-
-        when:
-        def result0 = runTasksSuccessfully('dependencies')
-
-        then:
-        result0.standardOutput.contains 'test.example:foo:1.+ -> 1.0.0'
-
-        when:
-        def result1 = runTasksSuccessfully('-PdependencyLock.useGeneratedLock=true', 'dependencies')
-
-        then:
-        result1.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
     }
 
     def 'generateLock fails if dependency locks are ignored'() {
