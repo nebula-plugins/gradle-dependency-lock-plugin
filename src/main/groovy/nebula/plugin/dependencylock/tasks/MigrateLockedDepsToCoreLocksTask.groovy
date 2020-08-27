@@ -24,9 +24,7 @@ import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 
 class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
@@ -57,7 +55,7 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
 
                 def migrateConfigurationClosure = {
                     def dependenciesForConf = new ArrayList()
-                    def locks = lockReader.readLocks(it, getInputLockFile())
+                    def locks = lockReader.readLocks(it, getInputLockFile(), new HashMap<>())
 
                     if (locks != null) {
                         for (Map.Entry<String, ArrayList<String>> entry : locks.entrySet()) {

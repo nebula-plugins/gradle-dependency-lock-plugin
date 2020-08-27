@@ -17,6 +17,8 @@ package nebula.plugin.dependencylock
 
 import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
+import nebula.plugin.dependencylock.model.LockKey
+import nebula.plugin.dependencylock.model.LockValue
 import nebula.plugin.dependencylock.utils.CoreLocking
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifier
@@ -26,6 +28,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.DependencyResolveDetails
+import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.util.NameMatcher
@@ -232,7 +235,16 @@ class DependencyLockPlugin : Plugin<Project> {
 
     private fun applyLock(conf: Configuration, dependenciesLock: File, updates: Set<String> = emptySet()) {
         LOGGER.info("Using ${dependenciesLock.name} to lock dependencies in $conf")
-        val locks = lockReader.readLocks(conf, dependenciesLock, updates)
+        // Capture the version of each dependency as requested for reference on which use version recommendations vs request a particular version
+        val deps = mutableMapOf<LockKey, LockValue>().withDefault { LockValue() }
+        val externalDependencies = conf.allDependencies.withType(ExternalDependency::class.java)
+        externalDependencies.forEach({ dependency: ExternalDependency ->
+            val key = LockKey(dependency.group, dependency.name, conf.name)
+            deps.put(key, LockValue())
+            deps[key]!!.requested = dependency.version
+        })
+
+        val locks = lockReader.readLocks(conf, dependenciesLock, deps, updates)
         if (locks != null) {
             // Non-project locks are the top-level dependencies, and possibly transitive thereof, of this project which are
             // locked by the lock file. There may also be dependencies on other projects. These are not captured here.

@@ -1111,12 +1111,10 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         legacyLockFile.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 },
                 "test.nebula:b": {
-                    "locked": "1.1.0",
-                    "requested": "1.+"
+                    "locked": "1.1.0"
                 }'''.stripIndent())
 
         when:
