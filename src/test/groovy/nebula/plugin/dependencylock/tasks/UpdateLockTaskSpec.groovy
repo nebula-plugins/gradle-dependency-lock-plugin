@@ -48,12 +48,10 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def lockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                     "test.example:bar": {
-                        "locked": "1.0.0",
-                        "requested": "1.+"
+                        "locked": "1.0.0"
                     },
                     "test.example:qux": {
-                        "locked": "1.0.0",
-                        "requested": "1.0.0"
+                        "locked": "1.0.0"
                     },
                     "test.example:foo": {
                         "locked": "1.0.0",
@@ -71,8 +69,7 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def updatedLock = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                     "test.example:bar": {
-                        "locked": "1.1.0",
-                        "requested": "1.+"
+                        "locked": "1.1.0"
                     },
                     "test.example:foo": {
                         "locked": "1.0.1",
@@ -82,8 +79,7 @@ class UpdateLockTaskSpec extends ProjectSpec {
                         ]
                     },
                     "test.example:qux": {
-                        "locked": "1.0.0",
-                        "requested": "1.0.0"
+                        "locked": "1.0.0"
                     }'''.stripIndent()
         )
 

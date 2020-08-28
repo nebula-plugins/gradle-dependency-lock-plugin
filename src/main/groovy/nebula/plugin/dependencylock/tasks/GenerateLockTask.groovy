@@ -188,16 +188,6 @@ class GenerateLockTask extends AbstractLockTask {
             def peers = project.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) }
 
             confs.each { Configuration configuration ->
-                // Capture the version of each dependency as requested in the build script for reference.
-                def externalDependencies = configuration.allDependencies.withType(ExternalDependency)
-                def filteredExternalDependencies = externalDependencies.findAll { Dependency dependency ->
-                    filter(dependency.group, dependency.name, dependency.version)
-                }
-                filteredExternalDependencies.each { ExternalDependency dependency ->
-                    def key = new LockKey(group: dependency.group, artifact: dependency.name, configuration: configuration.name)
-                    deps[key].requested = dependency.version
-                }
-
                 // Lock the version of each dependency specified in the build script as resolved by Gradle.
                 def resolvedDependencies = configuration.resolvedConfiguration.firstLevelModuleDependencies
                 def filteredResolvedDependencies = resolvedDependencies.findAll { ResolvedDependency resolved ->

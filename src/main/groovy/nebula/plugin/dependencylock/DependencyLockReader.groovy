@@ -3,13 +3,16 @@ package nebula.plugin.dependencylock
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import groovy.transform.TupleConstructor
+import nebula.plugin.dependencylock.model.LockKey
+import nebula.plugin.dependencylock.model.LockValue
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import static DependencyLockTaskConfigurer.OVERRIDE_FILE
+
 import static DependencyLockTaskConfigurer.GLOBAL_LOCK_CONFIG
+import static DependencyLockTaskConfigurer.OVERRIDE_FILE
 
 @TupleConstructor
 class DependencyLockReader {
@@ -22,21 +25,28 @@ class DependencyLockReader {
         this.project = project
     }
 
-    Map readLocks(Configuration conf, File dependenciesLock, Collection<String> updates = []) {
+    Map readLocks(Configuration conf, File dependenciesLock, Map<LockKey, LockValue> requestedDependencies, Collection<String> updates = []) {
         logger.info("Using ${dependenciesLock.name} to lock dependencies in $conf")
 
-        if(!dependenciesLock.exists())
+        if (!dependenciesLock.exists())
             return null
 
         Map locks = parseLockFile(dependenciesLock)
 
         if (updates) {
             locks = locks.collectEntries { configurationName, deps ->
+                if (configurationName != conf.name) {
+                    // short-circuit if this is not the relevant configuration
+                    return [(configurationName): []]
+                }
                 [(configurationName): deps.findAll { coord, info ->
                     def notUpdate = !updates.contains(coord)
-                    def isFirstLevel = info?.transitive == null && info?.requested != null
+                    def coordinateSections = coord.split(":")
+                    def lockValue = requestedDependencies.get(new LockKey(group: coordinateSections[0], artifact: coordinateSections[1], configuration: configurationName)) ?: new LockValue()
+                    def requestedAVersion = lockValue.requested != null
+                    def isFirstLevel = info?.transitive == null
                     def isFirstLevelTransitive = info?.transitive?.any { deps[it]?.project }
-                    notUpdate && (isFirstLevel || isFirstLevelTransitive)
+                    notUpdate && ((isFirstLevel && requestedAVersion) || isFirstLevelTransitive)
                 }]
             }
         }

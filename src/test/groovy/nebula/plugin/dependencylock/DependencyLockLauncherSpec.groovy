@@ -63,8 +63,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         {
             "compileClasspath": {
                 "test.example:foo": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }
             }
         }
@@ -72,40 +71,35 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
     static final String DEPRECATED_LOCK_FORMAT = '''\
         {
-           "test.example:foo": { "locked": "1.0.0", "requested": "1.+" }
+           "test.example:foo": { "locked": "1.0.0" }
         }
     '''.stripIndent()
 
     static final String PRE_DIFF_FOO_LOCK = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }
                 '''.stripIndent())
 
     static final String FOO_LOCK = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
-                    "locked": "1.0.1",
-                    "requested": "1.+"
+                    "locked": "1.0.1"
                 }
                 '''.stripIndent())
 
     static final String NEW_FOO_LOCK = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
                     "locked": "2.0.1",
-                    "requested": "1.+",
                     "viaOverride": "2.0.1"
                 }
                 '''.stripIndent())
 
     static final String REMOVE_UPDATE_LOCK = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:baz": {
-                    "locked": "1.1.0",
-                    "requested": "1.+"
+                    "locked": "1.1.0"
                 },
                 "test.example:foo": {
-                    "locked": "1.0.1",
-                    "requested": "1.+"
+                    "locked": "1.0.1"
                 }
                 '''.stripIndent())
 
@@ -396,8 +390,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         def lockWithSkips = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:baz": {
-                    "locked": "1.1.0",
-                    "requested": "1.+"
+                    "locked": "1.1.0"
                 }
             '''.stripIndent())
 
@@ -624,7 +617,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         String lockText1 = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
                     "locked": "2.0.0",
-                    "requested": "2.+",
                     "viaOverride": "2.0.0"
                 }
             '''.stripIndent())
@@ -632,7 +624,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         String lockText2 = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:baz": {
                     "locked": "1.0.0",
-                    "requested": "1.+",
                     "viaOverride": "1.0.0"
                 }
             '''.stripIndent())
@@ -975,15 +966,13 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'dependencies.lock').text.replaceAll(' ', '') == lockText
         String lockText1 = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
-                    "locked": "2.0.0",
-                    "requested": "2.0.0"
+                    "locked": "2.0.0"
                 }
             '''.stripIndent())
         new File(projectDir, 'sub1/dependencies.lock').text == lockText1
         String lockText2 = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
-                    "locked": "1.0.1",
-                    "requested": "1.+"
+                    "locked": "1.0.1"
                 }
             '''.stripIndent())
         new File(projectDir, 'sub2/dependencies.lock').text == lockText2
@@ -994,15 +983,13 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'dependencies.lock').text = '{}'
         new File(projectDir, 'sub1/dependencies.lock').text = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
-                    "locked": "2.0.0",
-                    "requested": "2.0.0"
+                    "locked": "2.0.0"
                 }
             '''.stripIndent())
 
         new File(projectDir, 'sub2/dependencies.lock').text = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }
             '''.stripIndent())
 
@@ -1150,12 +1137,10 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def lockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                     "test.example:bar": {
-                        "locked": "1.0.0",
-                        "requested": "1.+"
+                        "locked": "1.0.0"
                     },
                     "test.example:qux": {
-                        "locked": "1.0.0",
-                        "requested": "latest.release"
+                        "locked": "1.0.0"
                     },
                     "test.example:foo": {
                         "locked": "1.0.0",
@@ -1170,8 +1155,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def updatedLock = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                     "test.example:bar": {
-                        "locked": "1.1.0",
-                        "requested": "1.+"
+                        "locked": "1.1.0"
                     },
                     "test.example:foo": {
                         "locked": "1.0.1",
@@ -1181,8 +1165,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                         ]
                     },
                     "test.example:qux": {
-                        "locked": "1.0.0",
-                        "requested": "latest.release"
+                        "locked": "1.0.0"
                     }'''.stripIndent()
         )
 
@@ -1221,8 +1204,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                         "locked": "1.0.0"
                     },
                     "test.example:qux": {
-                        "locked": "1.0.0",
-                        "requested": "latest.release"
+                        "locked": "1.0.0"
                     },
                     "test.example:foo": {
                         "locked": "1.0.0",
@@ -1247,8 +1229,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                         ]
                     },
                     "test.example:qux": {
-                        "locked": "2.0.0",
-                        "requested": "latest.release"
+                        "locked": "2.0.0"
                     }'''.stripIndent()
         )
 
@@ -1701,8 +1682,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 ]
             },
             "test.nebula:foo": {
-                "locked": "1.0.0",
-                "requested": "1.+"
+                "locked": "1.0.0"
             }
             '''.stripIndent())
 
@@ -1837,8 +1817,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def deplock = new File(projectDir, 'dependencies.lock')
         deplock.text = LockGenerator.duplicateIntoConfigs('''\
             "test.nebula:foo": {
-                "locked": "1.0.0",
-                "requested": "1.+"
+                "locked": "1.0.0"
             }
             '''.stripIndent())
 
@@ -1873,12 +1852,10 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def deplock = new File(projectDir, 'dependencies.lock')
         deplock.text = LockGenerator.duplicateIntoConfigs('''\
             "test.nebula:bar": {
-                "locked": "1.0.0",
-                "requested": "1.+"
+                "locked": "1.0.0"
             },
             "test.nebula:foo": {
-                "locked": "1.0.0",
-                "requested": "1.+"
+                "locked": "1.0.0"
             }
             '''.stripIndent())
 

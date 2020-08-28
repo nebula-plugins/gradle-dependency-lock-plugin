@@ -210,12 +210,10 @@ class DependencyLockPluginSpec extends ProjectSpec {
             {
                 "compileClasspath": {
                     "test.example:foo": {
-                        "locked": "1.0.0",
-                        "requested": "1.+"
+                        "locked": "1.0.0"
                     },
                     "test.example:baz": {
-                        "locked": "2.0.0",
-                        "requested": "2.+"
+                        "locked": "2.0.0"
                     }
                 }
             }
@@ -340,14 +338,12 @@ class DependencyLockPluginSpec extends ProjectSpec {
             {
                 "compileClasspath": {
                     "test.example:baz": {
-                        "locked": "1.0.0",
-                        "requested": "1.+"
+                        "locked": "1.0.0"
                     }
                 },
                 "runtimeClasspath": {
                     "test.example:baz": {
-                        "locked": "1.0.0",
-                        "requested": "1.+"
+                        "locked": "1.0.0"
                     }
                 }
             }
@@ -361,8 +357,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
             {
                 "compileClasspath": {
                     "test.example:foo": {
-                        "locked": "2.0.0",
-                        "requested": "2.+"
+                        "locked": "2.0.0"
                     },
                     "test.nebula:sub1": {
                         "project": true,
@@ -375,8 +370,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
                         "firstLevelTransitive": [ "test.nebula:sub1" ]
                     },
                     "test.example:foo": {
-                        "locked": "2.0.0",
-                        "requested": "2.+"
+                        "locked": "2.0.0"
                     },
                     "test.nebula:sub1": {
                         "project": true,
@@ -423,8 +417,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
             {
                 "_global_": {
                     "test.example:foo": {
-                        "locked": "1.0.1",
-                        "requested": "1.+"
+                        "locked": "1.0.1"
                     }
                 }
             }
@@ -457,8 +450,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
             {
                 "compileClasspath": {
                     "test.example:foo": {
-                        "locked": "1.0.0",
-                        "requested": "1.+"
+                        "locked": "1.0.0"
                     }
                 }
             }
@@ -472,8 +464,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
             {
                 "compileClasspath": {
                     "test.example:foo": {
-                        "locked": "2.0.0",
-                        "requested": "2.+"
+                        "locked": "2.0.0"
                     }
                 }
             }
@@ -508,14 +499,12 @@ class DependencyLockPluginSpec extends ProjectSpec {
             {
                 "compileClasspath": {
                     "test.example:foo": {
-                        "locked": "1.0.0",
-                        "requested": "1.+"
+                        "locked": "1.0.0"
                     }
                 },
                 "default": {
                     "test.example:foo": {
-                        "locked": "1.0.0",
-                        "requested": "1.+"
+                        "locked": "1.0.0"
                     }
                 }
             }

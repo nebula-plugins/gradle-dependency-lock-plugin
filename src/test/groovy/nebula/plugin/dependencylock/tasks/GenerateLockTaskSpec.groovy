@@ -48,12 +48,10 @@ class GenerateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntimeClasspath": {
                     "test.example:baz": {
-                        "locked": "1.1.0",
-                        "requested": "1.+"
+                        "locked": "1.1.0"
                     },
                     "test.example:foo": {
-                        "locked": "2.0.1",
-                        "requested": "2.+"
+                        "locked": "2.0.1"
                     }
                 }
             }'''.stripIndent()
@@ -83,8 +81,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         String lockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                     "test.example:foo": {
-                        "locked": "2.0.1",
-                        "requested": "2.+"
+                        "locked": "2.0.1"
                     }'''.stripIndent())
         task.dependenciesLock.text == lockText
     }
@@ -119,8 +116,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         String lockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                     "test.example:foo": {
-                        "locked": "2.0.1",
-                        "requested": "2.+"
+                        "locked": "2.0.1"
                     }'''.stripIndent())
         task.dependenciesLock.text == lockText
         !task.dependenciesLock.text.contains('"zinc"')
@@ -150,8 +146,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                         ]
                     },
                     "test.example:foobaz": {
-                        "locked": "1.0.0",
-                        "requested": "1.+"
+                        "locked": "1.0.0"
                     }
                 }
             }'''.stripIndent()
@@ -192,8 +187,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntimeClasspath": {
                     "test.example:foo": {
-                        "locked": "2.0.1",
-                        "requested": "2.+"
+                        "locked": "2.0.1"
                     },
                     "test.nebula:common": {
                         "project": true
@@ -412,8 +406,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntimeClasspath": {
                     "test.example:bar": {
-                        "locked": "1.1.0",
-                        "requested": "1.+"
+                        "locked": "1.1.0"
                     },
                     "test.example:foo": {
                         "locked": "1.0.1",
@@ -448,7 +441,6 @@ class GenerateLockTaskSpec extends ProjectSpec {
                 "testRuntimeClasspath": {
                     "circular:a": {
                         "locked": "1.0.0",
-                        "requested": "1.+",
                         "transitive": [
                             "circular:b"
                         ]
@@ -498,8 +490,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                         ]
                     },
                     "circular:oneleveldeep": {
-                        "locked": "1.0.0",
-                        "requested": "1.+"
+                        "locked": "1.0.0"
                     }
                 }
             }'''.stripIndent()
@@ -528,8 +519,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntimeClasspath": {
                     "test.example:bar": {
-                        "locked": "1.1.0",
-                        "requested": "1.+"
+                        "locked": "1.1.0"
                     },
                     "test.example:baz": {
                         "locked": "1.0.0",
@@ -545,8 +535,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                         ]
                     },
                     "test.example:foobaz": {
-                        "locked": "1.0.0",
-                        "requested": "1.+"
+                        "locked": "1.0.0"
                     }
                 }
             }'''.stripIndent()
@@ -599,8 +588,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                         ]
                     },
                     "test.example:transitive": {
-                        "locked": "1.0.0",
-                        "requested": "1.0.0"
+                        "locked": "1.0.0"
                     }
                 }
             }'''.stripIndent()
@@ -634,8 +622,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntimeClasspath": {
                     "test.example:foo": {
-                        "locked": "2.0.1",
-                        "requested": "2.+"
+                        "locked": "2.0.1"
                     }
                 }
             }'''.stripIndent()

@@ -11,8 +11,7 @@ class DiffLockTaskSpec extends ProjectSpec {
         existingLock.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }
                 '''.stripIndent())
 
@@ -22,8 +21,7 @@ class DiffLockTaskSpec extends ProjectSpec {
         newLock.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.1.0",
-                    "requested": "1.+"
+                    "locked": "1.1.0"
                 }
                 '''.stripIndent())
         def task = project.tasks.register("diffLock", DiffLockTask)
@@ -57,8 +55,7 @@ class DiffLockTaskSpec extends ProjectSpec {
         newLock.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }
                 '''.stripIndent())
         def task = project.tasks.register("diffLock", DiffLockTask)
@@ -89,8 +86,7 @@ class DiffLockTaskSpec extends ProjectSpec {
         newLock.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }
                 '''.stripIndent())
         def task = project.tasks.register("diffLock", DiffLockTask)
@@ -116,8 +112,7 @@ class DiffLockTaskSpec extends ProjectSpec {
         existingLock.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }
                 '''.stripIndent())
 
@@ -150,18 +145,15 @@ class DiffLockTaskSpec extends ProjectSpec {
         existingLock.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }
                 '''.stripIndent(), ['compile', 'compileClasspath', 'default', 'runtime', 'runtimeClasspath'],
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 },
                 "test.nebula:testlib": {
-                    "locked": "2.0.0",
-                    "requested": "2.+"
+                    "locked": "2.0.0"
                 }
                 '''.stripIndent(), ['testCompile', 'testCompileClasspath', 'testRuntime', 'testRuntimeClasspath'])
 
@@ -171,18 +163,15 @@ class DiffLockTaskSpec extends ProjectSpec {
         newLock.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.1.0",
-                    "requested": "1.+"
+                    "locked": "1.1.0"
                 }
                 '''.stripIndent(), ['compile', 'compileClasspath', 'default', 'runtime', 'runtimeClasspath'],
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.1.0",
-                    "requested": "1.+"
+                    "locked": "1.1.0"
                 },
                 "test.nebula:testlib": {
-                    "locked": "2.0.2",
-                    "requested": "2.+"
+                    "locked": "2.0.2"
                 }
                 '''.stripIndent(), ['testCompile', 'testCompileClasspath', 'testRuntime', 'testRuntimeClasspath'])
         def task = project.tasks.register("diffLock", DiffLockTask)
@@ -210,8 +199,7 @@ class DiffLockTaskSpec extends ProjectSpec {
         existingLock.text = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }
                 '''.stripIndent())
 
@@ -221,14 +209,12 @@ class DiffLockTaskSpec extends ProjectSpec {
         newLock.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.1.0",
-                    "requested": "1.+"
+                    "locked": "1.1.0"
                 }
                 '''.stripIndent(), ['compileClasspath', 'runtimeClasspath'],
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.1.1",
-                    "requested": "1.+"
+                    "locked": "1.1.1"
                 }
                 '''.stripIndent(), ['testCompileClasspath', 'testRuntimeClasspath'])
         def task = project.tasks.register("diffLock", DiffLockTask)

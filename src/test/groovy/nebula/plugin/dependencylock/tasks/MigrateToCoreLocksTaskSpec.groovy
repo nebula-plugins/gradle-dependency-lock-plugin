@@ -28,12 +28,10 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         legacyLockFile.text = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 },
                 "test.nebula:b": {
-                    "locked": "1.1.0",
-                    "requested": "1.+"
+                    "locked": "1.1.0"
                 }'''.stripIndent())
 
         when:
@@ -127,6 +125,52 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         def expectedNebulaLockText = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
+                    "locked": "1.0.0"
+                },
+                "test.nebula:b": {
+                    "locked": "1.1.0"
+                },
+                "test.nebula:c": {
+                    "locked": "1.0.0"
+                },
+                "test.nebula:d": {
+                    "locked": "1.0.0",
+                    "transitive": [
+                        "test.nebula:c"
+                    ]
+                }'''.stripIndent())
+        legacyLockFile.text = expectedNebulaLockText
+
+        when:
+        def result = runTasks('migrateToCoreLocks')
+
+        then:
+        result.output.contains('coreLockingSupport feature enabled')
+        !result.output.contains('not supported')
+        result.output.contains('Migrating legacy locks')
+        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        actualLocks.containsAll(expectedLocks)
+        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
+        lockFile.text.contains('test.nebula:a:1.0.0')
+        lockFile.text.contains('test.nebula:b:1.1.0')
+        lockFile.text.contains('test.nebula:c:1.0.0')
+        lockFile.text.contains('test.nebula:d:1.0.0')
+
+        !legacyLockFile.exists()
+    }
+
+
+    def 'migration with transitives and reqested values'() {
+        given:
+        buildFile << """
+            dependencies {
+                implementation 'test.nebula:c:1.+'
+            }""".stripIndent()
+        def legacyLockFile = new File(projectDir, 'dependencies.lock')
+        def expectedNebulaLockText = LockGenerator.duplicateIntoConfigs(
+                '''\
+                "test.nebula:a": {
                     "locked": "1.0.0",
                     "requested": "1.+"
                 },
@@ -176,20 +220,16 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         def expectedNebulaLockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 },
                 "test.nebula:b": {
-                    "locked": "1.1.0",
-                    "requested": "1.+"
+                    "locked": "1.1.0"
                 },
                 "test.nebula:c": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 },
                 "test.nebula:e": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }'''.stripIndent())
         legacyLockFile.text = expectedNebulaLockText
 
@@ -256,16 +296,14 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         sub1LegacyLockFile.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }'''.stripIndent())
 
         def sub2LegacyLockFile = new File(projectDir, 'sub2/dependencies.lock')
         sub2LegacyLockFile.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:c": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 },
                 "test.nebula:d": {
                     "locked": "1.0.0",
@@ -334,8 +372,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         sub1LegacyLockFile.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }'''.stripIndent())
 
         def sub2LegacyLockFile = new File(projectDir, 'sub2/dependencies.lock')
@@ -351,8 +388,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
                     ]
                 },
                 "test.nebula:c": {
-                    "locked": "1.0.0",
-                    "requested": "1.0.0"
+                    "locked": "1.0.0"
                 },
                 "test.nebula:d": {
                     "locked": "1.0.0",
@@ -424,8 +460,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         sub1LegacyLockFile.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }'''.stripIndent())
 
         def sub2LegacyLockFile = new File(projectDir, 'sub2/dependencies.lock')
@@ -436,14 +471,12 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
                 },
                 "test.nebula:a": {
                     "locked": "1.0.0",
-                    "requested": "1.0.0",
                     "transitive": [
                         "${projectName}:sub1"
                     ]
                 },
                 "test.nebula:c": {
-                    "locked": "1.0.0",
-                    "requested": "1.0.0"
+                    "locked": "1.0.0"
                 },
                 "test.nebula:d": {
                     "locked": "1.0.0",
@@ -481,8 +514,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         legacyLockFile.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }'''.stripIndent())
 
         when:
@@ -591,8 +623,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         legacyLockFile.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 }
                 '''.stripIndent())
 
@@ -673,12 +704,10 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         legacyLockFile.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 },
                 "test.nebula:b": {
-                    "locked": "1.1.0",
-                    "requested": "1.+"
+                    "locked": "1.1.0"
                 }'''.stripIndent())
 
         buildFile.text = """\
@@ -722,12 +751,10 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         legacyLockFile.text = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.+"
+                    "locked": "1.0.0"
                 },
                 "test.nebula:b": {
-                    "locked": "1.1.0",
-                    "requested": "1.+"
+                    "locked": "1.1.0"
                 }'''.stripIndent())
 
         buildFile.text = """\
@@ -871,14 +898,12 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         def locks = LockGenerator.duplicateIntoConfigs(
                 '''\
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.0.0"
+                    "locked": "1.0.0"
                 }'''.stripIndent(),
                 compileBasedConfigs,
                 '''\
                 "junit:junit": {
-                    "locked": "4.12",
-                    "requested": "4.12"
+                    "locked": "4.12"
                 },
                 "org.hamcrest:hamcrest-core": {
                     "locked": "1.3",
@@ -887,8 +912,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
                     ]
                 },
                 "test.nebula:a": {
-                    "locked": "1.0.0",
-                    "requested": "1.0.0"
+                    "locked": "1.0.0"
                 }'''.stripIndent(),
                 testCompileBaseConfigs)
         return locks

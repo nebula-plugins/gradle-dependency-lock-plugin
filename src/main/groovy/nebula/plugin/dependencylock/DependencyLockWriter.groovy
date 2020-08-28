@@ -43,9 +43,6 @@ class DependencyLockWriter {
             } else {
                 depMap['project'] = true
             }
-            if (lock.requested) {
-                depMap['requested'] = lock.requested
-            }
             if (lock.viaOverride) {
                 depMap['viaOverride'] = lock.viaOverride
             }

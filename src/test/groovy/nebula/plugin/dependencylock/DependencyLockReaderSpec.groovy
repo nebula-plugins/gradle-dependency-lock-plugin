@@ -17,15 +17,14 @@ class DependencyLockReaderSpec extends ProjectSpec {
                         ]
                     },
                     "mytest:foobar": {
-                        "locked": "1.6.5",
-                        "requested": "1.+"
+                        "locked": "1.6.5"
                     }
                 }
             }
             '''.stripIndent()
 
         when:
-        reader.readLocks(project.configurations.compileClasspath, globalLock, ['test:baz'])
+        reader.readLocks(project.configurations.compileClasspath, globalLock, new HashMap<>(), ['test:baz'])
 
         then:
         noExceptionThrown()
