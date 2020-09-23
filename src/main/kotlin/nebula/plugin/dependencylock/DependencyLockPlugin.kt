@@ -28,6 +28,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.DependencyResolveDetails
+import org.gradle.api.artifacts.DependencySubstitutions
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -277,15 +278,17 @@ class DependencyLockPlugin : Plugin<Project> {
     }
 
     private fun lockConfiguration(conf: Configuration, selectorKeys: List<ModuleVersionSelectorKey>) {
-        val selectorsByKey = selectorKeys.groupBy { it }.mapValues { it.key }
-        conf.resolutionStrategy.eachDependency { details ->
-            val moduleKey = details.toKey()
-            val module = selectorsByKey[moduleKey]
-            if (module != null) {
-                details.because("${moduleKey.toModuleString()} locked to ${module.version}\n" +
-                        "\twith reasons: ${reasons.joinToString()}")
-                        .useVersion(module.version!!)
-            }
+        val resolutionStrategySubstitution: DependencySubstitutions = conf.resolutionStrategy.dependencySubstitution
+        selectorKeys.forEach { key ->
+            val substitutedModule = resolutionStrategySubstitution.module("${key.group}:${key.name}")
+            val withModule = resolutionStrategySubstitution.module("${key.group}:${key.name}:${key.version}")
+
+            val substitutionMessage = "${key.group}:${key.name} locked to ${key.version}\n" +
+                    "\twith reasons: ${reasons.joinToString()}"
+
+            resolutionStrategySubstitution.substitute(substitutedModule)
+                    .because(substitutionMessage)
+                    .with(withModule)
         }
     }
 
