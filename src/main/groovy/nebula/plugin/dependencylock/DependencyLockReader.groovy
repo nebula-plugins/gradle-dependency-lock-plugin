@@ -10,9 +10,8 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-
-import static DependencyLockTaskConfigurer.GLOBAL_LOCK_CONFIG
 import static DependencyLockTaskConfigurer.OVERRIDE_FILE
+import static DependencyLockTaskConfigurer.GLOBAL_LOCK_CONFIG
 
 @TupleConstructor
 class DependencyLockReader {
@@ -35,8 +34,8 @@ class DependencyLockReader {
 
         if (updates) {
             locks = locks.collectEntries { configurationName, deps ->
-                if (configurationName != conf.name) {
-                    // short-circuit if this is not the relevant configuration
+                if (configurationName != conf.name && configurationName != GLOBAL_LOCK_CONFIG) {
+                    // short-circuit if this is not the relevant configuration or global lock configuration
                     return [(configurationName): []]
                 }
                 [(configurationName): deps.findAll { coord, info ->
