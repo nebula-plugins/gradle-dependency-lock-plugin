@@ -26,6 +26,9 @@ import spock.lang.Ignore
 import spock.lang.Issue
 import spock.lang.Unroll
 
+import java.nio.file.Files
+import java.nio.file.Paths
+
 class DependencyLockLauncherSpec extends IntegrationSpec {
     def setup() {
         fork = false
@@ -1957,5 +1960,31 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         where:
         platformType << ['platform', 'enforcedPlatform']
+    }
+
+    def 'lock file is applied and local libs dont fail'() {
+        Files.createDirectory(Paths.get(projectDir.absolutePath, 'libs'))
+        Files.createFile(Paths.get(projectDir.absolutePath, 'libs/testJar.jar'))
+
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << OLD_FOO_LOCK
+
+        buildFile << """\
+            apply plugin: 'java'
+            apply plugin: 'nebula.dependency-lock'
+            repositories { maven { url '${Fixture.repo}' } }
+            repositories { flatDir { dirs 'libs' } }
+            dependencies {
+                implementation 'test.example:foo:1.0.1'
+                implementation 'test.example:baz:1.0.0'
+                implementation name: 'testJar'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasksSuccessfully('dependencies')
+
+        then:
+        result.standardOutput.contains 'test.example:foo:1.0.1 -> 1.0.0'
     }
 }
