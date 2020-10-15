@@ -30,6 +30,8 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.DependencySubstitutions
 import org.gradle.api.artifacts.ExternalDependency
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.Category
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.util.NameMatcher
@@ -278,10 +280,25 @@ class DependencyLockPlugin : Plugin<Project> {
     }
 
     private fun lockConfiguration(conf: Configuration, selectorKeys: List<ModuleVersionSelectorKey>) {
+        val externalDependencies = conf.allDependencies.withType(ExternalDependency::class.java)
+                .associateBy { ModuleVersionSelectorKey(it.group!!, it.name, null) }
         val resolutionStrategySubstitution: DependencySubstitutions = conf.resolutionStrategy.dependencySubstitution
         selectorKeys.forEach { key ->
+            val maybeDirectDependency = externalDependencies[key]
+            val category = maybeDirectDependency?.attributes?.getAttribute(Category.CATEGORY_ATTRIBUTE)
             val substitutedModule = resolutionStrategySubstitution.module("${key.group}:${key.name}")
-            val withModule = resolutionStrategySubstitution.module("${key.group}:${key.name}:${key.version}")
+
+            val withModule = resolutionStrategySubstitution.run {
+                val moduleId = "${key.group}:${key.name}:${key.version}"
+                if (category != null) {
+                    variant(module(moduleId), {
+                        it.attributes {
+                            it.attribute(Category.CATEGORY_ATTRIBUTE, category)
+                        }
+                    })
+                } else
+                    module(moduleId)
+            }
 
             val substitutionMessage = "${key.group}:${key.name} locked to ${key.version}\n" +
                     "\twith reasons: ${reasons.joinToString()}"

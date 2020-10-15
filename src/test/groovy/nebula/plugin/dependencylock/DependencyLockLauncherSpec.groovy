@@ -1903,4 +1903,59 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'global.lock').text == globalLockText
     }
 
+    @Unroll
+    def '#platformType platforms can be be locked'() {
+        given:
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << '''\
+        {
+            "compileClasspath": {
+                "sample:recommender": {
+                    "locked": "1.0"
+                }
+            }
+        }
+        '''.stripIndent()
+
+        def repo = new File(projectDir,'repo')
+        def sample = new File(repo, 'sample/recommender/1.0')
+        sample.mkdirs()
+        def sampleFile = new File(sample, 'recommender-1.0.pom')
+        sampleFile << '''
+            <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+              <modelVersion>4.0.0</modelVersion>
+              <groupId>sample</groupId>
+              <artifactId>recommender</artifactId>
+              <version>1.0</version>
+
+              <dependencyManagement>
+                <dependencies>
+                  <dependency>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                    <version>1.1.1</version>
+                  </dependency>
+              </dependencyManagement>
+            </project>
+        '''
+
+        buildFile << """\
+            apply plugin: 'java'
+            apply plugin: 'nebula.dependency-lock'
+            repositories { maven { url '${repo.absolutePath}' } }
+            dependencies {
+                implementation($platformType('sample:recommender:1.1'))
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasksSuccessfully('dI', '--dependency', 'recommender')
+
+        then:
+        result.standardOutput.contains 'sample:recommender:1.1 -> 1.0'
+
+        where:
+        platformType << ['platform', 'enforcedPlatform']
+    }
 }
