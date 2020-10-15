@@ -281,10 +281,10 @@ class DependencyLockPlugin : Plugin<Project> {
 
     private fun lockConfiguration(conf: Configuration, selectorKeys: List<ModuleVersionSelectorKey>) {
         val externalDependencies = conf.allDependencies.withType(ExternalDependency::class.java)
-                .associateBy { ModuleVersionSelectorKey(it.group!!, it.name, null) }
+                .associateBy { it.module.toString() }
         val resolutionStrategySubstitution: DependencySubstitutions = conf.resolutionStrategy.dependencySubstitution
         selectorKeys.forEach { key ->
-            val maybeDirectDependency = externalDependencies[key]
+            val maybeDirectDependency = externalDependencies[key.toModuleString()]
             val category = maybeDirectDependency?.attributes?.getAttribute(Category.CATEGORY_ATTRIBUTE)
             val substitutedModule = resolutionStrategySubstitution.module("${key.group}:${key.name}")
 
