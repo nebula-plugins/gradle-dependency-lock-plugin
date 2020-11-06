@@ -208,19 +208,31 @@ class DependencyResolutionVerifier {
         }
         val depsWhereResolvedVersionIsNotTheLockedVersionByConf = depsWhereResolvedVersionIsNotTheLockedVersionPerProjectForConfigurations[uniqueProjectKey(project)]
         val lockedDepsByConf = DependencyLockPlugin.lockedDepsPerProjectForConfigurations[uniqueProjectKey(project)]
+        val overrideDepsByConf = DependencyLockPlugin.overrideDepsPerProjectForConfigurations[uniqueProjectKey(project)]
         val lockedDependencies: Map<String, String> = lockedDepsByConf!![conf.name]
                 ?.associateBy({ "${it.group}:${it.name}" }, { "${it.version}" })
                 ?: emptyMap()
-        if (lockedDependencies.isEmpty()) {
+        val overrideDependencies: Map<String, String> = overrideDepsByConf!![conf.name]
+                ?.associateBy({ "${it.group}:${it.name}" }, { "${it.version}" })
+                ?: emptyMap()
+        if (lockedDependencies.isEmpty() && overrideDependencies.isEmpty()) {
             // short-circuit when locks are empty
             return
         }
 
         conf.resolvedConfiguration.resolvedArtifacts.map { it.moduleVersion.id }.forEach { dep ->
             val lockedVersion: String = lockedDependencies["${dep.group}:${dep.name}"] ?: ""
-            if (lockedVersion.isNotEmpty() && lockedVersion != dep.version) {
+            val overrideVersion: String = overrideDependencies["${dep.group}:${dep.name}"] ?: ""
+
+            val expectedVersion = when {
+                overrideVersion.isNotEmpty() -> overrideVersion
+                lockedVersion.isNotEmpty() -> lockedVersion
+                else -> ""
+            }
+
+            if (expectedVersion != dep.version) {
                 val depAsString = "${dep.group}:${dep.name}:${dep.version}"
-                val key = "'$depAsString' instead of locked version '$lockedVersion'"
+                val key = "'$depAsString' instead of locked version '$expectedVersion'"
                 if (depsWhereResolvedVersionIsNotTheLockedVersionByConf!!.containsKey(dep.toString())) {
                     depsWhereResolvedVersionIsNotTheLockedVersionByConf[key]!!.add(conf)
                 } else {

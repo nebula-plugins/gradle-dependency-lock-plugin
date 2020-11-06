@@ -788,6 +788,60 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     }
 
     @Unroll
+    def 'resolved versions are not equal to locked versions with override file - core alignment #coreAlignment - core locking #coreLocking'() {
+        given:
+        setupSingleProjectWithLockedVersionsThatAreNotAligned()
+
+        def graph = new DependencyGraphBuilder()
+                .addModule(new ModuleBuilder('test.nebula:a:1.3.0').addDependency('test.nebula:d:1.3.0').build())
+                .addModule('test.nebula:b:1.3.0')
+                .addModule('test.nebula:c:1.3.0')
+                .build()
+        def updatedmavenrepo = new GradleDependencyGenerator(graph, "$projectDir/testrepogen")
+        updatedmavenrepo.generateTestMavenRepo()
+
+        def dependenciesLockOverride = new File(projectDir, 'override.lock')
+        dependenciesLockOverride << '''
+            { "test.nebula:a": "1.3.0" }
+            '''.stripIndent()
+
+        when:
+        def flags = ['-PdependencyLock.overrideFile=override.lock', "-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
+        def insightResults = runTasksAndFail('dependencyInsight', '--dependency', 'test.nebula', *flags)
+        def results = runTasksAndFail('dependencies', '--configuration', 'compileClasspath', *flags)
+
+        then:
+        insightResults.output.contains('using override file: override.lock')
+
+        insightResults.output.contains('test.nebula:a:1.1.0 -> 1.3.0\n')
+        insightResults.output.contains('test.nebula:b:1.3.0\n')
+        insightResults.output.contains('test.nebula:c:1.1.0 -> 1.3.0\n')
+        insightResults.output.contains('test.nebula:d:1.3.0\n')
+
+        insightResults.output.contains('FAILED')
+
+        insightResults.output.contains("Dependency lock state is out of date:")
+        !insightResults.output.contains("Resolved 'test.nebula:a:1.3.0' instead of locked version")
+        insightResults.output.contains("Resolved 'test.nebula:b:1.3.0' instead of locked version '1.2.0' for project")
+        insightResults.output.contains("Resolved 'test.nebula:c:1.3.0' instead of locked version '1.1.0' for project")
+        insightResults.output.contains("Resolved 'test.nebula:d:1.3.0' instead of locked version '1.1.0' for project")
+        insightResults.output.contains('Please update your dependency locks or your build file constraints.')
+
+        results.output.contains('FAILED')
+
+        results.output.contains("Dependency lock state is out of date:")
+        !results.output.contains("Resolved 'test.nebula:a:1.3.0' instead of locked version")
+        results.output.contains("Resolved 'test.nebula:b:1.3.0' instead of locked version '1.2.0' for project")
+        results.output.contains("Resolved 'test.nebula:c:1.3.0' instead of locked version '1.1.0' for project")
+        results.output.contains("Resolved 'test.nebula:d:1.3.0' instead of locked version '1.1.0' for project")
+        results.output.contains('Please update your dependency locks or your build file constraints.')
+
+        where:
+        coreAlignment | coreLocking
+        true          | false
+    }
+
+    @Unroll
     def 'resolved versions are not equal to locked versions - can configure extension messaging - core alignment #coreAlignment - core locking #coreLocking'() {
         given:
         setupSingleProjectWithLockedVersionsThatAreNotAligned()

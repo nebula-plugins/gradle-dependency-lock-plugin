@@ -29,8 +29,6 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.ExternalDependency
-import org.gradle.api.attributes.Attribute
-import org.gradle.api.attributes.Category
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.util.NameMatcher
@@ -61,6 +59,7 @@ class DependencyLockPlugin : Plugin<Project> {
         val UPDATE_TASK_NAMES = setOf(UPDATE_LOCK_TASK_NAME, UPDATE_GLOBAL_LOCK_TASK_NAME)
         val MIGRATION_TASK_NAMES = setOf(MIGRATE_TO_CORE_LOCK_TASK_NAME)
         val lockedDepsPerProjectForConfigurations: MutableMap<String, MutableMap<String, List<ModuleVersionSelectorKey>>> = mutableMapOf()
+        val overrideDepsPerProjectForConfigurations: MutableMap<String, MutableMap<String, List<ModuleVersionSelectorKey>>> = mutableMapOf()
     }
 
     private val LOGGER: Logger = Logging.getLogger(DependencyLockPlugin::class.java)
@@ -79,6 +78,7 @@ class DependencyLockPlugin : Plugin<Project> {
             dependencyResolutionVerifierExtension = project.rootProject.extensions.create(DEPENDENCY_RESOLTION_VERIFIER_EXTENSION, DependencyResolutionVerifierExtension::class.java)
         }
         lockedDepsPerProjectForConfigurations[uniqueProjectKey(project)] = mutableMapOf()
+        overrideDepsPerProjectForConfigurations[uniqueProjectKey(project)] = mutableMapOf()
 
         if (!project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)) {
             /* MigrateToCoreLocks can be involved with migrating dependencies that were previously unlocked.
@@ -281,6 +281,8 @@ class DependencyLockPlugin : Plugin<Project> {
         }
         LOGGER.debug("overrides: {}", overrideDeps)
         lockConfiguration(conf, overrideDeps)
+        val overrideDepsByConf = overrideDepsPerProjectForConfigurations[uniqueProjectKey(project)]
+        overrideDepsByConf!![conf.name] = overrideDeps
     }
 
     private fun lockConfiguration(conf: Configuration, selectorKeys: List<ModuleVersionSelectorKey>) {
