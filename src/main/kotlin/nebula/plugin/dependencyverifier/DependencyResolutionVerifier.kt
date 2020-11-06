@@ -56,11 +56,12 @@ class DependencyResolutionVerifier {
         this.project = project
         this.extension = project.rootProject.extensions.findByType(DependencyResolutionVerifierExtension::class.java)!!
         this.configurationsToExcludeOverride = mutableSetOf()
-        if(project.hasProperty(CONFIGURATIONS_TO_EXCLUDE)) {
+        if (project.hasProperty(CONFIGURATIONS_TO_EXCLUDE)) {
             configurationsToExcludeOverride.addAll((project.property(CONFIGURATIONS_TO_EXCLUDE) as String).split(","))
         }
-        failedDependenciesPerProjectForConfigurations[uniqueProjectKey(project)] = mutableMapOf()
-        lockedDepsOutOfDatePerProject[uniqueProjectKey(project)] = mutableSetOf()
+        val uniqueProjectKey = uniqueProjectKey(project)
+        failedDependenciesPerProjectForConfigurations[uniqueProjectKey] = mutableMapOf()
+        lockedDepsOutOfDatePerProject[uniqueProjectKey] = mutableSetOf()
 
         verifyResolution(project)
     }
@@ -70,6 +71,8 @@ class DependencyResolutionVerifier {
             val buildFailed: Boolean = buildResult.failure != null
             if (buildFailed && !providedErrorMessageForThisProject) {
                 collectDependencyResolutionErrorsAfterBuildFailure(buildResult)
+            }
+            if (!providedErrorMessageForThisProject) {
                 logOrThrowOnFailedDependencies()
             }
         }
@@ -95,20 +98,19 @@ class DependencyResolutionVerifier {
                     if (providedErrorMessageForThisProject) {
                         return
                     }
-                    if(task !is DependencyReportTask && task !is DependencyInsightReportTask && task !is AbstractCompile) {
+                    if (task !is DependencyReportTask && task !is DependencyInsightReportTask && task !is AbstractCompile) {
                         return
                     }
                     collectDependencyResolutionErrorsAfterExecute(task)
                     logOrThrowOnFailedDependencies()
                 }
-
             })
         }
     }
 
     private fun collectDependencyResolutionErrorsAfterBuildFailure(buildResult: BuildResult) {
         val failureCause = buildResult.failure?.cause?.cause
-        if(failureCause == null || failureCause !is DefaultMultiCauseException) {
+        if (failureCause == null || failureCause !is DefaultMultiCauseException) {
             return
         }
         val moduleVersionNotFoundCauses: List<Throwable> = failureCause.causes.filterIsInstance<ModuleVersionNotFoundException>()
@@ -162,13 +164,13 @@ class DependencyResolutionVerifier {
             try {
                 conf.resolvedConfiguration.resolvedArtifacts
             } catch (e: Exception) {
-                when(e) {
+                when (e) {
                     is ResolveException -> {
                         e.causes.forEach { cause ->
-                            when(cause) {
+                            when (cause) {
                                 is ModuleVersionNotFoundException -> {
                                     val dep: String = cause.selector.toString()
-                                    if(failedDepsByConf!!.containsKey(dep)) {
+                                    if (failedDepsByConf!!.containsKey(dep)) {
                                         failedDepsByConf[dep]!!.add(conf)
                                     } else {
                                         failedDepsByConf[dep] = mutableSetOf(conf)
@@ -185,49 +187,21 @@ class DependencyResolutionVerifier {
                         logger.warn("Received an unhandled exception", e.message)
                     }
                 }
+                return@all
             }
         }
     }
 
     private fun logOrThrowOnFailedDependencies() {
-        val message: MutableList<String> = mutableListOf()
-        val depsMissingVersions: MutableList<String> = mutableListOf()
+        val messages: MutableList<String> = mutableListOf()
 
-        val failedDepsForConfs = failedDependenciesPerProjectForConfigurations[uniqueProjectKey(project)]!!
+        val failedDepsByConf = failedDependenciesPerProjectForConfigurations[uniqueProjectKey(project)]!!
         val lockedDepsOutOfDate = lockedDepsOutOfDatePerProject[uniqueProjectKey(project)]!!
-        if (failedDepsForConfs.isNotEmpty() || lockedDepsOutOfDate.isNotEmpty()) {
+
+        if (failedDepsByConf.isNotEmpty() || lockedDepsOutOfDate.isNotEmpty()) {
             try {
-                if (failedDepsForConfs.isNotEmpty()) {
-                    message.add("Failed to resolve the following dependencies:")
-                }
-                var failureMessageCounter = 0
-                failedDepsForConfs.toSortedMap().forEach { (dep, _) ->
-                    message.add("  ${failureMessageCounter + 1}. Failed to resolve '$dep' for project '${project.name}'")
-
-                    if (dep.split(':').size < 3) {
-                        depsMissingVersions.add(dep)
-                    }
-
-                    failureMessageCounter += 1
-                }
-
-                if (lockedDepsOutOfDate.isNotEmpty()) {
-                    message.add("Resolved dependencies were missing from the lock state:")
-                }
-
-                var locksOutOfDateCounter = 0
-                lockedDepsOutOfDate
-                        .sorted()
-                        .forEach { outOfDateMessage->
-                            message.add("  ${locksOutOfDateCounter + 1}. $outOfDateMessage for project '${project.name}'")
-                            locksOutOfDateCounter += 1
-                        }
-
-                if (depsMissingVersions.size > 0) {
-                    message.add("The following dependencies are missing a version: ${depsMissingVersions.joinToString()}\n" +
-                            "Please add a version to fix this. If you have been using a BOM, perhaps these dependencies are no longer managed. \n"
-                            + extension.missingVersionsMessageAddition)
-                }
+                messages.addAll(createMessagesForFailedDeps(failedDepsByConf))
+                messages.addAll(createMessagesForLockedDepsOutOfDate(lockedDepsOutOfDate))
             } catch (e: Exception) {
                 logger.warn("Error creating message regarding failed dependencies", e)
                 return
@@ -235,14 +209,56 @@ class DependencyResolutionVerifier {
 
             providedErrorMessageForThisProject = true
             if (unresolvedDependenciesShouldFailTheBuild()) {
-                throw DependencyResolutionException(message.joinToString("\n"))
+                throw DependencyResolutionException(messages.joinToString("\n"))
             } else {
-                logger.warn(message.joinToString("\n"))
+                logger.warn(messages.joinToString("\n"))
             }
         }
     }
 
-    private fun configurationIsResolvedAndMatches(conf: Configuration, configurationsToExclude: Set<String>) : Boolean {
+    private fun createMessagesForFailedDeps(failedDepsForConfs: MutableMap<String, MutableSet<Configuration>>): MutableList<String> {
+        val messages: MutableList<String> = mutableListOf()
+        val depsMissingVersions: MutableList<String> = mutableListOf()
+
+        if (failedDepsForConfs.isNotEmpty()) {
+            messages.add("Failed to resolve the following dependencies:")
+        }
+        var failureMessageCounter = 0
+        failedDepsForConfs.toSortedMap().forEach { (dep, _) ->
+            messages.add("  ${failureMessageCounter + 1}. Failed to resolve '$dep' for project '${project.name}'")
+
+            if (dep.split(':').size < 3) {
+                depsMissingVersions.add(dep)
+            }
+
+            failureMessageCounter += 1
+        }
+
+        if (depsMissingVersions.size > 0) {
+            messages.add("The following dependencies are missing a version: ${depsMissingVersions.joinToString()}\n" +
+                    "Please add a version to fix this. If you have been using a BOM, perhaps these dependencies are no longer managed. \n"
+                    + extension.missingVersionsMessageAddition)
+        }
+        return messages
+    }
+
+    private fun createMessagesForLockedDepsOutOfDate(lockedDepsOutOfDate: MutableSet<String>): MutableList<String> {
+        val messages: MutableList<String> = mutableListOf()
+        if (lockedDepsOutOfDate.isNotEmpty()) {
+            messages.add("Resolved dependencies were missing from the lock state:")
+        }
+
+        var locksOutOfDateCounter = 0
+        lockedDepsOutOfDate
+                .sorted()
+                .forEach { outOfDateMessage ->
+                    messages.add("  ${locksOutOfDateCounter + 1}. $outOfDateMessage for project '${project.name}'")
+                    locksOutOfDateCounter += 1
+                }
+        return messages
+    }
+
+    private fun configurationIsResolvedAndMatches(conf: Configuration, configurationsToExclude: Set<String>): Boolean {
         return conf.state != Configuration.State.UNRESOLVED &&
                 // the configurations `incrementalScalaAnalysisFor_x_` are resolvable only from a scala context
                 !conf.name.startsWith("incrementalScala") &&
@@ -250,7 +266,7 @@ class DependencyResolutionVerifier {
                 !ConfigurationFilters.safelyHasAResolutionAlternative(conf)
     }
 
-    private fun unresolvedDependenciesShouldFailTheBuild() :Boolean {
+    private fun unresolvedDependenciesShouldFailTheBuild(): Boolean {
         return if (project.hasProperty(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD)) {
             (project.property(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD) as String).toBoolean()
         } else {
@@ -259,6 +275,6 @@ class DependencyResolutionVerifier {
     }
 
     private fun uniqueProjectKey(project: Project): String {
-        return "${project.name}-${if(project == project.rootProject) "rootproject" else "subproject"}"
+        return "${project.name}-${if (project == project.rootProject) "rootproject" else "subproject"}"
     }
 }
