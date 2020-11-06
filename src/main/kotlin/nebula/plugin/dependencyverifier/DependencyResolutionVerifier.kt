@@ -18,7 +18,9 @@
 
 package nebula.plugin.dependencyverifier
 
+import nebula.plugin.dependencylock.DependencyLockPlugin
 import nebula.plugin.dependencylock.utils.ConfigurationFilters
+import nebula.plugin.dependencylock.utils.CoreLocking
 import nebula.plugin.dependencyverifier.exceptions.DependencyResolutionException
 import org.gradle.BuildResult
 import org.gradle.api.Project
@@ -34,6 +36,7 @@ import org.gradle.api.tasks.diagnostics.DependencyReportTask
 import org.gradle.internal.exceptions.DefaultMultiCauseException
 import org.gradle.internal.locking.LockOutOfDateException
 import org.gradle.internal.resolve.ModuleVersionNotFoundException
+import java.lang.Boolean.getBoolean
 
 const val UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD: String = "dependencyResolutionVerifier.unresolvedDependenciesFailTheBuild"
 const val CONFIGURATIONS_TO_EXCLUDE: String = "dependencyResolutionVerifier.configurationsToExclude"
@@ -43,6 +46,7 @@ class DependencyResolutionVerifier {
     companion object {
         var failedDependenciesPerProjectForConfigurations: MutableMap<String, MutableMap<String, MutableSet<Configuration>>> = mutableMapOf()
         var lockedDepsOutOfDatePerProject: MutableMap<String, MutableSet<String>> = mutableMapOf()
+        var depsWhereResolvedVersionIsNotTheLockedVersionPerProjectForConfigurations: MutableMap<String, MutableMap<String, MutableSet<Configuration>>> = mutableMapOf()
     }
 
     private val logger by lazy { Logging.getLogger(DependencyResolutionVerifier::class.java) }
@@ -62,6 +66,7 @@ class DependencyResolutionVerifier {
         val uniqueProjectKey = uniqueProjectKey(project)
         failedDependenciesPerProjectForConfigurations[uniqueProjectKey] = mutableMapOf()
         lockedDepsOutOfDatePerProject[uniqueProjectKey] = mutableSetOf()
+        depsWhereResolvedVersionIsNotTheLockedVersionPerProjectForConfigurations[uniqueProjectKey] = mutableMapOf()
 
         verifyResolution(project)
     }
@@ -189,6 +194,39 @@ class DependencyResolutionVerifier {
                 }
                 return@all
             }
+
+            validateThatResolvedVersionIsLockedVersion(conf)
+        }
+    }
+
+    private fun validateThatResolvedVersionIsLockedVersion(conf: Configuration) {
+        val usesNebulaAlignment = !getBoolean("nebula.features.coreAlignmentSupport")
+        val usesCoreLocking = CoreLocking.isCoreLockingEnabled()
+        if (usesCoreLocking || usesNebulaAlignment) {
+            // short-circuit unless using Nebula locking & core alignment
+            return
+        }
+        val depsWhereResolvedVersionIsNotTheLockedVersionByConf = depsWhereResolvedVersionIsNotTheLockedVersionPerProjectForConfigurations[uniqueProjectKey(project)]
+        val lockedDepsByConf = DependencyLockPlugin.lockedDepsPerProjectForConfigurations[uniqueProjectKey(project)]
+        val lockedDependencies: Map<String, String> = lockedDepsByConf!![conf.name]
+                ?.associateBy({ "${it.group}:${it.name}" }, { "${it.version}" })
+                ?: emptyMap()
+        if (lockedDependencies.isEmpty()) {
+            // short-circuit when locks are empty
+            return
+        }
+
+        conf.resolvedConfiguration.resolvedArtifacts.map { it.moduleVersion.id }.forEach { dep ->
+            val lockedVersion: String = lockedDependencies["${dep.group}:${dep.name}"] ?: ""
+            if (lockedVersion.isNotEmpty() && lockedVersion != dep.version) {
+                val depAsString = "${dep.group}:${dep.name}:${dep.version}"
+                val key = "'$depAsString' instead of locked version '$lockedVersion'"
+                if (depsWhereResolvedVersionIsNotTheLockedVersionByConf!!.containsKey(dep.toString())) {
+                    depsWhereResolvedVersionIsNotTheLockedVersionByConf[key]!!.add(conf)
+                } else {
+                    depsWhereResolvedVersionIsNotTheLockedVersionByConf[key] = mutableSetOf(conf)
+                }
+            }
         }
     }
 
@@ -197,11 +235,13 @@ class DependencyResolutionVerifier {
 
         val failedDepsByConf = failedDependenciesPerProjectForConfigurations[uniqueProjectKey(project)]!!
         val lockedDepsOutOfDate = lockedDepsOutOfDatePerProject[uniqueProjectKey(project)]!!
+        val depsWhereResolvedVersionIsNotTheLockedVersionByConf = depsWhereResolvedVersionIsNotTheLockedVersionPerProjectForConfigurations[uniqueProjectKey(project)]!!
 
-        if (failedDepsByConf.isNotEmpty() || lockedDepsOutOfDate.isNotEmpty()) {
+        if (failedDepsByConf.isNotEmpty() || lockedDepsOutOfDate.isNotEmpty() || depsWhereResolvedVersionIsNotTheLockedVersionByConf.isNotEmpty()) {
             try {
                 messages.addAll(createMessagesForFailedDeps(failedDepsByConf))
                 messages.addAll(createMessagesForLockedDepsOutOfDate(lockedDepsOutOfDate))
+                messages.addAll(createMessagesForDepsWhereResolvedVersionIsNotTheLockedVersion(depsWhereResolvedVersionIsNotTheLockedVersionByConf))
             } catch (e: Exception) {
                 logger.warn("Error creating message regarding failed dependencies", e)
                 return
@@ -255,6 +295,24 @@ class DependencyResolutionVerifier {
                     messages.add("  ${locksOutOfDateCounter + 1}. $outOfDateMessage for project '${project.name}'")
                     locksOutOfDateCounter += 1
                 }
+        return messages
+    }
+
+    private fun createMessagesForDepsWhereResolvedVersionIsNotTheLockedVersion(depsWhereResolvedVersionIsNotTheLockedVersionByConf: MutableMap<String, MutableSet<Configuration>>): MutableList<String> {
+        val messages: MutableList<String> = mutableListOf()
+        if (depsWhereResolvedVersionIsNotTheLockedVersionByConf.isNotEmpty()) {
+            messages.add("Dependency lock state is out of date:")
+        }
+        var failureMessageCounter = 0
+        depsWhereResolvedVersionIsNotTheLockedVersionByConf.toSortedMap().forEach { (dep, _) ->
+            messages.add("  ${failureMessageCounter + 1}. Resolved $dep for project '${project.name}'")
+
+            failureMessageCounter += 1
+        }
+
+        if (depsWhereResolvedVersionIsNotTheLockedVersionByConf.isNotEmpty()) {
+            messages.add("Please update your dependency locks or your build file constraints.\n" + extension.resolvedVersionDoesNotEqualLockedVersionMessageAddition)
+        }
         return messages
     }
 

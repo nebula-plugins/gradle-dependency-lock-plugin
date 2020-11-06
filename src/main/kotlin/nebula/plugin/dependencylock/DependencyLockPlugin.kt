@@ -28,7 +28,6 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.DependencyResolveDetails
-import org.gradle.api.artifacts.DependencySubstitutions
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.Category
@@ -61,6 +60,7 @@ class DependencyLockPlugin : Plugin<Project> {
         val GENERATION_TASK_NAMES = setOf(GENERATE_LOCK_TASK_NAME, GENERATE_GLOBAL_LOCK_TASK_NAME, UPDATE_LOCK_TASK_NAME, UPDATE_GLOBAL_LOCK_TASK_NAME)
         val UPDATE_TASK_NAMES = setOf(UPDATE_LOCK_TASK_NAME, UPDATE_GLOBAL_LOCK_TASK_NAME)
         val MIGRATION_TASK_NAMES = setOf(MIGRATE_TO_CORE_LOCK_TASK_NAME)
+        val lockedDepsPerProjectForConfigurations: MutableMap<String, MutableMap<String, List<ModuleVersionSelectorKey>>> = mutableMapOf()
     }
 
     private val LOGGER: Logger = Logging.getLogger(DependencyLockPlugin::class.java)
@@ -78,6 +78,8 @@ class DependencyLockPlugin : Plugin<Project> {
         if (dependencyResolutionVerifierExtension == null) {
             dependencyResolutionVerifierExtension = project.rootProject.extensions.create(DEPENDENCY_RESOLTION_VERIFIER_EXTENSION, DependencyResolutionVerifierExtension::class.java)
         }
+        lockedDepsPerProjectForConfigurations[uniqueProjectKey(project)] = mutableMapOf()
+
         if (!project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)) {
             /* MigrateToCoreLocks can be involved with migrating dependencies that were previously unlocked.
                Verifying resolution based on the base lockfiles causes a `LockOutOfDateException` from the initial DependencyLockingArtifactVisitor state
@@ -259,6 +261,8 @@ class DependencyLockPlugin : Plugin<Project> {
             }
             LOGGER.debug("locked: {}", locked)
             lockConfiguration(conf, locked)
+            val lockedDepsByConf = lockedDepsPerProjectForConfigurations[uniqueProjectKey(project)]
+            lockedDepsByConf!![conf.name] = locked
         }
     }
 
@@ -280,39 +284,22 @@ class DependencyLockPlugin : Plugin<Project> {
     }
 
     private fun lockConfiguration(conf: Configuration, selectorKeys: List<ModuleVersionSelectorKey>) {
-        val externalDependencies = conf.allDependencies.withType(ExternalDependency::class.java)
-                .associateBy { it.module.toString() }
-        val resolutionStrategySubstitution: DependencySubstitutions = conf.resolutionStrategy.dependencySubstitution
-        selectorKeys.forEach { key ->
-            val maybeDirectDependency = externalDependencies[key.toModuleString()]
-            val category = maybeDirectDependency?.attributes?.getAttribute(Category.CATEGORY_ATTRIBUTE)
-            val substitutedModule = resolutionStrategySubstitution.module("${key.group}:${key.name}")
-
-            val withModule = resolutionStrategySubstitution.run {
-                val moduleId = "${key.group}:${key.name}:${key.version}"
-                if (category != null) {
-                    variant(module(moduleId), {
-                        it.attributes {
-                            it.attribute(Category.CATEGORY_ATTRIBUTE, category)
-                        }
-                    })
-                } else
-                    module(moduleId)
+        val selectorsByKey = selectorKeys.groupBy { it }.mapValues { it.key }
+        conf.resolutionStrategy.eachDependency { details ->
+            val moduleKey = details.toKey()
+            val module = selectorsByKey[moduleKey]
+            if (module != null) {
+                details.because("${moduleKey.toModuleString()} locked to ${module.version}\n" +
+                        "\twith reasons: ${reasons.joinToString()}")
+                        .useVersion(module.version!!)
             }
-
-            val substitutionMessage = "${key.group}:${key.name} locked to ${key.version}\n" +
-                    "\twith reasons: ${reasons.joinToString()}"
-
-            resolutionStrategySubstitution.substitute(substitutedModule)
-                    .because(substitutionMessage)
-                    .with(withModule)
         }
     }
 
     private fun DependencyResolveDetails.toKey(): ModuleVersionSelectorKey =
             ModuleVersionSelectorKey(requested.group, requested.name, requested.version)
 
-    private class ModuleVersionSelectorKey(val group: String, val name: String, val version: String?) {
+    class ModuleVersionSelectorKey(val group: String, val name: String, val version: String?) {
         companion object {
             fun create(notation: Any?, version: Any?): ModuleVersionSelectorKey {
                 notation as String
@@ -354,5 +341,9 @@ class DependencyLockPlugin : Plugin<Project> {
         } catch (e: Exception) {
             throw BuildCancelledException(failureToDeleteLockfileMessage, e)
         }
+    }
+
+    private fun uniqueProjectKey(project: Project): String {
+        return "${project.name}-${if (project == project.rootProject) "rootproject" else "subproject"}"
     }
 }
