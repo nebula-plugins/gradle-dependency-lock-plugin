@@ -230,7 +230,7 @@ class DependencyResolutionVerifier {
                 else -> ""
             }
 
-            if (expectedVersion != dep.version) {
+            if (expectedVersion.isNotEmpty() && expectedVersion != dep.version) {
                 val depAsString = "${dep.group}:${dep.name}:${dep.version}"
                 val key = "'$depAsString' instead of locked version '$expectedVersion'"
                 if (depsWhereResolvedVersionIsNotTheLockedVersionByConf!!.containsKey(dep.toString())) {

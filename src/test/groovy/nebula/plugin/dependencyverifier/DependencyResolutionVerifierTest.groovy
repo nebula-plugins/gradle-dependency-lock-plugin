@@ -788,6 +788,24 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     }
 
     @Unroll
+    def 'resolved versions are not equal to locked versions - handles unlocked transitives - core alignment #coreAlignment - core locking #coreLocking'() {
+        given:
+        setupSingleProjectWithLockedVersionsThatAreNotAligned()
+
+        when:
+        def flags = ["-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
+        runTasks('generateLock', 'saveLock', *flags) // without locking transitives
+        def results = runTasks('dependencies', '--configuration', 'compileClasspath', *flags)
+
+        then:
+        results.output.contains('SUCCESS')
+
+        where:
+        coreAlignment | coreLocking
+        true          | false
+    }
+
+    @Unroll
     def 'resolved versions are not equal to locked versions with override file - core alignment #coreAlignment - core locking #coreLocking'() {
         given:
         setupSingleProjectWithLockedVersionsThatAreNotAligned()
