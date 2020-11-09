@@ -920,6 +920,108 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     }
 
     @Unroll
+    def 'resolved versions are not equal to locked versions because locked versions are not aligned - multiproject with global locks - core alignment #coreAlignment - core locking #coreLocking'() {
+        given:
+        setupMultiProjectWithLockedVersionsThatAreNotAligned()
+
+        new File(projectDir, 'dependencies.lock').delete()
+        new File(projectDir, 'sub1/dependencies.lock').delete()
+        new File(projectDir, 'sub2/dependencies.lock').delete()
+
+        String globalLockText = """\
+            {
+                "_global_": {
+                    "${moduleName}:sub1": {
+                        "project": true
+                    },
+                    "${moduleName}:sub2": {
+                        "project": true
+                    },
+                    "test.nebula:a": {
+                        "firstLevelTransitive": [
+                            "${moduleName}:sub1"
+                        ],
+                        "locked": "1.1.0"
+                    },
+                    "test.nebula:b": {
+                        "firstLevelTransitive": [
+                            "${moduleName}:sub1"
+                        ],
+                        "locked": "1.2.0"
+                    },
+                    "test.nebula:c": {
+                        "firstLevelTransitive": [
+                            "${moduleName}:sub1"
+                        ],
+                        "locked": "1.1.0"
+                    },
+                    "test.nebula:d": {
+                        "locked": "1.1.0",
+                        "transitive": [
+                            "test.nebula:a"
+                        ]
+                    },
+                    "test.nebula:e": {
+                        "firstLevelTransitive": [
+                            "${moduleName}:sub2"
+                        ],
+                        "locked": "3.1.0"
+                    },
+                    "test.nebula:f": {
+                        "firstLevelTransitive": [
+                            "${moduleName}:sub2"
+                        ],
+                        "locked": "3.2.0"
+                    },
+                    "test.nebula:g": {
+                        "firstLevelTransitive": [
+                            "${moduleName}:sub2"
+                        ],
+                        "locked": "3.1.0"
+                    },
+                    "test.nebula:h": {
+                        "locked": "3.1.0",
+                        "transitive": [
+                            "test.nebula:e"
+                        ]
+                    }
+                }
+            }""".stripIndent()
+        new File(projectDir, 'global.lock').text = globalLockText
+
+        when:
+        def flags = ["-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
+        def results = runTasksAndFail('dependenciesForAll', '--configuration', 'compileClasspath', *flags)
+
+        then:
+        results.output.contains('FAILED')
+
+        results.output.contains("Dependency lock state is out of date:")
+
+        results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+        results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+        results.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+
+        results.output.contains('Please update your dependency locks or your build file constraints.')
+
+        when:
+        def updateGlobalLocks = runTasks('deleteGlobalLock', 'generateGlobalLock', 'saveGlobalLock', '-PdependencyLock.includeTransitives=true', *flags)
+        def updatedDependencies = runTasks('dependenciesForAll', '--configuration', 'compileClasspath', *flags)
+
+        then:
+        updatedDependencies.output.contains('SUCCESS')
+
+        updatedDependencies.output.contains('test.nebula:a:1.1.0 -> 1.2.0\n')
+        updatedDependencies.output.contains('test.nebula:b:1.2.0\n')
+        updatedDependencies.output.contains('test.nebula:c:1.1.0 -> 1.2.0\n')
+        updatedDependencies.output.contains('test.nebula:d:1.2.0\n')
+
+        where:
+        coreAlignment | coreLocking
+        true          | false
+    }
+
+    @Unroll
     def 'with Gradle version #gradleVersionToTest - expecting #expecting - using task with configuration dependencies'() {
         given:
         gradleVersion = gradleVersionToTest
