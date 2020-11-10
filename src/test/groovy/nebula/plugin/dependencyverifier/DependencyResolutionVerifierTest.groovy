@@ -752,6 +752,381 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     }
 
     @Unroll
+    def 'resolved versions are not equal to locked versions because locked versions are not aligned - core alignment #coreAlignment - core locking #coreLocking'() {
+        given:
+        setupSingleProjectWithLockedVersionsThatAreNotAligned()
+
+        when:
+        def flags = ["-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
+        def insightResults = runTasksAndFail('dependencyInsight', '--dependency', 'test.nebula', *flags)
+        def results = runTasksAndFail('dependencies', '--configuration', 'compileClasspath', *flags)
+
+        then:
+        insightResults.output.contains('test.nebula:a:1.1.0 -> 1.2.0\n')
+        insightResults.output.contains('test.nebula:b:1.2.0\n')
+        insightResults.output.contains('test.nebula:c:1.1.0 -> 1.2.0\n')
+
+        insightResults.output.contains('FAILED')
+
+        insightResults.output.contains("Dependency lock state is out of date:")
+        insightResults.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project")
+        insightResults.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project")
+        insightResults.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project")
+        insightResults.output.contains('Please update your dependency locks or your build file constraints.')
+
+        results.output.contains('FAILED')
+
+        results.output.contains("Dependency lock state is out of date:")
+        results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project")
+        results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project")
+        results.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project")
+        results.output.contains('Please update your dependency locks or your build file constraints.')
+
+        where:
+        coreAlignment | coreLocking
+        true          | false
+    }
+
+    @Unroll
+    def 'resolved versions are not equal to locked versions - handles unlocked transitives - core alignment #coreAlignment - core locking #coreLocking'() {
+        given:
+        setupSingleProjectWithLockedVersionsThatAreNotAligned()
+
+        when:
+        def flags = ["-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
+        runTasks('generateLock', 'saveLock', *flags) // without locking transitives
+        def results = runTasks('dependencies', '--configuration', 'compileClasspath', *flags)
+
+        then:
+        results.output.contains('SUCCESS')
+
+        where:
+        coreAlignment | coreLocking
+        true          | false
+    }
+
+    @Unroll
+    def 'resolved versions are not equal to locked versions with override file - core alignment #coreAlignment - core locking #coreLocking'() {
+        given:
+        setupSingleProjectWithLockedVersionsThatAreNotAligned()
+
+        def graph = new DependencyGraphBuilder()
+                .addModule(new ModuleBuilder('test.nebula:a:1.3.0').addDependency('test.nebula:d:1.3.0').build())
+                .addModule('test.nebula:b:1.3.0')
+                .addModule('test.nebula:c:1.3.0')
+                .build()
+        def updatedmavenrepo = new GradleDependencyGenerator(graph, "$projectDir/testrepogen")
+        updatedmavenrepo.generateTestMavenRepo()
+
+        def dependenciesLockOverride = new File(projectDir, 'override.lock')
+        dependenciesLockOverride << '''
+            { "test.nebula:a": "1.3.0" }
+            '''.stripIndent()
+
+        when:
+        def flags = ['-PdependencyLock.overrideFile=override.lock', "-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
+        def insightResults = runTasksAndFail('dependencyInsight', '--dependency', 'test.nebula', *flags)
+        def results = runTasksAndFail('dependencies', '--configuration', 'compileClasspath', *flags)
+
+        then:
+        insightResults.output.contains('using override file: override.lock')
+
+        insightResults.output.contains('test.nebula:a:1.1.0 -> 1.3.0\n')
+        insightResults.output.contains('test.nebula:b:1.3.0\n')
+        insightResults.output.contains('test.nebula:c:1.1.0 -> 1.3.0\n')
+        insightResults.output.contains('test.nebula:d:1.3.0\n')
+
+        insightResults.output.contains('FAILED')
+
+        insightResults.output.contains("Dependency lock state is out of date:")
+        !insightResults.output.contains("Resolved 'test.nebula:a:1.3.0' instead of locked version")
+        insightResults.output.contains("Resolved 'test.nebula:b:1.3.0' instead of locked version '1.2.0' for project")
+        insightResults.output.contains("Resolved 'test.nebula:c:1.3.0' instead of locked version '1.1.0' for project")
+        insightResults.output.contains("Resolved 'test.nebula:d:1.3.0' instead of locked version '1.1.0' for project")
+        insightResults.output.contains('Please update your dependency locks or your build file constraints.')
+
+        results.output.contains('FAILED')
+
+        results.output.contains("Dependency lock state is out of date:")
+        !results.output.contains("Resolved 'test.nebula:a:1.3.0' instead of locked version")
+        results.output.contains("Resolved 'test.nebula:b:1.3.0' instead of locked version '1.2.0' for project")
+        results.output.contains("Resolved 'test.nebula:c:1.3.0' instead of locked version '1.1.0' for project")
+        results.output.contains("Resolved 'test.nebula:d:1.3.0' instead of locked version '1.1.0' for project")
+        results.output.contains('Please update your dependency locks or your build file constraints.')
+
+        where:
+        coreAlignment | coreLocking
+        true          | false
+    }
+
+    @Unroll
+    def 'resolved versions are not equal to locked versions - can configure extension messaging - core alignment #coreAlignment - core locking #coreLocking'() {
+        given:
+        setupSingleProjectWithLockedVersionsThatAreNotAligned()
+        def extensionMessage = 'You may see this after changing from Nebula alignment to core Gradle alignment for the first time in this repository'
+        buildFile << """
+            import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
+            plugins.withId('nebula.dependency-lock') {
+                def extension = extensions.getByType(DependencyResolutionVerifierExtension.class)
+                extension.resolvedVersionDoesNotEqualLockedVersionMessageAddition = '$extensionMessage'
+            }
+        """.stripIndent()
+
+        when:
+        def flags = ["-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
+        def results = runTasksAndFail('dependencies', '--configuration', 'compileClasspath', *flags)
+
+        then:
+        results.output.contains('Please update your dependency locks or your build file constraints.')
+        results.output.contains(extensionMessage)
+
+        where:
+        coreAlignment | coreLocking
+        true          | false
+    }
+
+    @Unroll
+    def 'resolved versions are not equal to locked versions because locked versions are not aligned - multiproject - core alignment #coreAlignment - core locking #coreLocking'() {
+        given:
+        setupMultiProjectWithLockedVersionsThatAreNotAligned()
+
+        when:
+        def flags = ["-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
+        def results = runTasksAndFail('dependenciesForAll', '--configuration', 'compileClasspath', *flags)
+
+        then:
+        results.output.contains('FAILED')
+
+        results.output.contains("Dependency lock state is out of date:")
+        results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+        results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+        results.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+        results.output.contains('Please update your dependency locks or your build file constraints.')
+
+        where:
+        coreAlignment | coreLocking
+        true          | false
+    }
+
+    @Unroll
+    def 'resolved versions are not equal to locked versions because locked versions are not aligned - multiproject and parallel - core alignment #coreAlignment - core locking #coreLocking'() {
+        given:
+        setupMultiProjectWithLockedVersionsThatAreNotAligned()
+
+        when:
+        def flags = ["-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
+        def results = runTasksAndFail('dependenciesForAll', '--configuration', 'compileClasspath', *flags, '--parallel')
+
+        then:
+        results.output.contains('FAILED')
+
+        results.output.contains("Dependency lock state is out of date:")
+
+        results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+        results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+        results.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+
+        results.output.contains("Resolved 'test.nebula:e:3.2.0' instead of locked version '3.1.0' for project 'sub2'")
+        results.output.contains("Resolved 'test.nebula:g:3.2.0' instead of locked version '3.1.0' for project 'sub2'")
+        results.output.contains("Resolved 'test.nebula:h:3.2.0' instead of locked version '3.1.0' for project 'sub2'")
+
+        results.output.contains('Please update your dependency locks or your build file constraints.')
+
+        where:
+        coreAlignment | coreLocking
+        true          | false
+    }
+
+    @Unroll
+    def 'resolved versions are not equal to locked versions because locked versions are not aligned - multiproject with global locks - core alignment #coreAlignment - core locking #coreLocking'() {
+        given:
+        setupMultiProjectWithLockedVersionsThatAreNotAligned()
+
+        new File(projectDir, 'dependencies.lock').delete()
+        new File(projectDir, 'sub1/dependencies.lock').delete()
+        new File(projectDir, 'sub2/dependencies.lock').delete()
+
+        String globalLockText = """\
+            {
+                "_global_": {
+                    "${moduleName}:sub1": {
+                        "project": true
+                    },
+                    "${moduleName}:sub2": {
+                        "project": true
+                    },
+                    "test.nebula:a": {
+                        "firstLevelTransitive": [
+                            "${moduleName}:sub1"
+                        ],
+                        "locked": "1.1.0"
+                    },
+                    "test.nebula:b": {
+                        "firstLevelTransitive": [
+                            "${moduleName}:sub1"
+                        ],
+                        "locked": "1.2.0"
+                    },
+                    "test.nebula:c": {
+                        "firstLevelTransitive": [
+                            "${moduleName}:sub1"
+                        ],
+                        "locked": "1.1.0"
+                    },
+                    "test.nebula:d": {
+                        "locked": "1.1.0",
+                        "transitive": [
+                            "test.nebula:a"
+                        ]
+                    },
+                    "test.nebula:e": {
+                        "firstLevelTransitive": [
+                            "${moduleName}:sub2"
+                        ],
+                        "locked": "3.1.0"
+                    },
+                    "test.nebula:f": {
+                        "firstLevelTransitive": [
+                            "${moduleName}:sub2"
+                        ],
+                        "locked": "3.2.0"
+                    },
+                    "test.nebula:g": {
+                        "firstLevelTransitive": [
+                            "${moduleName}:sub2"
+                        ],
+                        "locked": "3.1.0"
+                    },
+                    "test.nebula:h": {
+                        "locked": "3.1.0",
+                        "transitive": [
+                            "test.nebula:e"
+                        ]
+                    }
+                }
+            }""".stripIndent()
+        new File(projectDir, 'global.lock').text = globalLockText
+
+        when:
+        def flags = ["-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
+        def results = runTasksAndFail('dependenciesForAll', '--configuration', 'compileClasspath', *flags)
+
+        then:
+        results.output.contains('FAILED')
+
+        results.output.contains("Dependency lock state is out of date:")
+
+        results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+        results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+        results.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+
+        results.output.contains('Please update your dependency locks or your build file constraints.')
+
+        when:
+        def updateGlobalLocks = runTasks('deleteGlobalLock', 'generateGlobalLock', 'saveGlobalLock', '-PdependencyLock.includeTransitives=true', *flags)
+        def updatedDependencies = runTasks('dependenciesForAll', '--configuration', 'compileClasspath', *flags)
+
+        then:
+        updatedDependencies.output.contains('SUCCESS')
+
+        updatedDependencies.output.contains('test.nebula:a:1.1.0 -> 1.2.0\n')
+        updatedDependencies.output.contains('test.nebula:b:1.2.0\n')
+        updatedDependencies.output.contains('test.nebula:c:1.1.0 -> 1.2.0\n')
+        updatedDependencies.output.contains('test.nebula:d:1.2.0\n')
+
+        where:
+        coreAlignment | coreLocking
+        true          | false
+    }
+
+    @Unroll
+    def 'resolved versions are equal to locked versions - with a substitution in place - core alignment #coreAlignment - core locking #coreLocking'() {
+        // Note: this scenario had been failing with `Multiple forces on different versions for virtual platform` when we used the resolutionStrategy.dependencySubstitution dsl for dependency locking
+        given:
+        def rulesJsonFile = new File(projectDir, 'rules.json')
+        rulesJsonFile << '''\
+            {
+                "deny": [], "reject": [], "substitute": [
+                    {
+                        "module": "com.fasterxml.jackson.core:jackson-databind:[2.9.9,2.9.9.3)",
+                        "with": "com.fasterxml.jackson.core:jackson-databind:2.9.9.3",
+                        "reason": "There is a vulnerability, see...",
+                        "author": "Example Person <person@example.org>",
+                        "date": "2016-03-17T20:21:20.368Z"
+                    }
+                ], "replace": [],
+                "align": [
+                    {
+                        "name": "basic-align-jackson-libraries",
+                        "group": "com\\\\.fasterxml\\\\.jackson\\\\.(core|dataformat|datatype|jaxrs|jr|module)",
+                        "reason": "Align jackson dependencies",
+                        "author": "Example Person <person@example.org>",
+                        "date": "2016-03-17T20:21:20.368Z"
+                    }
+                ]
+            }
+        '''.stripIndent()
+
+        def graph = new DependencyGraphBuilder()
+                .addModule(new ModuleBuilder('some.dependency:a:1.1.0')
+                        .addDependency('com.fasterxml.jackson.core:jackson-databind:2.9.9')
+                        .addDependency('com.fasterxml.jackson.core:jackson-core:2.9.9')
+                        .build())
+                .build()
+        def mavenrepo = new GradleDependencyGenerator(graph, "$projectDir/testrepogen")
+        mavenrepo.generateTestMavenRepo()
+
+        definePluginOutsideOfPluginBlock = true
+        buildFile << """\
+            buildscript {
+                repositories { jcenter() }
+                dependencies {
+                    classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
+                }
+            }
+            apply plugin: 'nebula.resolution-rules'
+            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'java'
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+                jcenter()
+            }
+            dependencies {
+                resolutionRules files('$rulesJsonFile')
+                implementation 'some.dependency:a:1.1.0'
+            }
+            """.stripIndent()
+
+        when:
+        def basicLock = runTasks('generateLock', 'saveLock', '-PdependencyLock.includeTransitives=true') // with Nebula alignment, Nebula locking
+        def basicDependencies = runTasks('dependencies', '--configuration', 'compileClasspath') // with Nebula alignment, Nebula locking
+
+        then:
+        basicDependencies.output.contains('SUCCESS')
+        basicDependencies.output.contains('com.fasterxml.jackson.core:jackson-databind:2.9.9 -> 2.9.9.3\n')
+        basicDependencies.output.contains('com.fasterxml.jackson.core:jackson-annotations:2.9.0 -> 2.9.9\n')
+        basicDependencies.output.contains('com.fasterxml.jackson.core:jackson-core:2.9.9\n')
+
+        when:
+        // going down the code path with the verifier
+        def flags = ["-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
+        def results = runTasks('dependencies', '--configuration', 'compileClasspath', *flags)
+        def insightResults = runTasks('dependencyInsight', '--dependency', 'jackson', *flags)
+
+        then:
+        insightResults.output.contains('Selected by rule : substituted com.fasterxml.jackson.core:jackson-databind')
+        insightResults.output.contains('Selected by rule : com.fasterxml.jackson.core:jackson-databind locked')
+
+        results.output.contains('com.fasterxml.jackson.core:jackson-databind:2.9.9 -> 2.9.9.3\n')
+        results.output.contains('com.fasterxml.jackson.core:jackson-annotations:2.9.0 -> 2.9.9\n')
+        results.output.contains('com.fasterxml.jackson.core:jackson-core:2.9.9\n')
+
+        where:
+        coreAlignment | coreLocking
+        true          | false
+    }
+
+    @Unroll
     def 'with Gradle version #gradleVersionToTest - expecting #expecting - using task with configuration dependencies'() {
         given:
         gradleVersion = gradleVersionToTest
@@ -888,4 +1263,158 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         writeUnitTest(new File(projectDir, 'sub2'))
     }
 
+    void setupSingleProjectWithLockedVersionsThatAreNotAligned() {
+        def (GradleDependencyGenerator mavenrepo, File rulesJsonFile, String dependencyLockFileContents) = commonSetupForProjectWithLockedVersionsThatAreNotAligned()
+        def dependencyLock = new File(projectDir, 'dependencies.lock')
+        dependencyLock << dependencyLockFileContents
+
+        buildFile << """\
+            buildscript {
+                repositories { jcenter() }
+                dependencies {
+                    classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
+                }
+            }
+            apply plugin: 'nebula.resolution-rules'
+            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'java'
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+            }
+            dependencies {
+                resolutionRules files('$rulesJsonFile')
+                implementation 'test.nebula:a:1.1.0'
+                implementation 'test.nebula:b:1.2.0'
+                implementation 'test.nebula:c:1.1.0'
+            }
+            """.stripIndent()
+    }
+
+    void setupMultiProjectWithLockedVersionsThatAreNotAligned() {
+        def (GradleDependencyGenerator mavenrepo, File rulesJsonFile, String dependencyLockFileContents) = commonSetupForProjectWithLockedVersionsThatAreNotAligned()
+
+        def graph = new DependencyGraphBuilder()
+                .addModule(new ModuleBuilder('test.nebula:e:3.1.0').addDependency('test.nebula:h:3.1.0').build())
+                .addModule(new ModuleBuilder('test.nebula:e:3.2.0').addDependency('test.nebula:h:3.2.0').build())
+                .addModule('test.nebula:f:3.1.0')
+                .addModule('test.nebula:f:3.2.0')
+                .addModule('test.nebula:g:3.1.0')
+                .addModule('test.nebula:g:3.2.0')
+                .build()
+        def updatedmavenrepo = new GradleDependencyGenerator(graph, "$projectDir/testrepogen")
+        updatedmavenrepo.generateTestMavenRepo()
+
+        buildFile << """\
+            buildscript {
+                repositories { jcenter() }
+                dependencies {
+                    classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
+                }
+            }
+            subprojects {
+                task dependenciesForAll(type: DependencyReportTask) {}
+            }
+            allprojects {
+                apply plugin: 'nebula.resolution-rules'
+                apply plugin: 'nebula.dependency-lock'
+                apply plugin: 'java'
+                repositories {
+                    ${mavenrepo.mavenRepositoryBlock}
+                }
+            }
+            dependencies {
+                resolutionRules files('$rulesJsonFile')
+            }
+            """.stripIndent()
+
+        def subProject1BuildFileContent = """
+            dependencies {
+                implementation 'test.nebula:a:1.1.0'
+                implementation 'test.nebula:b:1.2.0'
+                implementation 'test.nebula:c:1.1.0'
+            }
+            """.stripIndent()
+
+        def subProject2BuildFileContent = """
+            dependencies {
+                implementation 'test.nebula:e:3.1.0'
+                implementation 'test.nebula:f:3.2.0'
+                implementation 'test.nebula:g:3.1.0'
+            }
+            """.stripIndent()
+
+        addSubproject("sub1", subProject1BuildFileContent)
+        addSubproject("sub2", subProject2BuildFileContent)
+
+        def dependencyLock = new File(projectDir, 'dependencies.lock')
+        def dependencyLockSubproject1 = new File(projectDir, 'sub1/dependencies.lock')
+        def dependencyLockSubproject2 = new File(projectDir, 'sub2/dependencies.lock')
+        dependencyLock << "{ }"
+        dependencyLockSubproject1 << dependencyLockFileContents
+
+        def dependencyLockFileContentsSubproject2 = '''\
+        {
+            "compileClasspath": {
+                "test.nebula:e": { "locked": "3.1.0" },
+                "test.nebula:f": { "locked": "3.2.0" },
+                "test.nebula:g": { "locked": "3.1.0" },
+                "test.nebula:h": {
+                    "locked": "3.1.0",
+                    "transitive": [
+                        "test.nebula:e"
+                    ]
+                }
+            }
+        }
+        '''.stripIndent()
+        dependencyLockSubproject2 << dependencyLockFileContentsSubproject2
+    }
+
+    private List commonSetupForProjectWithLockedVersionsThatAreNotAligned() {
+        // uses direct and transitive dependencies
+        definePluginOutsideOfPluginBlock = true
+        def graph = new DependencyGraphBuilder()
+                .addModule(new ModuleBuilder('test.nebula:a:1.1.0').addDependency('test.nebula:d:1.1.0').build())
+                .addModule(new ModuleBuilder('test.nebula:a:1.2.0').addDependency('test.nebula:d:1.2.0').build())
+                .addModule('test.nebula:b:1.1.0')
+                .addModule('test.nebula:b:1.2.0')
+                .addModule('test.nebula:c:1.1.0')
+                .addModule('test.nebula:c:1.2.0')
+                .build()
+        def mavenrepo = new GradleDependencyGenerator(graph, "$projectDir/testrepogen")
+        mavenrepo.generateTestMavenRepo()
+
+        def rulesJsonFile = new File(projectDir, 'rules.json')
+        rulesJsonFile << '''\
+            {
+                "deny": [], "reject": [], "substitute": [], "replace": [],
+                "align": [
+                    {
+                        "name": "testNebula",
+                        "group": "test.nebula",
+                        "reason": "Align test.nebula dependencies",
+                        "author": "Example Person <person@example.org>",
+                        "date": "2016-03-17T20:21:20.368Z"
+                    }
+                ]
+            }
+        '''.stripIndent()
+
+        def dependencyLockFileContents = '''\
+        {
+            "compileClasspath": {
+                "test.nebula:a": { "locked": "1.1.0" },
+                "test.nebula:b": { "locked": "1.2.0" },
+                "test.nebula:c": { "locked": "1.1.0" },
+                "test.nebula:d": {
+                    "locked": "1.1.0",
+                    "transitive": [
+                        "test.nebula:a"
+                    ]
+                }
+            }
+        }
+        '''.stripIndent()
+        [mavenrepo, rulesJsonFile, dependencyLockFileContents]
+    }
 }

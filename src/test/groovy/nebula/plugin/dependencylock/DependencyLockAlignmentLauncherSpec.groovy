@@ -13,9 +13,11 @@
  */
 package nebula.plugin.dependencylock
 
+import nebula.plugin.dependencyverifier.DependencyResolutionVerifierKt
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
+import spock.lang.Subject
 import spock.lang.Unroll
 
 import java.util.jar.Attributes
@@ -23,6 +25,7 @@ import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 
+@Subject(DependencyResolutionVerifierKt)
 class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
     def setup() {
         definePluginOutsideOfPluginBlock = true
@@ -193,18 +196,25 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
             """.stripIndent()
 
         when:
-        def insightResults = runTasks('dependencyInsight', '--dependency', 'test.nebula', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
-        def results = runTasks('dependencies', '--configuration', 'compileClasspath', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
+        def insightResults
+        def results
+        if (coreAlignment) {
+            insightResults = runTasksAndFail('dependencyInsight', '--dependency', 'test.nebula', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
+            results = runTasksAndFail('dependencies', '--configuration', 'compileClasspath', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
+        } else {
+            insightResults = runTasks('dependencyInsight', '--dependency', 'test.nebula', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
+            results = runTasks('dependencies', '--configuration', 'compileClasspath', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
+        }
 
         then:
         if (coreAlignment) {
-            assert insightResults.output.contains('Selected by rule : test.nebula:a locked to 1.41.5')
-            assert insightResults.output.contains('Selected by rule : test.nebula:b locked to 1.42.2')
+            assert insightResults.output.contains('test.nebula:a:1.41.5 -> 1.42.2\n')
+            assert insightResults.output.contains('test.nebula:a:1.42.2\n')
 
-            assert insightResults.output.contains('Multiple forces on different versions for virtual platform')
+            assert insightResults.output.contains('FAILED')
 
-            assert results.output.contains('test.nebula:a:1.41.5 FAILED\n')
-            assert results.output.contains('test.nebula:b:1.42.2 FAILED\n')
+            assert results.output.contains("Resolved 'test.nebula:a:1.42.2' instead of locked version '1.41.5'")
+            assert results.output.contains("Please update your dependency locks or your build file constraints.")
         } else {
             assert results.output.contains('+--- test.nebula:a:1.41.5\n')
             assert results.output.contains('\\--- test.nebula:b:1.42.2\n')
@@ -228,14 +238,6 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
         locksUpdatedResults.output.contains '\\--- test.nebula:b:1.42.2\n'
         locksUpdatedInsightResults.output.contains('Selected by rule : test.nebula:a locked to 1.42.2')
         locksUpdatedInsightResults.output.contains('Selected by rule : test.nebula:b locked to 1.42.2')
-
-        if(coreAlignment) {
-            assert locksUpdatedInsightResults.output.contains('belongs to platform')
-            assert locksUpdatedInsightResults.output.contains('- Forced') // this is a little weird, but now it's documented in this test
-        } else {
-            assert !locksUpdatedInsightResults.output.contains('belongs to platform')
-            assert !locksUpdatedInsightResults.output.contains('- Forced')
-        }
 
         where:
         coreAlignment | description
@@ -268,23 +270,25 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
             """.stripIndent()
 
         when:
-        def insightResults = runTasks('dependencyInsight', '--dependency', 'test.nebula', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
-        def results = runTasks('dependencies', '--configuration', 'compileClasspath', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
+        def insightResults
+        def results
+        if(coreAlignment) {
+            insightResults = runTasksAndFail('dependencyInsight', '--dependency', 'test.nebula', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
+            results = runTasksAndFail('dependencies', '--configuration', 'compileClasspath', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
+        } else {
+            insightResults = runTasks('dependencyInsight', '--dependency', 'test.nebula', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
+            results = runTasks('dependencies', '--configuration', 'compileClasspath', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
+        }
 
         then:
+        // plugin ordering is important. Dependency lock plugin must be applied after the resolution rules plugin.
+        // This test case is simply showcasing the current behavior.
+        assert results.output.contains('+--- test.nebula:a:1.41.5 -> 1.42.2\n') // this does not honor the locked versions
+        assert results.output.contains('\\--- test.nebula:b:1.42.2\n')
+
         if (coreAlignment) {
-            assert insightResults.output.contains('Selected by rule : test.nebula:a locked to 1.41.5')
-            assert insightResults.output.contains('Selected by rule : test.nebula:b locked to 1.42.2')
-
-            assert insightResults.output.contains('Multiple forces on different versions for virtual platform')
-
-            assert results.output.contains('test.nebula:a:1.41.5 FAILED\n')
-            assert results.output.contains('test.nebula:b:1.42.2 FAILED\n')
-        } else {
-            // plugin ordering is important. Dependency lock plugin must be applied after the resolution rules plugin.
-            // This test case is simply showcasing the current behavior.
-            assert results.output.contains('+--- test.nebula:a:1.41.5 -> 1.42.2\n') // this does not honor the locked versions
-            assert results.output.contains('\\--- test.nebula:b:1.42.2\n')
+            assert results.output.contains("Resolved 'test.nebula:a:1.42.2' instead of locked version '1.41.5'")
+            assert results.output.contains("Please update your dependency locks or your build file constraints.")
         }
 
         when:
@@ -305,14 +309,6 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
         locksUpdatedResults.output.contains '\\--- test.nebula:b:1.42.2\n'
         locksUpdatedInsightResults.output.contains('Selected by rule : test.nebula:a locked to 1.42.2')
         locksUpdatedInsightResults.output.contains('Selected by rule : test.nebula:b locked to 1.42.2')
-
-        if(coreAlignment) {
-            assert locksUpdatedInsightResults.output.contains('belongs to platform')
-            assert locksUpdatedInsightResults.output.contains('- Forced') // this is a little weird, but now it's documented in this test
-        } else {
-            assert !locksUpdatedInsightResults.output.contains('belongs to platform')
-            assert !locksUpdatedInsightResults.output.contains('- Forced')
-        }
 
         where:
         coreAlignment | description
@@ -358,14 +354,12 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
             }
             """.stripIndent()
 
-        def newAlignmentRuleInsightResults = runTasks('dependencyInsight', '--dependency', 'test.nebula', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
-        def newAlignmentRuleResults = runTasks('dependencies', '--configuration', 'compileClasspath', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
+        def newAlignmentRuleInsightResults = runTasksAndFail('dependencyInsight', '--dependency', 'test.nebula', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
+        def newAlignmentRuleResults = runTasksAndFail('dependencies', '--configuration', 'compileClasspath', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
 
         then:
-        newAlignmentRuleInsightResults.output.contains 'Multiple forces on different versions for virtual platform test.nebula:test.nebula'
-
-        newAlignmentRuleResults.output.contains 'test.nebula:a:1.41.5 FAILED\n'
-        newAlignmentRuleResults.output.contains 'test.nebula:b:1.42.2 FAILED\n'
+        newAlignmentRuleResults.output.contains("Resolved 'test.nebula:a:1.42.2' instead of locked version '1.41.5'")
+        newAlignmentRuleResults.output.contains("Please update your dependency locks or your build file constraints.")
 
         when:
         runTasks('generateLock', 'saveLock', "-Dnebula.features.coreAlignmentSupport=$coreAlignment")
@@ -379,7 +373,6 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
         locksUpdatedInsightResults.output.contains('Selected by rule : test.nebula:b locked to 1.42.2')
 
         locksUpdatedInsightResults.output.contains('belongs to platform test.nebula:test.nebula:1.42.2')
-        locksUpdatedInsightResults.output.contains('- Forced') // this is a little weird, but now it's documented in this test
 
         where:
         coreAlignment << [true]
