@@ -1,4 +1,9 @@
 {
+    "apiDependenciesMetadata": {
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+            "locked": "1.4.10"
+        }
+    },
     "compileClasspath": {
         "com.fasterxml.jackson:jackson-bom": {
             "locked": "2.9.9.20190807",
@@ -21,7 +26,7 @@
             "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
-            "locked": "1.9.2",
+            "locked": "1.11.0",
             "requested": "1.+"
         },
         "joda-time:joda-time": {
@@ -29,8 +34,8 @@
             "requested": "2.10"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
-            "locked": "1.3.61",
-            "requested": "1.3.61"
+            "locked": "1.4.10",
+            "requested": "1.4.10"
         }
     },
     "implementationDependenciesMetadata": {
@@ -55,7 +60,7 @@
             "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
-            "locked": "1.9.2",
+            "locked": "1.11.0",
             "requested": "1.+"
         },
         "joda-time:joda-time": {
@@ -63,8 +68,13 @@
             "requested": "2.10"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
-            "locked": "1.3.61",
-            "requested": "1.3.61"
+            "locked": "1.4.10",
+            "requested": "1.4.10"
+        }
+    },
+    "integTestApiDependenciesMetadata": {
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+            "locked": "1.4.10"
         }
     },
     "integTestCompileClasspath": {
@@ -101,11 +111,11 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.8.6",
+            "locked": "7.9.4",
             "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
-            "locked": "1.9.2",
+            "locked": "1.11.0",
             "requested": "1.+"
         },
         "joda-time:joda-time": {
@@ -117,8 +127,14 @@
             "requested": "3.0.0-beta.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
-            "locked": "1.3.61",
-            "requested": "1.3.61"
+            "locked": "1.4.10",
+            "requested": "1.4.10"
+        }
+    },
+    "integTestImplementationDependenciesMetadata": {
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
+            "locked": "1.4.10",
+            "requested": "1.4.10"
         }
     },
     "integTestRuntimeClasspath": {
@@ -155,11 +171,11 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.8.6",
+            "locked": "7.9.4",
             "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
-            "locked": "1.9.2",
+            "locked": "1.11.0",
             "requested": "1.+"
         },
         "joda-time:joda-time": {
@@ -171,8 +187,8 @@
             "requested": "3.0.0-beta.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
-            "locked": "1.3.61",
-            "requested": "1.3.61"
+            "locked": "1.4.10",
+            "requested": "1.4.10"
         }
     },
     "jacocoAgent": {
@@ -187,13 +203,18 @@
     },
     "kotlinCompilerClasspath": {
         "org.jetbrains.kotlin:kotlin-compiler-embeddable": {
-            "locked": "1.3.61"
+            "locked": "1.4.10"
         }
     },
     "kotlinCompilerPluginClasspath": {
         "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable": {
-            "locked": "1.3.61",
-            "requested": "1.3.61"
+            "locked": "1.4.10",
+            "requested": "1.4.10"
+        }
+    },
+    "kotlinKlibCommonizerClasspath": {
+        "org.jetbrains.kotlin:kotlin-klib-commonizer-embeddable": {
+            "locked": "1.4.10"
         }
     },
     "runtimeClasspath": {
@@ -218,7 +239,7 @@
             "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
-            "locked": "1.9.2",
+            "locked": "1.11.0",
             "requested": "1.+"
         },
         "joda-time:joda-time": {
@@ -226,8 +247,8 @@
             "requested": "2.10"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
-            "locked": "1.3.61",
-            "requested": "1.3.61"
+            "locked": "1.4.10",
+            "requested": "1.4.10"
         }
     },
     "testCompileClasspath": {
@@ -264,11 +285,11 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.8.6",
+            "locked": "7.9.4",
             "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
-            "locked": "1.9.2",
+            "locked": "1.11.0",
             "requested": "1.+"
         },
         "joda-time:joda-time": {
@@ -280,8 +301,8 @@
             "requested": "3.0.0-beta.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
-            "locked": "1.3.61",
-            "requested": "1.3.61"
+            "locked": "1.4.10",
+            "requested": "1.4.10"
         }
     },
     "testImplementationDependenciesMetadata": {
@@ -318,11 +339,11 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.8.6",
+            "locked": "7.9.4",
             "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
-            "locked": "1.9.2",
+            "locked": "1.11.0",
             "requested": "1.+"
         },
         "joda-time:joda-time": {
@@ -334,8 +355,8 @@
             "requested": "3.0.0-beta.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
-            "locked": "1.3.61",
-            "requested": "1.3.61"
+            "locked": "1.4.10",
+            "requested": "1.4.10"
         }
     },
     "testRuntimeClasspath": {
@@ -372,11 +393,11 @@
             "requested": "latest.release"
         },
         "com.netflix.nebula:nebula-test": {
-            "locked": "7.8.6",
+            "locked": "7.9.4",
             "requested": "latest.release"
         },
         "com.squareup.moshi:moshi": {
-            "locked": "1.9.2",
+            "locked": "1.11.0",
             "requested": "1.+"
         },
         "joda-time:joda-time": {
@@ -388,8 +409,8 @@
             "requested": "3.0.0-beta.1"
         },
         "org.jetbrains.kotlin:kotlin-stdlib-jdk8": {
-            "locked": "1.3.61",
-            "requested": "1.3.61"
+            "locked": "1.4.10",
+            "requested": "1.4.10"
         }
     }
 }
