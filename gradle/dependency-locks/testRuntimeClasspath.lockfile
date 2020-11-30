@@ -3,11 +3,11 @@
 # This file is expected to be part of source control.
 cglib:cglib-nodep:3.2.2
 ch.qos.logback:logback-core:1.1.3
-com.fasterxml.jackson.core:jackson-annotations:2.9.0
-com.fasterxml.jackson.core:jackson-core:2.9.9
-com.fasterxml.jackson.core:jackson-databind:2.9.9.3
-com.fasterxml.jackson.datatype:jackson-datatype-joda:2.9.9
-com.fasterxml.jackson:jackson-bom:2.9.9.20190807
+com.fasterxml.jackson.core:jackson-annotations:2.9.10
+com.fasterxml.jackson.core:jackson-core:2.9.10
+com.fasterxml.jackson.core:jackson-databind:2.9.10.6
+com.fasterxml.jackson.datatype:jackson-datatype-joda:2.9.10
+com.fasterxml.jackson:jackson-bom:2.9.10.20200824
 com.flipkart.zjsonpatch:zjsonpatch:0.4.4
 com.github.jknack:handlebars-helpers:4.0.6
 com.github.jknack:handlebars:4.0.6
