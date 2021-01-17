@@ -49,7 +49,6 @@ dependencies {
     implementation('com.netflix.nebula:nebula-dependencies-comparison:latest.release') {
         exclude module: 'groovy-all'
     }
-    implementation 'com.netflix.nebula:gradle-metrics-plugin:8.+', optional
 
     implementation enforcedPlatform("com.fasterxml.jackson:jackson-bom:2.9.10.+")
 
