@@ -26,4 +26,7 @@ class GradleVersionUtils {
         GradleVersion.current().baseVersion < GradleVersion.version(version)
     }
 
+    static boolean currentGradleVersionIsGreaterOrEqualThan(String version) {
+        GradleVersion.current().baseVersion >= GradleVersion.version(version)
+    }
 }
