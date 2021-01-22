@@ -4,6 +4,8 @@ import nebula.plugin.dependencyverifier.DependencyResolutionVerifierKt
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
+import org.gradle.util.GradleVersion
+import spock.lang.IgnoreIf
 import spock.lang.Subject
 import spock.lang.Unroll
 
@@ -288,12 +290,9 @@ test.nebula:b:1.1.0
 
     @Unroll
     def 'scala: fail when dependency is unresolvable upon update via #lockArg (defining dependencies on base configuration "#conf")'() {
-        // the configurations `incrementalScalaAnalysisFor_x_` are resolvable only from a scala context, and extend from `compile` and `implementation`
+        // the configurations `incrementalScalaAnalysisFor_x_` are resolvable only from a scala context, and extend from `implementation`
         // https://github.com/gradle/gradle/blob/master/subprojects/scala/src/main/java/org/gradle/api/plugins/scala/ScalaBasePlugin.java#L143
         given:
-        if (conf == 'compile') {
-            System.setProperty("ignoreDeprecations", "true")
-        }
         createSingleProjectBaseline('scala', conf)
 
         when:
@@ -317,8 +316,6 @@ test.nebula:b:1.1.0
 
         where:
         conf             | lockArg
-        'compile'        | "write-locks"
-        'compile'        | "update-locks"
         'implementation' | "write-locks"
         'implementation' | "update-locks"
     }
@@ -359,6 +356,8 @@ test.nebula:b:1.1.0
         lockArg << ['write-locks', 'update-locks']
     }
 
+    //kotlin plugin adds compile which causes unexpected results ignore until we know more https://youtrack.jetbrains.com/issue/KT-44462
+    @IgnoreIf({ GradleVersion.current().baseVersion >= GradleVersion.version("7.0")})
     @Unroll
     def 'nebula.kotlin: fail when dependency is unresolvable upon update via #lockArg'() {
         given:

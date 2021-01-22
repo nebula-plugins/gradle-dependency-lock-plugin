@@ -22,7 +22,9 @@ import nebula.test.IntegrationSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
+import org.gradle.util.GradleVersion
 import spock.lang.Ignore
+import spock.lang.IgnoreIf
 import spock.lang.Issue
 import spock.lang.Unroll
 
@@ -881,7 +883,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 implementation 'test.example:bar:1.1.0'
                 special 'test.example:foo:2.0.0'
             }
-            dependencyLock.configurationNames = ['testRuntime', 'compile', 'special', 'compileClasspath']
+            dependencyLock.configurationNames = ['special', 'compileClasspath']
         """.stripIndent())
 
         buildFile << """\
@@ -918,9 +920,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         assert globalLockFile.text.contains('test:sub1')
 
         if (!GradleVersionUtils.currentGradleVersionIsLessThan("6.0")) {
-            assert result.standardOutput.contains('Global lock warning: project \'sub1\' requested locking a deprecated configuration \'compile\' which has resolution alternatives: [compileClasspath]')
-            assert result.standardOutput.contains('Global lock warning: project \'sub1\' requested locking a deprecated configuration \'testRuntime\' which has resolution alternatives: [testRuntimeClasspath]')
-
             assert !globalLockFile.text.contains('test.example:bar')
         }
     }
@@ -1420,6 +1419,8 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         noExceptionThrown()
     }
 
+    //Spring boot plugin 1.x is using removed runtime configuration. Unless backported for Gradle 7.0 it cannot be used
+    @IgnoreIf({ GradleVersion.current().baseVersion >= GradleVersion.version("7.0")})
     @Issue('#86')
     def 'locks win over Spring dependency management'() {
         System.setProperty("ignoreDeprecations", "true")

@@ -1154,7 +1154,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
 
         then:
         if (expecting == 'error') {
-            assert results.output.contains('Could not determine the dependencies of task')
+            assert results.output.contains('Execution failed for task \':taskWithConfigurationDependencies\'')
             assert results.output.contains("1. Failed to resolve 'not.available:a:1.0.0' for project")
         } else {
             assert results.output.contains('Task :dependencies')
@@ -1177,7 +1177,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     private static String taskThatRequiresConfigurationDependencies() {
         return """
             task taskWithConfigurationDependencies {
-                inputs.files configurations.compileClasspath.incoming.artifacts
+                inputs.files configurations.compileClasspath
                 doLast { configurations.compileClasspath.each { } }
             }
             if(project.tasks.findByName('dependenciesForAll') != null) {

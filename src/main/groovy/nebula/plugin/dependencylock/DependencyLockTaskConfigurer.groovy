@@ -269,14 +269,17 @@ class DependencyLockTaskConfigurer {
                         if (ext != null) {
                             Collection<Configuration> lockableConfigurations = lockableConfigurations(project, subproject, ext.configurationNames, extension.skippedConfigurationNamesPrefixes)
                             Collection<Configuration> configurations = filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(subproject, ext.configurationNames, lockableConfigurations)
-
+                            Configuration aggregate = subproject.configurations.create("aggregateConfiguration")
+                            aggregate.setCanBeConsumed(true)
+                            aggregate.setCanBeResolved(true)
                             configurations
                                 .findAll { configuration ->
                                     !configurationsToSkipForGlobalLock.contains(configuration.name)
                                 }
-                                .collect { configuration ->
-                                    project.dependencies.create(project.dependencies.project(path: subproject.path, configuration: configuration.name))
+                                .each { configuration ->
+                                    aggregate.extendsFrom(configuration)
                                 }
+                            [project.dependencies.create(project.dependencies.project(path: subproject.path, configuration: aggregate.name))]
                         } else {
                             [project.dependencies.create(subproject)]
                         }

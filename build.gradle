@@ -56,7 +56,7 @@ dependencies {
     testImplementation 'com.netflix.nebula:nebula-project-plugin:latest.release'
     testImplementation 'com.netflix.nebula:nebula-test:latest.release'
     testImplementation gradleTestKit()
-    testImplementation('org.ajoberstar.grgit:grgit-core:3.0.0-beta.1') {
+    testImplementation('org.ajoberstar.grgit:grgit-core:4.1.0') {
         exclude group: 'org.codehaus.groovy', module: 'groovy'
     }
     testImplementation "com.github.tomakehurst:wiremock:2.17.0"

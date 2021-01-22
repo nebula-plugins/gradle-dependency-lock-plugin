@@ -554,7 +554,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
                 }
               }
               dependencies {
-                classpath "com.netflix.nebula:nebula-project-plugin:7.0.4"
+                classpath "com.netflix.nebula:nebula-project-plugin:7.0.9"
               }
             }
             plugins {
@@ -644,7 +644,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
                 }
               }
               dependencies {
-                classpath "com.netflix.nebula:nebula-project-plugin:7.0.4"
+                classpath "com.netflix.nebula:nebula-project-plugin:7.0.9"
               }
             }
             plugins {
