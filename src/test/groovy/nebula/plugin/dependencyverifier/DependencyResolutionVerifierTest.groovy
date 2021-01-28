@@ -1127,6 +1127,47 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     }
 
     @Unroll
+    def 'works with executing tasks from included composite builds with no errors'() {
+        given:
+        setupCompositeBuildProjects()
+
+        when:
+        def results = runTasks(':included-project:sub1:dependencies', '--configuration', 'compileClasspath')
+
+        then:
+        assert results.output.contains('> Task :included-project:sub1:dependencies')
+        assert !results.output.contains('FAIL')
+    }
+
+    @Unroll
+    def 'works with executing tasks from included composite builds with errors'() {
+        given:
+        setupCompositeBuildProjects()
+        buildFile << """
+                dependencies {
+                    implementation 'not.available:a:1.0.0' // dependency is not found
+                }
+                """.stripIndent()
+
+        def sub1Dir = new File(projectDir, "included-project/sub1")
+        sub1Dir.mkdirs()
+        def sub1BuildFile = new File(sub1Dir, "build.gradle")
+        sub1BuildFile << """
+                dependencies {
+                    implementation 'not.available:b:1.0.0' // dependency is not found either
+                }
+                """.stripIndent()
+
+        when:
+        def results = runTasksAndFail(':included-project:sub1:dependencies', '--configuration', 'compileClasspath')
+
+        then:
+        assert results.output.contains('> Task :included-project:sub1:dependencies')
+        assert results.output.contains("1. Failed to resolve 'not.available:b:1.0.0' for project 'sub1'")
+        assert results.output.contains('FAIL')
+    }
+
+    @Unroll
     def 'with Gradle version #gradleVersionToTest - expecting #expecting - using task with configuration dependencies'() {
         given:
         gradleVersion = gradleVersionToTest
@@ -1261,6 +1302,37 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         writeHelloWorld(new File(projectDir, 'sub2'))
         writeUnitTest(new File(projectDir, 'sub1'))
         writeUnitTest(new File(projectDir, 'sub2'))
+    }
+
+    private void setupCompositeBuildProjects() {
+        setupSingleProject()
+        settingsFile << "\nincludeBuild('included-project')"
+
+        def includedProjectDir = new File(projectDir, "included-project")
+        includedProjectDir.mkdirs()
+        def includedProjectBuildFile = new File(includedProjectDir, "build.gradle")
+        includedProjectBuildFile.createNewFile()
+        includedProjectBuildFile.text = """
+            plugins {
+                id 'java'
+            }
+            """.stripIndent()
+        def includedProjectSettingsFile = new File(includedProjectDir, "settings.gradle")
+        includedProjectSettingsFile.createNewFile()
+        includedProjectSettingsFile.text = """
+            rootProject.name = 'included-project'
+            
+            include "sub1"
+            include "sub2"
+            """.stripIndent()
+        def includedSub1Dir = new File(includedProjectDir, "sub1")
+        includedSub1Dir.mkdirs()
+        def includedSub1BuildFiles = new File(includedSub1Dir, "build.gradle")
+        includedSub1BuildFiles.text = buildFile.text
+        def includedSub2Dir = new File(includedProjectDir, "sub2")
+        includedSub2Dir.mkdirs()
+        def includedSub2BuildFiles = new File(includedSub2Dir, "build.gradle")
+        includedSub2BuildFiles.text = buildFile.text
     }
 
     void setupSingleProjectWithLockedVersionsThatAreNotAligned() {
