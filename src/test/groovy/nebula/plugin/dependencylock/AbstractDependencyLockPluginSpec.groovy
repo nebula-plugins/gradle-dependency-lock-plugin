@@ -7,29 +7,13 @@ import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
 
 class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
-    def expectedLocks = GradleVersionUtils.currentGradleVersionIsLessThan("6.0")
-            ? [
-            'annotationProcessor.lockfile',
-            'compile.lockfile',
-            'compileClasspath.lockfile',
-            'compileOnly.lockfile',
-            'default.lockfile',
-            'runtime.lockfile',
-            'runtimeClasspath.lockfile',
-            'testAnnotationProcessor.lockfile',
-            'testCompile.lockfile',
-            'testCompileClasspath.lockfile',
-            'testCompileOnly.lockfile',
-            'testRuntime.lockfile',
-            'testRuntimeClasspath.lockfile'
-    ] as String[]
-            : [
-            'annotationProcessor.lockfile',
-            'compileClasspath.lockfile',
-            'runtimeClasspath.lockfile',
-            'testAnnotationProcessor.lockfile',
-            'testCompileClasspath.lockfile',
-            'testRuntimeClasspath.lockfile'
+    def expectedLocks = [
+            'annotationProcessor',
+            'compileClasspath',
+            'runtimeClasspath',
+            'testAnnotationProcessor',
+            'testCompileClasspath',
+            'testRuntimeClasspath'
     ] as String[]
     def mavenrepo
     def projectName
@@ -41,6 +25,8 @@ class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
         projectName = getProjectDir().getName().replaceAll(/_\d+/, '')
         settingsFile << """\
             rootProject.name = '${projectName}'
+
+            enableFeaturePreview('ONE_LOCKFILE_PER_PROJECT')
         """.stripIndent()
 
         def graph = new DependencyGraphBuilder()
@@ -115,5 +101,15 @@ class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
               }
             }
             """.stripIndent()
+    }
+
+    Map<String, String> coreLockContent(File lockFile) {
+        lockFile.readLines().findAll {!it.startsWith("#")}.collectEntries {
+            it.split('=').toList()
+        }
+    }
+
+    List<String> lockedConfigurations(Map<String,String> lockFileContent) {
+        lockFileContent.values().collectMany { it.toString().split(',').toList() }.unique()
     }
 }

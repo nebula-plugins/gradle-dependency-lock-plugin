@@ -37,54 +37,64 @@ class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
             def coreLockingHelper = new CoreLockingHelper(project)
             coreLockingHelper.lockSelectedConfigurations(getConfigurationNames())
 
+            Map<String, List<String>> dependenciesInConfigs = new HashMap<>()
+
             def migratingUnlockedDependenciesClosure = {
                 HashSet<String> unlockedDependencies = findUnlockedDependencies(it)
 
                 if (unlockedDependencies.size() > 0) {
-                    List<String> sortableDeps = unlockedDependencies.toList()
-                    sortableDeps.sort()
 
-                    def configLockFile = new File(getOutputLocksDirectory(), "/${it.name}.lockfile")
-
-                    writeDependenciesIntoLockFile(it, sortableDeps, configLockFile)
+                    unlockedDependencies.toList().each { lockedDependency ->
+                        if (dependenciesInConfigs.containsKey(lockedDependency)) {
+                            if (!dependenciesInConfigs[lockedDependency].contains(it.name))
+                                dependenciesInConfigs[lockedDependency].add(it.name)
+                        } else {
+                            dependenciesInConfigs.put(lockedDependency, [it.name])
+                        }
+                    }
                 }
             }
             coreLockingHelper.migrateUnlockedDependenciesClosure(getConfigurationNames(), migratingUnlockedDependenciesClosure)
+
+            writeDependenciesIntoLockFile(dependenciesInConfigs, outputLock)
         }
     }
 
-    static def writeDependenciesIntoLockFile(Configuration conf, List<String> sortedDeps, File configLockFile) {
+    static def writeDependenciesIntoLockFile(Map<String, List<String>> unlockedDeps, File configLockFile) {
         try {
-            List<String> lockfileContents = configLockFile.readLines()
-
-            List<String> previouslyUnlockedDeps = sortedDeps.findAll {
-                !lockfileContents.contains(it)
+            def comments = configLockFile.readLines().findAll() {
+                it.startsWith('#')
             }
 
-            def comments = new ArrayList()
-            def lockedDeps = new ArrayList()
-            lockfileContents.each {
-                if (it.startsWith('#')) {
-                    comments.add(it)
-                } else if (it.matches(/\w*/)) {
-                    // do nothing
+            Map<String, List<String>> lockfileContents = coreLockContent(configLockFile)
+
+            unlockedDeps.each {unlockedDep ->
+                if (lockfileContents.containsKey(unlockedDep.key)) {
+                    unlockedDep.value.each {unlockedConfig ->
+                        if (!lockfileContents[unlockedDep.key].contains(unlockedConfig)) {
+                            lockfileContents[unlockedDep.key].add(unlockedConfig)
+                        }
+                    }
                 } else {
-                    lockedDeps.add(it)
+                    lockfileContents.put(unlockedDep.key, unlockedDep.value)
                 }
             }
 
-            def allDeps = lockedDeps + previouslyUnlockedDeps
-            allDeps.sort()
-
-            configLockFile.text =
-                    comments.join('\n') +
-                            '\n' +
-                            allDeps.join('\n')
+            configLockFile.text = comments.join('\n') + '\n'
+            lockfileContents.sort { it.key }.each {
+                configLockFile.append("${it.key}=${it.value.sort().join(",")}\n")
+            }
 
         } catch (Exception e) {
-            throw new BuildCancelledException("Failed to update the ${conf.name} core lock file." +
+            throw new BuildCancelledException("Failed to update the core lock file." +
                     " - Core lock file location: ${configLockFile.absolutePath}", e)
         }
+    }
+
+    static private Map<String, List<String>> coreLockContent(File lockFile) {
+        lockFile.readLines().findAll {!it.startsWith("#")}.collectEntries {
+            it.split('=').toList()
+        }.collectEntries {[it.key ,it.value.split(',')]}
     }
 
     private static Set<String> findUnlockedDependencies(Configuration conf) {

@@ -300,20 +300,20 @@ class DependencyLockTaskConfigurer {
         def migrateLockedDepsToCoreLocksTask = project.tasks.register(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME, MigrateLockedDepsToCoreLocksTask)
         def migrateToCoreLocksTask = project.tasks.register(MIGRATE_TO_CORE_LOCKS_TASK_NAME, MigrateToCoreLocksTask)
         def lockFile = new File(project.projectDir, extension.lockFile)
-        def dependencyLockDirectory = new File(project.projectDir, "/gradle/dependency-locks")
+        def dependencyLock = new File(project.projectDir, "gradle.lockfile")
 
         migrateLockedDepsToCoreLocksTask.configure {
             it.conventionMapping.with {
                 configurationNames = { extension.configurationNames }
                 inputLockFile = { lockFile }
-                outputLocksDirectory = { dependencyLockDirectory }
+                outputLock = { dependencyLock }
             }
         }
 
         migrateToCoreLocksTask.configure {
             it.conventionMapping.with {
                 configurationNames = { extension.configurationNames }
-                outputLocksDirectory = { dependencyLockDirectory }
+                outputLock = { dependencyLock }
             }
             it.dependsOn project.tasks.named(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME)
         }

@@ -46,15 +46,14 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
             if (getInputLockFile().exists()) {
                 LOGGER.warn("Migrating legacy locks to core Gradle locking. This will remove legacy locks.\n" +
                         " - Legacy lock: ${getInputLockFile().absolutePath}\n" +
-                        " - Core Gradle locks: ${getOutputLocksDirectory().absoluteFile}")
-                if (!getOutputLocksDirectory().exists()) {
-                    createOutputLocksDirectory()
-                }
+                        " - Core Gradle locks: ${project.projectDir.absoluteFile}/gradle.lockfile")
 
                 def lockReader = new DependencyLockReader(project)
 
+                Map<String, List<String>> dependenciesInConfigs = new HashMap<>()
+                List<String> emptyLockedConfigs = new ArrayList<>()
+
                 def migrateConfigurationClosure = {
-                    def dependenciesForConf = new ArrayList()
                     def locks = lockReader.readLocks(it, getInputLockFile(), new HashMap<>())
 
                     if (locks != null) {
@@ -63,26 +62,37 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
                             def entryLockedValue = (entry.value as Map<String, String>)["locked"]
                             if (entryLockedValue != null) {
                                 def lockedVersion = entryLockedValue as String
-                                dependenciesForConf.add("$groupAndName:$lockedVersion")
+                                def lockedDependency = "$groupAndName:$lockedVersion".toString()
+                                if (dependenciesInConfigs.containsKey(lockedDependency)) {
+                                    if (!dependenciesInConfigs[lockedDependency].contains(it.name)) {
+                                        dependenciesInConfigs[lockedDependency].add(it.name)
+                                    }
+                                } else {
+                                    dependenciesInConfigs.put(lockedDependency, [it.name])
+                                }
                             } else {
                                 LOGGER.info("No locked version for '$groupAndName' to migrate in $it")
                             }
                         }
-                    }
-
-                    def configLockFile = new File(getOutputLocksDirectory(), "/${it.name}.lockfile")
-                    if (!configLockFile.exists()) {
-                        configLockFile.createNewFile()
-                        configLockFile.write("# This is a file for dependency locking, migrated from Nebula locks.\n" +
-                                "# Manual edits can break the build and are not advised.\n" +
-                                "# This file is expected to be part of source control.\n")
-
-                        dependenciesForConf.sort()
-
-                        configLockFile.append(dependenciesForConf.join('\n'))
+                    } else {
+                        if (!emptyLockedConfigs.contains(it.name))
+                            emptyLockedConfigs.add(it.name)
                     }
                 }
                 coreLockingHelper.migrateLockedConfigurations(getConfigurationNames(), migrateConfigurationClosure)
+
+                def configLockFile = outputLock
+                if (!configLockFile.exists()) {
+                    configLockFile.createNewFile()
+                    configLockFile.write("# This is a file for dependency locking, migrated from Nebula locks.\n" +
+                            "# Manual edits can break the build and are not advised.\n" +
+                            "# This file is expected to be part of source control.\n")
+
+                    dependenciesInConfigs.sort { it.key }.each {
+                        configLockFile.append("${it.key}=${it.value.sort().join(",")}\n")
+                    }
+                    configLockFile.append("empty=${emptyLockedConfigs.join(',')}")
+                }
 
                 deleteInputLockFile()
             } else {
@@ -102,18 +112,6 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
             }
         } catch (Exception e) {
             throw new BuildCancelledException(failureToDeleteInputLockFileMessage, e)
-        }
-    }
-
-    private void createOutputLocksDirectory() {
-        def failureToDeleteOutputLocksDirectoryMessage = "Failed to create core lock directory. Check your permissions.\n" +
-                " - Core lock directory: ${getOutputLocksDirectory().absolutePath}"
-        try {
-            if (!getOutputLocksDirectory().mkdirs()) {
-                throw new BuildCancelledException(failureToDeleteOutputLocksDirectoryMessage)
-            }
-        } catch (Exception e) {
-            throw new BuildCancelledException(failureToDeleteOutputLocksDirectoryMessage, e)
         }
     }
 }

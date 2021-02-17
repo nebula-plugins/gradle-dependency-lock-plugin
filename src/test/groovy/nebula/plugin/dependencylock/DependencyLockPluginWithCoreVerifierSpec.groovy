@@ -14,8 +14,9 @@ class DependencyLockPluginWithCoreVerifierSpec extends AbstractDependencyLockPlu
     private static final String BASELINE_LOCKFILE_CONTENTS = """# This is a Gradle generated file for dependency locking.
 # Manual edits can break the build and are not advised.
 # This file is expected to be part of source control.
-test.nebula:a:1.1.0
-test.nebula:b:1.1.0
+test.nebula:a:1.1.0=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
+test.nebula:b:1.1.0=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
+empty=annotationProcessor,testAnnotationProcessor
 """.stripIndent()
 
     private static final String MIX_OF_RESOLVABLE_AND_UNRESOLVABLE_DEPENDENCIES = """ \
@@ -204,12 +205,11 @@ test.nebula:b:1.1.0
         runTasksAndFail(*tasks(lockArg))
 
         then:
-        def secondRunCompileLockfile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
-        secondRunCompileLockfile.text == BASELINE_LOCKFILE_CONTENTS + "test.nebula:d:1.0.0\n"
-
-        def secondRunTestCompileLockfile = new File(projectDir, '/gradle/dependency-locks/testCompileClasspath.lockfile')
-        assert secondRunTestCompileLockfile.exists()
-        secondRunTestCompileLockfile.text == BASELINE_LOCKFILE_CONTENTS
+        def secondRunLockfile = new File(projectDir, 'gradle.lockfile')
+        secondRunLockfile.text == BASELINE_LOCKFILE_CONTENTS.replace(
+                "empty=annotationProcessor,testAnnotationProcessor",
+                "test.nebula:d:1.0.0=compileClasspath,runtimeClasspath\nempty=annotationProcessor,testAnnotationProcessor"
+        )
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -227,12 +227,11 @@ test.nebula:b:1.1.0
         runTasksAndFail(*tasks(lockArg, true))
 
         then:
-        def secondRunCompileLockfile = new File(projectDir, 'sub1/gradle/dependency-locks/compileClasspath.lockfile')
-        secondRunCompileLockfile.text == BASELINE_LOCKFILE_CONTENTS + "test.nebula:d:1.0.0\n"
-
-        def secondRunTestCompileLockfile = new File(projectDir, 'sub1/gradle/dependency-locks/testCompileClasspath.lockfile')
-        assert secondRunTestCompileLockfile.exists()
-        secondRunTestCompileLockfile.text == BASELINE_LOCKFILE_CONTENTS
+        def secondRunLockfile = new File(projectDir, 'sub1/gradle.lockfile')
+        secondRunLockfile.text == BASELINE_LOCKFILE_CONTENTS.replace(
+                "empty=annotationProcessor,testAnnotationProcessor",
+                "test.nebula:d:1.0.0=compileClasspath,runtimeClasspath\nempty=annotationProcessor,testAnnotationProcessor"
+        )
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -415,7 +414,8 @@ test.nebula:b:1.1.0
 
         runTasks('dependencies', '--write-locks') // baseline dependency locks
 
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         expectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
@@ -423,11 +423,9 @@ test.nebula:b:1.1.0
         actualLocks.each {
             assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
-        def firstRunCompileLockfile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
-        assert firstRunCompileLockfile.text == BASELINE_LOCKFILE_CONTENTS
 
-        def firstRunTestCompileLockfile = new File(projectDir, '/gradle/dependency-locks/testCompileClasspath.lockfile')
-        assert firstRunTestCompileLockfile.text == BASELINE_LOCKFILE_CONTENTS
+        def firstRunLockfile = new File(projectDir, 'gradle.lockfile')
+        assert firstRunLockfile.text == BASELINE_LOCKFILE_CONTENTS
 
         if (languagePlugin == 'nebula.kotlin') {
             System.setProperty("ignoreDeprecations", "false")
@@ -490,7 +488,8 @@ test.nebula:b:1.1.0
 
         runTasks('dependenciesForAll', '--write-locks') // baseline dependency locks
 
-        def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
+        def sub1LockFile = coreLockContent(new File(projectDir, 'sub1/gradle.lockfile'))
+        def sub1ActualLocks = lockedConfigurations(sub1LockFile)
 
         expectedLocks.each {
             assert sub1ActualLocks.contains(it): "There is a missing lockfile: $it"
@@ -499,7 +498,8 @@ test.nebula:b:1.1.0
             assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
-        def sub2ActualLocks = new File(projectDir, 'sub2/gradle/dependency-locks/').list().toList()
+        def sub2LockFile = coreLockContent(new File(projectDir, 'sub2/gradle.lockfile'))
+        def sub2ActualLocks = lockedConfigurations(sub2LockFile)
 
         expectedLocks.each {
             assert sub2ActualLocks.contains(it): "There is a missing lockfile: $it"
@@ -508,11 +508,8 @@ test.nebula:b:1.1.0
             assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
-        def firstRunCompileLockfile = new File(projectDir, 'sub1/gradle/dependency-locks/compileClasspath.lockfile')
+        def firstRunCompileLockfile = new File(projectDir, 'sub1/gradle.lockfile')
         assert firstRunCompileLockfile.text == BASELINE_LOCKFILE_CONTENTS
-
-        def firstRunTestCompileLockfile = new File(projectDir, 'sub1/gradle/dependency-locks/testCompileClasspath.lockfile')
-        assert firstRunTestCompileLockfile.text == BASELINE_LOCKFILE_CONTENTS
     }
 
     def createScalaSingleProjectBaseline(String conf) {
@@ -530,7 +527,8 @@ test.nebula:b:1.1.0
 
         runTasks('dependencies', '--write-locks') // baseline dependency locks
 
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         expectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
@@ -538,31 +536,16 @@ test.nebula:b:1.1.0
         actualLocks.each {
             assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
-        def firstRunCompileLockfile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
-        assert firstRunCompileLockfile.text ==
-                """# This is a Gradle generated file for dependency locking.
-# Manual edits can break the build and are not advised.
-# This file is expected to be part of source control.
-org.scala-lang:scala-library:2.12.7
-test.nebula:a:1.1.0
-test.nebula:b:1.1.0
-"""
 
-        def firstRunTestCompileLockfile = new File(projectDir, '/gradle/dependency-locks/testCompileClasspath.lockfile')
-        assert firstRunTestCompileLockfile.text ==
-                """# This is a Gradle generated file for dependency locking.
-# Manual edits can break the build and are not advised.
-# This file is expected to be part of source control.
-junit:junit:4.12
-org.hamcrest:hamcrest-core:1.3
-org.scala-lang.modules:scala-xml_2.12:1.0.6
-org.scala-lang:scala-library:2.12.7
-org.scala-lang:scala-reflect:2.12.4
-org.scalactic:scalactic_2.12:3.0.5
-org.scalatest:scalatest_2.12:3.0.5
-test.nebula:a:1.1.0
-test.nebula:b:1.1.0
-"""
+        lockFile.get("test.nebula:a:1.1.0") == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("test.nebula:b:1.1.0") == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("org.scala-lang:scala-library:2.12.7") == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("junit:junit:4.12") == "testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("org.hamcrest:hamcrest-core:1.3") == "testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("org.scala-lang.modules:scala-xml_2.12:1.0.6") == "testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("org.scala-lang:scala-reflect:2.12.4") == "testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("org.scalactic:scalactic_2.12:3.0.5") == "testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("org.scalatest:scalatest_2.12:3.0.5") == "testCompileClasspath,testRuntimeClasspath"
     }
 
     def createKotlinSingleProjectBaseline() {
@@ -602,7 +585,8 @@ test.nebula:b:1.1.0
             throw new Exception("Could not find needed version(s) for this test", e)
         }
 
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         expectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
@@ -610,22 +594,14 @@ test.nebula:b:1.1.0
         actualLocks.each {
             assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
-        def firstRunCompileLockfile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
-        def lockfileContents = """# This is a Gradle generated file for dependency locking.
-# Manual edits can break the build and are not advised.
-# This file is expected to be part of source control.
-org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion
-org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion
-org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion
-org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion
-org.jetbrains:annotations:$jetbrainsAnnotationsVersion
-test.nebula:a:1.1.0
-test.nebula:b:1.1.0
-"""
-        assert firstRunCompileLockfile.text == lockfileContents
 
-        def firstRunTestCompileLockfile = new File(projectDir, '/gradle/dependency-locks/testCompileClasspath.lockfile')
-        assert firstRunTestCompileLockfile.text == lockfileContents
+        lockFile.get("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion") == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion") == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion") == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion") == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("org.jetbrains:annotations:$jetbrainsAnnotationsVersion") == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("test.nebula:a:1.1.0") == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("test.nebula:b:1.1.0") == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
     }
 
     def createClojureSingleProjectBaseline() {
@@ -657,7 +633,8 @@ test.nebula:b:1.1.0
 
         runTasks('dependencies', '--write-locks') // baseline dependency locks
 
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         expectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
@@ -665,18 +642,10 @@ test.nebula:b:1.1.0
         actualLocks.each {
             assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
-        def firstRunCompileLockfile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
-        def lockfileContents = """# This is a Gradle generated file for dependency locking.
-# Manual edits can break the build and are not advised.
-# This file is expected to be part of source control.
-org.clojure:clojure:1.8.0
-test.nebula:a:1.1.0
-test.nebula:b:1.1.0
-"""
-        assert firstRunCompileLockfile.text == lockfileContents
 
-        def firstRunTestCompileLockfile = new File(projectDir, '/gradle/dependency-locks/testCompileClasspath.lockfile')
-        assert firstRunTestCompileLockfile.text == lockfileContents
+        lockFile.get("org.clojure:clojure:1.8.0") == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("test.nebula:a:1.1.0") == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get("test.nebula:b:1.1.0") == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
     }
 
     def updateSingleProjectFor(String languagePlugin) {
