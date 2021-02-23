@@ -57,7 +57,7 @@ class DependencyLockPluginIntegrationSpec extends IntegrationSpec {
             }
 
             repositories {
-                jcenter()
+                mavenCentral()
             }
 
             dependencies {

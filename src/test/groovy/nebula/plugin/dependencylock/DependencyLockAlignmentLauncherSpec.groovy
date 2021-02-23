@@ -39,7 +39,7 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
 
         buildFile << """\
             buildscript {
-                repositories { jcenter() }
+                repositories { mavenCentral() }
                 dependencies {
                     classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
                 }
@@ -108,7 +108,7 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
 
         buildFile << """\
             buildscript {
-                repositories { jcenter() }
+                repositories { mavenCentral() }
                 dependencies {
                     classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
                 }
@@ -177,7 +177,7 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
         def (GradleDependencyGenerator mavenrepo, File rulesJsonFile) = dependencyLockAlignInteractionSetupWithUnlockedResolutionRulesConfiguration()
         buildFile << """\
             buildscript {
-                repositories { jcenter() }
+                repositories { mavenCentral() }
                 dependencies {
                     classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
                 }
@@ -251,7 +251,7 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
         def (GradleDependencyGenerator mavenrepo, File rulesJsonFile) = dependencyLockAlignInteractionSetupWithUnlockedResolutionRulesConfiguration()
         buildFile << """\
             buildscript {
-                repositories { jcenter() }
+                repositories { mavenCentral() }
                 dependencies {
                     classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
                 }

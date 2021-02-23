@@ -1079,7 +1079,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         definePluginOutsideOfPluginBlock = true
         buildFile << """\
             buildscript {
-                repositories { jcenter() }
+                repositories { mavenCentral() }
                 dependencies {
                     classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
                 }
@@ -1089,7 +1089,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
             apply plugin: 'java'
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
-                jcenter()
+                mavenCentral()
             }
             dependencies {
                 resolutionRules files('$rulesJsonFile')
@@ -1342,7 +1342,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
 
         buildFile << """\
             buildscript {
-                repositories { jcenter() }
+                repositories { mavenCentral() }
                 dependencies {
                     classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
                 }
@@ -1378,7 +1378,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
 
         buildFile << """\
             buildscript {
-                repositories { jcenter() }
+                repositories { mavenCentral() }
                 dependencies {
                     classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
                 }

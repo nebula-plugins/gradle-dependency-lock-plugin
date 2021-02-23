@@ -1390,7 +1390,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << """\
             buildscript {
                 repositories {
-                    jcenter()
+                    mavenCentral()
                 }
                 dependencies {
                     classpath "com.netflix.nebula:gradle-resolution-rules-plugin:latest.release"
@@ -1488,7 +1488,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             apply plugin: 'com.android.application'
 
             repositories {
-                jcenter()
+                mavenCentral()
             }
 
             android {
@@ -1588,7 +1588,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             }
             
             subprojects {
-                repositories { jcenter() }
+                repositories { mavenCentral() }
             }
             """.stripIndent()
 
