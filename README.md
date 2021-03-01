@@ -1,11 +1,14 @@
 Gradle Dependency Lock Plugin
 =============================
 
-![Support Status](https://img.shields.io/badge/nebula-supported-brightgreen.svg)
-[![Build Status](https://travis-ci.com/nebula-plugins/gradle-dependency-lock-plugin.svg?branch=master)](https://travis-ci.com/nebula-plugins/gradle-dependency-lock-plugin)
-[![Coverage Status](https://coveralls.io/repos/nebula-plugins/gradle-dependency-lock-plugin/badge.svg?branch=master&service=github)](https://coveralls.io/github/nebula-plugins/gradle-dependency-lock-plugin?branch=master)
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/nebula-plugins/gradle-dependency-lock-plugin?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+![Support Status](https://img.shields.io/badge/nebula-active-green.svg)
+[![Gradle Plugin Portal](https://img.shields.io/maven-metadata/v/https/plugins.gradle.org/m2/com.netflix.nebula/gradle-dependency-lock-plugin/maven-metadata.xml.svg?label=gradlePluginPortal)](https://plugins.gradle.org/plugin/nebula.dependency-lock)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.netflix.nebula/gradle-dependency-lock-plugin/badge.svg?style=plastic)](https://maven-badges.herokuapp.com/maven-central/com.netflix.nebula/gradle-dependency-lock-plugin)
+![CI](https://github.com/nebula-plugins/gradle-dependency-lock-plugin/actions/workflows/ci.yml/badge.svg)
+![Publish](https://github.com/nebula-plugins/gradle-dependency-lock-plugin/actions/workflows/publish.yml/badge.svg)
 [![Apache 2.0](https://img.shields.io/github/license/nebula-plugins/gradle-dependency-lock-plugin.svg)](http://www.apache.org/licenses/LICENSE-2.0)
+
+
 
 A plugin to allow people using dynamic dependency versions to lock them to specific versions.
 
@@ -21,21 +24,10 @@ Refer to the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/nebula.dep
 
 The project wiki contains the [full documentation](https://github.com/nebula-plugins/gradle-dependency-lock-plugin/wiki) for the plugin.
 
-Gradle Compatibility Tested
----------------------------
-
-Built with Oracle JDK8
-
-| Gradle Version | Works | Version |
-| :------------: | :---: | :---: |
-| 3.4.1          | yes   | 5.x |
-| 4.x            | yes   | 6.x |
-| 5.x            | yes   | 7.x |
-
 LICENSE
 =======
 
-Copyright 2014-2019 Netflix, Inc.
+Copyright 2014-2021 Netflix, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
