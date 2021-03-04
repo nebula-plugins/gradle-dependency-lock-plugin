@@ -1,11 +1,11 @@
 package nebula.plugin.dependencylock.tasks
 
-import jdk.jfr.internal.LogLevel
 import nebula.plugin.dependencylock.AbstractDependencyLockPluginSpec
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
+import org.gradle.api.logging.LogLevel
 import org.gradle.util.GradleVersion
 import spock.lang.Unroll
 
