@@ -1,5 +1,6 @@
 package nebula.plugin.dependencylock
 
+import jdk.jfr.internal.LogLevel
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.plugin.dependencylock.utils.GradleVersionUtils
 import nebula.test.dependencies.DependencyGraphBuilder
@@ -9,6 +10,10 @@ import spock.lang.IgnoreIf
 import spock.lang.Unroll
 
 class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec {
+    def setup() {
+        logLevel = LogLevel.INFO
+    }
+
     def 'generate core lock file'() {
         when:
         def result = runTasks('dependencies', '--write-locks')

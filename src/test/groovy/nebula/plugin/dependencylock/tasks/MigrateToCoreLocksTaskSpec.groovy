@@ -1,5 +1,6 @@
 package nebula.plugin.dependencylock.tasks
 
+import jdk.jfr.internal.LogLevel
 import nebula.plugin.dependencylock.AbstractDependencyLockPluginSpec
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.dependencies.DependencyGraphBuilder
@@ -20,6 +21,8 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
                 .build()
         mavenrepo = new GradleDependencyGenerator(graph, "${projectDir}/testrepogen")
         mavenrepo.generateTestMavenRepo()
+
+        logLevel = LogLevel.INFO
     }
 
     def 'migration to core locks'() {

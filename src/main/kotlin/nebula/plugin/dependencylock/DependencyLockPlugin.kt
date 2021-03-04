@@ -97,7 +97,7 @@ class DependencyLockPlugin : Plugin<Project> {
         val lockFilename = project.findStringProperty(LOCK_FILE)
         DependencyLockTaskConfigurer(project).configureTasks(globalLockFilename, lockFilename, extension, commitExtension, overrides)
         if (CoreLocking.isCoreLockingEnabled()) {
-            LOGGER.warn("${project.name}: coreLockingSupport feature enabled")
+            LOGGER.info("${project.name}: coreLockingSupport feature enabled")
             val coreLockingHelper = CoreLockingHelper(project)
             coreLockingHelper.lockSelectedConfigurations(extension.configurationNames)
 
