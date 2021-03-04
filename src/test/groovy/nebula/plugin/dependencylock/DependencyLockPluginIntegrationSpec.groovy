@@ -4,6 +4,10 @@ import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.test.IntegrationSpec
 
 class DependencyLockPluginIntegrationSpec extends IntegrationSpec {
+    def setupSpec() {
+        Fixture.createFixtureIfNotCreated()
+    }
+
     def 'eachDependency wins over force'() {
         buildFile << """\
             plugins {
@@ -54,10 +58,6 @@ class DependencyLockPluginIntegrationSpec extends IntegrationSpec {
                         }
                     }
                 }
-            }
-
-            repositories {
-                mavenCentral()
             }
 
             dependencies {
