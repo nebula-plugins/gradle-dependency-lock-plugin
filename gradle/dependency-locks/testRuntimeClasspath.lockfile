@@ -9,6 +9,7 @@ com.fasterxml.jackson:jackson-bom:2.9.10.20210106
 com.flipkart.zjsonpatch:zjsonpatch:0.4.4
 com.github.jknack:handlebars-helpers:4.0.6
 com.github.jknack:handlebars:4.0.6
+com.github.stefanbirkner:system-rules:1.19.0
 com.github.tomakehurst:wiremock:2.17.0
 com.google.guava:guava:20.0
 com.googlecode.javaewah:JavaEWAH:1.1.7
@@ -29,7 +30,7 @@ com.netflix.nebula:nebula-dependencies-comparison:0.1.8
 com.netflix.nebula:nebula-gradle-interop:1.0.11
 com.netflix.nebula:nebula-project-plugin:8.0.0
 com.netflix.nebula:nebula-publishing-plugin:17.3.2
-com.netflix.nebula:nebula-test:7.10.1
+com.netflix.nebula:nebula-test:8.1.0
 com.perforce:p4java:2015.2.1365273
 com.squareup.moshi:moshi:1.11.0
 com.squareup.okio:okio:1.17.5
@@ -40,6 +41,7 @@ commons-logging:commons-logging:1.2
 de.regnis.q.sequence:sequence-library:1.0.3
 javax.servlet:javax.servlet-api:3.1.0
 joda-time:joda-time:2.10
+junit:junit-dep:4.11
 junit:junit:4.12
 net.java.dev.jna:jna-platform:4.1.0
 net.java.dev.jna:jna:4.1.0

@@ -52,6 +52,7 @@ dependencies {
         exclude group: 'org.codehaus.groovy', module: 'groovy'
     }
     testImplementation "com.github.tomakehurst:wiremock:2.17.0"
+    testImplementation 'com.github.stefanbirkner:system-rules:1.19.0'
 }
 
 gradlePlugin {

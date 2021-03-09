@@ -38,7 +38,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
                 }'''.stripIndent())
 
         when:
-        def result = runTasks('migrateToCoreLocks', '--warning-mode', 'all')
+        def result = runTasks('migrateToCoreLocks')
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
@@ -260,7 +260,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         lockFile.get('test.nebula:some-dep:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
 
         when:
-        def verify = runTasks('dependencies')
+        def verify = runTasks('dependencies', '--warning-mode', 'none')
 
         then:
         !verify.output.contains('Failure')

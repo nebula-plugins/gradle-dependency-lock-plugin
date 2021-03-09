@@ -44,7 +44,7 @@ class OfflineModeSpec extends AbstractCachingAndCoreLockingSpec {
         result.output.contains("\\--- test.nebula:a-$uniqueId:1.0.0")
         !result.output.contains(OFFLINE_MODE_NOTIFICATION)
 
-        def lockFile = new File(projectDir, 'gradle/dependency-locks/compileClasspath.lockfile')
+        def lockFile = new File(projectDir, 'gradle.lockfile')
         lockFile.exists()
 
         List<ServeEvent> allServeEvents = WireMock.getAllServeEvents()

@@ -19,6 +19,7 @@ import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.ProjectSpec
 import org.gradle.testfixtures.ProjectBuilder
+import spock.lang.Unroll
 
 class GenerateLockTaskSpec extends ProjectSpec {
     final String taskName = 'generateLock'
@@ -595,7 +596,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.text == lockText
     }
 
-    def 'filter is applied'() {
+    @Unroll
+    def '#methodName is applied'() {
         project.apply plugin: 'java'
 
         project.repositories { maven { url Fixture.repo } }
@@ -616,15 +618,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.text == lockText
 
         where:
-        filter || lockText
-                { group, artifact, version -> false } || '{\n    \n}'
-                { group, artifact, version -> artifact == 'foo' } || '''\
+        methodName << ["negative filter", "positive filter"]
+        filter << [{ group, artifact, version -> false }, { group, artifact, version -> artifact == 'foo' }]
+        lockText << ['{\n    \n}', '''\
             {
                 "testRuntimeClasspath": {
                     "test.example:foo": {
                         "locked": "2.0.1"
                     }
                 }
-            }'''.stripIndent()
+            }'''.stripIndent()]
     }
 }

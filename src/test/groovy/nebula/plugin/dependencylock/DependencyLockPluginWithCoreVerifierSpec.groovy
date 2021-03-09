@@ -194,6 +194,8 @@ empty=annotationProcessor,testAnnotationProcessor
         lockArg << ['write-locks', 'update-locks']
     }
 
+    //Gradle 7.0 will not update lock state if build failed so those tests are not necessary anymore after we move to Gradle 7.0
+    @IgnoreIf({ GradleVersion.current().baseVersion >= GradleVersion.version("7.0")})
     @Unroll
     def 'update lockfiles for resolvable configurations only upon update via #lockArg'() {
         given:
@@ -215,6 +217,8 @@ empty=annotationProcessor,testAnnotationProcessor
         lockArg << ['write-locks', 'update-locks']
     }
 
+    //Gradle 7.0 will not update lock state if build failed so those tests are not necessary anymore after we move to Gradle 7.0
+    @IgnoreIf({ GradleVersion.current().baseVersion >= GradleVersion.version("7.0")})
     @Unroll
     def 'multiproject: update lockfiles for resolvable configurations only upon update via #lockArg'() {
         given:
@@ -308,10 +312,6 @@ empty=annotationProcessor,testAnnotationProcessor
 
         results.output.contains("> Failed to resolve the following dependencies")
         results.output.contains(failedResolutionDependencies())
-
-        if (conf == 'compile') {
-            System.setProperty("ignoreDeprecations", "false")
-        }
 
         where:
         conf             | lockArg
@@ -426,10 +426,6 @@ empty=annotationProcessor,testAnnotationProcessor
 
         def firstRunLockfile = new File(projectDir, 'gradle.lockfile')
         assert firstRunLockfile.text == BASELINE_LOCKFILE_CONTENTS
-
-        if (languagePlugin == 'nebula.kotlin') {
-            System.setProperty("ignoreDeprecations", "false")
-        }
     }
 
     def createMultiProjectBaseline(boolean usesOwnBuildFile = true) {
@@ -572,7 +568,6 @@ empty=annotationProcessor,testAnnotationProcessor
                     implementation 'test.nebula:b:1.+'
                 }
                 """.stripIndent()
-        System.setProperty("ignoreDeprecations", "true")
 
         def results = runTasks('dependencies', '--write-locks') // baseline dependency locks
 
@@ -629,7 +624,6 @@ empty=annotationProcessor,testAnnotationProcessor
                     implementation 'test.nebula:b:1.+'
                 }
                 """.stripIndent()
-        System.setProperty("ignoreDeprecations", "true")
 
         runTasks('dependencies', '--write-locks') // baseline dependency locks
 

@@ -368,7 +368,6 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
     @Unroll
     def 'generate core lock file with kotlin plugin - for configuration #configuration'() {
         given:
-        System.setProperty("ignoreDeprecations", "true")
         buildFile.delete()
         buildFile.createNewFile()
         buildFile << """\
@@ -409,7 +408,6 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         !cleanBuildResults.output.contains('FAILURE')
-        System.setProperty("ignoreDeprecations", "false")
 
         where:
         configuration    | lockFileToVerify
@@ -421,7 +419,6 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
     @Unroll
     def 'generate core lock file with kotlin plugin with multiproject setup - for configuration #configuration'() {
         given:
-        System.setProperty("ignoreDeprecations", "true")
 
         buildFile.delete()
         buildFile.createNewFile()
@@ -472,7 +469,6 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         !cleanBuildResults.output.contains('FAILURE')
-        System.setProperty("ignoreDeprecations", "false")
 
         where:
         configuration    | lockFileToVerify
@@ -578,9 +574,6 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             }
         """.stripIndent()
 
-        if (languagePlugin == 'nebula.kotlin') {
-            System.setProperty("ignoreDeprecations", "true")
-        }
         when:
         def result = runTasks('dependencies', '--write-locks')
 
@@ -606,10 +599,6 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         !cleanBuildResults.output.contains('FAILURE')
-
-        if (languagePlugin == 'nebula.kotlin') {
-            System.setProperty("ignoreDeprecations", "false")
-        }
 
         //TODO kotlin plugin adds compile which causes unexpected results ignore until we know more https://youtrack.jetbrains.com/issue/KT-44462
         where:
@@ -741,7 +730,9 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         !cleanBuildResults.output.contains('FAILURE')
     }
 
-    //TODO currently fails
+    //only Gradle 7 and higher support this feature for single lock file, when we move up we can remove ignore
+    //since Gradle 7 will be used as default
+    @IgnoreIf({ GradleVersion.current().baseVersion < GradleVersion.version("7.0")})
     def 'generate core lock should ignore extra lockfiles and then delete stale lockfiles when regenerating'() {
         given:
         buildFile.text = """\
@@ -798,7 +789,9 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         }
     }
 
-    //TODO currently fails
+    //only Gradle 7 and higher support this feature for single lock file, when we move up we can remove ignore
+    //since Gradle 7 will be used as default
+    @IgnoreIf({ GradleVersion.current().baseVersion < GradleVersion.version("7.0")})
     def 'generate core lock should ignore extra lockfiles and then delete stale lockfiles when regenerating - multiproject setup'() {
         given:
         definePluginOutsideOfPluginBlock = true
@@ -1023,14 +1016,6 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         def result = runTasksAndFail('dependencies', '--write-locks', 'generateLock', 'saveLock')
 
         then:
-        result.output.contains('coreLockingSupport feature enabled')
-        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
-        def actualLocks = lockedConfigurations(lockFile)
-
-        actualLocks.containsAll(expectedLocks)
-        lockFile.containsKey('test.nebula:a:1.1.0')
-        lockFile.containsKey('test.nebula:b:1.1.0')
-
         result.output.contains("> Task :generateLock FAILED")
     }
 

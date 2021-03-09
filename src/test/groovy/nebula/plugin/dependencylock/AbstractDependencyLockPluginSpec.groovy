@@ -5,6 +5,8 @@ import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
+import org.junit.Rule
+import org.junit.contrib.java.lang.system.ProvideSystemProperty
 
 class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
     def expectedLocks = [
@@ -17,6 +19,11 @@ class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
     ] as String[]
     def mavenrepo
     def projectName
+
+    //to avoid enableFeaturePreview('ONE_LOCKFILE_PER_PROJECT') has been deprecated
+    @Rule
+    public final ProvideSystemProperty provideSystemProperty = new ProvideSystemProperty("ignoreDeprecations", "true")
+
 
     def setup() {
         keepFiles = true

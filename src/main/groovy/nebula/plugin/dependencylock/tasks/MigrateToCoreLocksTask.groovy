@@ -40,7 +40,7 @@ class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
             Map<String, List<String>> dependenciesInConfigs = new HashMap<>()
 
             def migratingUnlockedDependenciesClosure = {
-                HashSet<String> unlockedDependencies = findUnlockedDependencies(it)
+                HashSet<String> unlockedDependencies = MigrateToCoreLocksTask.findUnlockedDependencies(it)
 
                 if (unlockedDependencies.size() > 0) {
 
