@@ -27,6 +27,8 @@ import nebula.test.dependencies.DependencyGraph
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
+import org.junit.Rule
+import org.junit.contrib.java.lang.system.ProvideSystemProperty
 
 class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
     static WireMockServer wireMockServer
@@ -38,6 +40,10 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
     def mavenrepo
     File repo
     String uniqueId
+
+    //to avoid enableFeaturePreview('ONE_LOCKFILE_PER_PROJECT') has been deprecated
+    @Rule
+    public final ProvideSystemProperty provideSystemProperty = new ProvideSystemProperty("ignoreDeprecations", "true")
 
     def setupSpec() {
         if (wireMockServer != null && wireMockServer.isRunning()) {
@@ -63,6 +69,8 @@ class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
         projectName = getProjectDir().getName().replaceAll(/_\d+/, '')
         settingsFile << """\
             rootProject.name = '${projectName}'
+
+            enableFeaturePreview('ONE_LOCKFILE_PER_PROJECT')
         """.stripIndent()
 
         serverUrl = wireMockServer.url('/').toString()

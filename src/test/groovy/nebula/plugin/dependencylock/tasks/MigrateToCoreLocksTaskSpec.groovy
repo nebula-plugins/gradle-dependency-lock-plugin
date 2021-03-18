@@ -38,18 +38,19 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
                 }'''.stripIndent())
 
         when:
-        def result = runTasks('migrateToCoreLocks', '--warning-mode', 'all')
+        def result = runTasks('migrateToCoreLocks')
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
         !result.output.contains('not supported')
         result.output.contains('Migrating legacy locks')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
-        lockFile.text.contains('test.nebula:a:1.0.0')
-        lockFile.text.contains('test.nebula:b:1.1.0')
+        lockFile.get('test.nebula:a:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get('test.nebula:b:1.1.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
 
         !legacyLockFile.exists()
 
@@ -151,14 +152,16 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         result.output.contains('coreLockingSupport feature enabled')
         !result.output.contains('not supported')
         result.output.contains('Migrating legacy locks')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
-        lockFile.text.contains('test.nebula:a:1.0.0')
-        lockFile.text.contains('test.nebula:b:1.1.0')
-        lockFile.text.contains('test.nebula:c:1.0.0')
-        lockFile.text.contains('test.nebula:d:1.0.0')
+
+        lockFile.get('test.nebula:a:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get('test.nebula:b:1.1.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get('test.nebula:c:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get('test.nebula:d:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
 
         !legacyLockFile.exists()
     }
@@ -200,14 +203,15 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         result.output.contains('coreLockingSupport feature enabled')
         !result.output.contains('not supported')
         result.output.contains('Migrating legacy locks')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
-        lockFile.text.contains('test.nebula:a:1.0.0')
-        lockFile.text.contains('test.nebula:b:1.1.0')
-        lockFile.text.contains('test.nebula:c:1.0.0')
-        lockFile.text.contains('test.nebula:d:1.0.0')
+        lockFile.get('test.nebula:a:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get('test.nebula:b:1.1.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get('test.nebula:c:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get('test.nebula:d:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
 
         !legacyLockFile.exists()
     }
@@ -243,19 +247,20 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         result.output.contains('coreLockingSupport feature enabled')
         !result.output.contains('not supported')
         result.output.contains('Migrating legacy locks')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
-        lockFile.text.contains('test.nebula:a:1.0.0')
-        lockFile.text.contains('test.nebula:b:1.1.0')
-        lockFile.text.contains('test.nebula:c:1.0.0')
-        lockFile.text.contains('test.nebula:d:1.0.0')
-        lockFile.text.contains('test.nebula:e:1.0.0')
-        lockFile.text.contains('test.nebula:some-dep:1.0.0')
+        lockFile.get('test.nebula:a:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get('test.nebula:b:1.1.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get('test.nebula:c:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get('test.nebula:d:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get('test.nebula:e:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get('test.nebula:some-dep:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
 
         when:
-        def verify = runTasks('dependencies')
+        def verify = runTasks('dependencies', '--warning-mode', 'none')
 
         then:
         !verify.output.contains('Failure')
@@ -322,17 +327,18 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         !result.output.contains('not supported')
         result.output.contains('Migrating legacy locks')
 
-        def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
+        def sub1LockFile = coreLockContent(new File(projectDir, 'sub1/gradle.lockfile'))
+        def sub1ActualLocks = lockedConfigurations(sub1LockFile)
+
         sub1ActualLocks.containsAll(expectedLocks)
-        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compileClasspath.lockfile')
-        sub1LockFile.text.contains('test.nebula:a:1.0.0')
+        sub1LockFile.get('test.nebula:a:1.0.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
         !sub1LegacyLockFile.exists()
 
-        def sub2ActualLocks = new File(projectDir, 'sub2/gradle/dependency-locks/').list().toList()
+        def sub2LockFile = coreLockContent(new File(projectDir, 'sub2/gradle.lockfile'))
+        def sub2ActualLocks = lockedConfigurations(sub2LockFile)
         sub2ActualLocks.containsAll(expectedLocks)
-        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compileClasspath.lockfile')
-        sub2LockFile.text.contains('test.nebula:c:1.0.0')
-        sub2LockFile.text.contains('test.nebula:d:1.0.0')
+        sub2LockFile.get('test.nebula:c:1.0.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+        sub2LockFile.get('test.nebula:d:1.0.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
         !sub2LegacyLockFile.exists()
     }
 
@@ -408,18 +414,20 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         result.output.contains('Migrating legacy locks')
         result.output.contains("No locked version for '${projectName}:sub1' to migrate in configuration ':sub2:compileClasspath'")
 
-        def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
+        def sub1LockFile = coreLockContent(new File(projectDir, 'sub1/gradle.lockfile'))
+        def sub1ActualLocks = lockedConfigurations(sub1LockFile)
+
         sub1ActualLocks.containsAll(expectedLocks)
-        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compileClasspath.lockfile')
-        sub1LockFile.text.contains('test.nebula:a:1.0.0')
+        sub1LockFile.get('test.nebula:a:1.0.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
         !sub1LegacyLockFile.exists()
 
-        def sub2ActualLocks = new File(projectDir, 'sub2/gradle/dependency-locks/').list().toList()
+        def sub2LockFile = coreLockContent(new File(projectDir, 'sub2/gradle.lockfile'))
+        def sub2ActualLocks = lockedConfigurations(sub2LockFile)
         sub2ActualLocks.containsAll(expectedLocks)
-        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compileClasspath.lockfile')
-        sub2LockFile.text.contains('test.nebula:a:1.0.0')
-        sub2LockFile.text.contains('test.nebula:c:1.0.0')
-        sub2LockFile.text.contains('test.nebula:d:1.0.0')
+        sub1LockFile.get('test.nebula:a:1.0.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+        sub2LockFile.get('test.nebula:c:1.0.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+        sub2LockFile.get('test.nebula:d:1.0.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+
         !sub2LegacyLockFile.exists()
     }
 
@@ -495,19 +503,19 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         !result.output.contains('not supported')
         result.output.contains('Migrating legacy locks')
 
-        def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
+        def sub1LockFile = coreLockContent(new File(projectDir, 'sub1/gradle.lockfile'))
+        def sub1ActualLocks = lockedConfigurations(sub1LockFile)
+
         sub1ActualLocks.containsAll(expectedLocks)
-        def sub1LockFile = new File(projectDir, 'sub1/gradle/dependency-locks/compileClasspath.lockfile')
-        sub1LockFile.text.contains('test.nebula:a:1.0.0')
+        sub1LockFile.get('test.nebula:a:1.0.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
         !sub1LegacyLockFile.exists()
 
-        def sub2ActualLocks = new File(projectDir, 'sub2/gradle/dependency-locks/').list().toList()
+        def sub2LockFile = coreLockContent(new File(projectDir, 'sub2/gradle.lockfile'))
+        def sub2ActualLocks = lockedConfigurations(sub2LockFile)
         sub2ActualLocks.containsAll(expectedLocks)
-        def sub2LockFile = new File(projectDir, 'sub2/gradle/dependency-locks/compileClasspath.lockfile')
-        sub2LockFile.text.contains('test.nebula:a:1.0.0')
-        sub2LockFile.text.findAll('test.nebula:a:1.0.0').size() == 1
-        sub2LockFile.text.contains('test.nebula:c:1.0.0')
-        sub2LockFile.text.contains('test.nebula:d:1.0.0')
+        sub1LockFile.get('test.nebula:a:1.0.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+        sub2LockFile.get('test.nebula:c:1.0.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+        sub2LockFile.get('test.nebula:d:1.0.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
         !sub2LegacyLockFile.exists()
     }
 
@@ -527,12 +535,13 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         result.output.contains('coreLockingSupport feature enabled')
         !result.output.contains('not supported')
         result.output.contains('Migrating legacy locks')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
-        lockFile.text.contains('test.nebula:a:1.0.0')
-        lockFile.text.contains('test.nebula:b:1.1.0')
+        lockFile.get('test.nebula:a:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+        lockFile.get('test.nebula:b:1.1.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
     }
 
     @Unroll
@@ -596,22 +605,23 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         result.output.contains('coreLockingSupport feature enabled')
         !result.output.contains('not supported')
         result.output.contains('Migrating legacy locks')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         def facetLockfiles = [
-                "${facet}AnnotationProcessor.lockfile".toString(),
-                "${facet}CompileClasspath.lockfile".toString(),
-                "${facet}RuntimeClasspath.lockfile".toString()
+                "${facet}AnnotationProcessor".toString(),
+                "${facet}CompileClasspath".toString(),
+                "${facet}RuntimeClasspath".toString()
         ]
         def updatedExpectedLocks = expectedLocks + facetLockfiles
         updatedExpectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
 
-        def lockFile = new File(projectDir, "/gradle/dependency-locks/${facet}CompileClasspath.lockfile")
-        assert lockFile.text.contains('test.nebula:a:1.0.0')
-        assert lockFile.text.contains('junit:junit:4.12')
-        assert lockFile.text.contains('org.hamcrest:hamcrest-core:1.3')
+        assert lockFile.get('test.nebula:a:1.0.0').contains("${facet}CompileClasspath")
+        assert lockFile.get('junit:junit:4.12').contains("${facet}CompileClasspath")
+        assert lockFile.get('org.hamcrest:hamcrest-core:1.3').contains("${facet}CompileClasspath")
 
         where:
         facet       | plugin             | setParentSourceSet
@@ -674,12 +684,14 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         result.output.contains('coreLockingSupport feature enabled')
         !result.output.contains('not supported')
         result.output.contains('Migrating legacy locks')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         def facetLockfiles = [
-                "${facet}AnnotationProcessor.lockfile".toString(),
-                "${facet}CompileClasspath.lockfile".toString(),
-                "${facet}RuntimeClasspath.lockfile".toString()
+                "${facet}AnnotationProcessor".toString(),
+                "${facet}CompileClasspath".toString(),
+                "${facet}RuntimeClasspath".toString()
         ]
         def updatedExpectedLocks = expectedLocks + facetLockfiles
         updatedExpectedLocks.each {
@@ -687,12 +699,10 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         }
 
         // implementation lock came from json lockfile
-        def compileClasspathLockFile = new File(projectDir, "/gradle/dependency-locks/compileClasspath.lockfile")
-        compileClasspathLockFile.text.contains('test.nebula:a:1.0.0')
+        assert lockFile.get('test.nebula:a:1.0.0').contains("compileClasspath")
 
         // facet lock had been unlocked & resolved to different version
-        def facetLockFile = new File(projectDir, "/gradle/dependency-locks/${facet}CompileClasspath.lockfile")
-        assert facetLockFile.text.contains('test.nebula:a:1.1.0')
+        assert lockFile.get('test.nebula:a:1.1.0').contains("${facet}CompileClasspath")
 
         where:
         facet       | plugin             | setParentSourceSet
@@ -734,11 +744,11 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
-        !lockFile.exists()
+        ! actualLocks.contains("jacocoAgent")
 
         when:
         def cleanBuildResults = runTasks('clean', 'build')
@@ -781,11 +791,12 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
-        lockFile.exists()
+        actualLocks.contains("jacocoAgent")
 
         when:
         def cleanBuildResults = runTasks('clean', 'build')
@@ -886,15 +897,8 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
     }
 
     private static String createFacetLockfileText(String facet) {
-        def compileBasedConfigs = GradleVersion.current().baseVersion < GradleVersion.version("6.0")
-                ? ['compile', 'compileClasspath', 'default', 'runtime', 'runtimeClasspath']
-                : ['compileClasspath', 'default', 'runtimeClasspath']
-        def testCompileBaseConfigs = GradleVersion.current().baseVersion < GradleVersion.version("6.0")
-                ? [
-                "testCompile", "testCompileClasspath", "testDefault", "testRuntime", "testRuntimeClasspath",
-                "${facet}Compile".toString(), "${facet}CompileClasspath".toString(), "${facet}Default".toString(), "${facet}Runtime".toString(), "${facet}RuntimeClasspath".toString()
-        ]
-                : [
+        def compileBasedConfigs = ['compileClasspath', 'default', 'runtimeClasspath']
+        def testCompileBaseConfigs = [
                 "testCompileClasspath", "testDefault", "testRuntimeClasspath",
                 "${facet}CompileClasspath".toString(), "${facet}Default".toString(), "${facet}RuntimeClasspath".toString()
         ]

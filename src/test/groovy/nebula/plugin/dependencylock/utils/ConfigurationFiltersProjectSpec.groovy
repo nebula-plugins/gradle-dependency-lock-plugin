@@ -46,13 +46,11 @@ class ConfigurationFiltersProjectSpec extends ProjectSpec {
         } else if (GradleVersionUtils.currentGradleVersionIsLessThan('6.3')) {
             assert results.size() == 6
         } else if (GradleVersionUtils.currentGradleVersionIsGreaterOrEqualThan('7.0')) {
-            assert results.size() == 4
+            assert results.size() == 2
 
             Collection<String> configurationNames = results.collect { (it as Configuration).name }
             assert configurationNames.contains('default')
             assert configurationNames.contains('archives')
-            assert configurationNames.contains('compileOnly')
-            assert configurationNames.contains('testCompileOnly')
         } else {
             assert results.size() == 8
 
@@ -95,14 +93,11 @@ class ConfigurationFiltersProjectSpec extends ProjectSpec {
         }  else if (GradleVersionUtils.currentGradleVersionIsLessThan('6.3')) {
             assert results.size() == 9
         } else if (GradleVersionUtils.currentGradleVersionIsGreaterOrEqualThan('7.0')) {
-            assert results.size() == 5
+            assert results.size() == 2
 
             Collection<String> configurationNames = results.collect { (it as Configuration).name }
             assert configurationNames.contains('default')
             assert configurationNames.contains('archives')
-            assert configurationNames.contains('compileOnly')
-            assert configurationNames.contains('testCompileOnly')
-            assert configurationNames.contains('integTestCompileOnly')
         } else {
             assert results.size() == 11
 

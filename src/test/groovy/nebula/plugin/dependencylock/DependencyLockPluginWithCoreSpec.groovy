@@ -1,7 +1,6 @@
 package nebula.plugin.dependencylock
 
 import nebula.plugin.dependencylock.util.LockGenerator
-import nebula.plugin.dependencylock.utils.GradleVersionUtils
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import org.gradle.api.logging.LogLevel
@@ -20,7 +19,8 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         expectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
@@ -29,9 +29,8 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
-        lockFile.text.contains('test.nebula:a:1.1.0')
-        lockFile.text.contains('test.nebula:b:1.1.0')
+        lockFile.get('test.nebula:a:1.1.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+        lockFile.get('test.nebula:b:1.1.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
 
         when:
         def cleanBuildResults = runTasks('clean', 'build')
@@ -46,7 +45,8 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         expectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
@@ -55,9 +55,8 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
-        lockFile.text.contains('test.nebula:a:1.1.0')
-        lockFile.text.contains('test.nebula:b:1.1.0')
+        lockFile.get('test.nebula:a:1.1.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+        lockFile.get('test.nebula:b:1.1.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
 
         when:
         // update build file, so it no longer matches locks
@@ -78,7 +77,8 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         runTasks('dependencies', '--update-locks', 'test.nebula:d')
 
         then:
-        lockFile.text.contains('test.nebula:d:1.1.0')
+        def updatedLockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        updatedLockFile.containsKey('test.nebula:d:1.1.0')
 
         when:
         def cleanBuildResults = runTasks('clean', 'build')
@@ -136,23 +136,19 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         then:
         !result.output.contains('FAILED')
 
-        def lockfileDir = new File(projectDir, 'gradle/dependency-locks/')
-        assert lockfileDir.listFiles().size() > 0
-        lockfileDir.listFiles().each { lockFile ->
-            if (lockFile.text.contains('test.nebula:a')) {
-                assert lockFile.text.contains('test.nebula:a:1.2.0')
-            }
-            if (lockFile.text.contains('test.nebula:b')) {
-                if (lockingTask == 'write-locks') {
-                    assert lockFile.text.contains('test.nebula:b:1.2.0') // write-locks updates all deps
-                } else {
-                    assert lockFile.text.contains('test.nebula:b:1.1.0') // update-locks only updates the deps passed in
-                }
-            }
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+
+        lockFile.get('test.nebula:a:1.2.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+        if (lockingTask == 'write-locks') {
+            // write-locks updates all deps
+            assert lockFile.get('test.nebula:b:1.2.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+        } else {
+            // update-locks only updates the deps passed in
+            assert lockFile.get('test.nebula:b:1.1.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
         }
 
-        def actualLocks = lockfileDir.list().toList()
-        def updatedLocks = expectedLocks + 'shadow.lockfile'
+        def actualLocks = lockedConfigurations(lockFile)
+        def updatedLocks = expectedLocks + 'shadow'
         updatedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
@@ -181,17 +177,11 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             }
         """.stripIndent()
 
-        def lockfileDir = new File(projectDir, 'gradle/dependency-locks/')
-        lockfileDir.mkdirs()
-        def endResultConfigurations = ['compileClasspath', 'runtimeClasspath', 'testCompileClasspath', 'testRuntimeClasspath']
-
-        endResultConfigurations.each { config ->
-            def lockFile = new File(lockfileDir, "${config}.lockfile")
-            lockFile.text = '''
-                test.nebula:a:1.0.0
-                test.nebula:b:1.0.0
+        def lockfile = new File(projectDir, 'gradle.lockfile')
+        lockfile.text = '''
+                test.nebula:a:1.0.0=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
+                test.nebula:b:1.0.0=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
                 '''.stripIndent()
-        }
 
         when:
         def results = runTasks('dependencies')
@@ -227,23 +217,21 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         expectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
         assert actualLocks.size() > expectedLocks.size()
-        def allExpectedLocks = ["testCompileClasspath.lockfile",
-                                "annotationProcessor.lockfile",
-                                "compileClasspath.lockfile", "jacocoAnt.lockfile", "testAnnotationProcessor.lockfile",
-                                "jacocoAgent.lockfile", "testRuntimeClasspath.lockfile",
-                                "runtimeClasspath.lockfile"]
+        def allExpectedLocks = ["testCompileClasspath",
+                                "annotationProcessor",
+                                "compileClasspath", "jacocoAnt", "testAnnotationProcessor",
+                                "jacocoAgent", "testRuntimeClasspath",
+                                "runtimeClasspath"]
         allExpectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
-
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
-        lockFile.exists()
 
         when:
         def cleanBuildResults = runTasks('clean', 'build')
@@ -275,7 +263,8 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         expectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
@@ -283,9 +272,6 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         actualLocks.each {
             assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
-
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
-        !lockFile.exists()
 
         when:
         def cleanBuildResults = runTasks('clean', 'build')
@@ -341,29 +327,30 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
+        def sub1LockFile = coreLockContent(new File(projectDir, 'sub1/gradle.lockfile'))
+        def sub1ActualLocks = lockedConfigurations(sub1LockFile)
 
-        def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
         expectedLocks.each {
             assert sub1ActualLocks.contains(it): "There is a missing lockfile: $it"
         }
         sub1ActualLocks.each {
             assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
-        def sub1LockFile = new File(projectDir, "sub1/gradle/dependency-locks/${lockFileToVerify}.lockfile")
-        sub1LockFile.text.contains('test.nebula:a:1.1.0')
-        sub1LockFile.text.contains('test.nebula:b:1.1.0')
 
-        def sub2ActualLocks = new File(projectDir, 'sub2/gradle/dependency-locks/').list().toList()
+        sub1LockFile.get('test.nebula:a:1.1.0').contains(lockFileToVerify)
+        sub1LockFile.get('test.nebula:b:1.1.0').contains(lockFileToVerify)
+
+        def sub2LockFile = coreLockContent(new File(projectDir, 'sub2/gradle.lockfile'))
+        def sub2ActualLocks = lockedConfigurations(sub2LockFile)
         expectedLocks.each {
             assert sub2ActualLocks.contains(it): "There is a missing lockfile: $it"
         }
         sub2ActualLocks.each {
             assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
-        def sub2LockFile = new File(projectDir, "sub2/gradle/dependency-locks/${lockFileToVerify}.lockfile")
-        sub2LockFile.text.contains('test.nebula:a:1.1.0')
-        sub2LockFile.text.contains('test.nebula:c:1.1.0')
-        sub2LockFile.text.contains('test.nebula:d:1.1.0')
+        sub2LockFile.get('test.nebula:a:1.1.0').contains(lockFileToVerify)
+        sub2LockFile.get('test.nebula:c:1.1.0').contains(lockFileToVerify)
+        sub2LockFile.get('test.nebula:d:1.1.0').contains(lockFileToVerify)
 
         when:
         def cleanBuildResults = runTasks('clean', 'build', '--warning-mode', 'none')
@@ -381,7 +368,6 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
     @Unroll
     def 'generate core lock file with kotlin plugin - for configuration #configuration'() {
         given:
-        System.setProperty("ignoreDeprecations", "true")
         buildFile.delete()
         buildFile.createNewFile()
         buildFile << """\
@@ -404,7 +390,8 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         expectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
@@ -413,16 +400,14 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
-        def lockFile = new File(projectDir, "/gradle/dependency-locks/${lockFileToVerify}.lockfile")
-        lockFile.text.contains('test.nebula:a:1.1.0')
-        lockFile.text.contains('test.nebula:b:1.1.0')
+        lockFile.get('test.nebula:a:1.1.0').contains(lockFileToVerify)
+        lockFile.get('test.nebula:b:1.1.0').contains(lockFileToVerify)
 
         when:
         def cleanBuildResults = runTasks('clean', 'build', '--warning-mode', 'none')
 
         then:
         !cleanBuildResults.output.contains('FAILURE')
-        System.setProperty("ignoreDeprecations", "false")
 
         where:
         configuration    | lockFileToVerify
@@ -434,7 +419,6 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
     @Unroll
     def 'generate core lock file with kotlin plugin with multiproject setup - for configuration #configuration'() {
         given:
-        System.setProperty("ignoreDeprecations", "true")
 
         buildFile.delete()
         buildFile.createNewFile()
@@ -467,7 +451,8 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
+        def sub1LockFile = coreLockContent(new File(projectDir, 'sub1/gradle.lockfile'))
+        def actualLocks = lockedConfigurations(sub1LockFile)
 
         expectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
@@ -476,16 +461,14 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
-        def lockFile = new File(projectDir, "sub1/gradle/dependency-locks/${lockFileToVerify}.lockfile")
-        lockFile.text.contains('test.nebula:a:1.1.0')
-        lockFile.text.contains('test.nebula:b:1.1.0')
+        sub1LockFile.get('test.nebula:a:1.1.0').contains(lockFileToVerify)
+        sub1LockFile.get('test.nebula:b:1.1.0').contains(lockFileToVerify)
 
         when:
         def cleanBuildResults = runTasks('clean', 'build', '--warning-mode', 'none')
 
         then:
         !cleanBuildResults.output.contains('FAILURE')
-        System.setProperty("ignoreDeprecations", "false")
 
         where:
         configuration    | lockFileToVerify
@@ -518,7 +501,8 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         expectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
@@ -527,9 +511,8 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             assert expectedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
-        def lockFile = new File(projectDir, "/gradle/dependency-locks/${lockFileToVerify}.lockfile")
-        lockFile.text.contains('test.nebula:a:1.1.0')
-        lockFile.text.contains('test.nebula:b:1.1.0')
+        lockFile.get('test.nebula:a:1.1.0').contains(lockFileToVerify)
+        lockFile.get('test.nebula:b:1.1.0').contains(lockFileToVerify)
 
         when:
         def cleanBuildResults = runTasks('clean', 'build', '--warning-mode', 'none')
@@ -591,17 +574,13 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             }
         """.stripIndent()
 
-        if (languagePlugin == 'nebula.kotlin') {
-            System.setProperty("ignoreDeprecations", "true")
-        }
         when:
         def result = runTasks('dependencies', '--write-locks')
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        assert new File(projectDir, "/gradle/").exists()
-
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
         expectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
@@ -612,19 +591,14 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         def lockFileToVerify = "compileClasspath"
 
-        def lockFile = new File(projectDir, "/gradle/dependency-locks/${lockFileToVerify}.lockfile")
-        lockFile.text.contains('test.nebula:a:1.1.0')
-        lockFile.text.contains('test.nebula:b:1.1.0')
+        lockFile.get('test.nebula:a:1.1.0').contains(lockFileToVerify)
+        lockFile.get('test.nebula:b:1.1.0').contains(lockFileToVerify)
 
         when:
         def cleanBuildResults = runTasks('clean', 'build')
 
         then:
         !cleanBuildResults.output.contains('FAILURE')
-
-        if (languagePlugin == 'nebula.kotlin') {
-            System.setProperty("ignoreDeprecations", "false")
-        }
 
         //TODO kotlin plugin adds compile which causes unexpected results ignore until we know more https://youtrack.jetbrains.com/issue/KT-44462
         where:
@@ -679,18 +653,16 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
-        def updatedLocks = expectedLocks + ["jacocoAnt.lockfile", "jacocoAgent.lockfile"]
+        def updatedLocks = expectedLocks + ["jacocoAnt", "jacocoAgent"]
         updatedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
         actualLocks.each {
             assert updatedLocks.contains(it): "There is an extra lockfile: $it"
         }
-
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
-        lockFile.exists()
 
         when:
         def cleanBuildResults = runTasks('clean', 'build')
@@ -740,18 +712,16 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
-        def updatedLocks = expectedLocks + ["jacocoAnt.lockfile", "jacocoAgent.lockfile", "spotbugs.lockfile"]
+        def updatedLocks = expectedLocks + ["jacocoAnt", "jacocoAgent", "spotbugs"]
         updatedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
         actualLocks.each {
             assert updatedLocks.contains(it): "There is an extra lockfile: $it"
         }
-
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/jacocoAgent.lockfile')
-        lockFile.exists()
 
         when:
         def cleanBuildResults = runTasks('clean', 'build')
@@ -760,6 +730,9 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         !cleanBuildResults.output.contains('FAILURE')
     }
 
+    //only Gradle 7 and higher support this feature for single lock file, when we move up we can remove ignore
+    //since Gradle 7 will be used as default
+    @IgnoreIf({ GradleVersion.current().baseVersion < GradleVersion.version("7.0")})
     def 'generate core lock should ignore extra lockfiles and then delete stale lockfiles when regenerating'() {
         given:
         buildFile.text = """\
@@ -784,9 +757,10 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
-        def updatedLocks = expectedLocks + ["customConfiguration.lockfile"]
+        def updatedLocks = expectedLocks + ["customConfiguration"]
         updatedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
@@ -794,34 +768,30 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             assert updatedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/customConfiguration.lockfile')
-        lockFile.exists()
-
         when:
         def buildResult = runTasks('clean', 'build')
 
         then:
         !buildResult.output.contains('FAIL')
 
-        def customConfigurationLockFile = new File(projectDir, '/gradle/dependency-locks/customConfiguration.lockfile')
-        assert customConfigurationLockFile.exists()
-
         when:
         runTasks('dependencies', '--write-locks')
 
         then:
-        def updatedActualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def updatedLockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def updatedActualLocks = lockedConfigurations(updatedLockFile)
+
         expectedLocks.each { expected ->
             assert updatedActualLocks.contains(expected)
         }
         updatedActualLocks.each { actual ->
             assert expectedLocks.contains(actual)
         }
-
-        def customConfigurationLockFileAfterWriteLocks = new File(projectDir, '/gradle/dependency-locks/customConfiguration.lockfile')
-        assert !customConfigurationLockFileAfterWriteLocks.exists()
     }
 
+    //only Gradle 7 and higher support this feature for single lock file, when we move up we can remove ignore
+    //since Gradle 7 will be used as default
+    @IgnoreIf({ GradleVersion.current().baseVersion < GradleVersion.version("7.0")})
     def 'generate core lock should ignore extra lockfiles and then delete stale lockfiles when regenerating - multiproject setup'() {
         given:
         definePluginOutsideOfPluginBlock = true
@@ -861,9 +831,10 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def sub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
+        def sub1LockFile = coreLockContent(new File(projectDir, 'sub1/gradle.lockfile'))
+        def sub1ActualLocks = lockedConfigurations(sub1LockFile)
 
-        def updatedLocks = expectedLocks + ["customConfiguration.lockfile"]
+        def updatedLocks = expectedLocks + ["customConfiguration"]
         updatedLocks.each {
             assert sub1ActualLocks.contains(it): "There is a missing lockfile: $it"
         }
@@ -871,32 +842,25 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             assert updatedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
-        def lockFile = new File(projectDir, 'sub1/gradle/dependency-locks/customConfiguration.lockfile')
-        lockFile.exists()
-
         when:
         def buildResult = runTasks('clean', 'build')
 
         then:
         !buildResult.output.contains('FAIL')
 
-        def customConfigurationLockFile = new File(projectDir, 'sub1/gradle/dependency-locks/customConfiguration.lockfile')
-        assert customConfigurationLockFile.exists()
-
         when:
         runTasks('dependenciesForAll', '--write-locks')
 
         then:
-        def updatedSub1ActualLocks = new File(projectDir, 'sub1/gradle/dependency-locks/').list().toList()
+        def sub1UpdatedLockFile = coreLockContent(new File(projectDir, 'sub1/gradle.lockfile'))
+        def updatedSub1ActualLocks = lockedConfigurations(sub1UpdatedLockFile)
+
         expectedLocks.each { expected ->
             assert updatedSub1ActualLocks.contains(expected)
         }
         updatedSub1ActualLocks.each { actual ->
             assert expectedLocks.contains(actual)
         }
-
-        def customConfigurationLockFileAfterWriteLocks = new File(projectDir, 'sub1/gradle/dependency-locks/customConfiguration.lockfile')
-        assert !customConfigurationLockFileAfterWriteLocks.exists()
     }
 
     @Unroll
@@ -958,20 +922,13 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
-        def facetLockfiles = GradleVersionUtils.currentGradleVersionIsLessThan("6.0")
-                ? ["${facet}AnnotationProcessor.lockfile".toString(),
-                   "${facet}Compile.lockfile".toString(),
-                   "${facet}CompileClasspath.lockfile".toString(),
-                   "${facet}CompileOnly.lockfile".toString(),
-                   "${facet}Runtime.lockfile".toString(),
-                   "${facet}RuntimeClasspath.lockfile".toString()
-        ]
-                : [
-                "${facet}AnnotationProcessor.lockfile".toString(),
-                "${facet}CompileClasspath.lockfile".toString(),
-                "${facet}RuntimeClasspath.lockfile".toString()
+        def facetLockfiles = [
+                "${facet}AnnotationProcessor".toString(),
+                "${facet}CompileClasspath".toString(),
+                "${facet}RuntimeClasspath".toString()
         ]
 
         def updatedExpectedLocks = expectedLocks + facetLockfiles
@@ -981,11 +938,10 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         actualLocks.each {
             assert updatedExpectedLocks.contains(it): "There is an extra lockfile: $it"
         }
-        def lockFile = new File(projectDir, "/gradle/dependency-locks/${facet}CompileClasspath.lockfile")
-        assert lockFile.text.contains('test.nebula:a:1.1.0')
-        assert lockFile.text.contains('test.nebula:b:1.1.0')
-        assert lockFile.text.contains('junit:junit:4.12')
-        assert lockFile.text.contains('org.hamcrest:hamcrest-core:1.3')
+        assert lockFile.get('test.nebula:a:1.1.0').contains("${facet}CompileClasspath")
+        assert lockFile.get('test.nebula:b:1.1.0').contains("${facet}CompileClasspath")
+        assert lockFile.get('junit:junit:4.12').contains("${facet}CompileClasspath")
+        assert lockFile.get('org.hamcrest:hamcrest-core:1.3').contains("${facet}CompileClasspath")
 
         where:
         facet       | plugin             | setParentSourceSet
@@ -1023,9 +979,10 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         then:
         result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def actualLocks = lockedConfigurations(lockFile)
 
-        def updatedLocks = expectedLocks + 'customConfiguration.lockfile'
+        def updatedLocks = expectedLocks + 'customConfiguration'
         updatedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
@@ -1033,9 +990,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             assert updatedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/customConfiguration.lockfile')
-        assert lockFile.exists()
-        assert lockFile.text.contains('test.nebula:b:')
+        assert lockFile.get('test.nebula:b:1.1.0') == 'customConfiguration'
 
         when:
         def cleanBuildResults = runTasks('clean', 'build')
@@ -1061,14 +1016,6 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         def result = runTasksAndFail('dependencies', '--write-locks', 'generateLock', 'saveLock')
 
         then:
-        result.output.contains('coreLockingSupport feature enabled')
-        def actualLocks = new File(projectDir, '/gradle/dependency-locks/').list().toList()
-
-        actualLocks.containsAll(expectedLocks)
-        def lockFile = new File(projectDir, '/gradle/dependency-locks/compileClasspath.lockfile')
-        lockFile.text.contains('test.nebula:a:1.1.0')
-        lockFile.text.contains('test.nebula:b:1.1.0')
-
         result.output.contains("> Task :generateLock FAILED")
     }
 

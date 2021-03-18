@@ -23,6 +23,8 @@ import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
 import org.gradle.util.GradleVersion
+import org.junit.Rule
+import org.junit.contrib.java.lang.system.ProvideSystemProperty
 import spock.lang.Ignore
 import spock.lang.IgnoreIf
 import spock.lang.Issue
@@ -32,6 +34,10 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 class DependencyLockLauncherSpec extends IntegrationSpec {
+
+    @Rule
+    public final ProvideSystemProperty provideSystemProperty = new ProvideSystemProperty("ignoreDeprecations", "false")
+
     def setup() {
         fork = false
     }
@@ -1423,7 +1429,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
     @IgnoreIf({ GradleVersion.current().baseVersion >= GradleVersion.version("7.0")})
     @Issue('#86')
     def 'locks win over Spring dependency management'() {
-        System.setProperty("ignoreDeprecations", "true")
+        provideSystemProperty.setProperty("ignoreDeprecations", "true")
         // Deprecation: The classifier property has been deprecated. This is scheduled to be removed in Gradle 7.0. Please use the archiveClassifier property instead.
 
         buildFile << """\
@@ -1465,7 +1471,6 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         when:
         def result = runTasksSuccessfully('dependencies')
-        System.setProperty("ignoreDeprecations", "false")
 
         then:
         result.standardOutput.contains('\\--- com.hazelcast:hazelcast:3.6-RC1\n')
