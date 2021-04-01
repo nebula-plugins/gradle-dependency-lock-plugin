@@ -5,6 +5,7 @@ import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
+import org.gradle.util.GradleVersion
 import org.junit.Rule
 import org.junit.contrib.java.lang.system.ProvideSystemProperty
 
@@ -118,5 +119,16 @@ class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
 
     List<String> lockedConfigurations(Map<String,String> lockFileContent) {
         lockFileContent.values().collectMany { it.toString().split(',').toList() }.unique()
+    }
+
+    //kotlin 1.4.x plugin (which we use in nebula.kotlin), is using getOrCreate to find deprecated resolvable configurations (compile, runtime ...)
+    //In Gradle 6.x it means it will find existing configurations created by Gradle itself, they have resolution alternatives so we skip them from locking
+    //In Gradle 7 they are not created by Gradle itself anymore so kotlin plugins creates them but without resolution alternatives it means they are included in locking
+    //It will be fixed in kotlin plugin 1.5 but that is used directly not through nebula.kotlin
+    def getKotlinExpectedLocks() {
+        if (GradleVersion.current().baseVersion >= GradleVersion.version('7.0'))
+            expectedLocks + ['compile', 'runtime', 'compileOnly', 'testCompile', 'testRuntime', 'testCompileOnly']
+        else
+            expectedLocks
     }
 }
