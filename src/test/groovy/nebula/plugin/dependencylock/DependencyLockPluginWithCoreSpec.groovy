@@ -363,8 +363,6 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         'implementation' | 'compileClasspath'
     }
 
-    //kotlin plugin adds compile which causes unexpected results ignore until we know more https://youtrack.jetbrains.com/issue/KT-44462
-    @IgnoreIf({ GradleVersion.current().baseVersion >= GradleVersion.version("7.0")})
     @Unroll
     def 'generate core lock file with kotlin plugin - for configuration #configuration'() {
         given:
@@ -393,11 +391,13 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
         def actualLocks = lockedConfigurations(lockFile)
 
-        expectedLocks.each {
+        def kotlinExpectedLocks = getKotlinExpectedLocks()
+
+        kotlinExpectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
         actualLocks.each {
-            assert expectedLocks.contains(it): "There is an extra lockfile: $it"
+            assert kotlinExpectedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
         lockFile.get('test.nebula:a:1.1.0').contains(lockFileToVerify)
@@ -414,8 +414,6 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         'implementation' | 'compileClasspath'
     }
 
-    //kotlin plugin adds compile which causes unexpected results ignore until we know more https://youtrack.jetbrains.com/issue/KT-44462
-    @IgnoreIf({ GradleVersion.current().baseVersion >= GradleVersion.version("7.0")})
     @Unroll
     def 'generate core lock file with kotlin plugin with multiproject setup - for configuration #configuration'() {
         given:
@@ -454,11 +452,13 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         def sub1LockFile = coreLockContent(new File(projectDir, 'sub1/gradle.lockfile'))
         def actualLocks = lockedConfigurations(sub1LockFile)
 
-        expectedLocks.each {
+        def kotlinExpectedLocks = getKotlinExpectedLocks()
+
+        kotlinExpectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
         actualLocks.each {
-            assert expectedLocks.contains(it): "There is an extra lockfile: $it"
+            assert kotlinExpectedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
         sub1LockFile.get('test.nebula:a:1.1.0').contains(lockFileToVerify)
@@ -582,11 +582,13 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
         def actualLocks = lockedConfigurations(lockFile)
 
-        expectedLocks.each {
+        def projectLocks = languagePlugin == 'nebula.kotlin' ? getKotlinExpectedLocks() : expectedLocks
+
+        projectLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
         actualLocks.each {
-            assert expectedLocks.contains(it): "There is an extra lockfile: $it"
+            assert projectLocks.contains(it): "There is an extra lockfile: $it"
         }
 
         def lockFileToVerify = "compileClasspath"
@@ -600,21 +602,20 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         then:
         !cleanBuildResults.output.contains('FAILURE')
 
-        //TODO kotlin plugin adds compile which causes unexpected results ignore until we know more https://youtrack.jetbrains.com/issue/KT-44462
         where:
         languagePlugin   | languagePluginFirst | notes
         'groovy'         | true                | 'applied first'
         'java'           | true                | 'applied first'
         'java-library'   | true                | 'applied first'
         'nebula.clojure' | true                | 'applied first'
-        //'nebula.kotlin'  | true                | 'applied first'
+        'nebula.kotlin'  | true                | 'applied first'
         'scala'          | true                | 'applied first'
 
         'groovy'         | false               | 'applied last'
         'java'           | false               | 'applied last'
         'java-library'   | false               | 'applied last'
         'nebula.clojure' | false               | 'applied last'
-        //'nebula.kotlin'  | false               | 'applied last'
+        'nebula.kotlin'  | false               | 'applied last'
         'scala'          | false               | 'applied last'
     }
 
@@ -1132,5 +1133,4 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         assert text.contains("Failed to apply plugin [id 'nebula.dependency-lock']") ||
                 text.contains("Failed to apply plugin 'nebula.dependency-lock'")
     }
-
 }

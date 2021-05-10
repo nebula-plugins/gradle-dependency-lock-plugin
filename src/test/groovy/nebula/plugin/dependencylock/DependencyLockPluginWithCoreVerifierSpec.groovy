@@ -355,8 +355,6 @@ empty=annotationProcessor,testAnnotationProcessor
         lockArg << ['write-locks', 'update-locks']
     }
 
-    //kotlin plugin adds compile which causes unexpected results ignore until we know more https://youtrack.jetbrains.com/issue/KT-44462
-    @IgnoreIf({ GradleVersion.current().baseVersion >= GradleVersion.version("7.0")})
     @Unroll
     def 'nebula.kotlin: fail when dependency is unresolvable upon update via #lockArg'() {
         given:
@@ -583,11 +581,13 @@ empty=annotationProcessor,testAnnotationProcessor
         def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
         def actualLocks = lockedConfigurations(lockFile)
 
-        expectedLocks.each {
+        def kotlinExpectedLocks = getKotlinExpectedLocks()
+
+        kotlinExpectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }
         actualLocks.each {
-            assert expectedLocks.contains(it): "There is an extra lockfile: $it"
+            assert kotlinExpectedLocks.contains(it): "There is an extra lockfile: $it"
         }
 
         lockFile.get("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion") == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
