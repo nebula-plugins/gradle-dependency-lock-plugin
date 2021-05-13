@@ -412,16 +412,10 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
 
         where:
         gradleVersionToTest | expecting
+        '6.9'               | 'error'
+        '6.9'               | 'no error'
         '6.0.1'             | 'error'
         '6.0.1'             | 'no error'
-        '5.6.4'             | 'error'
-        '5.6.4'             | 'no error'
-        '5.1'               | 'error'
-        '5.1'               | 'no error'
-        '4.10.3'            | 'error'
-        '4.10.3'            | 'no error'
-        '4.9'               | 'error'
-        '4.9'               | 'no error'
     }
 
     @Unroll

@@ -19,6 +19,7 @@
 package nebula.plugin.dependencyverifier
 
 import nebula.plugin.dependencylock.DependencyLockPlugin
+import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
 import nebula.plugin.dependencylock.utils.ConfigurationFilters
 import nebula.plugin.dependencylock.utils.CoreLocking
 import nebula.plugin.dependencyverifier.exceptions.DependencyResolutionException
@@ -206,15 +207,23 @@ class DependencyResolutionVerifier {
             // short-circuit unless using Nebula locking & core alignment
             return
         }
-        val depsWhereResolvedVersionIsNotTheLockedVersionByConf = depsWhereResolvedVersionIsNotTheLockedVersionPerProjectForConfigurations[uniqueProjectKey(project)]
+        if (project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.UPDATE_LOCK_TASK_NAME) ||
+            project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.UPDATE_GLOBAL_LOCK_TASK_NAME)
+        ) {
+            // short-circuit when selectively updating locks. The lock-reading for dependencies that are updated
+            // transitively or from a recommendation BOM or from aligned dependencies getting updated can provide false-positives
+            return
+        }
+        val depsWhereResolvedVersionIsNotTheLockedVersionByConf =
+            depsWhereResolvedVersionIsNotTheLockedVersionPerProjectForConfigurations[uniqueProjectKey(project)]
         val lockedDepsByConf = DependencyLockPlugin.lockedDepsPerProjectForConfigurations[uniqueProjectKey(project)]
         val overrideDepsByConf = DependencyLockPlugin.overrideDepsPerProjectForConfigurations[uniqueProjectKey(project)]
         val lockedDependencies: Map<String, String> = lockedDepsByConf!![conf.name]
-                ?.associateBy({ "${it.group}:${it.name}" }, { "${it.version}" })
-                ?: emptyMap()
+            ?.associateBy({ "${it.group}:${it.name}" }, { "${it.version}" })
+            ?: emptyMap()
         val overrideDependencies: Map<String, String> = overrideDepsByConf!![conf.name]
-                ?.associateBy({ "${it.group}:${it.name}" }, { "${it.version}" })
-                ?: emptyMap()
+            ?.associateBy({ "${it.group}:${it.name}" }, { "${it.version}" })
+            ?: emptyMap()
         if (lockedDependencies.isEmpty() && overrideDependencies.isEmpty()) {
             // short-circuit when locks are empty
             return
@@ -316,8 +325,8 @@ class DependencyResolutionVerifier {
             messages.add("Dependency lock state is out of date:")
         }
         var failureMessageCounter = 0
-        depsWhereResolvedVersionIsNotTheLockedVersionByConf.toSortedMap().forEach { (dep, _) ->
-            messages.add("  ${failureMessageCounter + 1}. Resolved $dep for project '${project.name}'")
+        depsWhereResolvedVersionIsNotTheLockedVersionByConf.toSortedMap().forEach { (dep, configs) ->
+            messages.add("  ${failureMessageCounter + 1}. Resolved $dep for project '${project.name}' for configuration(s): ${configs.joinToString(",") { it.name }}")
 
             failureMessageCounter += 1
         }
