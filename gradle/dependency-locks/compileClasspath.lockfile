@@ -5,11 +5,11 @@ com.fasterxml.jackson:jackson-bom:2.9.10.20210106
 com.netflix.nebula:gradle-scm-plugin:5.1.0
 com.netflix.nebula:nebula-dependencies-comparison:0.1.8
 com.netflix.nebula:nebula-gradle-interop:1.0.11
-com.squareup.moshi:moshi:1.11.0
-com.squareup.okio:okio:1.17.5
+com.squareup.moshi:moshi:1.12.0
+com.squareup.okio:okio:2.10.0
 joda-time:joda-time:2.10
-org.jetbrains.kotlin:kotlin-stdlib-common:1.4.21
+org.jetbrains.kotlin:kotlin-stdlib-common:1.4.31
 org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.4.21
 org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.4.21
-org.jetbrains.kotlin:kotlin-stdlib:1.4.21
+org.jetbrains.kotlin:kotlin-stdlib:1.4.31
 org.jetbrains:annotations:13.0
