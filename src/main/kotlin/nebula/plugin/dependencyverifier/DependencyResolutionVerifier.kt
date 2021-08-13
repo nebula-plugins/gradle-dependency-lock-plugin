@@ -162,6 +162,8 @@ class DependencyResolutionVerifier {
         val failedDepsByConf = failedDependenciesPerProjectForConfigurations[uniqueProjectKey(project)]
         val lockedDepsOutOfDate = lockedDepsOutOfDatePerProject[uniqueProjectKey(project)]
         val configurationsToExclude = if (configurationsToExcludeOverride.isNotEmpty()) configurationsToExcludeOverride else extension.configurationsToExclude
+        // Always exclude compileOnly to avoid issues with kotlin plugin
+        configurationsToExclude.add("compileOnly")
 
         task.project.configurations.matching { // returns a live collection
             configurationIsResolvedAndMatches(it, configurationsToExclude)
