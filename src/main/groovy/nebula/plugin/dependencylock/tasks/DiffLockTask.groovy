@@ -2,6 +2,9 @@ package nebula.plugin.dependencylock.tasks
 
 import groovy.json.JsonSlurper
 import nebula.dependencies.comparison.*
+import nebula.plugin.dependencylock.diff.DiffReportGenerator
+import nebula.plugin.dependencylock.diff.PathDiffer
+import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
@@ -38,8 +41,14 @@ class DiffLockTask extends AbstractLockTask {
                 writer.println('--no updated locks to diff--')
             }
         } else {
-            List<DependencyDiff> diff = new DependenciesComparison().performDiff(existingLock, newLock)
-            writeDiff(diff)
+            if (DependencyLockingFeatureFlags.isPathAwareDependencyDiffEnabled()) {
+                Map<String, List<DependencyDiff>> diffByConfiguration = new DependenciesComparison().performDiffByConfiguration(existingLock, newLock)
+                DiffReportGenerator generator = Class.forName("nebula.plugin.dependencylock.diff.PathAwareDiffReportGenerator").newInstance() as DiffReportGenerator
+                generator.generateDiffReport(project, diffByConfiguration)
+            } else {
+                List<DependencyDiff> diff = new DependenciesComparison().performDiff(existingLock, newLock)
+                writeDiff(diff)
+            }
         }
     }
 
@@ -61,7 +70,7 @@ class DiffLockTask extends AbstractLockTask {
     void writeDiff(List<DependencyDiff> diff) {
         outputDir.mkdirs()
 
-        diffFile.withPrintWriter(StandardCharsets.UTF_8.displayName()) { writer ->
+        System.out.withPrintWriter { writer ->
             def newDeps = diff.findAll { it.isNew() }
             if (!newDeps.isEmpty()) {
                 writer.println('new:')

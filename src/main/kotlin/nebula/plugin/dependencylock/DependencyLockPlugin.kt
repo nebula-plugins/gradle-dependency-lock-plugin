@@ -19,7 +19,7 @@ import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
-import nebula.plugin.dependencylock.utils.CoreLocking
+import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifier
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
@@ -96,7 +96,7 @@ class DependencyLockPlugin : Plugin<Project> {
         val globalLockFilename = project.findStringProperty(GLOBAL_LOCK_FILE)
         val lockFilename = project.findStringProperty(LOCK_FILE)
         DependencyLockTaskConfigurer(project).configureTasks(globalLockFilename, lockFilename, extension, commitExtension, overrides)
-        if (CoreLocking.isCoreLockingEnabled()) {
+        if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
             LOGGER.info("${project.name}: coreLockingSupport feature enabled")
             val coreLockingHelper = CoreLockingHelper(project)
             coreLockingHelper.lockSelectedConfigurations(extension.configurationNames)
