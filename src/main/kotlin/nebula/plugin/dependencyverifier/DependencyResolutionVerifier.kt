@@ -162,8 +162,6 @@ class DependencyResolutionVerifier {
         val failedDepsByConf = failedDependenciesPerProjectForConfigurations[uniqueProjectKey(project)]
         val lockedDepsOutOfDate = lockedDepsOutOfDatePerProject[uniqueProjectKey(project)]
         val configurationsToExclude = if (configurationsToExcludeOverride.isNotEmpty()) configurationsToExcludeOverride else extension.configurationsToExclude
-        // Always exclude compileOnly to avoid issues with kotlin plugin
-        configurationsToExclude.add("compileOnly")
 
         task.project.configurations.matching { // returns a live collection
             configurationIsResolvedAndMatches(it, configurationsToExclude)
@@ -344,7 +342,10 @@ class DependencyResolutionVerifier {
                 // the configurations `incrementalScalaAnalysisFor_x_` are resolvable only from a scala context
                 !conf.name.startsWith("incrementalScala") &&
                 !configurationsToExclude.contains(conf.name) &&
-                !ConfigurationFilters.safelyHasAResolutionAlternative(conf)
+                !ConfigurationFilters.safelyHasAResolutionAlternative(conf) &&
+                // Always exclude compileOnly to avoid issues with kotlin plugin
+                !conf.name.endsWith("CompileOnly") &&
+                !conf.name.equals("compileOnly")
     }
 
     private fun unresolvedDependenciesShouldFailTheBuild(): Boolean {
