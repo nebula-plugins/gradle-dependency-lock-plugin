@@ -1607,6 +1607,50 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         plugin << ['id \'checkstyle\'', 'id \'jacoco\''] // removed 'id \'net.saliman.cobertura\' version \'2.5.0\'', because it isn't gradle 5.1 compatible yet
     }
 
+    @Issue("https://youtrack.jetbrains.com/issue/KT-48245")
+    def 'compileOnly configuration is not resolvable for locking'() {
+        // the kotlin plugin make this resolvable in Gradle 7
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << OLD_FOO_LOCK
+
+        gradleVersion = "7.0.2"
+
+        buildFile << """
+            buildscript {
+              repositories {
+                maven {
+                  url "https://plugins.gradle.org/m2/"
+                }
+              }
+              dependencies {
+                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.32"
+              }
+            }
+            """.stripIndent()
+        buildFile << SPECIFIC_BUILD_GRADLE
+        buildFile << """
+            apply plugin: "org.jetbrains.kotlin.jvm"
+            repositories {
+                mavenCentral()
+            }
+            dependencies {
+                // add a compileOnly dependency
+                compileOnly 'test.example:bar:1.0.0'
+                implementation 'test.example:qux:1.0.0'
+            }
+            """.stripIndent()
+
+        when:
+        def result = runTasksSuccessfully('generateLock', 'saveLock')
+        def lockFile = new File(projectDir, "dependencies.lock")
+
+        then:
+        lockFile.text.contains('"compileClasspath"')
+        lockFile.text.contains('"testCompileClasspath"')
+        !lockFile.text.contains('"compileOnly"')
+        !lockFile.text.contains('"testCompileOnly"')
+    }
+
     def 'handle generating a lock with circular dependencies depending on a jar that depends on us'() {
         def builder = new DependencyGraphBuilder()
         builder.addModule(new ModuleBuilder('test.nebula:foo:1.0.0').addDependency('example.nebula:circulartest:1.0.0').build())
