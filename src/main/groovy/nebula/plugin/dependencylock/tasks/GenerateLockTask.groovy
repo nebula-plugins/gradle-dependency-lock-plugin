@@ -26,8 +26,6 @@ import nebula.plugin.dependencylock.utils.CoreLocking
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.Dependency
-import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -98,11 +96,10 @@ class GenerateLockTask extends AbstractLockTask {
         if (configurationNames.empty) {
             if (Configuration.class.declaredMethods.any { it.name == 'isCanBeResolved' }) {
                 lockableConfigurations.addAll project.configurations.findAll {
-                    if (taskProject == project) {
-                        it.canBeResolved && !ConfigurationFilters.safelyHasAResolutionAlternative(it)
-                    } else {
-                        it.canBeResolved && (!ConfigurationFilters.safelyHasAResolutionAlternative(it))
-                    }
+                    it.canBeResolved && !ConfigurationFilters.safelyHasAResolutionAlternative(it) &&
+                            // Always exclude compileOnly to avoid issues with kotlin plugin
+                            !it.name.endsWith("CompileOnly") &&
+                            it.name != "compileOnly"
                 }
             } else {
                 lockableConfigurations.addAll project.configurations.asList()
