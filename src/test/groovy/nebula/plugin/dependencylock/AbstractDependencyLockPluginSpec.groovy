@@ -127,7 +127,7 @@ class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
     //It will be fixed in kotlin plugin 1.5 but that is used directly not through nebula.kotlin
     def getKotlinExpectedLocks() {
         if (GradleVersion.current().baseVersion >= GradleVersion.version('7.0'))
-            expectedLocks + ['compile', 'runtime', 'compileOnly', 'testCompile', 'testRuntime', 'testCompileOnly']
+            expectedLocks + ['compile', 'runtime', 'testCompile', 'testRuntime']
         else
             expectedLocks
     }

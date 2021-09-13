@@ -16,13 +16,14 @@
 import org.gradle.util.GradleVersion
 
 plugins {
-    id 'nebula.plugin-plugin' version '15.4.1'
+    id 'nebula.plugin-plugin' version '16.0.1'
     id 'nebula.optional-base' version '3.1.0'
-    id "org.jetbrains.kotlin.jvm" version "1.4.21"
+    id "org.jetbrains.kotlin.jvm" version "1.5.30"
     id 'java-gradle-plugin'
 }
 
 description 'Gradle plugin to allow locking of dynamic dependency versions'
+
 
 group = 'com.netflix.nebula'
 
@@ -134,4 +135,8 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+}
+
+tasks.withType(GenerateModuleMetadata).configureEach {
+    suppressedValidationErrors.add('enforced-platform')
 }
