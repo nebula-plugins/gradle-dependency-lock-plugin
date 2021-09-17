@@ -14,7 +14,6 @@ import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionP
 import java.util.*
 import kotlin.collections.HashSet
 
-//todo add assertions to tests
 //todo refactor
 class PathAwareDiffReportGenerator : DiffReportGenerator {
 

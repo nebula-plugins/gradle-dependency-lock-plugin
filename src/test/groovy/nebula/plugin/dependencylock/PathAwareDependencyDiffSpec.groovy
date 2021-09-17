@@ -1,5 +1,6 @@
 package nebula.plugin.dependencylock
 
+import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraph
@@ -148,8 +149,43 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def result = runTasks('generateLock', 'diffLock')
 
         then:
-        println(new File(projectDir, 'build/dependency-lock/lockdiff.json').text)
-        true
+        def lockdiff = new JsonSlurper().parse(new File(projectDir, 'build/dependency-lock/lockdiff.json'))
+        def allConfigurations = lockdiff[0]
+        allConfigurations["configurations"].containsAll(["compileClasspath", "runtimeClasspath", "testCompileClasspath", "testRuntimeClasspath"])
+        allConfigurations["removed"].contains("test.example:removed-dependency")
+        def directDependencies = allConfigurations["differentPaths"]
+        def directTransitive = directDependencies.find { it.dependency == "test.example:direct-dependency-updating-transitive"}
+        directTransitive.version == "2.2.0"
+        directTransitive.change.description == "requested"
+        directTransitive.change.type == "UPDATED"
+        directTransitive.change.previousVersion == "2.0.0"
+        def ruleUpdateConsumer = directDependencies.find { it.dependency == "test.example:updated-by-rule-dependency-consumer"}
+        ruleUpdateConsumer.version == "1.0.0"
+        ruleUpdateConsumer.change == null
+        ruleUpdateConsumer.children[0].dependency == "test.example:updated-by-rule-dependency"
+        ruleUpdateConsumer.children[0].version == "2.0.0"
+        ruleUpdateConsumer.children[0].change.description == "substitue test.example:updated-by-rule-dependency:1.0.0 with 2.0.0 because JIRA-1039"
+        ruleUpdateConsumer.children[0].change.type == "UPDATED"
+        ruleUpdateConsumer.children[0].change.previousVersion == "1.0.0"
+        def qux = directDependencies.find { it.dependency == "test.example:qux"}
+        qux.version == "2.0.0"
+        qux.change.description == "requested"
+        qux.change.type == "UPDATED"
+        qux.change.previousVersion == "1.0.0"
+        def foo = qux.children.find { it.dependency == "test.example:foo" }
+        foo.version == "2.0.1"
+        foo.change.description == "requested"
+        foo.change.type == "UPDATED"
+        foo.change.previousVersion == "1.0.1"
+        foo.children[0].dependency == "test.example:direct-dependency-updated-transitively"
+        foo.children[0].version == "1.1.0"
+        foo.children[0].change.description == "requested"
+        foo.children[0].change.type == "UPDATED"
+        foo.children[0].change.previousVersion == "1.0.0"
+        def newDependency = qux.children.find { it.dependency == "test.example:new-dependency" }
+        newDependency.version == "1.0.0"
+        newDependency.change.description == "requested"
+        newDependency.change.type == "NEW"
     }
 
     def 'diff lock with paths with recommendation'() {
@@ -219,8 +255,14 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def result = runTasks('generateLock', 'diffLock')
 
         then:
-        println(new File(projectDir, 'build/dependency-lock/lockdiff.json').text)
-        true
+        def lockdiff = new JsonSlurper().parse(new File(projectDir, 'build/dependency-lock/lockdiff.json'))
+        def allConfigurations = lockdiff.find { it.configurations.contains("compileClasspath")}
+        def directDependencies = allConfigurations["differentPaths"]
+        def qux = directDependencies.find { it.dependency == "test.example:qux"}
+        qux.version == "2.0.0"
+        qux.change.description == "Recommending version 2.0.0 for dependency test.example:qux via conflict resolution recommendation\n\twith reasons: nebula.dependency-recommender uses mavenBom: test.nebula.bom:testbom:pom:1.0.0"
+        qux.change.type == "UPDATED"
+        qux.change.previousVersion == "1.0.0"
     }
 
     def 'diff lock with paths with forced alignment'() {
@@ -294,8 +336,29 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def result = runTasks('generateLock', 'diffLock')
 
         then:
-        println(new File(projectDir, 'build/dependency-lock/lockdiff.json').text)
-        true
+        def lockdiff = new JsonSlurper().parse(new File(projectDir, 'build/dependency-lock/lockdiff.json'))
+        def allConfigurations = lockdiff.find { it.configurations.contains("compileClasspath")}
+        def directDependencies = allConfigurations["differentPaths"]
+        def consumer1 = directDependencies.find { it.dependency == "test.example.alignment:consumer1-library"}
+        consumer1.version == "1.0.0"
+        consumer1.change.description == "aligned to 1.0.0 by rule diff-lock-with-paths-with-forced-alignment aligning group 'test.example.alignment'"
+        consumer1.change.type == "UPDATED"
+        consumer1.change.previousVersion == "2.0.0"
+        consumer1.children[0].dependency == "test.example.alignment:core-library"
+        consumer1.children[0].version == "1.0.0"
+        consumer1.children[0].change.description == "forced"
+        consumer1.children[0].change.type == "UPDATED"
+        consumer1.children[0].change.previousVersion == "2.0.0"
+        def consumer2 = directDependencies.find { it.dependency == "test.example.alignment:consumer2-library"}
+        consumer2.version == "1.0.0"
+        consumer2.change.description == "aligned to 1.0.0 by rule diff-lock-with-paths-with-forced-alignment aligning group 'test.example.alignment'"
+        consumer2.change.type == "UPDATED"
+        consumer2.change.previousVersion == "2.0.0"
+        consumer2.children[0].dependency == "test.example.alignment:core2-library"
+        consumer2.children[0].version == "1.0.0"
+        consumer2.children[0].change.description == "requested"
+        consumer2.children[0].change.type == "UPDATED"
+        consumer2.children[0].change.previousVersion == "2.0.0"
     }
 
     def 'diff lock with paths with replaced rules'() {
@@ -363,8 +426,9 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def result = runTasks('generateLock', 'diffLock')
 
         then:
-        println(new File(projectDir, 'build/dependency-lock/lockdiff.json').text)
-        true
+        def lockdiff = new JsonSlurper().parse(new File(projectDir, 'build/dependency-lock/lockdiff.json'))
+        def allConfigurations = lockdiff[0]
+        allConfigurations["removed"].contains("test.example:replaced")
     }
 
     def 'diff lock with paths including submodule'() {
@@ -473,8 +537,21 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def result = runTasks('generateLock', 'diffLock')
 
         then:
-        println(new File(projectDir, 'app/build/dependency-lock/lockdiff.json').text)
-        true
+        def lockdiff = new JsonSlurper().parse(new File(projectDir, 'app/build/dependency-lock/lockdiff.json'))
+        def allConfigurations = lockdiff[0]
+        def directDependencies = allConfigurations["differentPaths"]
+        def common = directDependencies.find { it.dependency == "test:common"}
+        common.isSubmodule == true
+        def foo = common.children.find { it.dependency == "test.example:foo" }
+        foo.version == "2.0.1"
+        foo.change.description == "requested"
+        foo.change.type == "UPDATED"
+        foo.change.previousVersion == "1.0.1"
+        foo.children[0].dependency == "test.example:direct-dependency-updated-transitively"
+        foo.children[0].version == "1.1.0"
+        foo.children[0].change.description == "requested"
+        foo.children[0].change.type == "UPDATED"
+        foo.children[0].change.previousVersion == "1.0.0"
     }
 
     def 'diff lock with new submodule dependency'() {
@@ -511,7 +588,12 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def result = runTasks('generateLock', 'diffLock')
 
         then:
-        println(new File(projectDir, 'app/build/dependency-lock/lockdiff.json').text)
-        true
+        def lockdiff = new JsonSlurper().parse(new File(projectDir, 'app/build/dependency-lock/lockdiff.json'))
+        def allConfigurations = lockdiff[0]
+        def directDependencies = allConfigurations["differentPaths"]
+        def common = directDependencies.find { it.dependency == "test:common"}
+        common.isSubmodule == true
+        common.change.description == "new local submodule"
+        common.change.type == "NEW"
     }
 }
