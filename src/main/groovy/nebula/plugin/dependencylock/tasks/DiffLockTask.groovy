@@ -1,9 +1,9 @@
 package nebula.plugin.dependencylock.tasks
 
+import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import nebula.dependencies.comparison.*
 import nebula.plugin.dependencylock.diff.DiffReportGenerator
-import nebula.plugin.dependencylock.diff.PathDiffer
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
@@ -29,22 +29,28 @@ class DiffLockTask extends AbstractLockTask {
     File outputDir = new File(project.buildDir, "dependency-lock")
 
     @OutputFile
-    File diffFile = new File(outputDir, "lockdiff.txt")
+    File diffFile = new File(outputDir, "lockdiff.${this.diffFileExtension()}")
+
+    private String diffFileExtension() {
+        DependencyLockingFeatureFlags.isPathAwareDependencyDiffEnabled() ? "json" : "txt"
+    }
 
     @TaskAction
     def diffLocks() {
         ConfigurationsSet existingLock = readLocks(existingLockFile)
         ConfigurationsSet newLock = readLocks(updatedLockFile)
-        if (newLock.isEmpty()) {
+        if (DependencyLockingFeatureFlags.isPathAwareDependencyDiffEnabled()) {
+            Map<String, List<DependencyDiff>> diffByConfiguration = new DependenciesComparison().performDiffByConfiguration(existingLock, newLock)
+            DiffReportGenerator generator = Class.forName("nebula.plugin.dependencylock.diff.PathAwareDiffReportGenerator").newInstance() as DiffReportGenerator
+            def lockDiff = generator.generateDiffReport(project, diffByConfiguration)
             outputDir.mkdirs()
-            diffFile.withPrintWriter(StandardCharsets.UTF_8.displayName()) { writer ->
-                writer.println('--no updated locks to diff--')
-            }
+            diffFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(lockDiff))
         } else {
-            if (DependencyLockingFeatureFlags.isPathAwareDependencyDiffEnabled()) {
-                Map<String, List<DependencyDiff>> diffByConfiguration = new DependenciesComparison().performDiffByConfiguration(existingLock, newLock)
-                DiffReportGenerator generator = Class.forName("nebula.plugin.dependencylock.diff.PathAwareDiffReportGenerator").newInstance() as DiffReportGenerator
-                generator.generateDiffReport(project, diffByConfiguration)
+            if (newLock.isEmpty()) {
+                outputDir.mkdirs()
+                diffFile.withPrintWriter(StandardCharsets.UTF_8.displayName()) { writer ->
+                    writer.println('--no updated locks to diff--')
+                }
             } else {
                 List<DependencyDiff> diff = new DependenciesComparison().performDiff(existingLock, newLock)
                 writeDiff(diff)

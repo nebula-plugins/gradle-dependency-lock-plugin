@@ -148,7 +148,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def result = runTasks('generateLock', 'diffLock')
 
         then:
-        println(result.output)
+        println(new File(projectDir, 'build/dependency-lock/lockdiff.json').text)
         true
     }
 
@@ -219,7 +219,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def result = runTasks('generateLock', 'diffLock')
 
         then:
-        println(result.output)
+        println(new File(projectDir, 'build/dependency-lock/lockdiff.json').text)
         true
     }
 
@@ -294,7 +294,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def result = runTasks('generateLock', 'diffLock')
 
         then:
-        println(result.output)
+        println(new File(projectDir, 'build/dependency-lock/lockdiff.json').text)
         true
     }
 
@@ -363,7 +363,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def result = runTasks('generateLock', 'diffLock')
 
         then:
-        println(result.output)
+        println(new File(projectDir, 'build/dependency-lock/lockdiff.json').text)
         true
     }
 
@@ -473,7 +473,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def result = runTasks('generateLock', 'diffLock')
 
         then:
-        println(result.output)
+        println(new File(projectDir, 'app/build/dependency-lock/lockdiff.json').text)
         true
     }
 
@@ -511,7 +511,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def result = runTasks('generateLock', 'diffLock')
 
         then:
-        println(result.output)
+        println(new File(projectDir, 'app/build/dependency-lock/lockdiff.json').text)
         true
     }
 }
