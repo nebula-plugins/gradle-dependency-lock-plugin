@@ -76,7 +76,7 @@ class DiffLockTask extends AbstractLockTask {
     void writeDiff(List<DependencyDiff> diff) {
         outputDir.mkdirs()
 
-        System.out.withPrintWriter { writer ->
+        diffFile.withPrintWriter(StandardCharsets.UTF_8.displayName()) { writer ->
             def newDeps = diff.findAll { it.isNew() }
             if (!newDeps.isEmpty()) {
                 writer.println('new:')
