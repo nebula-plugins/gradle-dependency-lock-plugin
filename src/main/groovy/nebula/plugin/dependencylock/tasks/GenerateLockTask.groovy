@@ -22,7 +22,7 @@ import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
 import nebula.plugin.dependencylock.utils.ConfigurationFilters
-import nebula.plugin.dependencylock.utils.CoreLocking
+import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -70,7 +70,7 @@ class GenerateLockTask extends AbstractLockTask {
 
     @TaskAction
     void lock() {
-        if (CoreLocking.isCoreLockingEnabled()) {
+        if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
             def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
             def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile)
             if (globalLockFile.exists()) {

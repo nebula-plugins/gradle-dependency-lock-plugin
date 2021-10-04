@@ -21,7 +21,7 @@ package nebula.plugin.dependencylock.caching
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent
 
-class OfflineModeSpec extends AbstractCachingAndCoreLockingSpec {
+class OfflineModeSpec extends AbstractCachingAndDependencyLockingFeatureFlagsSpec {
     private static final String OFFLINE_MODE_NOTIFICATION = 'offline mode enabled. Using cached dependencies'
 
     def setup() {
