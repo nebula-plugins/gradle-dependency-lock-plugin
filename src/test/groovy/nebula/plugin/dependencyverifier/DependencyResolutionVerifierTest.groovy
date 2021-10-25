@@ -22,6 +22,8 @@ import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
+import spock.lang.Ignore
+import spock.lang.IgnoreIf
 import spock.lang.Subject
 import spock.lang.Unroll
 
@@ -215,7 +217,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
             buildscript {
                 repositories { maven { url "https://plugins.gradle.org/m2/" } }
                 dependencies {
-                    classpath "gradle.plugin.com.github.spotbugs.snom:spotbugs-gradle-plugin:4.4.4"
+                     classpath "com.github.spotbugs.snom:spotbugs-gradle-plugin:5.0.0-beta.4"
                 }
             }            
             """.stripIndent()
@@ -383,6 +385,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         tasks << [['build'], ['build', '--parallel']]
     }
 
+    @IgnoreIf({ jvm.isJava17Compatible() })
     @Unroll
     def 'with Gradle version #gradleVersionToTest - expecting #expecting'() {
         given:
@@ -932,7 +935,8 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     }
 
     @Unroll
-    def 'resolved versions are not equal to locked versions because locked versions are not aligned - multiproject with global locks - core alignment #coreAlignment - core locking #coreLocking'() {
+    @Ignore
+    def 'resolved versions are not equal to locked versions because locked versions are not aligned - multiproject with global locks'() {
         given:
         setupMultiProjectWithLockedVersionsThatAreNotAligned()
 
@@ -1002,7 +1006,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         new File(projectDir, 'global.lock').text = globalLockText
 
         when:
-        def flags = ["-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
+        def flags = ["-Dnebula.features.coreAlignmentSupport=true", "-Dnebula.features.coreLockingSupport=false"]
         def results = runTasksAndFail('dependenciesForAll', '--configuration', 'compileClasspath', *flags)
 
         then:
@@ -1027,10 +1031,6 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         updatedDependencies.output.contains('test.nebula:b:1.2.0\n')
         updatedDependencies.output.contains('test.nebula:c:1.1.0 -> 1.2.0\n')
         updatedDependencies.output.contains('test.nebula:d:1.2.0\n')
-
-        where:
-        coreAlignment | coreLocking
-        true          | false
     }
 
     @Unroll
@@ -1161,6 +1161,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         assert results.output.contains('FAIL')
     }
 
+    @IgnoreIf({ jvm.isJava17Compatible() })
     @Unroll
     def 'with Gradle version #gradleVersionToTest - expecting #expecting - using task with configuration dependencies'() {
         given:
@@ -1387,10 +1388,11 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
                 repositories {
                     ${mavenrepo.mavenRepositoryBlock}
                 }
+                dependencies {
+                    resolutionRules files('$rulesJsonFile')
+                }
             }
-            dependencies {
-                resolutionRules files('$rulesJsonFile')
-            }
+      
             """.stripIndent()
 
         def subProject1BuildFileContent = """

@@ -8,7 +8,7 @@ import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.plugin.dependencylock.tasks.UpdateLockTask
 import nebula.test.IntegrationTestKitSpec
-import org.gradle.api.tasks.Delete
+
 
 class DependencyLockConfigurationAvoidanceSpec extends IntegrationTestKitSpec {
     def 'task configuration avoidance'() {
@@ -32,7 +32,6 @@ class DependencyLockConfigurationAvoidanceSpec extends IntegrationTestKitSpec {
         !result.output.contains("class ${MigrateLockedDepsToCoreLocksTask.class.name}")
         !result.output.contains("class ${CommitLockTask.class.name}")
         !result.output.contains("class ${DiffLockTask.class.name}")
-        !result.output.contains("class ${Delete.class.name}")
     }
 
     def 'task configuration avoidance - commitLock is registered with scm plugin'() {
@@ -57,6 +56,5 @@ class DependencyLockConfigurationAvoidanceSpec extends IntegrationTestKitSpec {
         !result.output.contains("class ${MigrateLockedDepsToCoreLocksTask.class.name}")
         !result.output.contains("class ${CommitLockTask.class.name}")
         !result.output.contains("class ${DiffLockTask.class.name}")
-        !result.output.contains("class ${Delete.class.name}")
     }
 }

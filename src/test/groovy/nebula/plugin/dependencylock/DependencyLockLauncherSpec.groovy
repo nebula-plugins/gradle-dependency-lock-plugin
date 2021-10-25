@@ -409,7 +409,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         runTasksSuccessfully('generateLock')
 
         then:
-        new File(projectDir, 'build/dependencies.lock').text == lockWithSkips
+        new File(projectDir, 'build/dependencies.lock').text.replaceAll("\\s", "") == lockWithSkips.replaceAll("\\s", "")
     }
 
     def 'update lock'() {
@@ -631,14 +631,14 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                     "viaOverride": "2.0.0"
                 }
             '''.stripIndent())
-        new File(sub1, 'dependencies.lock').text == lockText1
+        new File(sub1, 'dependencies.lock').text.replaceAll("\\s", "") == lockText1.replaceAll("\\s", "")
         String lockText2 = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:baz": {
                     "locked": "1.0.0",
                     "viaOverride": "1.0.0"
                 }
             '''.stripIndent())
-        new File(sub2, 'dependencies.lock').text == lockText2
+        new File(sub2, 'dependencies.lock').text.replaceAll("\\s", "") == lockText2.replaceAll("\\s", "")
     }
 
     def 'in multiproject allow applying to root project'() {
@@ -977,13 +977,13 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                     "locked": "2.0.0"
                 }
             '''.stripIndent())
-        new File(projectDir, 'sub1/dependencies.lock').text == lockText1
+        new File(projectDir, 'sub1/dependencies.lock').text.replaceAll("\\s", "") == lockText1.replaceAll("\\s", "")
         String lockText2 = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
                     "locked": "1.0.1"
                 }
             '''.stripIndent())
-        new File(projectDir, 'sub2/dependencies.lock').text == lockText2
+        new File(projectDir, 'sub2/dependencies.lock').text.replaceAll("\\s", "") == lockText2.replaceAll("\\s", "")
     }
 
     def 'diffLock in multiproject'() {
@@ -1607,6 +1607,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         plugin << ['id \'checkstyle\'', 'id \'jacoco\''] // removed 'id \'net.saliman.cobertura\' version \'2.5.0\'', because it isn't gradle 5.1 compatible yet
     }
 
+    @IgnoreIf({ jvm.isJava17Compatible() }) // Because we use old version of Gradle and koltin
     @Issue("https://youtrack.jetbrains.com/issue/KT-48245")
     def 'compileOnly configuration is not resolvable for locking'() {
         // the kotlin plugin make this resolvable in Gradle 7
