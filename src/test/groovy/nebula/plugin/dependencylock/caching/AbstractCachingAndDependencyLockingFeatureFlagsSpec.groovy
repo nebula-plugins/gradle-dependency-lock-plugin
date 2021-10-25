@@ -30,7 +30,7 @@ import nebula.test.dependencies.ModuleBuilder
 import org.junit.Rule
 import org.junit.contrib.java.lang.system.ProvideSystemProperty
 
-class AbstractCachingAndCoreLockingSpec extends IntegrationTestKitSpec {
+class AbstractCachingAndDependencyLockingFeatureFlagsSpec extends IntegrationTestKitSpec {
     static WireMockServer wireMockServer
     static WireMock testClient
     static Stubbing wm

@@ -8,7 +8,7 @@ import com.github.tomakehurst.wiremock.stubbing.ServeEvent
  * mavenLocal is not used as a repository as it is a local file repository and will bypass the dependency cache
  * These tests resolve dependencies via HTTP to verify caching behavior, such as cacheDynamicVersionsFor
  */
-class DynamicVersionsCacheSpec extends AbstractCachingAndCoreLockingSpec {
+class DynamicVersionsCacheSpec extends AbstractCachingAndDependencyLockingFeatureFlagsSpec {
     def setup() {
         buildFile << """
             dependencies {
