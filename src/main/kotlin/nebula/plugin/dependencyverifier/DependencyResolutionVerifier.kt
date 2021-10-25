@@ -21,7 +21,7 @@ package nebula.plugin.dependencyverifier
 import nebula.plugin.dependencylock.DependencyLockPlugin
 import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
 import nebula.plugin.dependencylock.utils.ConfigurationFilters
-import nebula.plugin.dependencylock.utils.CoreLocking
+import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencyverifier.exceptions.DependencyResolutionException
 import org.gradle.BuildResult
 import org.gradle.api.Project
@@ -202,8 +202,8 @@ class DependencyResolutionVerifier {
 
     private fun validateThatResolvedVersionIsLockedVersion(conf: Configuration) {
         val usesNebulaAlignment = !getBoolean("nebula.features.coreAlignmentSupport")
-        val usesCoreLocking = CoreLocking.isCoreLockingEnabled()
-        if (usesCoreLocking || usesNebulaAlignment) {
+        val usesDependencyLockingFeatureFlags = DependencyLockingFeatureFlags.isCoreLockingEnabled()
+        if (usesDependencyLockingFeatureFlags || usesNebulaAlignment) {
             // short-circuit unless using Nebula locking & core alignment
             return
         }

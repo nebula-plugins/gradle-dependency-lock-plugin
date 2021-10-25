@@ -19,7 +19,7 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.DependencyLockReader
-import nebula.plugin.dependencylock.utils.CoreLocking
+import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.logging.Logger
@@ -39,7 +39,7 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
 
     @TaskAction
     void migrateLockedDependencies() {
-        if (CoreLocking.isCoreLockingEnabled()) {
+        if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
             def coreLockingHelper = new CoreLockingHelper(project)
             coreLockingHelper.lockSelectedConfigurations(getConfigurationNames())
 
