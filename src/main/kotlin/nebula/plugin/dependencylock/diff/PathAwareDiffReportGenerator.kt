@@ -2,10 +2,7 @@ package nebula.plugin.dependencylock.diff
 
 import nebula.dependencies.comparison.DependencyDiff
 import org.gradle.api.Project
-import org.gradle.api.artifacts.component.ComponentSelector
-import org.gradle.api.artifacts.component.ModuleComponentIdentifier
-import org.gradle.api.artifacts.component.ModuleComponentSelector
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+import org.gradle.api.artifacts.component.*
 import org.gradle.api.artifacts.result.ComponentSelectionCause
 import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
@@ -41,7 +38,7 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
         return groupedDiffs.map { (differences: Differences, configurations: List<String>) ->
             mapOf<String, Any>(
                     "configurations" to configurations,
-                    "differentPaths" to createDiffTree(differences.paths),
+                    "differentPaths" to createDiffTree(differences.paths, hashSetOf()),
                     "removed" to differences.removed
             )
         }
@@ -54,22 +51,16 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
         //build paths for all dependencies
         val pathQueue: Queue<DependencyPathElement> = LinkedList()
         pathQueue.add(DependencyPathElement(project.configurations.getByName(configurationName).incoming.resolutionResult.root, null, null, null))
-        val visited: MutableSet<ResolvedComponentResult> = HashSet()
         val terminatedPaths: MutableSet<DependencyPathElement> = HashSet()
         while (!pathQueue.isEmpty()) {
             val forExploration = pathQueue.poll()
-            visited.add(forExploration.selected)
             val nextLevel: Set<DependencyPathElement> = forExploration.selected.dependencies.filterIsInstance<ResolvedDependencyResult>().map {
                 DependencyPathElement(it.selected, it.requested, differencesByDependency[it.selected.moduleName()], forExploration)
             }.toSet()
 
             if (nextLevel.isNotEmpty())
                 nextLevel.forEach {
-                    if (visited.contains(it.selected)) {
-                        terminatedPaths.add(it)
-                    } else {
-                        pathQueue.add(it)
-                    }
+                    pathQueue.add(it)
                 }
             else
                 terminatedPaths.add(forExploration)
@@ -97,7 +88,14 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
     // by conflict resolution
     private fun removeNonSignificantPathParts(pathsWithChanges: Set<Path>) =
             pathsWithChanges.map { fullPath ->
-                fullPath.dropLastWhile { !it.isChangedInUpdate() || it.selected.selectionReason.isConflictResolution && !it.isWinnerOfConflictResolution() }
+                val pathWithoutUnchangedTail = fullPath.dropLastWhile { !it.isChangedInUpdate()}
+                val indexOfFirstConflictResolutionLooser = pathWithoutUnchangedTail.indexOfFirst { it.selected.selectionReason.isConflictResolution && !it.isWinnerOfConflictResolution() }
+
+                if (indexOfFirstConflictResolutionLooser > 0) {
+                    pathWithoutUnchangedTail.take(indexOfFirstConflictResolutionLooser)
+                } else {
+                    pathWithoutUnchangedTail
+                }
             }.toSet()
 
     // some configurations can have the exact same changes we want to avoid duplicating the same information so
@@ -105,13 +103,18 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
     private fun groupConfigurationsWithSameChanges(pathsPerConfiguration: List<ConfigurationPaths>) =
             pathsPerConfiguration.groupBy { it.paths }.mapValues { it.value.map { it.configurationName } }
 
-    private fun createDiffTree(paths: Set<Path>): List<Map<String, Any>> {
+    private fun createDiffTree(paths: Set<Path>, visited: MutableSet<ComponentIdentifier>): List<Map<String, Any>> {
         val grouped: Map<DependencyPathElement, Set<Path>> = currentLevelPathElementsWithChildren(paths)
 
         return grouped.map { (dependencyPathElement: DependencyPathElement, restOfPaths: Set<Path>) ->
             val result = mutableMapOf(
                     "dependency" to dependencyPathElement.selected.moduleName(),
-                    "children" to createDiffTree(restOfPaths),
+                    if (!visited.contains(dependencyPathElement.selected.id)) {
+                        visited.add(dependencyPathElement.selected.id)
+                        "children" to createDiffTree(restOfPaths, visited)
+                    } else {
+                        "repeated" to true
+                    },
                     if (dependencyPathElement.isSubmodule())
                         "isSubmodule" to true
                     else
@@ -129,7 +132,7 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
                 result["change"] = change
             }
             result
-        }
+        }.filter { it.isNotEmpty() }
     }
 
     private fun currentLevelPathElementsWithChildren(paths: Set<Path>) =
@@ -176,7 +179,15 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
                     findDescriptionForCause(ComponentSelectionCause.REQUESTED)
                 }
             } else if (selected.selectionReason.isForced) {
-                findDescriptionForCause(ComponentSelectionCause.FORCED)
+                val forcedDescription = findDescriptionForCause(ComponentSelectionCause.FORCED)
+                //if it is force and also constrained we add message for constraint, it would be typically alignment
+                forcedDescription + if (selected.selectionReason.isConstrained) {
+                    ", ${findDescriptionForCause(ComponentSelectionCause.CONSTRAINT)}"
+                } else {
+                    ""
+                }
+            } else if (selected.selectionReason.isConstrained) {
+                findDescriptionForCause(ComponentSelectionCause.CONSTRAINT)
             } else if (isWinnerOfConflictResolution()) {
                 findDescriptionForCause(ComponentSelectionCause.REQUESTED)
             } else {

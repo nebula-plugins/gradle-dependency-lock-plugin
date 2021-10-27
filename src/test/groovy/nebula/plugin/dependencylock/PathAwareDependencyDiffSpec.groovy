@@ -45,6 +45,19 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 'test.example:consumer-of-replacer:1.0.0 -> test.example:replacer:1.0.0',
                 'test.example:replaced:1.0.0',
                 'test.example:replacer:1.0.0',
+                'test.example:constrained-dependency:1.0.0',
+                'test.example:constrained-dependency:2.0.0',
+                'test.example:constrained-consumer:1.0.0 -> test.example:constrained-dependency:2.0.0',
+                'test.example:transitive-dependency:1.0.0',
+                'test.example:transitive-dependency:2.0.0',
+                'test.example:transitive-consumer1:1.0.0 -> test.example:transitive-dependency:1.0.0',
+                'test.example:transitive-consumer1:2.0.0 -> test.example:transitive-dependency:1.0.0',
+                'test.example:transitive-consumer2:1.0.0 -> test.example:transitive-dependency:1.0.0',
+                'test.example:transitive-consumer2:2.0.0 -> test.example:transitive-dependency:2.0.0',
+                'test.example:transitive-consumer3:1.0.0 -> test.example:transitive-consumer2:1.0.0',
+                'test.example:transitive-consumer3:2.0.0 -> test.example:transitive-consumer2:2.0.0',
+                'test.example:transitive-consumer4:1.0.0 -> test.example:transitive-dependency:1.0.0',
+                'test.example:transitive-consumer4:2.0.0 -> test.example:transitive-dependency:2.0.0',
         ]
 
         def generator = new GradleDependencyGenerator(new DependencyGraph(myGraph))
@@ -341,24 +354,148 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def directDependencies = allConfigurations["differentPaths"]
         def consumer1 = directDependencies.find { it.dependency == "test.example.alignment:consumer1-library"}
         consumer1.version == "1.0.0"
-        consumer1.change.description == "aligned to 1.0.0 by rule diff-lock-with-paths-with-forced-alignment aligning group 'test.example.alignment'"
+        consumer1.change.description == "forced, belongs to platform aligned-platform:diff-lock-with-paths-with-forced-alignment-0-for-test.example.alignment:1.0.0"
         consumer1.change.type == "UPDATED"
         consumer1.change.previousVersion == "2.0.0"
         consumer1.children[0].dependency == "test.example.alignment:core-library"
         consumer1.children[0].version == "1.0.0"
-        consumer1.children[0].change.description == "forced"
+        consumer1.children[0].change.description == "forced, belongs to platform aligned-platform:diff-lock-with-paths-with-forced-alignment-0-for-test.example.alignment:1.0.0"
         consumer1.children[0].change.type == "UPDATED"
         consumer1.children[0].change.previousVersion == "2.0.0"
         def consumer2 = directDependencies.find { it.dependency == "test.example.alignment:consumer2-library"}
         consumer2.version == "1.0.0"
-        consumer2.change.description == "aligned to 1.0.0 by rule diff-lock-with-paths-with-forced-alignment aligning group 'test.example.alignment'"
+        consumer2.change.description == "forced, belongs to platform aligned-platform:diff-lock-with-paths-with-forced-alignment-0-for-test.example.alignment:1.0.0"
         consumer2.change.type == "UPDATED"
         consumer2.change.previousVersion == "2.0.0"
         consumer2.children[0].dependency == "test.example.alignment:core2-library"
         consumer2.children[0].version == "1.0.0"
-        consumer2.children[0].change.description == "requested"
+        consumer2.children[0].change.description == "forced, belongs to platform aligned-platform:diff-lock-with-paths-with-forced-alignment-0-for-test.example.alignment:1.0.0"
         consumer2.children[0].change.type == "UPDATED"
         consumer2.children[0].change.previousVersion == "2.0.0"
+    }
+
+    def 'diff lock with paths with constrained dependency'() {
+        new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.pathAwareDependencyDiff=true"
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
+                    "test.example:constrained-consumer": {
+                        "locked": "1.0.0"
+                    },
+                    "test.example:constrained-dependency": {
+                        "locked": "2.0.0",
+                        "transitive": [
+                            "test.example:constrained-consumer"\
+                        ]
+                    }
+                '''.stripIndent())
+        buildFile << """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id "nebula.resolution-rules" version "9.0.0"
+            }
+        
+            apply plugin: 'java'
+            repositories { 
+                maven { url '${repoDir.absolutePath}' }
+            }
+
+            dependencyLock {
+                includeTransitives = true
+            }
+
+            dependencies {
+                constraints {
+                    implementation('test.example:constrained-dependency') {
+                        version {
+                            strictly '1.0.0'
+                        }
+                    }
+                }
+                implementation 'test.example:constrained-consumer:1.0.0'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('generateLock', 'diffLock')
+
+        then:
+        def lockdiff = new JsonSlurper().parse(new File(projectDir, 'build/dependency-lock/lockdiff.json'))
+        def allConfigurations = lockdiff.find { it.configurations.contains("compileClasspath")}
+        def directDependencies = allConfigurations["differentPaths"]
+        def consumer = directDependencies.find { it.dependency == "test.example:constrained-consumer"}
+        consumer.version == "1.0.0"
+        consumer.change == null
+        consumer.children[0].dependency == "test.example:constrained-dependency"
+        consumer.children[0].version == "1.0.0"
+        consumer.children[0].change.type == "UPDATED"
+        consumer.children[0].change.previousVersion == "2.0.0"
+        consumer.children[0].change.description == "constraint"
+    }
+
+    def 'diff lock with paths with repeated dependencies'() {
+        new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.pathAwareDependencyDiff=true"
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
+                    "test.example:transitive-consumer1": {
+                        "locked": "1.0.0"
+                    },
+                    "test.example:transitive-consumer3": {
+                        "locked": "1.0.0"
+                    },
+                    "test.example:transitive-consumer4": {
+                        "locked": "1.0.0"
+                    },
+                    "test.example:transitive-consumer2": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:transitive-consumer3"
+                        ]
+                    },
+                    "test.example:transitive-dependency": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:transitive-consumer1",
+                            "test.example:transitive-consumer2",
+                            "test.example:transitive-consumer4"
+                        ]
+                    }
+                '''.stripIndent())
+        buildFile << """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id "nebula.resolution-rules" version "9.0.0"
+            }
+        
+            apply plugin: 'java'
+            repositories { 
+                maven { url '${repoDir.absolutePath}' }
+            }
+
+            dependencyLock {
+                includeTransitives = true
+            }
+
+            dependencies {
+                implementation 'test.example:transitive-consumer1:2.0.0'
+                implementation 'test.example:transitive-consumer3:2.0.0'
+                implementation 'test.example:transitive-consumer4:2.0.0'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('generateLock', 'diffLock')
+
+        then:
+        def lockdiff = new JsonSlurper().parse(new File(projectDir, 'build/dependency-lock/lockdiff.json'))
+        def allConfigurations = lockdiff.find { it.configurations.contains("compileClasspath")}
+        def directDependencies = allConfigurations["differentPaths"]
+        def consumer = directDependencies.find { it.dependency == "test.example:transitive-consumer4"}
+        consumer.version == "2.0.0"
+        consumer.children[0].dependency == "test.example:transitive-dependency"
+        consumer.children[0].version == "2.0.0"
+        consumer.children[0].change.type == "UPDATED"
+        consumer.children[0].change.previousVersion == "1.0.0"
+        consumer.children[0].repeated == true
     }
 
     def 'diff lock with paths with replaced rules'() {
