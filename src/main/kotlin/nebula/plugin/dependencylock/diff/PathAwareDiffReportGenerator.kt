@@ -174,34 +174,19 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
 
 
         fun changeDescription(): String {
-            return if (selected.selectionReason.isSelectedByRule) {
-                findDescriptionForCause(ComponentSelectionCause.SELECTED_BY_RULE)
-            } else if (selected.selectionReason.isExpected) {
-                if (isSubmodule()) {
-                    "new local submodule"
-                } else {
-                    findDescriptionForCause(ComponentSelectionCause.REQUESTED)
-                }
-            } else if (selected.selectionReason.isForced) {
-                val forcedDescription = findDescriptionForCause(ComponentSelectionCause.FORCED)
-                //if it is force and also constrained we add message for constraint, it would be typically alignment
-                forcedDescription + if (selected.selectionReason.isConstrained) {
-                    ", ${findDescriptionForCause(ComponentSelectionCause.CONSTRAINT)}"
-                } else {
-                    ""
-                }
-            } else if (selected.selectionReason.isConstrained) {
-                findDescriptionForCause(ComponentSelectionCause.CONSTRAINT)
-            } else if (isWinnerOfConflictResolution()) {
-                findDescriptionForCause(ComponentSelectionCause.REQUESTED)
-            } else {
-                ""
+            val causesWithDescription = selected.selectionReason.descriptions.associate { it.cause to it.description }.toSortedMap()
+            if (causesWithDescription.contains(ComponentSelectionCause.REQUESTED) && isSubmodule()) {
+                causesWithDescription[ComponentSelectionCause.REQUESTED] = "new local submodule"
             }
-        }
+            if (causesWithDescription.contains(ComponentSelectionCause.CONFLICT_RESOLUTION)) {
+                val message = if (isWinnerOfConflictResolution())
+                    "this path brought the winner of conflict resolution"
+                else
+                    "this path participates in conflict resolution, but the winner is from a different path"
+                causesWithDescription[ComponentSelectionCause.CONFLICT_RESOLUTION] = message
 
-        private fun findDescriptionForCause(cause: ComponentSelectionCause): String {
-            val gradleDescription = selected.selectionReason.descriptions.find { it.cause == cause}
-            return gradleDescription!!.description
+            }
+            return causesWithDescription.values.joinToString("; ")
         }
 
         fun isSubmodule(): Boolean {

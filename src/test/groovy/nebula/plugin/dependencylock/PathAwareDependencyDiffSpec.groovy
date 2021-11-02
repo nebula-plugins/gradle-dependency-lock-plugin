@@ -173,7 +173,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def directDependencies = allConfigurations["differentPaths"]
         def directTransitive = directDependencies.find { it.dependency == "test.example:direct-dependency-updating-transitive"}
         directTransitive.version == "2.2.0"
-        directTransitive.change.description == "requested"
+        directTransitive.change.description == "requested; this path brought the winner of conflict resolution"
         directTransitive.change.type == "UPDATED"
         directTransitive.change.previousVersion == "2.0.0"
         def ruleUpdateConsumer = directDependencies.find { it.dependency == "test.example:updated-by-rule-dependency-consumer"}
@@ -181,7 +181,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         ruleUpdateConsumer.change == null
         ruleUpdateConsumer.children[0].dependency == "test.example:updated-by-rule-dependency"
         ruleUpdateConsumer.children[0].version == "2.0.0"
-        ruleUpdateConsumer.children[0].change.description == "substitue test.example:updated-by-rule-dependency:1.0.0 with 2.0.0 because JIRA-1039"
+        ruleUpdateConsumer.children[0].change.description == "requested; substitue test.example:updated-by-rule-dependency:1.0.0 with 2.0.0 because JIRA-1039"
         ruleUpdateConsumer.children[0].change.type == "UPDATED"
         ruleUpdateConsumer.children[0].change.previousVersion == "1.0.0"
         def qux = directDependencies.find { it.dependency == "test.example:qux"}
@@ -191,12 +191,12 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         qux.change.previousVersion == "1.0.0"
         def foo = qux.children.find { it.dependency == "test.example:foo" }
         foo.version == "2.0.1"
-        foo.change.description == "requested"
+        foo.change.description == "requested; this path brought the winner of conflict resolution"
         foo.change.type == "UPDATED"
         foo.change.previousVersion == "1.0.1"
         foo.children[0].dependency == "test.example:direct-dependency-updated-transitively"
         foo.children[0].version == "1.1.0"
-        foo.children[0].change.description == "requested"
+        foo.children[0].change.description == "requested; this path brought the winner of conflict resolution"
         foo.children[0].change.type == "UPDATED"
         foo.children[0].change.previousVersion == "1.0.0"
         def newDependency = qux.children.find { it.dependency == "test.example:new-dependency" }
@@ -277,7 +277,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def directDependencies = allConfigurations["differentPaths"]
         def qux = directDependencies.find { it.dependency == "test.example:qux"}
         qux.version == "2.0.0"
-        qux.change.description == "Recommending version 2.0.0 for dependency test.example:qux via conflict resolution recommendation\n\twith reasons: nebula.dependency-recommender uses mavenBom: test.nebula.bom:testbom:pom:1.0.0"
+        qux.change.description == "requested; Recommending version 2.0.0 for dependency test.example:qux via conflict resolution recommendation\n\twith reasons: nebula.dependency-recommender uses mavenBom: test.nebula.bom:testbom:pom:1.0.0"
         qux.change.type == "UPDATED"
         qux.change.previousVersion == "1.0.0"
     }
@@ -358,22 +358,22 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def directDependencies = allConfigurations["differentPaths"]
         def consumer1 = directDependencies.find { it.dependency == "test.example.alignment:consumer1-library"}
         consumer1.version == "1.0.0"
-        consumer1.change.description == "forced, belongs to platform aligned-platform:diff-lock-with-paths-with-forced-alignment-0-for-test.example.alignment:1.0.0"
+        consumer1.change.description == "requested; forced; belongs to platform aligned-platform:diff-lock-with-paths-with-forced-alignment-0-for-test.example.alignment:1.0.0"
         consumer1.change.type == "UPDATED"
         consumer1.change.previousVersion == "2.0.0"
         consumer1.children[0].dependency == "test.example.alignment:core-library"
         consumer1.children[0].version == "1.0.0"
-        consumer1.children[0].change.description == "forced, belongs to platform aligned-platform:diff-lock-with-paths-with-forced-alignment-0-for-test.example.alignment:1.0.0"
+        consumer1.children[0].change.description == "requested; forced; belongs to platform aligned-platform:diff-lock-with-paths-with-forced-alignment-0-for-test.example.alignment:1.0.0"
         consumer1.children[0].change.type == "UPDATED"
         consumer1.children[0].change.previousVersion == "2.0.0"
         def consumer2 = directDependencies.find { it.dependency == "test.example.alignment:consumer2-library"}
         consumer2.version == "1.0.0"
-        consumer2.change.description == "forced, belongs to platform aligned-platform:diff-lock-with-paths-with-forced-alignment-0-for-test.example.alignment:1.0.0"
+        consumer2.change.description == "requested; forced; belongs to platform aligned-platform:diff-lock-with-paths-with-forced-alignment-0-for-test.example.alignment:1.0.0"
         consumer2.change.type == "UPDATED"
         consumer2.change.previousVersion == "2.0.0"
         consumer2.children[0].dependency == "test.example.alignment:core2-library"
         consumer2.children[0].version == "1.0.0"
-        consumer2.children[0].change.description == "forced, belongs to platform aligned-platform:diff-lock-with-paths-with-forced-alignment-0-for-test.example.alignment:1.0.0"
+        consumer2.children[0].change.description == "requested; forced; belongs to platform aligned-platform:diff-lock-with-paths-with-forced-alignment-0-for-test.example.alignment:1.0.0"
         consumer2.children[0].change.type == "UPDATED"
         consumer2.children[0].change.previousVersion == "2.0.0"
     }
@@ -465,12 +465,12 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         alignedConsumer1.change.previousVersion == "1.0.0"
         def consumer1 = alignedConsumer1.children.find { it.dependency == "test.example.alignment:consumer1-library"}
         consumer1.version == "2.0.0"
-        consumer1.change.description == "belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
+        consumer1.change.description == "requested; this path participates in conflict resolution, but the winner is from a different path; belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
         consumer1.change.type == "UPDATED"
         consumer1.change.previousVersion == "1.0.0"
         consumer1.children[0].dependency == "test.example.alignment:core-library"
         consumer1.children[0].version == "2.0.0"
-        consumer1.children[0].change.description == "belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
+        consumer1.children[0].change.description == "requested; belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
         consumer1.children[0].change.type == "UPDATED"
         consumer1.children[0].change.previousVersion == "1.0.0"
         def alignedConsumer2 = directDependencies.find { it.dependency == "test.example:consumer-of-aligned-dependency2"}
@@ -480,12 +480,12 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         alignedConsumer2.change.previousVersion == "1.0.0"
         def consumer2 = alignedConsumer2.children.find { it.dependency == "test.example.alignment:consumer2-library"}
         consumer2.version == "2.0.0"
-        consumer2.change.description == "belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
+        consumer2.change.description == "requested; belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
         consumer2.change.type == "UPDATED"
         consumer2.change.previousVersion == "1.0.0"
         consumer2.children[0].dependency == "test.example.alignment:core2-library"
         consumer2.children[0].version == "2.0.0"
-        consumer2.children[0].change.description == "belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
+        consumer2.children[0].change.description == "requested; belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
         consumer2.children[0].change.type == "UPDATED"
         consumer2.children[0].change.previousVersion == "1.0.0"
     }
@@ -545,7 +545,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         consumer.children[0].version == "1.0.0"
         consumer.children[0].change.type == "UPDATED"
         consumer.children[0].change.previousVersion == "2.0.0"
-        consumer.children[0].change.description == "constraint"
+        consumer.children[0].change.description == "constraint; by ancestor"
     }
 
     def 'diff lock with paths with repeated dependencies'() {
