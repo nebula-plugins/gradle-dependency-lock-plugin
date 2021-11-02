@@ -10,7 +10,6 @@ import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultV
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionSelectorScheme
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
 import java.util.*
-import kotlin.collections.HashSet
 
 typealias Path = List<PathAwareDiffReportGenerator.DependencyPathElement>
 
@@ -24,13 +23,14 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
     // is marked with configuration names where those paths belong.
     override fun generateDiffReport(project: Project, diffsByConfiguration: Map<String, List<DependencyDiff>> ): List<Map<String, Any>> {
         val pathsPerConfiguration: List<ConfigurationPaths> = diffsByConfiguration.map { (configurationName: String, differences: List<DependencyDiff>) ->
-            val allPaths: Set<Path> = constructShortestPathsToAllDependencies(differences, project, configurationName)
-            val pathsWithChanges: Set<Path> = filterPathsWithSignificantChanges(allPaths)
-            val pathsFromDirectDependencies: Set<Path> = removeNonSignificantPathParts(pathsWithChanges)
+            val completeDependencyTree: AnnotatedDependencyTree = constructPathsToAllDependencies(differences, project, configurationName)
+            val removedInsignificantChanges: AnnotatedDependencyTree = filterPathsWithSignificantChanges(completeDependencyTree)
+            val removeAlreadyVisited: AnnotatedDependencyTree = filterPathsWithDuplicatedElements(removedInsignificantChanges)
+            val removedInsignificantChangesAfterRemovingAlreadyVisited: AnnotatedDependencyTree = filterPathsWithSignificantChanges(removeAlreadyVisited)
 
             val removed: List<String> = differences.filter { it.isRemoved }.map { it.dependency }
 
-            ConfigurationPaths(configurationName, Differences(pathsFromDirectDependencies, removed))
+            ConfigurationPaths(configurationName, Differences(removedInsignificantChangesAfterRemovingAlreadyVisited, removed))
         }
 
         val groupedDiffs: Map<Differences, List<String>> = groupConfigurationsWithSameChanges(pathsPerConfiguration)
@@ -38,85 +38,90 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
         return groupedDiffs.map { (differences: Differences, configurations: List<String>) ->
             mapOf<String, Any>(
                     "configurations" to configurations,
-                    "differentPaths" to createDiffTree(differences.paths, hashSetOf()),
+                    "differentPaths" to createDiffTree(differences.newAndUpdated.root),
                     "removed" to differences.removed
             )
         }
     }
 
-    //this method constructs shotests paths to all unique dependencies from module root within a configuration
-    private fun constructShortestPathsToAllDependencies(differences: List<DependencyDiff>, project: Project, configurationName: String): Set<Path> {
+    //this method constructs paths to all unique dependencies from module root within a configuration
+    private fun constructPathsToAllDependencies(differences: List<DependencyDiff>, project: Project, configurationName: String): AnnotatedDependencyTree {
         val differencesByDependency: Map<String, DependencyDiff> = differences.associateBy { it.dependency }
 
         //build paths for all dependencies
         val pathQueue: Queue<DependencyPathElement> = LinkedList()
-        pathQueue.add(DependencyPathElement(project.configurations.getByName(configurationName).incoming.resolutionResult.root, null, null, null))
-        val terminatedPaths: MutableSet<DependencyPathElement> = HashSet()
+        val root = DependencyPathElement(project.configurations.getByName(configurationName).incoming.resolutionResult.root, null, null)
+        pathQueue.add(root)
         while (!pathQueue.isEmpty()) {
             val forExploration = pathQueue.poll()
-            val nextLevel: Set<DependencyPathElement> = forExploration.selected.dependencies.filterIsInstance<ResolvedDependencyResult>().map {
-                DependencyPathElement(it.selected, it.requested, differencesByDependency[it.selected.moduleName()], forExploration)
-            }.toSet()
-
-            if (nextLevel.isNotEmpty())
-                nextLevel.forEach {
-                    pathQueue.add(it)
-                }
-            else
-                terminatedPaths.add(forExploration)
+            forExploration.selected.dependencies.filterIsInstance<ResolvedDependencyResult>().forEach {
+                //attach new element to the tree
+                val newElement = DependencyPathElement(it.selected, it.requested, differencesByDependency[it.selected.moduleName()])
+                forExploration.children.add(newElement)
+                pathQueue.add(newElement)
+            }
         }
-        //convert path to a list structure and drop root from it
-        return terminatedPaths.mapTo(mutableSetOf()) { it.toList().drop(1) }
+        return AnnotatedDependencyTree(root)
     }
 
     // we need to find only paths that have significant changes in them. A significant change is any new version requested by parent
     // or a rule or force. If change is caused by conflict resolution but the path is not responsible for bringing the winning version,
     // it is not considered significant change
-    private fun filterPathsWithSignificantChanges(allPaths: Set<Path>): Set<Path> {
-        return allPaths.filterTo(mutableSetOf()) { fullPath ->
-            val firstChangeOnPath = fullPath.find { it.isChangedInUpdate() }
-            if (firstChangeOnPath == null) {
-                false
-            } else {
-                !firstChangeOnPath.selected.selectionReason.isConflictResolution || firstChangeOnPath.isWinnerOfConflictResolution()
-            }
-        }
-    }
-
     // dependency paths can have a significant change in a middle but transitive dependencies of the updated dependency
     // might be the same, we will drop any parts of a path after changed dependency that is unchanged or just changed
     // by conflict resolution
-    private fun removeNonSignificantPathParts(pathsWithChanges: Set<Path>) =
-            pathsWithChanges.map { fullPath ->
-                val pathWithoutUnchangedTail = fullPath.dropLastWhile { !it.isChangedInUpdate()}
-                val indexOfFirstConflictResolutionLooser = pathWithoutUnchangedTail.indexOfFirst { it.selected.selectionReason.isConflictResolution && !it.isWinnerOfConflictResolution() }
+    private fun filterPathsWithSignificantChanges(completeDependencyTree: AnnotatedDependencyTree): AnnotatedDependencyTree {
+        removeInsignificantDependencyPathElements(completeDependencyTree.root)
+        return completeDependencyTree
+    }
 
-                if (indexOfFirstConflictResolutionLooser > 0) {
-                    pathWithoutUnchangedTail.take(indexOfFirstConflictResolutionLooser)
-                } else {
-                    pathWithoutUnchangedTail
-                }
-            }.toSet()
+    private fun removeInsignificantDependencyPathElements(element: DependencyPathElement): Boolean {
+        //we assume that if this node lost conflict resolution there will be another place where this subtree
+        //was a winner so we don't need to cover it on all places where it was used instead of losers
+        //the exception are aligned dependencies that could have "no winner" since they are using virtual platform to upgrade to desired version
+        val selectionReason = element.selected.selectionReason
+        if (selectionReason.isConflictResolution && !selectionReason.isConstrained && !element.isWinnerOfConflictResolution()) {
+            return true
+        }
+        element.children.removeIf {
+            removeInsignificantDependencyPathElements(it)
+        }
+        return element.children.isEmpty() && !element.isChangedInUpdate()
+    }
+
+    private fun filterPathsWithDuplicatedElements(completeDependencyTree: AnnotatedDependencyTree): AnnotatedDependencyTree {
+        removeAlreadyVisited(completeDependencyTree.root, mutableSetOf())
+        return completeDependencyTree
+    }
+
+    private fun removeAlreadyVisited(element: DependencyPathElement, visited: MutableSet<ComponentIdentifier>) {
+        visited.add(element.selected.id)
+        element.children.forEach {
+            if (visited.contains(it.selected.id)) {
+                it.alreadyVisited = true
+                it.children.clear()
+            } else {
+                removeAlreadyVisited(it, visited)
+            }
+        }
+    }
 
     // some configurations can have the exact same changes we want to avoid duplicating the same information so
     // configurations with the exact same changes are grouped together.
     private fun groupConfigurationsWithSameChanges(pathsPerConfiguration: List<ConfigurationPaths>) =
             pathsPerConfiguration.groupBy { it.paths }.mapValues { it.value.map { it.configurationName } }
 
-    private fun createDiffTree(paths: Set<Path>, visited: MutableSet<ComponentIdentifier>): List<Map<String, Any>> {
-        val grouped: Map<DependencyPathElement, Set<Path>> = currentLevelPathElementsWithChildren(paths)
-
-        return grouped.map { (dependencyPathElement: DependencyPathElement, restOfPaths: Set<Path>) ->
+    private fun createDiffTree(parentElement: DependencyPathElement): List<Map<String, Any>> {
+        return parentElement.children.map { dependencyPathElement: DependencyPathElement ->
             val result = mutableMapOf(
                     "dependency" to dependencyPathElement.selected.moduleName(),
-                    if (!visited.contains(dependencyPathElement.selected.id)) {
-                        visited.add(dependencyPathElement.selected.id)
-                        "children" to createDiffTree(restOfPaths, visited)
+                    if (! dependencyPathElement.alreadyVisited) {
+                        "children" to createDiffTree(dependencyPathElement)
                     } else {
                         "repeated" to true
                     },
                     if (dependencyPathElement.isSubmodule())
-                        "isSubmodule" to true
+                        "submodule" to true
                     else
                         "version" to dependencyPathElement.selected.moduleVersion()
             )
@@ -148,15 +153,14 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
 
     class ConfigurationPaths(val configurationName: String, val paths: Differences)
 
-    data class Differences(val paths: Set<Path>, val removed: List<String>)
+    data class Differences(val newAndUpdated: AnnotatedDependencyTree, val removed: List<String>)
 
-    class DependencyPathElement(val selected: ResolvedComponentResult, val requested: ComponentSelector?, val dependencyDiff: DependencyDiff?, val parent: DependencyPathElement?): Comparable<DependencyPathElement> {
+    data class AnnotatedDependencyTree(val root: DependencyPathElement)
 
-        fun toList(): MutableList<DependencyPathElement> {
-            val tail = parent?.toList() ?: LinkedList()
-            tail.add(this)
-            return tail
-        }
+    class DependencyPathElement(val selected: ResolvedComponentResult, val requested: ComponentSelector?, val dependencyDiff: DependencyDiff?): Comparable<DependencyPathElement> {
+
+        var alreadyVisited: Boolean = false
+        val children: MutableSet<DependencyPathElement> = sortedSetOf()
 
         //return true if the dependency has been somehow updated/added in the graph
         fun isChangedInUpdate(): Boolean {
@@ -170,34 +174,19 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
 
 
         fun changeDescription(): String {
-            return if (selected.selectionReason.isSelectedByRule) {
-                findDescriptionForCause(ComponentSelectionCause.SELECTED_BY_RULE)
-            } else if (selected.selectionReason.isExpected) {
-                if (isSubmodule()) {
-                    "new local submodule"
-                } else {
-                    findDescriptionForCause(ComponentSelectionCause.REQUESTED)
-                }
-            } else if (selected.selectionReason.isForced) {
-                val forcedDescription = findDescriptionForCause(ComponentSelectionCause.FORCED)
-                //if it is force and also constrained we add message for constraint, it would be typically alignment
-                forcedDescription + if (selected.selectionReason.isConstrained) {
-                    ", ${findDescriptionForCause(ComponentSelectionCause.CONSTRAINT)}"
-                } else {
-                    ""
-                }
-            } else if (selected.selectionReason.isConstrained) {
-                findDescriptionForCause(ComponentSelectionCause.CONSTRAINT)
-            } else if (isWinnerOfConflictResolution()) {
-                findDescriptionForCause(ComponentSelectionCause.REQUESTED)
-            } else {
-                ""
+            val causesWithDescription = selected.selectionReason.descriptions.associate { it.cause to it.description }.toSortedMap()
+            if (causesWithDescription.contains(ComponentSelectionCause.REQUESTED) && isSubmodule()) {
+                causesWithDescription[ComponentSelectionCause.REQUESTED] = "new local submodule"
             }
-        }
+            if (causesWithDescription.contains(ComponentSelectionCause.CONFLICT_RESOLUTION)) {
+                val message = if (isWinnerOfConflictResolution())
+                    "this path brought the winner of conflict resolution"
+                else
+                    "this path participates in conflict resolution, but the winner is from a different path"
+                causesWithDescription[ComponentSelectionCause.CONFLICT_RESOLUTION] = message
 
-        private fun findDescriptionForCause(cause: ComponentSelectionCause): String {
-            val gradleDescription = selected.selectionReason.descriptions.find { it.cause == cause}
-            return gradleDescription!!.description
+            }
+            return causesWithDescription.values.joinToString("; ")
         }
 
         fun isSubmodule(): Boolean {
@@ -225,15 +214,12 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
             other as DependencyPathElement
 
             if (selected.id != other.selected.id) return false
-            if (parent != other.parent) return false
 
             return true
         }
 
         override fun hashCode(): Int {
-            var result = selected.id.hashCode()
-            result = 31 * result + (parent?.hashCode() ?: 0)
-            return result
+            return selected.id.hashCode()
         }
     }
 
