@@ -41,6 +41,10 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 'test.example.alignment:consumer1-library:2.0.0 -> test.example.alignment:core-library:2.0.0',
                 'test.example.alignment:consumer2-library:1.0.0 -> test.example.alignment:core2-library:1.0.0',
                 'test.example.alignment:consumer2-library:2.0.0 -> test.example.alignment:core2-library:2.0.0',
+                'test.example:consumer-of-aligned-dependency1:1.0.0 -> test.example.alignment:consumer1-library:1.0.0',
+                'test.example:consumer-of-aligned-dependency1:2.0.0 -> test.example.alignment:consumer1-library:1.0.0',
+                'test.example:consumer-of-aligned-dependency2:1.0.0 -> test.example.alignment:consumer2-library:1.0.0',
+                'test.example:consumer-of-aligned-dependency2:2.0.0 -> test.example.alignment:consumer2-library:2.0.0',
                 'test.example:consumer-of-replaced:1.0.0 -> test.example:replaced:1.0.0',
                 'test.example:consumer-of-replacer:1.0.0 -> test.example:replacer:1.0.0',
                 'test.example:replaced:1.0.0',
@@ -372,6 +376,118 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         consumer2.children[0].change.description == "forced, belongs to platform aligned-platform:diff-lock-with-paths-with-forced-alignment-0-for-test.example.alignment:1.0.0"
         consumer2.children[0].change.type == "UPDATED"
         consumer2.children[0].change.previousVersion == "2.0.0"
+    }
+
+    def 'diff lock with paths with alignment without clear conflict resolution winner'() {
+        File rulesJsonFile = new File(projectDir, "${moduleName}.json")
+        rulesJsonFile << '''\
+            {
+                "deny": [], "reject": [], "substitute": [], "replace": [],
+                "align": [
+                    {
+                        "name": "testNebula",
+                        "group": "test.example.alignment",
+                        "reason": "Align test.example.alignment dependencies",
+                        "author": "Example Person <person@example.org>",
+                        "date": "2016-03-17T20:21:20.368Z"
+                    }
+                ]
+            }
+        '''.stripIndent()
+
+        new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.pathAwareDependencyDiff=true"
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
+                    "test.example:consumer-of-aligned-dependency1": {
+                        "locked": "1.0.0"
+                    },
+                    "test.example:consumer-of-aligned-dependency2": {
+                        "locked": "1.0.0"
+                    },
+                    "test.example.alignment:consumer1-library": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:consumer-of-aligned-dependency1"
+                        ]
+                    },
+                    "test.example.alignment:consumer2-library": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:consumer-of-aligned-dependency2"
+                        ]
+                    },
+                    "test.example.alignment:core-library": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example.alignment:consumer1-library"
+                        ]
+                    },
+                    "test.example.alignment:core2-library": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example.alignment:consumer2-library"
+                        ]
+                    }
+                '''.stripIndent())
+        buildFile << """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id "nebula.resolution-rules" version "9.0.0"
+            }
+        
+            apply plugin: 'java'
+            repositories { 
+                maven { url '${repoDir.absolutePath}' }
+            }
+
+            dependencyLock {
+                includeTransitives = true
+            }
+
+            dependencies {
+                resolutionRules files('$rulesJsonFile')
+                implementation 'test.example:consumer-of-aligned-dependency1:2.0.0'
+                implementation 'test.example:consumer-of-aligned-dependency2:2.0.0'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('generateLock', 'diffLock')
+
+        then:
+        def lockdiff = new JsonSlurper().parse(new File(projectDir, 'build/dependency-lock/lockdiff.json'))
+        def allConfigurations = lockdiff.find { it.configurations.contains("compileClasspath")}
+        def directDependencies = allConfigurations["differentPaths"]
+        def alignedConsumer1 = directDependencies.find { it.dependency == "test.example:consumer-of-aligned-dependency1"}
+        alignedConsumer1.version == "2.0.0"
+        alignedConsumer1.change.description == "requested"
+        alignedConsumer1.change.type == "UPDATED"
+        alignedConsumer1.change.previousVersion == "1.0.0"
+        def consumer1 = alignedConsumer1.children.find { it.dependency == "test.example.alignment:consumer1-library"}
+        consumer1.version == "2.0.0"
+        consumer1.change.description == "belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
+        consumer1.change.type == "UPDATED"
+        consumer1.change.previousVersion == "1.0.0"
+        consumer1.children[0].dependency == "test.example.alignment:core-library"
+        consumer1.children[0].version == "2.0.0"
+        consumer1.children[0].change.description == "belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
+        consumer1.children[0].change.type == "UPDATED"
+        consumer1.children[0].change.previousVersion == "1.0.0"
+        def alignedConsumer2 = directDependencies.find { it.dependency == "test.example:consumer-of-aligned-dependency2"}
+        alignedConsumer2.version == "2.0.0"
+        alignedConsumer2.change.description == "requested"
+        alignedConsumer2.change.type == "UPDATED"
+        alignedConsumer2.change.previousVersion == "1.0.0"
+        def consumer2 = alignedConsumer2.children.find { it.dependency == "test.example.alignment:consumer2-library"}
+        consumer2.version == "2.0.0"
+        consumer2.change.description == "belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
+        consumer2.change.type == "UPDATED"
+        consumer2.change.previousVersion == "1.0.0"
+        consumer2.children[0].dependency == "test.example.alignment:core2-library"
+        consumer2.children[0].version == "2.0.0"
+        consumer2.children[0].change.description == "belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
+        consumer2.children[0].change.type == "UPDATED"
+        consumer2.children[0].change.previousVersion == "1.0.0"
     }
 
     def 'diff lock with paths with constrained dependency'() {
