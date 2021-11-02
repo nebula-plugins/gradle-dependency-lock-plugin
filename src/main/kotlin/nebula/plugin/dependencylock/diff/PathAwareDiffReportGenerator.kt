@@ -121,7 +121,7 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
                         "repeated" to true
                     },
                     if (dependencyPathElement.isSubmodule())
-                        "isSubmodule" to true
+                        "submodule" to true
                     else
                         "version" to dependencyPathElement.selected.moduleVersion()
             )

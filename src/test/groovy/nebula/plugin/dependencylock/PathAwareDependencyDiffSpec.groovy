@@ -794,7 +794,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def allConfigurations = lockdiff[0]
         def directDependencies = allConfigurations["differentPaths"]
         def common = directDependencies.find { it.dependency == "test:common"}
-        common.isSubmodule == true
+        common.submodule == true
         def foo = common.children.find { it.dependency == "test.example:foo" }
         foo.version == "2.0.1"
         foo.change.description == "requested"
@@ -845,7 +845,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def allConfigurations = lockdiff[0]
         def directDependencies = allConfigurations["differentPaths"]
         def common = directDependencies.find { it.dependency == "test:common"}
-        common.isSubmodule == true
+        common.submodule == true
         common.change.description == "new local submodule"
         common.change.type == "NEW"
     }
