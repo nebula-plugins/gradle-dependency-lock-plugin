@@ -214,12 +214,15 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
             other as DependencyPathElement
 
             if (selected.id != other.selected.id) return false
+            if (children != other.children) return false
 
             return true
         }
 
         override fun hashCode(): Int {
-            return selected.id.hashCode()
+            var result = selected.id.hashCode()
+            result = 31 * result + children.hashCode()
+            return result
         }
     }
 

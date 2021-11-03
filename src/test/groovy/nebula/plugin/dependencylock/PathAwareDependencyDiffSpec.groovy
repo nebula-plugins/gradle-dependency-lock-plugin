@@ -64,6 +64,10 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 'test.example:transitive-consumer4:2.0.0 -> test.example:transitive-dependency:2.0.0',
                 'some.group:dependency:1.0.0',
                 'some.group:dependency:2.0.0',
+                'test.example:dependency1:1.0.0',
+                'test.example:dependency1:2.0.0',
+                'test.example:dependency2:1.0.0',
+                'test.example:dependency2:2.0.0',
         ]
 
         def generator = new GradleDependencyGenerator(new DependencyGraph(myGraph))
@@ -858,5 +862,44 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         common.submodule == true
         common.change.description == "new local submodule"
         common.change.type == "NEW"
+    }
+
+    def 'properly aggregate configurations with the same dependencies into report'() {
+        new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.pathAwareDependencyDiff=true"
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        buildFile << """\
+            plugins {
+                id 'nebula.dependency-lock'
+            }
+        
+            apply plugin: 'java'
+            repositories { 
+                maven { url '${repoDir.absolutePath}' }
+            }
+
+            dependencyLock {
+                includeTransitives = true
+            }
+
+            dependencies {
+                compileOnly 'test.example:dependency1:2.0.0'
+                runtimeOnly 'test.example:dependency2:2.0.0'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('generateLock', 'diffLock')
+
+        then:
+        def lockdiff = new JsonSlurper().parse(new File(projectDir, 'build/dependency-lock/lockdiff.json'))
+        def directDependenciesCompileClasspath = lockdiff.find { it.configurations.contains("compileClasspath")} ["differentPaths"]
+        def direct1 = directDependenciesCompileClasspath.find { it.dependency == "test.example:dependency1"}
+        direct1.version == "2.0.0"
+        direct1.change.type == "NEW"
+
+        def directDependenciesRuntimeClasspath = lockdiff.find { it.configurations.contains("runtimeClasspath")} ["differentPaths"]
+        def direct2 = directDependenciesRuntimeClasspath.find { it.dependency == "test.example:dependency2"}
+        direct2.version == "2.0.0"
+        direct2.change.type == "NEW"
     }
 }
