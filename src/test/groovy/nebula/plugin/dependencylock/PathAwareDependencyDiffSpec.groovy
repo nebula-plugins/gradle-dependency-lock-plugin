@@ -62,6 +62,8 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 'test.example:transitive-consumer3:2.0.0 -> test.example:transitive-consumer2:2.0.0',
                 'test.example:transitive-consumer4:1.0.0 -> test.example:transitive-dependency:1.0.0',
                 'test.example:transitive-consumer4:2.0.0 -> test.example:transitive-dependency:2.0.0',
+                'some.group:dependency:1.0.0',
+                'some.group:dependency:2.0.0',
         ]
 
         def generator = new GradleDependencyGenerator(new DependencyGraph(myGraph))
@@ -745,11 +747,15 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         addSubproject("app", """
             dependencies {
                 implementation project(':common')
+                implementation "some.group:dependency:2.0.0"
             }
         """)
 
         def dependenciesLockApp = new File(projectDir, 'app/dependencies.lock')
         dependenciesLockApp << LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
+                    "some.group:dependency": {
+                        "locked": "1.0.0"
+                    },
                     "test:common": {
                         "project": true
                     },
@@ -793,7 +799,11 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def lockdiff = new JsonSlurper().parse(new File(projectDir, 'app/build/dependency-lock/lockdiff.json'))
         def allConfigurations = lockdiff[0]
         def directDependencies = allConfigurations["differentPaths"]
-        def common = directDependencies.find { it.dependency == "test:common"}
+        //verify the right order involving submodule
+        def some = directDependencies[0]
+        some.dependency == "some.group:dependency"
+        def common = directDependencies[1]
+        common.dependency == "test:common"
         common.submodule == true
         def foo = common.children.find { it.dependency == "test.example:foo" }
         foo.version == "2.0.1"

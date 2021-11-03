@@ -204,7 +204,7 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
         }
 
         override fun compareTo(other: DependencyPathElement): Int {
-            return selected.id.toString().compareTo(other.selected.id.toString())
+            return selected.moduleVersion.toString().compareTo(other.selected.moduleVersion.toString())
         }
 
         override fun equals(other: Any?): Boolean {
