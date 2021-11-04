@@ -26,4 +26,12 @@ class DependencyLockExtension {
     boolean includeTransitives = false
     boolean lockAfterEvaluating = true
     Set<String> additionalConfigurationsToLock = [] as Set
+    LockfileStatus lockfileStatus = LockfileStatus.NOT_ENFORCED
+    String missingLockfileMessage = 'It is important to lock your project dependencies.'
+
+    static enum LockfileStatus {
+        NOT_ENFORCED,
+        REQUIRE_LOCKFILE_VIA_WARNING,
+        REQUIRE_LOCKFILE_VIA_FAILURE
+    }
 }

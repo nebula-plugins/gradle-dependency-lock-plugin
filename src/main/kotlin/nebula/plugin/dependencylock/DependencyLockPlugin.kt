@@ -19,8 +19,8 @@ import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
-import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
+import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifier
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
 import org.gradle.api.BuildCancelledException
@@ -33,7 +33,7 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.util.NameMatcher
 import java.io.File
-import java.util.*
+import java.util.Objects
 
 class DependencyLockPlugin : Plugin<Project> {
 
@@ -53,7 +53,7 @@ class DependencyLockPlugin : Plugin<Project> {
         const val UPDATE_LOCK_TASK_NAME = "updateLock"
         const val MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
         const val WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
-
+        const val LOCKFILE_STATUS_PROPERTY = "nebula.features.dependencyLock.lockfileStatus"
 
         val GENERATION_TASK_NAMES = setOf(GENERATE_LOCK_TASK_NAME, GENERATE_GLOBAL_LOCK_TASK_NAME, UPDATE_LOCK_TASK_NAME, UPDATE_GLOBAL_LOCK_TASK_NAME)
         val UPDATE_TASK_NAMES = setOf(UPDATE_LOCK_TASK_NAME, UPDATE_GLOBAL_LOCK_TASK_NAME)
@@ -156,6 +156,7 @@ class DependencyLockPlugin : Plugin<Project> {
                 }
             })
         }
+        handleLackOfLockfiles(project, extension)
     }
 
     private fun disableCachingForGenerateLock() {
@@ -348,4 +349,66 @@ class DependencyLockPlugin : Plugin<Project> {
     private fun uniqueProjectKey(project: Project): String {
         return "${project.name}-${if (project == project.rootProject) "rootproject" else "subproject"}"
     }
+
+    private fun handleLackOfLockfiles(project: Project, extension: DependencyLockExtension) {
+        project.afterEvaluate {
+            if (lockfileStatusIsNotEnforced(project, extension)) {
+                // do nothing
+                return@afterEvaluate
+            }
+
+            val taskNames = project.gradle.startParameter.taskNames
+            val numberOfTasks = taskNames.size
+            if (numberOfTasks == 0 ||
+                (numberOfTasks == 1 && taskNames.contains("clean")) ||
+                (numberOfTasks >= 2 && taskNames.contains("generateLock") && taskNames.contains("saveLock")) ||
+                (numberOfTasks >= 1 && project.gradle.startParameter.isWriteDependencyLocks)
+            ) {
+                // happy path. Do not perform a check
+            } else {
+                val nebulaLockFile = File(
+                    project.projectDir,
+                    project.findStringProperty(LOCK_FILE) ?: extension.lockFile
+                )
+                val nebulaGlobalLockFile = File(
+                    project.projectDir,
+                    project.findStringProperty(GLOBAL_LOCK_FILE) ?: extension.globalLockFile
+                )
+                val gradleSingleLockfile = File(project.projectDir, "gradle.lockfile")
+
+                if (!nebulaLockFile.exists() && !nebulaGlobalLockFile.exists() && !gradleSingleLockfile.exists()) {
+                    val informationalMessage =
+                        "Searched for lockfiles in the following locations, but did not find a project lockfile:\n" +
+                                " - " + nebulaLockFile.path + "\n" +
+                                " - " + nebulaGlobalLockFile.path + "\n" +
+                                " - " + gradleSingleLockfile.path
+                    LOGGER.info(informationalMessage)
+
+                    val callToActionMessage = extension.missingLockfileMessage
+                    if (lockfileStatusIsEnforcedWithAWarning(project, extension)) {
+                        LOGGER.warn(callToActionMessage)
+                    } else {
+                        throw DependencyLockException(callToActionMessage)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun lockfileStatusIsNotEnforced(project: Project, extension: DependencyLockExtension): Boolean {
+        return if (project.hasProperty(LOCKFILE_STATUS_PROPERTY)) {
+            (project.property(LOCKFILE_STATUS_PROPERTY) as String) == "notEnforced"
+        } else {
+            extension.lockfileStatus == DependencyLockExtension.LockfileStatus.NOT_ENFORCED
+        }
+    }
+
+    private fun lockfileStatusIsEnforcedWithAWarning(project: Project, extension: DependencyLockExtension): Boolean {
+        return if (project.hasProperty(LOCKFILE_STATUS_PROPERTY)) {
+            (project.property(LOCKFILE_STATUS_PROPERTY) as String) == "requireLockfileViaWarning"
+        } else {
+            extension.lockfileStatus == DependencyLockExtension.LockfileStatus.REQUIRE_LOCKFILE_VIA_WARNING
+        }
+    }
+
 }
