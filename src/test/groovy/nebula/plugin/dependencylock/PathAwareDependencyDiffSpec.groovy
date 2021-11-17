@@ -68,6 +68,10 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 'test.example:dependency1:2.0.0',
                 'test.example:dependency2:1.0.0',
                 'test.example:dependency2:2.0.0',
+                'test.example:cycle1:1.0.0',
+                'test.example:cycle1:2.0.0 -> test.example:cycle2:2.0.0',
+                'test.example:cycle2:1.0.0',
+                'test.example:cycle2:2.0.0 -> test.example:cycle1:2.0.0',
         ]
 
         def generator = new GradleDependencyGenerator(new DependencyGraph(myGraph))
@@ -901,5 +905,46 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def direct2 = directDependenciesRuntimeClasspath.find { it.dependency == "test.example:dependency2"}
         direct2.version == "2.0.0"
         direct2.change.type == "NEW"
+    }
+
+    def 'diff lock with cyclic dependencies'() {
+        new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.pathAwareDependencyDiff=true"
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
+                    "test.example:cycle1": {
+                        "locked": "1.0.0"
+                    },
+                    "test.example:cycle2": {
+                        "locked": "1.0.0"
+                    }
+                '''.stripIndent())
+        buildFile << """\
+            plugins {
+                id 'nebula.dependency-lock'
+                id "nebula.resolution-rules" version "9.0.0"
+            }
+        
+            apply plugin: 'java'
+            repositories { 
+                maven { url '${repoDir.absolutePath}' }
+            }
+
+            dependencyLock {
+                includeTransitives = true
+            }
+
+            dependencies {
+                implementation 'test.example:cycle1:2.0.0'
+                implementation 'test.example:cycle2:2.0.0'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('generateLock', 'diffLock')
+
+        then:
+        def lockdiff = new JsonSlurper().parse(new File(projectDir, 'build/dependency-lock/lockdiff.json'))
+        def allConfigurations = lockdiff[0]
+        ! allConfigurations["differentPaths"].isEmpty()
     }
 }
