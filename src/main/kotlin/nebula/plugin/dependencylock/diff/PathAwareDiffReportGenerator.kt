@@ -175,9 +175,9 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
             }
             if (causesWithDescription.contains(ComponentSelectionCause.CONFLICT_RESOLUTION)) {
                 val message = if (isWinnerOfConflictResolution())
-                    "this path brought the winner of conflict resolution"
+                    "the parent brought the winner of conflict resolution"
                 else
-                    "this path participates in conflict resolution, but the winner is from a different path"
+                    "the parent brought this participant in conflict resolution, but the winner is from a different path"
                 causesWithDescription[ComponentSelectionCause.CONFLICT_RESOLUTION] = message
 
             }
