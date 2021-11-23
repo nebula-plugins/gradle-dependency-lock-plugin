@@ -4,7 +4,9 @@ import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraph
+import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
+import nebula.test.dependencies.ModuleBuilder
 import nebula.test.dependencies.maven.Pom
 import nebula.test.dependencies.maven.ArtifactType
 import nebula.test.dependencies.repositories.MavenRepo
@@ -183,7 +185,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def directDependencies = allConfigurations["differentPaths"]
         def directTransitive = directDependencies.find { it.dependency == "test.example:direct-dependency-updating-transitive"}
         directTransitive.version == "2.2.0"
-        directTransitive.change.description == "requested; this path brought the winner of conflict resolution"
+        directTransitive.change.description == "requested; the parent brought the winner of conflict resolution"
         directTransitive.change.type == "UPDATED"
         directTransitive.change.previousVersion == "2.0.0"
         def ruleUpdateConsumer = directDependencies.find { it.dependency == "test.example:updated-by-rule-dependency-consumer"}
@@ -201,12 +203,12 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         qux.change.previousVersion == "1.0.0"
         def foo = qux.children.find { it.dependency == "test.example:foo" }
         foo.version == "2.0.1"
-        foo.change.description == "requested; this path brought the winner of conflict resolution"
+        foo.change.description == "requested; the parent brought the winner of conflict resolution"
         foo.change.type == "UPDATED"
         foo.change.previousVersion == "1.0.1"
         foo.children[0].dependency == "test.example:direct-dependency-updated-transitively"
         foo.children[0].version == "1.1.0"
-        foo.children[0].change.description == "requested; this path brought the winner of conflict resolution"
+        foo.children[0].change.description == "requested; the parent brought the winner of conflict resolution"
         foo.children[0].change.type == "UPDATED"
         foo.children[0].change.previousVersion == "1.0.0"
         def newDependency = qux.children.find { it.dependency == "test.example:new-dependency" }
@@ -475,7 +477,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         alignedConsumer1.change.previousVersion == "1.0.0"
         def consumer1 = alignedConsumer1.children.find { it.dependency == "test.example.alignment:consumer1-library"}
         consumer1.version == "2.0.0"
-        consumer1.change.description == "requested; this path participates in conflict resolution, but the winner is from a different path; belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
+        consumer1.change.description == "requested; the parent brought this participant in conflict resolution, but the winner is from a different path; belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
         consumer1.change.type == "UPDATED"
         consumer1.change.previousVersion == "1.0.0"
         consumer1.children[0].dependency == "test.example.alignment:core-library"
@@ -946,5 +948,83 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def lockdiff = new JsonSlurper().parse(new File(projectDir, 'build/dependency-lock/lockdiff.json'))
         def allConfigurations = lockdiff[0]
         ! allConfigurations["differentPaths"].isEmpty()
+    }
+
+    def 'diff lock with snapshot dependencies'() {
+        def myGraph= new DependencyGraphBuilder()
+                .addModule("test.example:dependency-of-snapshot:2.0.0")
+                .addModule(new ModuleBuilder("test.example:snapshot-dependency:1.0.0")
+                        .setStatus("integration")
+                        .addDependency("test.example:dependency-of-snapshot:2.0.0")
+                        .build())
+                .addModule(new ModuleBuilder("test.example:dependency-of-snapshot:2.0.0").setStatus("release").build())
+                .addModule(new ModuleBuilder("test.example:direct-dependency:1.0.0")
+                        .setStatus("release")
+                        .addDependency("test.example:snapshot-dependency:1.0.0")
+                        .build())
+                .build()
+
+        def generator = new GradleDependencyGenerator(myGraph)
+        generator.generateTestIvyRepo()
+
+        new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.pathAwareDependencyDiff=true"
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
+                    "test.example:dependency-of-snapshot": {
+                        "locked": "1.0.0"
+                    },
+                    "test.example:snapshot-dependency": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:dependency-of-snapshot"
+                        ]
+                    },
+                    "test.example:direct-dependency": {
+                        "locked": "1.0.0",
+                        "transitive": [
+                            "test.example:snapshot-dependency"
+                        ]
+                    }
+                '''.stripIndent())
+        buildFile << """\
+            plugins {
+                id 'nebula.dependency-lock'
+            }
+        
+            apply plugin: 'java'
+            repositories { 
+                ${generator.getIvyRepositoryBlock()}
+            }
+
+            dependencyLock {
+                includeTransitives = true
+            }
+
+            dependencies {
+                implementation 'test.example:direct-dependency:1.0.0'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('generateLock', 'diffLock')
+
+        then:
+        def lockdiff = new JsonSlurper().parse(new File(projectDir, 'build/dependency-lock/lockdiff.json'))
+        def allConfigurations = lockdiff[0]
+        def directDependencies = allConfigurations["differentPaths"]
+        def direct = directDependencies[0]
+        direct.dependency == "test.example:direct-dependency"
+        direct.status == "release"
+        direct.version == "1.0.0"
+        direct.children[0].dependency == "test.example:snapshot-dependency"
+        direct.children[0].status == "integration"
+        direct.children[0].version == "1.0.0"
+        def updatedChild = direct.children[0].children[0]
+        updatedChild.dependency == "test.example:dependency-of-snapshot"
+        updatedChild.status == "release"
+        updatedChild.version == "2.0.0"
+        updatedChild.change.description == "requested"
+        updatedChild.change.type == "UPDATED"
+        updatedChild.change.previousVersion == "1.0.0"
     }
 }
