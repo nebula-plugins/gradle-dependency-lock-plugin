@@ -9,6 +9,8 @@ import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionSelectorScheme
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser
+import org.gradle.api.internal.project.ProjectInternal
+import java.lang.RuntimeException
 import java.util.*
 
 class PathAwareDiffReportGenerator : DiffReportGenerator {
@@ -119,18 +121,20 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
 
     private fun createDiffTree(parentElement: DependencyPathElement): List<Map<String, Any>> {
         return parentElement.children.map { dependencyPathElement: DependencyPathElement ->
-            val result = mutableMapOf(
-                    "dependency" to dependencyPathElement.selected.moduleName(),
-                    if (! dependencyPathElement.alreadyVisited) {
-                        "children" to createDiffTree(dependencyPathElement)
-                    } else {
-                        "repeated" to true
-                    },
-                    if (dependencyPathElement.isSubmodule())
-                        "submodule" to true
-                    else
-                        "version" to dependencyPathElement.selected.moduleVersion()
-            )
+            val result: MutableMap<String, Any> = mutableMapOf()
+            result["dependency"] = dependencyPathElement.selected.moduleName()
+            if (dependencyPathElement.isSubmodule())
+                result["submodule"] = true
+            else {
+                result["status"] = dependencyPathElement.extractStatus()
+                result["version"] = dependencyPathElement.selected.moduleVersion()
+            }
+
+            if (!dependencyPathElement.alreadyVisited) {
+                result["children"] = createDiffTree(dependencyPathElement)
+            } else {
+                result["repeated"] = true
+            }
             if (dependencyPathElement.isChangedInUpdate()) {
                 val diff = dependencyPathElement.dependencyDiff!!
                 val change = mutableMapOf(
@@ -175,9 +179,9 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
             }
             if (causesWithDescription.contains(ComponentSelectionCause.CONFLICT_RESOLUTION)) {
                 val message = if (isWinnerOfConflictResolution())
-                    "this path brought the winner of conflict resolution"
+                    "the parent brought the winner of conflict resolution"
                 else
-                    "this path participates in conflict resolution, but the winner is from a different path"
+                    "the parent brought this participant in conflict resolution, but the winner is from a different path"
                 causesWithDescription[ComponentSelectionCause.CONFLICT_RESOLUTION] = message
 
             }
@@ -196,6 +200,10 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
                 selector.accept((selected.id as ModuleComponentIdentifier).version)
             } else
                 false
+        }
+
+        fun extractStatus(): String {
+            return this.selected.variants.first().attributes.getAttribute(ProjectInternal.STATUS_ATTRIBUTE) ?: throw RuntimeException("Unknown status")
         }
 
         override fun equals(other: Any?): Boolean {
