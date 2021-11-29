@@ -476,6 +476,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         alignedConsumer1.change.type == "UPDATED"
         alignedConsumer1.change.previousVersion == "1.0.0"
         def consumer1 = alignedConsumer1.children.find { it.dependency == "test.example.alignment:consumer1-library"}
+        consumer1.requestedVersion == "1.0.0"
         consumer1.version == "2.0.0"
         consumer1.change.description == "requested; the parent brought this participant in conflict resolution, but the winner is from a different path; belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
         consumer1.change.type == "UPDATED"

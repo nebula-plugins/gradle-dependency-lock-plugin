@@ -128,6 +128,7 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
             else {
                 result["status"] = dependencyPathElement.extractStatus()
                 result["version"] = dependencyPathElement.selected.moduleVersion()
+                result["requestedVersion"] = dependencyPathElement.requestedVersion() ?: "Unknown"
             }
 
             if (!dependencyPathElement.alreadyVisited) {
@@ -193,13 +194,22 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
         }
 
         fun isWinnerOfConflictResolution(): Boolean {
+            val requestedVersion = requestedVersion()
             return if (selected.selectionReason.isConflictResolution &&
-                    requested is ModuleComponentSelector &&
+                    requestedVersion != null &&
                     selected.id is ModuleComponentIdentifier) {
-                val selector = VERSION_SCHEME.parseSelector(requested.version)
+                val selector = VERSION_SCHEME.parseSelector(requestedVersion)
                 selector.accept((selected.id as ModuleComponentIdentifier).version)
             } else
                 false
+        }
+
+        fun requestedVersion(): String? {
+            return if (requested is ModuleComponentSelector) {
+                requested.version
+            } else {
+                null
+            }
         }
 
         fun extractStatus(): String {
