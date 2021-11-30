@@ -83,7 +83,9 @@ class LockGenerator {
      * @param secondConfigs configurations to duplicate the second set of dependencies into
      * @return the String to put into the file
      */
-    static String duplicateIntoConfigs(String firstDeps, Collection<String> firstConfigs, String secondDeps, Collection<String> secondConfigs) {
+    static String duplicateIntoConfigs(String firstDeps, Collection<String> firstConfigs,
+                                       String secondDeps, Collection<String> secondConfigs,
+                                       String thirdDeps = '', Collection<String> thirdConfigs = new ArrayList<>()) {
         Map<String, String> configNameToDependencyContents = new HashMap<String, String>()
 
         firstConfigs.each { configName ->
@@ -91,6 +93,9 @@ class LockGenerator {
         }
         secondConfigs.each { configName ->
             configNameToDependencyContents.put(configName, secondDeps)
+        }
+        thirdConfigs.each { configName ->
+            configNameToDependencyContents.put(configName, thirdDeps)
         }
         def sortedConfigNameToDependencyContents = configNameToDependencyContents.sort()
 

@@ -40,7 +40,7 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
             buildscript {
                 repositories { mavenCentral() }
                 dependencies {
-                    classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:8.0.0'
+                    classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
                 }
             }
             plugins {
@@ -174,7 +174,16 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
             "org.apache.commons:commons-lang3": {
                 "locked": "3.12.0"
             }
-            '''.stripIndent())
+            '''.stripIndent(), ['compileClasspath', 'testCompileClasspath', 'runtimeClasspath', 'testRuntimeClasspath'], """\
+            ":$moduleName": {
+                "project": true
+            },
+            "test.rules:resolution-rules": {
+                "firstLevelTransitive": [
+                    ":$moduleName"
+                ],
+                "locked": "1.0.0"
+            }""".stripIndent(), ['resolutionRules'])
 
         def sub2LockText = LockGenerator.duplicateIntoConfigs("""\
         "commons-io:commons-io": {
@@ -196,13 +205,31 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
         "$moduleName:sub1": {
             "project": true
         }
-        """.stripIndent(), ['compileClasspath', 'testCompileClasspath'])
+        """.stripIndent(), ['compileClasspath', 'testCompileClasspath'], """\
+        ":$moduleName": {
+            "project": true
+        },
+        "test.rules:resolution-rules": {
+            "firstLevelTransitive": [
+                ":$moduleName"
+            ],
+            "locked": "1.0.0"
+        }""".stripIndent(), ['resolutionRules'])
 
         def sub3LockText = LockGenerator.duplicateIntoConfigs('''\
             "commons-logging:commons-logging": {
                 "locked": "1.2"
             }
-            '''.stripIndent())
+            '''.stripIndent(), ['compileClasspath', 'testCompileClasspath', 'runtimeClasspath', 'testRuntimeClasspath'], """\
+            ":$moduleName": {
+                "project": true
+            },
+            "test.rules:resolution-rules": {
+                "firstLevelTransitive": [
+                    ":$moduleName"
+                ],
+                "locked": "1.0.0"
+            }""".stripIndent(), ['resolutionRules'])
 
         rootLockFile.text == rootLockText
         sub1LockFile.text == sub1LockText
@@ -235,13 +262,16 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
         rootLockFile.get('empty') == 'annotationProcessor,compileClasspath,runtimeClasspath,testAnnotationProcessor,testCompileClasspath,testRuntimeClasspath'
 
         sub1LockFile.get('org.apache.commons:commons-lang3:3.12.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+        sub1LockFile.get('test.rules:resolution-rules:1.0.0') == 'resolutionRules'
         sub1LockFile.get('empty') == 'annotationProcessor,testAnnotationProcessor'
 
         sub2LockFile.get('commons-io:commons-io:2.11.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
         sub2LockFile.get('org.apache.commons:commons-lang3:3.12.0') == 'runtimeClasspath,testRuntimeClasspath'
+        sub2LockFile.get('test.rules:resolution-rules:1.0.0') == 'resolutionRules'
         sub2LockFile.get('empty') == 'annotationProcessor,testAnnotationProcessor'
 
         sub3LockFile.get('commons-logging:commons-logging:1.2') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+        sub3LockFile.get('test.rules:resolution-rules:1.0.0') == 'resolutionRules'
         sub3LockFile.get('empty') == 'annotationProcessor,testAnnotationProcessor'
     }
 
