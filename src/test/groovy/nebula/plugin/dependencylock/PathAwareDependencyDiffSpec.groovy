@@ -185,6 +185,8 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def directDependencies = allConfigurations["differentPaths"]
         def directTransitive = directDependencies.find { it.dependency == "test.example:direct-dependency-updating-transitive"}
         directTransitive.version == "2.2.0"
+        directTransitive.selectionReasons["REQUESTED"] == "requested"
+        directTransitive.selectionReasons["CONFLICT_RESOLUTION"] == "between versions 2.2.0 and 2.0.0"
         directTransitive.change.description == "requested; the parent brought the winner of conflict resolution"
         directTransitive.change.type == "UPDATED"
         directTransitive.change.previousVersion == "2.0.0"
