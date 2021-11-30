@@ -129,6 +129,7 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
                 result["status"] = dependencyPathElement.extractStatus()
                 result["version"] = dependencyPathElement.selected.moduleVersion()
                 result["requestedVersion"] = dependencyPathElement.requestedVersion() ?: "Unknown"
+                result["selectionReasons"] = dependencyPathElement.collectSelectionReasons()
             }
 
             if (!dependencyPathElement.alreadyVisited) {
@@ -214,6 +215,10 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
 
         fun extractStatus(): String {
             return this.selected.variants.first().attributes.getAttribute(ProjectInternal.STATUS_ATTRIBUTE) ?: throw RuntimeException("Unknown status")
+        }
+
+        fun collectSelectionReasons(): Map<String, Any> {
+            return selected.selectionReason.descriptions.associate { it.cause.toString() to it.description }.toSortedMap()
         }
 
         override fun equals(other: Any?): Boolean {
