@@ -52,20 +52,19 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
         val pathQueue: Queue<DependencyPathElement> = LinkedList()
         val root = DependencyPathElement(project.configurations.getByName(configurationName).incoming.resolutionResult.root, null, null)
         pathQueue.add(root)
-        val visited = mutableSetOf<ResolvedComponentResult>()
+        val visited = mutableSetOf<ResolvedDependencyResult>()
         while (!pathQueue.isEmpty()) {
             val forExploration = pathQueue.poll()
-            visited.add(forExploration.selected)
             forExploration.selected.dependencies.filterIsInstance<ResolvedDependencyResult>()
                     .sortedBy { it.selected.moduleVersion.toString() }
                     .forEach {
                 //attach new element to the tree
                 val newElement = DependencyPathElement(it.selected, it.requested, differencesByDependency[it.selected.moduleName()])
-                if (! visited.contains(it.selected) && ! terminateExploration(newElement)) {
+                if (! visited.contains(it) && ! terminateExploration(newElement)) {
                     forExploration.addChild(newElement)
                     pathQueue.add(newElement)
                 }
-
+                visited.add(it)
             }
         }
         return AnnotatedDependencyTree(root)
@@ -218,7 +217,10 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
         }
 
         fun collectSelectionReasons(): Map<String, Any> {
-            return selected.selectionReason.descriptions.associate { it.cause.toString() to it.description }.toSortedMap()
+            return selected.selectionReason.descriptions.groupBy { it.cause.toString() }
+                    .mapValues {
+                        it.value.filter { it.description.isNotEmpty() }.joinToString("; ")
+                    }.toSortedMap()
         }
 
         override fun equals(other: Any?): Boolean {
