@@ -25,6 +25,7 @@ class OfflineModeSpec extends AbstractCachingAndDependencyLockingFeatureFlagsSpe
     private static final String OFFLINE_MODE_NOTIFICATION = 'offline mode enabled. Using cached dependencies'
 
     def setup() {
+        debug = true
         buildFile << """
             dependencies {
                 implementation 'test.offlineMode:z-$uniqueId:latest.release'

@@ -27,10 +27,16 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.execution.TaskExecutionGraph
 import org.gradle.api.execution.TaskExecutionListener
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.TaskState
+import org.gradle.execution.plan.DefaultExecutionPlan
+import org.gradle.execution.plan.ExecutionPlan
+import org.gradle.execution.plan.LocalTaskNode
+import org.gradle.execution.plan.Node
+import org.gradle.execution.taskgraph.DefaultTaskExecutionGraph
 
 class CoreLockingHelper {
     private static final Logger LOGGER = Logging.getLogger(CoreLockingHelper.class)
@@ -137,9 +143,22 @@ class CoreLockingHelper {
 
     private void removeLockfilesForUnlockedConfigurations() {
         if (!shouldLockAllConfigurations && !migrationTaskWasRequested && isUpdatingDependencies) {
-            project.gradle.taskGraph.whenReady { taskGraph ->
-                LinkedList tasks = taskGraph.executionPlan.executionQueue
-                Task lastTask = tasks.last?.task
+            project.gradle.taskGraph.whenReady { TaskExecutionGraph taskGraph ->
+                if(!(taskGraph instanceof DefaultTaskExecutionGraph)) {
+                    return
+                }
+                ExecutionPlan executionPlan = taskGraph.executionPlan
+                if(!(executionPlan instanceof DefaultExecutionPlan)) {
+                    return
+                }
+                List<Node> queue = new ArrayList<>(executionPlan.executionQueue)
+                Integer nodeIdx = queue.findLastIndexOf {
+                    it instanceof LocalTaskNode
+                }
+                if(nodeIdx == null) {
+                    return
+                }
+                Task lastTask = (queue.get(nodeIdx) as LocalTaskNode)?.task
                 taskGraph.addTaskExecutionListener(new TaskExecutionListener() {
                     @Override
                     void beforeExecute(Task task) {
