@@ -185,8 +185,8 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def directDependencies = allConfigurations["differentPaths"]
         def directTransitive = directDependencies.find { it.dependency == "test.example:direct-dependency-updating-transitive"}
         directTransitive.version == "2.2.0"
-        directTransitive.selectionReasons["REQUESTED"] == "requested"
-        directTransitive.selectionReasons["CONFLICT_RESOLUTION"] == "between versions 2.2.0 and 2.0.0"
+        directTransitive.selectionReasonDescriptions["REQUESTED"] == ["requested"]
+        directTransitive.selectionReasonDescriptions["CONFLICT_RESOLUTION"] == ["between versions 2.2.0 and 2.0.0"]
         directTransitive.change.description == "requested; the parent brought the winner of conflict resolution"
         directTransitive.change.type == "UPDATED"
         directTransitive.change.previousVersion == "2.0.0"
@@ -596,7 +596,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def consumer1 = alignedConsumer1.children.find { it.dependency == "test.example.alignment:consumer1-library"}
         consumer1.requestedVersion == "1.0.0"
         consumer1.version == "2.0.0"
-        consumer1.selectionReasons["CONSTRAINT"] == "belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-and-constraint-to-have-multiple-descriptions-of-the-same-cause-0-for-test.example.alignment:2.0.0; constraint"
+        consumer1.selectionReasonDescriptions["CONSTRAINT"] == ["belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-and-constraint-to-have-multiple-descriptions-of-the-same-cause-0-for-test.example.alignment:2.0.0", "constraint"]
         consumer1.change.type == "UPDATED"
         consumer1.change.previousVersion == "1.0.0"
         def alignedConsumer2 = directDependencies.find { it.dependency == "test.example:consumer-of-aligned-dependency2"}
