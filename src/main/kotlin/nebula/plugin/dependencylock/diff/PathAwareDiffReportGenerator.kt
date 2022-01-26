@@ -49,20 +49,21 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
         val differencesByDependency: Map<String, DependencyDiff> = differences.associateBy { it.dependency }
 
         //build paths for all dependencies
-        val pathQueue: Queue<DependencyPathElement> = LinkedList()
+        val pathStack: Deque<DependencyPathElement> = LinkedList()
         val root = DependencyPathElement(project.configurations.getByName(configurationName).incoming.resolutionResult.root, null, null)
-        pathQueue.add(root)
+        pathStack.add(root)
         val visited = mutableSetOf<ResolvedDependencyResult>()
-        while (!pathQueue.isEmpty()) {
-            val forExploration = pathQueue.poll()
+        while (!pathStack.isEmpty()) {
+            val forExploration = pathStack.pop()
             forExploration.selected.dependencies.filterIsInstance<ResolvedDependencyResult>()
                     .sortedBy { it.selected.moduleVersion.toString() }
+                    .reversed()
                     .forEach {
                 //attach new element to the tree
                 val newElement = DependencyPathElement(it.selected, it.requested, differencesByDependency[it.selected.moduleName()])
                 if (! visited.contains(it) && ! terminateExploration(newElement)) {
                     forExploration.addChild(newElement)
-                    pathQueue.add(newElement)
+                    pathStack.push(newElement)
                 }
                 visited.add(it)
             }
@@ -128,7 +129,7 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
                 result["status"] = dependencyPathElement.extractStatus()
                 result["version"] = dependencyPathElement.selected.moduleVersion()
                 result["requestedVersion"] = dependencyPathElement.requestedVersion() ?: "Unknown"
-                result["selectionReasons"] = dependencyPathElement.collectSelectionReasons()
+                result["selectionReasonDescriptions"] = dependencyPathElement.collectSelectionReasons()
             }
 
             if (!dependencyPathElement.alreadyVisited) {
@@ -160,7 +161,7 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
     class DependencyPathElement(val selected: ResolvedComponentResult, val requested: ComponentSelector?, val dependencyDiff: DependencyDiff?) {
 
         var alreadyVisited: Boolean = false
-        val children: MutableList<DependencyPathElement> = arrayListOf()
+        val children: LinkedList<DependencyPathElement> = LinkedList()
 
         //return true if the dependency has been somehow updated/added in the graph
         fun isChangedInUpdate(): Boolean {
@@ -216,10 +217,10 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
             return this.selected.variants.first().attributes.getAttribute(ProjectInternal.STATUS_ATTRIBUTE) ?: throw RuntimeException("Unknown status")
         }
 
-        fun collectSelectionReasons(): Map<String, Any> {
+        fun collectSelectionReasons(): Map<String, List<String>> {
             return selected.selectionReason.descriptions.groupBy { it.cause.toString() }
                     .mapValues {
-                        it.value.filter { it.description.isNotEmpty() }.joinToString("; ")
+                        it.value.filter { it.description.isNotEmpty() }.map { it.toString() }
                     }.toSortedMap()
         }
 
@@ -242,7 +243,11 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
         }
 
         fun addChild(child: DependencyPathElement) {
-            children.add(child)
+            children.addFirst(child)
+        }
+
+        override fun toString(): String {
+            return "DependencyPathElement(selected=${selected.id.displayName})"
         }
     }
 
