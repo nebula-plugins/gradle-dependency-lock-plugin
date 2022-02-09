@@ -98,8 +98,6 @@ class AbstractCachingAndDependencyLockingFeatureFlagsSpec extends IntegrationTes
                 }
             }
             """.stripIndent()
-
-        debug = true // if you want to debug with IntegrationTestKit, this is needed
     }
 
     def cleanupSpec() {

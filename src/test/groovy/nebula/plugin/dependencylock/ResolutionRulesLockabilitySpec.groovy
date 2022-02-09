@@ -31,7 +31,6 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
     def mavenForRules
 
     def setup() {
-        debug = true
         keepFiles = true
 
         setupRules()

@@ -29,7 +29,6 @@ import java.util.jar.Manifest
 class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
     def setup() {
         definePluginOutsideOfPluginBlock = true
-        debug = true
         keepFiles = true
     }
 

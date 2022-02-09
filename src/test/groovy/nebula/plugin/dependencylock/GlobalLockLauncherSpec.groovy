@@ -23,7 +23,6 @@ class GlobalLockLauncherSpec extends IntegrationTestKitSpec {
 
     def setup() {
         definePluginOutsideOfPluginBlock = true
-        debug = true
         keepFiles = true
     }
 

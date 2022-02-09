@@ -16,8 +16,6 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
     private File repoDir
 
     def setup() {
-        debug = true
-
         def myGraph = [
                 'test.example:foo:1.0.0 -> test.example:baz:1.0.0|test.example:direct-dependency-updated-transitively:1.0.0|test.example:direct-dependency-updating-transitive:2.0.0|test.example:removed-dependency:1.0.0',
                 'test.example:foo:1.0.1 -> test.example:baz:1.0.0|test.example:direct-dependency-updated-transitively:1.0.0|test.example:direct-dependency-updating-transitive:2.0.0|test.example:removed-dependency:1.0.0',
