@@ -90,7 +90,7 @@ class DependencyLockPlugin : Plugin<Project> {
             isConfigurationCache = method.invoke(startParameter) as Boolean
         } catch (ignore: Exception) {
         }
-        if (!isMigratingToCoreLocks || !isConfigurationCache) {
+        if (!isMigratingToCoreLocks && !isConfigurationCache) {
             /* MigrateToCoreLocks can be involved with migrating dependencies that were previously unlocked.
                Verifying resolution based on the base lockfiles causes a `LockOutOfDateException` from the initial DependencyLockingArtifactVisitor state
             */
