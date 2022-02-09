@@ -102,10 +102,6 @@ if (GradleVersion.version(project.gradle.gradleVersion) >= (GradleVersion.versio
     classes.dependsOn compileKotlin
 }
 
-test {
-    forkEvery = 1
-}
-
 tasks.withType(Test) {
     testLogging {
         events "PASSED", "FAILED", "SKIPPED"

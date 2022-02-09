@@ -32,7 +32,6 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     def mavenrepo
 
     def setup() {
-        debug = true
         keepFiles = true
         def graph = new DependencyGraphBuilder()
                 .addModule('test.nebula:a:1.0.0')
@@ -46,8 +45,6 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
 
         def transitiveNotAvailableDep = new File(mavenrepo.getMavenRepoDir(), "transitive/not/available/a")
         transitiveNotAvailableDep.deleteDir() // to create a missing transitive dependency
-
-        debug = true // if you want to debug with IntegrationTestKit, this is needed
     }
 
     @Unroll

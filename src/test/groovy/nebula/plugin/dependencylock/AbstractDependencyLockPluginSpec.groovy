@@ -63,8 +63,6 @@ class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
                 implementation 'test.nebula:b:1.+'
             }
         """.stripIndent()
-
-        debug = true // if you want to debug with IntegrationTestKit, this is needed
     }
 
     def setupScalaProject(String conf) {
