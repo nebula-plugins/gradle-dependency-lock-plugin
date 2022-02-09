@@ -1,8 +1,6 @@
 plugins {
-    id 'com.gradle.enterprise' version '3.4.1'
+    id 'com.gradle.enterprise' version '3.8.1'
 }
-
-rootProject.name='gradle-dependency-lock-plugin'
 
 gradleEnterprise {
     buildScan {
@@ -11,3 +9,5 @@ gradleEnterprise {
         termsOfServiceAgree = 'yes'
     }
 }
+
+rootProject.name='gradle-dependency-lock-plugin'
