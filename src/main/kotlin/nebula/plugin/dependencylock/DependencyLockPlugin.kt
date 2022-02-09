@@ -23,12 +23,14 @@ import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifier
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
+import org.gradle.StartParameter
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.ExternalDependency
+import org.gradle.api.internal.StartParameterInternal
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.util.NameMatcher
@@ -80,7 +82,15 @@ class DependencyLockPlugin : Plugin<Project> {
         lockedDepsPerProjectForConfigurations[uniqueProjectKey(project)] = mutableMapOf()
         overrideDepsPerProjectForConfigurations[uniqueProjectKey(project)] = mutableMapOf()
 
-        if (!project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)) {
+        val startParameter = project.gradle.startParameter as StartParameterInternal
+        val isMigratingToCoreLocks = startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)
+        var isConfigurationCache = false
+        try {
+            val method = StartParameterInternal::class.java.getMethod("isConfigurationCache")
+            isConfigurationCache = method.invoke(startParameter) as Boolean
+        } catch (ignore: Exception) {
+        }
+        if (!isMigratingToCoreLocks || !isConfigurationCache) {
             /* MigrateToCoreLocks can be involved with migrating dependencies that were previously unlocked.
                Verifying resolution based on the base lockfiles causes a `LockOutOfDateException` from the initial DependencyLockingArtifactVisitor state
             */
@@ -107,10 +117,10 @@ class DependencyLockPlugin : Plugin<Project> {
             val lockFile = File(project.projectDir, extension.lockFile)
 
             if (lockFile.exists()) {
-                if (project.gradle.startParameter.isWriteDependencyLocks) {
+                if (startParameter.isWriteDependencyLocks) {
                     rewriteLocksUsingCoreLocking(lockFile)
                 } else {
-                    val taskNames = project.gradle.startParameter.taskNames
+                    val taskNames = startParameter.taskNames
                     val hasMigrationTask = hasMigrationTask(taskNames)
                     if (!hasMigrationTask) {
                         throw BuildCancelledException("Legacy locks are not supported with core locking.\n" +
@@ -121,7 +131,7 @@ class DependencyLockPlugin : Plugin<Project> {
                 }
             }
 
-            val taskNames = project.gradle.startParameter.taskNames
+            val taskNames = startParameter.taskNames
             val hasUpdateTask = hasUpdateTask(taskNames)
             val hasGenerationTask = hasGenerationTask(taskNames)
             val globalLockFile = File(project.projectDir, extension.globalLockFile)

@@ -1607,7 +1607,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         plugin << ['id \'checkstyle\'', 'id \'jacoco\''] // removed 'id \'net.saliman.cobertura\' version \'2.5.0\'', because it isn't gradle 5.1 compatible yet
     }
 
-    @IgnoreIf({ jvm.isJava17Compatible() }) // Because we use old version of Gradle and koltin
+    @IgnoreIf({ jvm.isJava17Compatible() }) // Because we use old version of Gradle and Kotlin
     @Issue("https://youtrack.jetbrains.com/issue/KT-48245")
     def 'compileOnly configuration is not resolvable for locking'() {
         // the kotlin plugin make this resolvable in Gradle 7
@@ -2037,5 +2037,13 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         result.standardOutput.contains 'test.example:foo:1.0.1 -> 1.0.0'
+    }
+
+    def 'does not fail with configuration caching enabled'() {
+        when:
+        runTasksSuccessfully('help', '--configuration-cache')
+
+        then:
+        noExceptionThrown()
     }
 }
