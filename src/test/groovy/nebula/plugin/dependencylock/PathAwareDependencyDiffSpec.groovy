@@ -1147,7 +1147,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                     "test.example:qux": {
                         "locked": "1.0.0"
                     }
-                '''.stripIndent(), LockGenerator.DEFAULT_CONFIG_NAMES_POPULATED_BY_IMPLEMENTATION_SCOPE + "notUsedConfigurationAnymore")
+                '''.stripIndent(), LockGenerator.DEFAULT_CONFIG_NAMES_POPULATED_BY_IMPLEMENTATION_SCOPE + ["notUsedConfigurationAnymore", "compileOnly"])
         buildFile << """\
             plugins {
                 id 'nebula.dependency-lock'
