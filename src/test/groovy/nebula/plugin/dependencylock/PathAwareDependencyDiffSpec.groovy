@@ -1139,4 +1139,40 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         updatedChild.change.type == "UPDATED"
         updatedChild.change.previousVersion == "1.0.0"
     }
+
+    def 'diff lock with not used configuration in old lockfile'() {
+        new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.pathAwareDependencyDiff=true"
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
+                    "test.example:qux": {
+                        "locked": "1.0.0"
+                    }
+                '''.stripIndent(), LockGenerator.DEFAULT_CONFIG_NAMES_POPULATED_BY_IMPLEMENTATION_SCOPE + "notUsedConfigurationAnymore")
+        buildFile << """\
+            plugins {
+                id 'nebula.dependency-lock'
+            }
+        
+            apply plugin: 'java'
+            repositories { 
+                maven { url '${repoDir.absolutePath}' }
+            }
+
+            dependencyLock {
+                includeTransitives = true
+            }
+
+            dependencies {
+                implementation 'test.example:qux:latest.release'
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('generateLock', 'diffLock')
+
+        then:
+        def lockdiff = new JsonSlurper().parse(new File(projectDir, 'build/dependency-lock/lockdiff.json'))
+        def allConfigurations = lockdiff[0]
+        ! allConfigurations["differentPaths"].isEmpty()
+    }
 }
