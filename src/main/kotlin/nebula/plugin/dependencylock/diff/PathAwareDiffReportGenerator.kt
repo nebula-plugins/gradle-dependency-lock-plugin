@@ -23,7 +23,10 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
     // is marked with configuration names where those paths belong.
     override fun generateDiffReport(project: Project, diffsByConfiguration: Map<String, List<DependencyDiff>> ): List<Map<String, Any>> {
         val pathsPerConfiguration: List<ConfigurationPaths> = diffsByConfiguration
-            .filterKeys { project.configurations.findByName(it) != null }
+            .filterKeys { name ->
+                val conf = project.configurations.findByName(name)
+                conf != null && conf.isCanBeResolved
+            }
             .map { (configurationName: String, differences: List<DependencyDiff>) ->
             val completeDependencyTree: AnnotatedDependencyTree = constructPathsToAllDependencies(differences, project, configurationName)
             val removedInsignificantChanges: AnnotatedDependencyTree = filterPathsWithSignificantChanges(completeDependencyTree)
