@@ -25,5 +25,6 @@ class DependencyLockExtension {
     Set<String> skippedDependencies = [] as Set
     boolean includeTransitives = false
     boolean lockAfterEvaluating = true
+    boolean updateDependenciesFailOnInvalidCoordinates = true
     Set<String> additionalConfigurationsToLock = [] as Set
 }

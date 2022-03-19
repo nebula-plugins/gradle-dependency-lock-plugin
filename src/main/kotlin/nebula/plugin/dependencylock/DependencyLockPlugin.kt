@@ -21,6 +21,7 @@ import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
+import nebula.plugin.dependencylock.validation.UpdateDependenciesValidator
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifier
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
 import org.gradle.StartParameter
@@ -197,6 +198,9 @@ class DependencyLockPlugin : Plugin<Project> {
             val hasUpdateTask = hasUpdateTask(taskNames)
 
             val updates = if (project.hasProperty(UPDATE_DEPENDENCIES)) parseUpdates(project.property(UPDATE_DEPENDENCIES) as String) else extension.updateDependencies
+            if(updates != null && updates.isNotEmpty()) {
+                UpdateDependenciesValidator.validate(updates, extension.updateDependenciesFailOnInvalidCoordinates)
+            }
             val projectCoord = "${project.group}:${project.name}"
             if (hasUpdateTask && updates.any { it == projectCoord }) {
                 throw DependencyLockException("Dependency locks cannot be updated. An update was requested for a project dependency ($projectCoord)")
