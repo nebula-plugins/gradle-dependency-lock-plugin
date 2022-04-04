@@ -12,10 +12,13 @@ class UpdateDependenciesValidator {
         fun validate(updateDependencies: Set<String>, failOnError: Boolean) {
             val errors = mutableListOf<String>()
             updateDependencies.forEach { coordinate ->
-                if(coordinate.split(":").size == 1) {
+                if(coordinate.isEmpty()) {
+                    errors.add("An empty element exists in the list")
+                }
+                else if(coordinate.split(":").size == 1) {
                     errors.add("$coordinate does not contain groupId:module. Only has one element")
                 }
-                if(coordinate.split(":").size > 2) {
+                else if(coordinate.split(":").size > 2) {
                     errors.add("$coordinate contains more elements than groupId:module. Version and classifiers are not supported")
                 }
                 if(coordinate.contains(";")) {

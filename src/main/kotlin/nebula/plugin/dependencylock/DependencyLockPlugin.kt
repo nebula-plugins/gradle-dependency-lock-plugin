@@ -48,6 +48,7 @@ class DependencyLockPlugin : Plugin<Project> {
         const val GLOBAL_LOCK_FILE = "dependencyLock.globalLockFile"
         const val LOCK_AFTER_EVALUATING = "dependencyLock.lockAfterEvaluating"
         const val UPDATE_DEPENDENCIES = "dependencyLock.updateDependencies"
+        const val  VALIDATE_DEPENDENCY_COORDINATES = "dependencyLock.updateDependenciesFailOnInvalidCoordinates"
         const val OVERRIDE = "dependencyLock.override"
         const val OVERRIDE_FILE = "dependencyLock.overrideFile"
         const val GENERATE_GLOBAL_LOCK_TASK_NAME = "generateGlobalLock"
@@ -199,7 +200,8 @@ class DependencyLockPlugin : Plugin<Project> {
 
             val updates = if (project.hasProperty(UPDATE_DEPENDENCIES)) parseUpdates(project.property(UPDATE_DEPENDENCIES) as String) else extension.updateDependencies
             if(updates != null && updates.isNotEmpty()) {
-                UpdateDependenciesValidator.validate(updates, extension.updateDependenciesFailOnInvalidCoordinates)
+                val validateCoordinates = if (project.hasProperty(VALIDATE_DEPENDENCY_COORDINATES)) project.property(VALIDATE_DEPENDENCY_COORDINATES).toString().toBoolean() else extension.updateDependenciesFailOnInvalidCoordinates
+                UpdateDependenciesValidator.validate(updates, validateCoordinates)
             }
             val projectCoord = "${project.group}:${project.name}"
             if (hasUpdateTask && updates.any { it == projectCoord }) {
@@ -249,8 +251,11 @@ class DependencyLockPlugin : Plugin<Project> {
         }
     }
 
+    /**
+     * Split the string on comma, dropping any empty entries (allows for comma seperated environment variables which may be empty)
+     */
     private fun parseUpdates(updates: String): Set<String> =
-            updates.split(",").toSet()
+            updates.split(",").filter {it.isNotEmpty()} .toSet()
 
     private fun applyLock(conf: Configuration, dependenciesLock: File, updates: Set<String> = emptySet()) {
         LOGGER.info("Using ${dependenciesLock.name} to lock dependencies in $conf")
