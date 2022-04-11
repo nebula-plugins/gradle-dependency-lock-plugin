@@ -27,4 +27,13 @@ class UpdateDependenciesValidatorSpec extends Specification {
         exception.message.contains("netflix:my-module;2:latest.release contains more elements than groupId:module. Version and classifiers are not supported")
         exception.message.contains("netflix:my-module;2:latest.release contains ; which is invalid")
     }
+
+    def 'should not fail if invalid coordinates but disabled validation'() {
+        when:
+        Set<String> modules = ["netflix", "netflix:my-module:1.+", "netflix:my-module-2:latest.release", "netflix:my-module;2:latest.release"]
+        UpdateDependenciesValidator.validate(modules,false)
+
+        then:
+        notThrown(DependencyLockException)
+    }
 }

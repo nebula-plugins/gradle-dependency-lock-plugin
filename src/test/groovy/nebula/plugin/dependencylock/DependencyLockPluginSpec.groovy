@@ -177,6 +177,21 @@ class DependencyLockPluginSpec extends ProjectSpec {
         foo.moduleVersion == '2.0.1'
     }
 
+    def 'command line override of a dependency accepts empty entries'() {
+        stockTestSetup()
+
+        project.ext.set('dependencyLock.override', 'test.example:foo:2.0.1,')
+
+        when:
+        project.apply plugin: pluginName
+        triggerAfterEvaluate()
+        def resolved = project.configurations.compileClasspath.resolvedConfiguration
+
+        then:
+        def foo = resolved.firstLevelModuleDependencies.find { it.moduleName == 'foo' }
+        foo.moduleVersion == '2.0.1'
+    }
+
     def 'command line override of a dependency with forces in place'() {
         stockTestSetup()
 

@@ -1392,6 +1392,99 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         Throwables.getRootCause(result.failure).message == 'Dependency locks cannot be updated. An update was requested for a project dependency (test:sub1)'
     }
 
+    def 'update fails if updateDependencies has malformed coordiantes'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << FOO_LOCK
+        buildFile << BUILD_GRADLE
+
+        when:
+        def result = runTasks('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', 'updateLock', 'saveLock')
+
+
+        then:
+        def message = Throwables.getRootCause(result.failure).message
+        message.contains("updateDependencies list is invalid")
+        message.contains("test.example:foo:2.0.1 contains more elements than groupId:module")
+    }
+
+    def 'command line override respected while updating lock with malformed coordinates with extension'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << FOO_LOCK
+        buildFile << """
+        apply plugin: 'java'
+        apply plugin: 'nebula.dependency-lock'
+        repositories { maven { url '${Fixture.repo}' } }
+        dependencies {
+            implementation 'test.example:foo:1.+'
+        }
+        dependencyLock {
+            updateDependenciesFailOnInvalidCoordinates = false
+        }
+        """.stripIndent()
+
+        when:
+        runTasksSuccessfully('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', 'updateLock', 'saveLock')
+
+        then:
+        new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
+    }
+
+    def 'command line override respected while updating lock with malformed coordinates allowed by property'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << FOO_LOCK
+        buildFile << BUILD_GRADLE
+
+        when:
+        runTasksSuccessfully('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', '-PdependencyLock.updateDependenciesFailOnInvalidCoordinates=false', 'updateLock', 'saveLock')
+
+        then:
+        new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
+    }
+
+    def 'updateDependenciesFailOnInvalidCoordinates command line override respected while updating lock with malformed coordinates allowed by extension'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << FOO_LOCK
+        buildFile << """
+        apply plugin: 'java'
+        apply plugin: 'nebula.dependency-lock'
+        repositories { maven { url '${Fixture.repo}' } }
+        dependencies {
+            implementation 'test.example:foo:1.+'
+        }
+        dependencyLock {
+            updateDependenciesFailOnInvalidCoordinates = false
+        }
+        """.stripIndent()
+
+        when:
+        runTasksSuccessfully('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', '-PdependencyLock.updateDependenciesFailOnInvalidCoordinates=false', 'updateLock', 'saveLock')
+
+        then:
+        new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
+    }
+
+    def 'updateDependenciesFailOnInvalidCoordinates prefers property over extension'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << FOO_LOCK
+        buildFile << """
+        apply plugin: 'java'
+        apply plugin: 'nebula.dependency-lock'
+        repositories { maven { url '${Fixture.repo}' } }
+        dependencies {
+            implementation 'test.example:foo:1.+'
+        }
+        dependencyLock {
+            updateDependenciesFailOnInvalidCoordinates = true
+        }
+        """.stripIndent()
+
+        when:
+        runTasksSuccessfully('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', '-PdependencyLock.updateDependenciesFailOnInvalidCoordinates=false', 'updateLock', 'saveLock')
+
+        then:
+        new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
+    }
+
     def 'generateLock interacts well with resolution rules'() {
         buildFile << """\
             buildscript {
