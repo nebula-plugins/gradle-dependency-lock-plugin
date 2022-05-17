@@ -67,7 +67,7 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
         then:
         results.output.contains 'test.nebula:a locked to 1.41.5'
         results.output.contains 'test.nebula:b locked to 1.42.2'
-        resultsForRules.output.contains 'Selected by rule : test.rules:resolution-rules locked to 1.0.0'
+        resultsForRules.output.contains 'Selected by rule: test.rules:resolution-rules locked to 1.0.0'
 
         // final results where locks win over new alignment rules
         results.output.contains 'test.nebula:a:1.41.5\n'
@@ -89,8 +89,8 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
         resultsIgnoringLocks.output.contains 'test.nebula:b:1.42.2\n'
         resultsForRulesIgnoringLocks.output.contains 'test.rules:resolution-rules:1.1.0\n'
 
-        assert resultsIgnoringLocks.output.contains('- By constraint : belongs to platform aligned-platform:rules-0-for-test.nebula:1.42.2\n')
-        assert resultsIgnoringLocks.output.contains('- By conflict resolution : between versions 1.42.2 and 1.41.5')
+        assert resultsIgnoringLocks.output.contains('- By constraint: belongs to platform aligned-platform:rules-0-for-test.nebula:1.42.2\n')
+        assert resultsIgnoringLocks.output.contains('- By conflict resolution: between versions 1.42.2 and 1.41.5')
 
         !resultsIgnoringLocks.output.contains('- Forced')
         !resultsForRulesIgnoringLocks.output.contains('- Forced')
@@ -131,7 +131,7 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
         then:
         results.output.contains 'test.nebula:a locked to 1.41.5'
         results.output.contains 'test.nebula:b locked to 1.42.2'
-        resultsForRules.output.contains 'Selected by rule : test.rules:resolution-rules locked to 1.0.0'
+        resultsForRules.output.contains 'Selected by rule: test.rules:resolution-rules locked to 1.0.0'
 
         // final results where locks win over new alignment rules
         results.output.contains 'test.nebula:a:1.41.5\n'
@@ -154,8 +154,8 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
         resultsForRulesIgnoringLocks.output.contains 'test.rules:resolution-rules:1.1.0\n'
 
         if(coreAlignment) {
-            assert resultsIgnoringLocks.output.contains('- By constraint : belongs to platform aligned-platform:rules-0-for-test.nebula:1.42.2\n')
-            assert resultsIgnoringLocks.output.contains('- By conflict resolution : between versions 1.42.2 and 1.41.5')
+            assert resultsIgnoringLocks.output.contains('- By constraint: belongs to platform aligned-platform:rules-0-for-test.nebula:1.42.2\n')
+            assert resultsIgnoringLocks.output.contains('- By conflict resolution: between versions 1.42.2 and 1.41.5')
         }
 
         !resultsIgnoringLocks.output.contains('- Forced')
@@ -218,8 +218,8 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
         then:
         locksUpdatedResults.output.contains '+--- test.nebula:a:1.41.5 -> 1.42.2\n'
         locksUpdatedResults.output.contains '\\--- test.nebula:b:1.42.2\n'
-        locksUpdatedInsightResults.output.contains('Selected by rule : test.nebula:a locked to 1.42.2')
-        locksUpdatedInsightResults.output.contains('Selected by rule : test.nebula:b locked to 1.42.2')
+        locksUpdatedInsightResults.output.contains('Selected by rule: test.nebula:a locked to 1.42.2')
+        locksUpdatedInsightResults.output.contains('Selected by rule: test.nebula:b locked to 1.42.2')
 
     }
 
@@ -277,8 +277,8 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
         then:
         locksUpdatedResults.output.contains '+--- test.nebula:a:1.41.5 -> 1.42.2\n'
         locksUpdatedResults.output.contains '\\--- test.nebula:b:1.42.2\n'
-        locksUpdatedInsightResults.output.contains('Selected by rule : test.nebula:a locked to 1.42.2')
-        locksUpdatedInsightResults.output.contains('Selected by rule : test.nebula:b locked to 1.42.2')
+        locksUpdatedInsightResults.output.contains('Selected by rule: test.nebula:a locked to 1.42.2')
+        locksUpdatedInsightResults.output.contains('Selected by rule: test.nebula:b locked to 1.42.2')
 
     }
 
@@ -335,8 +335,8 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
         then:
         locksUpdatedResults.output.contains '+--- test.nebula:a:1.41.5 -> 1.42.2\n'
         locksUpdatedResults.output.contains '\\--- test.nebula:b:1.42.2\n'
-        locksUpdatedInsightResults.output.contains('Selected by rule : test.nebula:a locked to 1.42.2')
-        locksUpdatedInsightResults.output.contains('Selected by rule : test.nebula:b locked to 1.42.2')
+        locksUpdatedInsightResults.output.contains('Selected by rule: test.nebula:a locked to 1.42.2')
+        locksUpdatedInsightResults.output.contains('Selected by rule: test.nebula:b locked to 1.42.2')
 
         locksUpdatedInsightResults.output.contains('belongs to platform test.nebula:test.nebula:1.42.2')
 

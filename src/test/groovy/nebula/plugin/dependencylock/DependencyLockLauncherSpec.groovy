@@ -2022,7 +2022,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def zincDependencyInsight = runTasksSuccessfully(':sub1:dI', '--dependency', 'scala', '--configuration', 'zinc')
 
         then:
-        zincDependencyInsight.standardOutput.contains('org.scala-sbt:zinc_2.12')
+        zincDependencyInsight.standardOutput.contains('org.scala-sbt:zinc_2.13')
 
         when:
         runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock')
