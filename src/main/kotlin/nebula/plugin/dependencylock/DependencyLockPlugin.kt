@@ -19,12 +19,11 @@ import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
-import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
+import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencylock.validation.UpdateDependenciesValidator
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifier
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
-import org.gradle.StartParameter
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -36,7 +35,7 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.util.NameMatcher
 import java.io.File
-import java.util.*
+import java.util.Objects
 
 class DependencyLockPlugin : Plugin<Project> {
 
@@ -48,7 +47,10 @@ class DependencyLockPlugin : Plugin<Project> {
         const val GLOBAL_LOCK_FILE = "dependencyLock.globalLockFile"
         const val LOCK_AFTER_EVALUATING = "dependencyLock.lockAfterEvaluating"
         const val UPDATE_DEPENDENCIES = "dependencyLock.updateDependencies"
-        const val  VALIDATE_DEPENDENCY_COORDINATES = "dependencyLock.updateDependenciesFailOnInvalidCoordinates"
+        const val VALIDATE_DEPENDENCY_COORDINATES = "dependencyLock.updateDependenciesFailOnInvalidCoordinates"
+        const val VALIDATE_SIMULTANEOUS_TASKS = "dependencyLock.updateDependenciesFailOnSimultaneousTaskUsage"
+        const val VALIDATE_SPECIFIED_DEPENDENCIES_TO_UPDATE =
+            "dependencyLock.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate"
         const val OVERRIDE = "dependencyLock.override"
         const val OVERRIDE_FILE = "dependencyLock.overrideFile"
         const val GENERATE_GLOBAL_LOCK_TASK_NAME = "generateGlobalLock"
@@ -199,10 +201,11 @@ class DependencyLockPlugin : Plugin<Project> {
             val hasUpdateTask = hasUpdateTask(taskNames)
 
             val updates = if (project.hasProperty(UPDATE_DEPENDENCIES)) parseUpdates(project.property(UPDATE_DEPENDENCIES) as String) else extension.updateDependencies
-            if(updates != null && updates.isNotEmpty()) {
-                val validateCoordinates = if (project.hasProperty(VALIDATE_DEPENDENCY_COORDINATES)) project.property(VALIDATE_DEPENDENCY_COORDINATES).toString().toBoolean() else extension.updateDependenciesFailOnInvalidCoordinates
-                UpdateDependenciesValidator.validate(updates, validateCoordinates)
-            }
+            UpdateDependenciesValidator.validate(
+                updates, overrides, hasUpdateTask,
+                hasTask(taskNames, GENERATION_TASK_NAMES - UPDATE_TASK_NAMES),
+                project, extension
+            )
             val projectCoord = "${project.group}:${project.name}"
             if (hasUpdateTask && updates.any { it == projectCoord }) {
                 throw DependencyLockException("Dependency locks cannot be updated. An update was requested for a project dependency ($projectCoord)")
