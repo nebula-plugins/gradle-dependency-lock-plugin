@@ -1106,8 +1106,8 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         def insightResults = runTasks('dependencyInsight', '--dependency', 'jackson', *flags)
 
         then:
-        insightResults.output.contains('Selected by rule : substituted com.fasterxml.jackson.core:jackson-databind')
-        insightResults.output.contains('Selected by rule : com.fasterxml.jackson.core:jackson-databind locked')
+        insightResults.output.contains('Selected by rule: substituted com.fasterxml.jackson.core:jackson-databind')
+        insightResults.output.contains('Selected by rule: com.fasterxml.jackson.core:jackson-databind locked')
 
         results.output.contains('com.fasterxml.jackson.core:jackson-databind:2.9.9 -> 2.9.9.3\n')
         results.output.contains('com.fasterxml.jackson.core:jackson-annotations:2.9.0 -> 2.9.9\n')
