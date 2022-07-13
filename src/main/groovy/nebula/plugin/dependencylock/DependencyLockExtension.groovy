@@ -26,5 +26,7 @@ class DependencyLockExtension {
     boolean includeTransitives = false
     boolean lockAfterEvaluating = true
     boolean updateDependenciesFailOnInvalidCoordinates = true
+    boolean updateDependenciesFailOnSimultaneousTaskUsage = true
+    boolean updateDependenciesFailOnNonSpecifiedDependenciesToUpdate = true
     Set<String> additionalConfigurationsToLock = [] as Set
 }

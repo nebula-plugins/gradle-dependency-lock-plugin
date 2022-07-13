@@ -521,6 +521,29 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'dependencies.lock').text == FOO_LOCK
     }
 
+    def 'update lock requires dependencies to update by default'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << REMOVE_UPDATE_LOCK
+        buildFile.text = BUILD_GRADLE
+
+        when:
+        def result = runTasksWithFailure('updateLock', 'saveLock')
+
+        then:
+        result.standardError.contains("Please specify dependencies to update")
+    }
+
+    def 'update lock uses property when intending to run with no dependencies to update passed in'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << REMOVE_UPDATE_LOCK
+        buildFile.text = BUILD_GRADLE
+        when:
+        runTasksSuccessfully('-PdependencyLock.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate=false', 'updateLock', 'saveLock')
+
+        then:
+        new File(projectDir, 'dependencies.lock').text == FOO_LOCK
+    }
+
     def 'command line override file respected while generating lock'() {
         def testLock = new File(projectDir, 'test.lock')
         testLock << FOO_LOCK_OVERRIDE
