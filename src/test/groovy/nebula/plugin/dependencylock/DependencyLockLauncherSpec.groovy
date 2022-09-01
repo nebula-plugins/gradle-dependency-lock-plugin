@@ -530,7 +530,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def result = runTasksWithFailure('updateLock', 'saveLock')
 
         then:
-        result.standardError.contains("Please specify dependencies to update")
+        result.standardError.contains("Usage of `updateLock` task requires specific modules to update. Please specify dependencies to update")
     }
 
     def 'update lock uses property when intending to run with no dependencies to update passed in'() {
