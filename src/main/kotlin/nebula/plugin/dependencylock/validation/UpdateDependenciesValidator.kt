@@ -87,7 +87,7 @@ class UpdateDependenciesValidator {
         ) {
             if (hasUpdateTask && updates.isEmpty() && overrides.isEmpty()) {
                 val error =
-                    "Please specify dependencies to update, such as with `-P${UPDATE_DEPENDENCIES}=com.example:foo,com.example:bar`. " +
+                    "Usage of `updateLock` task requires specific modules to update. Please specify dependencies to update, such as with `-P${UPDATE_DEPENDENCIES}=com.example:foo,com.example:bar`. " +
                             "You can bypass this fail-fast validation with `-P${VALIDATE_SPECIFIED_DEPENDENCIES_TO_UPDATE}=false`"
                 if (failOnError) {
                     throw DependencyLockException(error)
