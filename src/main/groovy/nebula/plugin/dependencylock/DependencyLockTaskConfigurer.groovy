@@ -54,7 +54,7 @@ class DependencyLockTaskConfigurer {
     public static final String SAVE_GLOBAL_LOCK_TASK_NAME = 'saveGlobalLock'
 
     // these get skipped for subproject's configurations
-    final Set<String> configurationsToSkipForGlobalLock = ['checkstyle', 'findbugs', 'findbugsPlugins', 'jacocoAgent', 'jacocoAnt', 'spotbugs', 'spotbugsPlugins', 'zinc', 'pmd', 'resolutionRules']
+    public static final Set<String> configurationsToSkipForGlobalLockPrefixes = ['checkstyle', 'findbugs', 'findbugsPlugins', 'jacocoAgent', 'jacocoAnt', 'spotbugs', 'spotbugsPlugins', 'zinc', 'pmd', 'resolutionRules', 'spotless']
 
     Project project
 
@@ -275,7 +275,8 @@ class DependencyLockTaskConfigurer {
                             aggregate.setCanBeResolved(true)
                             configurations
                                 .findAll { configuration ->
-                                    !configurationsToSkipForGlobalLock.contains(configuration.name)
+                                    !configurationsToSkipForGlobalLockPrefixes.any { String prefix -> configuration.name.startsWith(prefix) }
+                                            && !extension.skippedConfigurationNamesPrefixes.any { String prefix -> configuration.name.startsWith(prefix) }
                                 }
                                 .each { configuration ->
                                     aggregate.extendsFrom(configuration)

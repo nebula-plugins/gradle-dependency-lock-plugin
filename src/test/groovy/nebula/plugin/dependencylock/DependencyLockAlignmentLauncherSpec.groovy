@@ -17,6 +17,7 @@ import nebula.plugin.dependencyverifier.DependencyResolutionVerifierKt
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
+import spock.lang.Ignore
 import spock.lang.Subject
 import spock.lang.Unroll
 
@@ -33,6 +34,7 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
     }
 
     @Unroll
+    @Ignore
     def 'dependency-lock when applied before wins out over new locked alignment rules - core alignment #coreAlignment'() {
         def (GradleDependencyGenerator mavenrepo, File mavenForRules, File jsonRuleFile) = dependencyLockAlignInteractionSetupWithLockedResolutionRulesConfiguration()
 
@@ -97,6 +99,7 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
     }
 
     @Unroll
+    @Ignore
     def 'dependency-lock when applied after wins out over new locked alignment rules - coreAlignment #coreAlignment'() {
         def (GradleDependencyGenerator mavenrepo, File mavenForRules, File jsonRuleFile) = dependencyLockAlignInteractionSetupWithLockedResolutionRulesConfiguration()
 

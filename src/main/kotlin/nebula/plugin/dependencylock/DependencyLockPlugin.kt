@@ -186,6 +186,12 @@ class DependencyLockPlugin : Plugin<Project> {
     }
 
     private fun maybeApplyLock(conf: Configuration, extension: DependencyLockExtension, overrides: Map<*, *>, globalLockFileName: String?, lockFilename: String?) {
+        val shouldIgnoreLock = (extension.skippedConfigurationNamesPrefixes + DependencyLockTaskConfigurer.configurationsToSkipForGlobalLockPrefixes).any {
+            prefix -> conf.name.startsWith(prefix)
+        }
+        if(shouldIgnoreLock) {
+            return
+        }
         val globalLock = File(project.rootProject.projectDir, globalLockFileName ?: extension.globalLockFile)
         val dependenciesLock = if (globalLock.exists()) {
             globalLock
