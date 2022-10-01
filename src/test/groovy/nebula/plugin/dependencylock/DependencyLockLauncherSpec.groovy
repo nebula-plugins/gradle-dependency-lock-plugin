@@ -1723,6 +1723,62 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         plugin << ['id \'checkstyle\'', 'id \'jacoco\''] // removed 'id \'net.saliman.cobertura\' version \'2.5.0\'', because it isn't gradle 5.1 compatible yet
     }
 
+    def 'global lock with skippedConfigurationNamesPrefixes'() {
+        addSubproject('one')
+        addSubproject('two')
+
+        buildFile << """\
+            allprojects {
+                apply plugin: 'nebula.dependency-lock'
+                dependencyLock {
+                    skippedConfigurationNamesPrefixes = ['spotless']
+                }
+                
+            }
+            
+            subprojects {
+                apply plugin: 'java'
+                repositories { mavenCentral() }
+                configurations {
+                    spotless123
+                }
+                dependencies {
+                    compileOnly 'com.google.guava:guava:19.0'
+                    spotless123 'com.google.guava:guava:31.1-jre'
+                }
+            }
+            """.stripIndent()
+
+        when:
+        def result = runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock')
+
+        then: "Guava is locked to 19.0"
+        new File(projectDir, 'global.lock').text == """{
+    "_global_": {
+        "com.google.guava:guava": {
+            "firstLevelTransitive": [
+                "global-lock-with-skippedConfigurationNamesPrefixes:one",
+                "global-lock-with-skippedConfigurationNamesPrefixes:two"
+            ],
+            "locked": "19.0"
+        },
+        "global-lock-with-skippedConfigurationNamesPrefixes:one": {
+            "project": true
+        },
+        "global-lock-with-skippedConfigurationNamesPrefixes:two": {
+            "project": true
+        }
+    }
+}"""
+
+        when:
+        def resultDependencies = runTasksSuccessfully(':one:dependencies')
+
+        then:
+        resultDependencies.standardOutput.contains("com.google.guava:guava:31.1-jre")
+        !resultDependencies.standardOutput.contains("com.google.guava:guava:31.1-jre -> 19.0")
+    }
+
     @IgnoreIf({ jvm.isJava17Compatible() }) // Because we use old version of Gradle and Kotlin
     @Issue("https://youtrack.jetbrains.com/issue/KT-48245")
     def 'compileOnly configuration is not resolvable for locking'() {
