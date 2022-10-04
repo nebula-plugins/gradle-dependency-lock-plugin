@@ -187,7 +187,7 @@ class DependencyLockPlugin : Plugin<Project> {
 
     private fun maybeApplyLock(conf: Configuration, extension: DependencyLockExtension, overrides: Map<*, *>, globalLockFileName: String?, lockFilename: String?) {
         val shouldIgnoreLock = (extension.skippedConfigurationNamesPrefixes + DependencyLockTaskConfigurer.configurationsToSkipForGlobalLockPrefixes).any {
-            prefix -> conf.name.startsWith(prefix)
+            prefix -> conf.name.startsWith(prefix) && !conf.name.contains("resolutionRules")
         }
         if(shouldIgnoreLock) {
             return
