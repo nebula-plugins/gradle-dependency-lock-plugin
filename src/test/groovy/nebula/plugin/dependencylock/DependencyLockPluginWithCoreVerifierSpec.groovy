@@ -441,7 +441,7 @@ empty=annotationProcessor,testAnnotationProcessor
         if (usesOwnBuildFile) {
             def subProjectBuildFileContent = """
                 plugins {
-                    id 'nebula.dependency-lock'
+                    id 'com.netflix.nebula.dependency-lock'
                     id 'java'
                 }
                 repositories {
@@ -460,7 +460,7 @@ empty=annotationProcessor,testAnnotationProcessor
 
             buildFile << """
                 subprojects {
-                    apply plugin: 'nebula.dependency-lock'
+                    apply plugin: 'com.netflix.nebula.dependency-lock'
                     apply plugin: 'java'
                     repositories {
                         ${mavenrepo.mavenRepositoryBlock}
@@ -554,7 +554,7 @@ empty=annotationProcessor,testAnnotationProcessor
                     }
                 }
                 plugins {
-                    id 'nebula.dependency-lock'
+                    id 'com.netflix.nebula.dependency-lock'
                 }
                 apply plugin: 'nebula.kotlin'
                 repositories {
@@ -611,7 +611,7 @@ empty=annotationProcessor,testAnnotationProcessor
                     }
                 }
                 plugins {
-                    id 'nebula.dependency-lock'
+                    id 'com.netflix.nebula.dependency-lock'
                 }
                 apply plugin: 'nebula.clojure'
                 repositories {
@@ -648,7 +648,7 @@ empty=annotationProcessor,testAnnotationProcessor
         if (languagePlugin == 'groovy') {
             buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'groovy'
             }
             
@@ -656,7 +656,7 @@ empty=annotationProcessor,testAnnotationProcessor
         } else if (languagePlugin == 'java-library') {
             buildFile << """\
                 plugins {
-                    id 'nebula.dependency-lock'
+                    id 'com.netflix.nebula.dependency-lock'
                     id 'java-library'
                 }
                 """.stripIndent()

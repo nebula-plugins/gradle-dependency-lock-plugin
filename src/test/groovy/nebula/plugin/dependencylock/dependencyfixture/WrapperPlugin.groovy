@@ -27,7 +27,7 @@ class WrapperPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         project.with {
-            plugins.apply('nebula.dependency-lock')
+            plugins.apply('com.netflix.nebula.dependency-lock')
 
             plugins.withType(DependencyLockPlugin) {
                 def extension = extensions.getByType(DependencyLockExtension)

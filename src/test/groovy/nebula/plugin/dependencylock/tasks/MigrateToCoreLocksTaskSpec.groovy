@@ -72,7 +72,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
 
         buildFile.text = """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             
@@ -276,7 +276,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
 
         addSubproject('sub1', """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             repositories {
@@ -289,7 +289,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
 
         addSubproject('sub2', """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             repositories {
@@ -352,7 +352,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
 
         addSubproject('sub1', """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             repositories {
@@ -365,7 +365,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
 
         addSubproject('sub2', """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             repositories {
@@ -441,7 +441,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
 
         addSubproject('sub1', """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             repositories {
@@ -454,7 +454,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
 
         addSubproject('sub2', """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             repositories {
@@ -570,7 +570,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
               }
             }
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             apply plugin: '$plugin'
@@ -661,7 +661,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
               }
             }
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             apply plugin: '$plugin'
@@ -725,7 +725,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
 
         buildFile.text = """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
                 id 'jacoco'
             }
@@ -772,7 +772,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
 
         buildFile.text = """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
                 id 'jacoco'
             }
@@ -821,7 +821,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         given:
         buildFile.text = """
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             repositories {
@@ -830,7 +830,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
             """.stripIndent()
         addSubproject('sub1', """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             repositories {
@@ -842,7 +842,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
             """.stripIndent())
         addSubproject('sub2', """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             repositories {
@@ -926,7 +926,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
     }
 
     private static void assertFailureOccursAtPluginLevel(String text) {
-        assert text.contains("Failed to apply plugin [id 'nebula.dependency-lock']") ||
-                text.contains("Failed to apply plugin 'nebula.dependency-lock'")
+        assert text.contains("Failed to apply plugin [id 'com.netflix.nebula.dependency-lock']") ||
+                text.contains("Failed to apply plugin 'com.netflix.nebula.dependency-lock'")
     }
 }

@@ -23,7 +23,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.testfixtures.ProjectBuilder
 
 class DependencyLockPluginSpec extends ProjectSpec {
-    String pluginName = 'nebula.dependency-lock'
+    String pluginName = 'com.netflix.nebula.dependency-lock'
 
     def setupSpec() {
         Fixture.createFixtureIfNotCreated()
@@ -439,7 +439,7 @@ class DependencyLockPluginSpec extends ProjectSpec {
         '''.stripIndent()
 
         project.allprojects {
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
         }
 
         when:

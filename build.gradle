@@ -18,7 +18,7 @@ import org.gradle.util.GradleVersion
 plugins {
     id 'nebula.plugin-plugin' version '17.1.0'
     id 'nebula.optional-base' version '3.1.0'
-    id "org.jetbrains.kotlin.jvm" version "1.5.30"
+    id "org.jetbrains.kotlin.jvm" version "1.7.20"
     id 'java-gradle-plugin'
     id "org.gradle.test-retry" version "1.3.1"
 }
@@ -36,7 +36,7 @@ contacts {
 }
 
 dependencies {
-    implementation 'com.squareup.moshi:moshi:1.+'
+    implementation 'com.squareup.moshi:moshi:1.12.+'
     implementation 'joda-time:joda-time:2.10'
     implementation 'com.netflix.nebula:nebula-gradle-interop:latest.release'
     implementation 'com.netflix.nebula:gradle-scm-plugin:latest.release'
@@ -55,12 +55,18 @@ dependencies {
     }
     testImplementation "com.github.tomakehurst:wiremock:2.17.0"
     testImplementation 'com.github.stefanbirkner:system-rules:1.19.0'
+    testImplementation 'org.eclipse.jgit:org.eclipse.jgit:5.13.0.202109080827-r'
 }
 
+configurations.all {
+    resolutionStrategy {
+        force 'org.eclipse.jgit:org.eclipse.jgit:5.13.0.202109080827-r'
+    }
+}
 gradlePlugin {
     plugins {
         dependencyLock {
-            id = 'nebula.dependency-lock'
+            id = 'com.netflix.nebula.dependency-lock'
             displayName = 'Nebula Dependency Lock plugin'
             implementationClass = 'nebula.plugin.dependencylock.DependencyLockPlugin'
             description = 'Plugin to lock dynamic dependencies'
@@ -134,4 +140,8 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 
 tasks.withType(GenerateModuleMetadata).configureEach {
     suppressedValidationErrors.add('enforced-platform')
+}
+
+javaCrossCompile {
+    disableKotlinSupport = true
 }

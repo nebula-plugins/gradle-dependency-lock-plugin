@@ -46,7 +46,7 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
 
     def 'commitLock no-ops when no scm implementation is applied'() {
         buildFile << DependencyLockLauncherSpec.BUILD_GRADLE
-        buildFile << 'apply plugin: \'nebula.gradle-scm\''
+        buildFile << 'apply plugin: \'com.netflix.nebula.gradle-scm\''
 
         when:
         def result = runTasks('generateLock', 'saveLock', 'commitLock')
@@ -61,7 +61,7 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         def git = commonGitSetup(gitDir)
 
         buildFile << DependencyLockLauncherSpec.BUILD_GRADLE
-        buildFile << 'apply plugin: \'nebula.gradle-git-scm\''
+        buildFile << 'apply plugin: \'com.netflix.nebula.gradle-git-scm\''
 
         finishGitSetup(['build.gradle', 'settings.gradle'])
 
@@ -85,8 +85,8 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         buildFile << """\
             subprojects {
                 apply plugin: 'java'
-                apply plugin: 'nebula.dependency-lock'
-                apply plugin: 'nebula.gradle-scm'
+                apply plugin: 'com.netflix.nebula.dependency-lock'
+                apply plugin: 'com.netflix.nebula.gradle-scm'
                 repositories { maven { url '${Fixture.repo}' } }
             }
         """.stripIndent()
@@ -127,8 +127,8 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         buildFile << """\
             subprojects {
                 apply plugin: 'java'
-                apply plugin: 'nebula.dependency-lock'
-                apply plugin: 'nebula.gradle-git-scm'
+                apply plugin: 'com.netflix.nebula.dependency-lock'
+                apply plugin: 'com.netflix.nebula.gradle-git-scm'
                 repositories { maven { url '${Fixture.repo}' } }
             }
         """.stripIndent()
@@ -171,11 +171,11 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         sub2.mkdirs()
 
         buildFile << """\
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             subprojects {
                 apply plugin: 'java'
-                apply plugin: 'nebula.dependency-lock'
-                apply plugin: 'nebula.gradle-git-scm'
+                apply plugin: 'com.netflix.nebula.dependency-lock'
+                apply plugin: 'com.netflix.nebula.gradle-git-scm'
                 repositories { maven { url '${Fixture.repo}' } }
             }
         """.stripIndent()

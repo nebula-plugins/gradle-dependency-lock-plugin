@@ -44,7 +44,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
     static final String SPECIFIC_BUILD_GRADLE = """\
         apply plugin: 'java'
-        apply plugin: 'nebula.dependency-lock'
+        apply plugin: 'com.netflix.nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.0.1'
@@ -54,7 +54,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
     static final String BUILD_GRADLE = """\
         apply plugin: 'java'
-        apply plugin: 'nebula.dependency-lock'
+        apply plugin: 'com.netflix.nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.+'
@@ -63,7 +63,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
     static final String NEW_BUILD_GRADLE = """\
         apply plugin: 'java'
-        apply plugin: 'nebula.dependency-lock'
+        apply plugin: 'com.netflix.nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:2.+'
@@ -158,14 +158,14 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         fooResult.standardOutput.contains 'locked to 1.0.0'
-        fooResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+        fooResult.standardOutput.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
 
         when:
         def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'baz')
 
         then:
         !bazResult.standardOutput.contains('locked')
-        !bazResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
+        !bazResult.standardOutput.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
         bazResult.standardOutput.contains('baz:1.0.0')
     }
 
@@ -185,16 +185,16 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         fooResult.standardOutput.contains 'locked to 2.0.0'
-        fooResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
-        fooResult.standardOutput.contains('nebula.dependency-lock using override file: override.lock')
+        fooResult.standardOutput.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
+        fooResult.standardOutput.contains('com.netflix.nebula.dependency-lock using override file: override.lock')
 
         when:
         def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'baz', '-PdependencyLock.overrideFile=override.lock')
 
         then:
         !bazResult.standardOutput.contains('locked')
-        !bazResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
-        !bazResult.standardOutput.contains('nebula.dependency-lock using override file: override.lock')
+        !bazResult.standardOutput.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
+        !bazResult.standardOutput.contains('com.netflix.nebula.dependency-lock using override file: override.lock')
         bazResult.standardOutput.contains('baz:1.0.0')
     }
 
@@ -209,16 +209,16 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         then:
         fooResult.standardOutput.contains 'locked to 2.0.1'
-        fooResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
-        fooResult.standardOutput.contains('nebula.dependency-lock using override: test.example:foo:2.0.1')
+        fooResult.standardOutput.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
+        fooResult.standardOutput.contains('com.netflix.nebula.dependency-lock using override: test.example:foo:2.0.1')
 
         when:
         def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'baz', '-PdependencyLock.override=test.example:foo:2.0.1')
 
         then:
         !bazResult.standardOutput.contains('locked')
-        !bazResult.standardOutput.contains('nebula.dependency-lock locked with: dependencies.lock')
-        !bazResult.standardOutput.contains('nebula.dependency-lock using override: test.example:foo:2.0.1')
+        !bazResult.standardOutput.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
+        !bazResult.standardOutput.contains('com.netflix.nebula.dependency-lock using override: test.example:foo:2.0.1')
         bazResult.standardOutput.contains('baz:1.0.0')
     }
 
@@ -388,7 +388,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
     def 'create lock with skipped dependencies'() {
         buildFile << """\
             apply plugin: 'java'
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             repositories { maven { url '${Fixture.repo}' } }
             dependencyLock {
                 skippedDependencies = [ 'test.example:foo' ]
@@ -614,7 +614,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         buildFile << """\
             subprojects {
                 apply plugin: 'java'
-                apply plugin: 'nebula.dependency-lock'
+                apply plugin: 'com.netflix.nebula.dependency-lock'
                 repositories { maven { url '${Fixture.repo}' } }
             }
         """.stripIndent()
@@ -1153,7 +1153,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
     def 'only the update dependency and its transitives are updated'() {
         buildFile << """\
             apply plugin: 'java'
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             repositories { maven { url '${Fixture.repo}' } }
             dependencyLock {
                 includeTransitives = true
@@ -1210,7 +1210,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
     def 'only the update dependency, its transitives and dependencies without requested versions are updated'() {
         buildFile << """\
             apply plugin: 'java'
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             repositories { maven { url '${Fixture.repo}' } }
             dependencyLock {
                 includeTransitives = true
@@ -1435,7 +1435,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         dependenciesLock << FOO_LOCK
         buildFile << """
         apply plugin: 'java'
-        apply plugin: 'nebula.dependency-lock'
+        apply plugin: 'com.netflix.nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.+'
@@ -1469,7 +1469,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         dependenciesLock << FOO_LOCK
         buildFile << """
         apply plugin: 'java'
-        apply plugin: 'nebula.dependency-lock'
+        apply plugin: 'com.netflix.nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.+'
@@ -1491,7 +1491,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         dependenciesLock << FOO_LOCK
         buildFile << """
         apply plugin: 'java'
-        apply plugin: 'nebula.dependency-lock'
+        apply plugin: 'com.netflix.nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.+'
@@ -1519,8 +1519,8 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 }
             }
 
-            apply plugin: 'nebula.dependency-lock'
-            apply plugin: 'nebula.resolution-rules'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.resolution-rules'
             apply plugin: 'java'
 
             repositories {
@@ -1559,7 +1559,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             }
 
             apply plugin: 'java'
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             apply plugin: 'spring-boot'
 
             repositories {
@@ -1605,7 +1605,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                 }
             }
 
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             apply plugin: 'com.android.application'
 
             repositories {
@@ -1705,7 +1705,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         buildFile << """\
             allprojects {
-                apply plugin: 'nebula.dependency-lock'
+                apply plugin: 'com.netflix.nebula.dependency-lock'
             }
             
             subprojects {
@@ -1729,7 +1729,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         buildFile << """\
             allprojects {
-                apply plugin: 'nebula.dependency-lock'
+                apply plugin: 'com.netflix.nebula.dependency-lock'
                 dependencyLock {
                     skippedConfigurationNamesPrefixes = ['spotless']
                 }
@@ -1836,7 +1836,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             }
             group = 'example.nebula'
             version = '1.1.0'
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             
             repositories {
                 ${generator.mavenRepositoryBlock}
@@ -1882,7 +1882,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             }
             group = 'example.nebula'
             version = '1.1.0'
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             
             repositories {
                 ${generator.mavenRepositoryBlock}
@@ -2029,7 +2029,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             plugins {
                 id 'java'
             }
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             
             repositories {
                 ${generator.mavenRepositoryBlock}
@@ -2064,7 +2064,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
             plugins {
                 id 'java'
             }
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             
             repositories {
                 ${generator.mavenRepositoryBlock}
@@ -2168,7 +2168,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         buildFile << """\
             apply plugin: 'java'
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             repositories { maven { url '${repo.absolutePath}' } }
             dependencies {
                 implementation($platformType('sample:recommender:1.1'))
@@ -2194,7 +2194,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
 
         buildFile << """\
             apply plugin: 'java'
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             repositories { maven { url '${Fixture.repo}' } }
             repositories { flatDir { dirs 'libs' } }
             dependencies {

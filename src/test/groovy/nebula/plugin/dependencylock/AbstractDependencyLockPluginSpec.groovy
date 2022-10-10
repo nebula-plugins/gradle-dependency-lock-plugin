@@ -52,7 +52,7 @@ class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
 
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             repositories {
@@ -71,7 +71,7 @@ class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
         buildFile << """
             plugins {
                 id 'scala'
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
             }
             repositories {
                 mavenCentral()

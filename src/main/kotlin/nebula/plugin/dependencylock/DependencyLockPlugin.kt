@@ -200,7 +200,7 @@ class DependencyLockPlugin : Plugin<Project> {
         }
 
         lockUsed = dependenciesLock.name
-        reasons.add("nebula.dependency-lock locked with: $lockUsed")
+        reasons.add("com.netflix.nebula.dependency-lock locked with: $lockUsed")
 
         if (!DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
             val taskNames = project.gradle.startParameter.taskNames
@@ -297,11 +297,11 @@ class DependencyLockPlugin : Plugin<Project> {
     private fun applyOverrides(conf: Configuration, overrides: Map<*, *>) {
         if (project.hasProperty(OVERRIDE_FILE)) {
             LOGGER.info("Using override file ${project.property(OVERRIDE_FILE)} to lock dependencies")
-            reasons.add("nebula.dependency-lock using override file: ${project.property(OVERRIDE_FILE)}")
+            reasons.add("com.netflix.nebula.dependency-lock using override file: ${project.property(OVERRIDE_FILE)}")
         }
         if (project.hasProperty(OVERRIDE)) {
             LOGGER.info("Using command line overrides ${project.property(OVERRIDE)}")
-            reasons.add("nebula.dependency-lock using override: ${project.property(OVERRIDE)}")
+            reasons.add("com.netflix.nebula.dependency-lock using override: ${project.property(OVERRIDE)}")
         }
 
         val overrideDeps = overrides.map {

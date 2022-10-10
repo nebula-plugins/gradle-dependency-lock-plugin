@@ -54,7 +54,7 @@ class GlobalLockLauncherSpec extends IntegrationTestKitSpec {
 
         buildFile << """\
             allprojects {
-                apply plugin: 'nebula.dependency-lock'
+                apply plugin: 'com.netflix.nebula.dependency-lock'
                 dependencyLock {
                     includeTransitives = true
                 }

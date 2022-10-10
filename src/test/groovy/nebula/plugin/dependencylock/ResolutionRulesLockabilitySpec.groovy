@@ -43,10 +43,10 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
                 }
             }
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
-            apply plugin: 'nebula.resolution-rules'
+            apply plugin: 'com.netflix.nebula.resolution-rules'
             allprojects {
                 repositories {
                     mavenCentral()
@@ -60,8 +60,8 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
 
         addSubproject('sub1', """
             plugins {
-                id 'nebula.dependency-lock'
-                id 'nebula.resolution-rules'
+                id 'com.netflix.nebula.dependency-lock'
+                id 'com.netflix.nebula.resolution-rules'
                 id 'java'
             }
             dependencies {
@@ -71,8 +71,8 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
 
         addSubproject('sub2', """
             plugins {
-                id 'nebula.dependency-lock'
-                id 'nebula.resolution-rules'
+                id 'com.netflix.nebula.dependency-lock'
+                id 'com.netflix.nebula.resolution-rules'
                 id 'java'
             }
             dependencies {
@@ -83,8 +83,8 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
 
         addSubproject('sub3', """
             plugins {
-                id 'nebula.dependency-lock'
-                id 'nebula.resolution-rules'
+                id 'com.netflix.nebula.dependency-lock'
+                id 'com.netflix.nebula.resolution-rules'
                 id 'java'
             }
             dependencies {

@@ -46,8 +46,8 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
                 }
             }
 
-            apply plugin: 'nebula.dependency-lock'
-            apply plugin: 'nebula.resolution-rules'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.resolution-rules'
             apply plugin: 'java'
 
             repositories {
@@ -111,8 +111,8 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
                 }
             }
 
-            apply plugin: 'nebula.resolution-rules'
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.resolution-rules'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             apply plugin: 'java'
 
             repositories {
@@ -179,8 +179,8 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
                     classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
                 }
             }
-            apply plugin: 'nebula.resolution-rules'
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.resolution-rules'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             apply plugin: 'java'
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
@@ -237,8 +237,8 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
                     classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
                 }
             }
-            apply plugin: 'nebula.dependency-lock'
-            apply plugin: 'nebula.resolution-rules'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.resolution-rules'
             apply plugin: 'java'
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
@@ -289,7 +289,7 @@ class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
         // note: this is a more unusual case. Typically resolution rules are distributed like a library, version controlled, and locked like other dependencies
         def (GradleDependencyGenerator mavenrepo, File rulesJsonFile) = dependencyLockAlignInteractionSetupWithUnlockedResolutionRulesConfiguration()
         buildFile << """\
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             apply plugin: 'java'
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}

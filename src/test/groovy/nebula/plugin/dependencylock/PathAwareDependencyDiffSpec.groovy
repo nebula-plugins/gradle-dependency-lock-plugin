@@ -142,7 +142,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 '''.stripIndent())
             buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
             }
         
             apply plugin: 'java'
@@ -257,8 +257,8 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 '''.stripIndent())
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
-                id 'nebula.dependency-recommender' version '10.0.0'
+                id 'com.netflix.nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-recommender' version '12.0.0'
             }
         
             apply plugin: 'java'
@@ -335,7 +335,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 '''.stripIndent())
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id "nebula.resolution-rules" version "9.0.0"
             }
         
@@ -443,7 +443,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 '''.stripIndent())
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id "nebula.resolution-rules" version "9.0.0"
             }
         
@@ -556,7 +556,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 '''.stripIndent())
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id "nebula.resolution-rules" version "9.0.0"
             }
         
@@ -630,7 +630,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 '''.stripIndent())
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id "nebula.resolution-rules" version "9.0.0"
             }
         
@@ -702,7 +702,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 '''.stripIndent())
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id "nebula.resolution-rules" version "9.0.0"
             }
         
@@ -779,7 +779,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 '''.stripIndent())
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id "nebula.resolution-rules" version "9.0.0"
             }
         
@@ -812,12 +812,12 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.pathAwareDependencyDiff=true"
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
             }
         
             allprojects {
                 apply plugin: 'java-library'
-                apply plugin: 'nebula.dependency-lock'
+                apply plugin: 'com.netflix.nebula.dependency-lock'
                 repositories { maven { url '${repoDir.absolutePath}' } }
 
                 group = 'test'
@@ -943,12 +943,12 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.pathAwareDependencyDiff=true"
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
             }
         
             allprojects {
                 apply plugin: 'java-library'
-                apply plugin: 'nebula.dependency-lock'
+                apply plugin: 'com.netflix.nebula.dependency-lock'
                 repositories { maven { url '${repoDir.absolutePath}' } }
 
                 group = 'test'
@@ -987,7 +987,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
             }
         
             apply plugin: 'java'
@@ -1034,7 +1034,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 '''.stripIndent())
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id "nebula.resolution-rules" version "9.0.0"
             }
         
@@ -1100,7 +1100,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 '''.stripIndent())
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
             }
         
             apply plugin: 'java'
@@ -1150,7 +1150,7 @@ class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
                 '''.stripIndent(), LockGenerator.DEFAULT_CONFIG_NAMES_POPULATED_BY_IMPLEMENTATION_SCOPE + ["notUsedConfigurationAnymore", "compileOnly"])
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
             }
         
             apply plugin: 'java'

@@ -540,7 +540,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
                 $configurationName 'not.available:a'
             }
             import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
-            plugins.withId('nebula.dependency-lock') {
+            plugins.withId('com.netflix.nebula.dependency-lock') {
                 def extension = extensions.getByType(DependencyResolutionVerifierExtension.class)
                 def list = new ArrayList<>()
                 $extensionSetting
@@ -861,7 +861,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
         def extensionMessage = 'You may see this after changing from Nebula alignment to core Gradle alignment for the first time in this repository'
         buildFile << """
             import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
-            plugins.withId('nebula.dependency-lock') {
+            plugins.withId('com.netflix.nebula.dependency-lock') {
                 def extension = extensions.getByType(DependencyResolutionVerifierExtension.class)
                 extension.resolvedVersionDoesNotEqualLockedVersionMessageAddition = '$extensionMessage'
             }
@@ -1076,8 +1076,8 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
                     classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
                 }
             }
-            apply plugin: 'nebula.resolution-rules'
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.resolution-rules'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             apply plugin: 'java'
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
@@ -1249,7 +1249,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     private void setupSingleProject() {
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java-library'
             }
             repositories {
@@ -1276,7 +1276,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
 
         def subProjectBuildFileContent = """
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             repositories {
@@ -1340,8 +1340,8 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
                     classpath 'com.netflix.nebula:gradle-resolution-rules-plugin:latest.release'
                 }
             }
-            apply plugin: 'nebula.resolution-rules'
-            apply plugin: 'nebula.dependency-lock'
+            apply plugin: 'com.netflix.nebula.resolution-rules'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             apply plugin: 'java'
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
@@ -1380,8 +1380,8 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
                 task dependenciesForAll(type: DependencyReportTask) {}
             }
             allprojects {
-                apply plugin: 'nebula.resolution-rules'
-                apply plugin: 'nebula.dependency-lock'
+                apply plugin: 'com.netflix.nebula.resolution-rules'
+                apply plugin: 'com.netflix.nebula.dependency-lock'
                 apply plugin: 'java'
                 repositories {
                     ${mavenrepo.mavenRepositoryBlock}

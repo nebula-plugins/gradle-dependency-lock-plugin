@@ -83,7 +83,7 @@ class AbstractCachingAndDependencyLockingFeatureFlagsSpec extends IntegrationTes
 
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
             repositories {

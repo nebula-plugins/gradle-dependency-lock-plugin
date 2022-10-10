@@ -15,7 +15,7 @@ class DependencyLockConfigurationAvoidanceSpec extends IntegrationTestKitSpec {
         given:
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
             }
         """.stripIndent()
@@ -38,9 +38,9 @@ class DependencyLockConfigurationAvoidanceSpec extends IntegrationTestKitSpec {
         given:
         buildFile << """\
             plugins {
-                id 'nebula.dependency-lock'
+                id 'com.netflix.nebula.dependency-lock'
                 id 'java'
-                id 'nebula.gradle-scm'
+                id 'com.netflix.nebula.gradle-scm'
             }
         """.stripIndent()
 
