@@ -20,7 +20,6 @@ package nebula.plugin.dependencylock.utils
 
 import nebula.plugin.dependencylock.ConfigurationsToLockFinder
 import nebula.plugin.dependencylock.DependencyLockExtension
-import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Plugin
@@ -36,6 +35,7 @@ class CoreLockingHelper {
     private Project project
     private Boolean shouldLockAllConfigurations
     private synchronized Set<Configuration> configsWithActivatedDependencyLocking
+    private synchronized Set<Configuration> configsNotGettingLocked
 
     boolean hasWriteLocksFlag = project.gradle.startParameter.isWriteDependencyLocks()
     boolean projectIsOffline = project.gradle.startParameter.isOffline()
@@ -46,6 +46,7 @@ class CoreLockingHelper {
         this.project = project
         shouldLockAllConfigurations = project.hasProperty("lockAllConfigurations") && (project.property("lockAllConfigurations") as String).toBoolean()
         configsWithActivatedDependencyLocking = new HashSet<Configuration>()
+        configsNotGettingLocked = new HashSet<Configuration>()
     }
 
     void lockSelectedConfigurations(Set<String> configurationNames) {
@@ -58,10 +59,15 @@ class CoreLockingHelper {
                 if (!it instanceof Configuration) {
                     throw new BuildCancelledException("There is an issue with the configuration to lock '${it.toString()}'")
                 }
-                if (!configsWithActivatedDependencyLocking.contains(it)) {
-                    it.resolutionStrategy.activateDependencyLocking()
-                    LOGGER.debug("Activated ${it} for dependency locking")
-                    configsWithActivatedDependencyLocking.add(it as Configuration)
+                if (!configsWithActivatedDependencyLocking.contains(it) && !configsNotGettingLocked.contains(it)) {
+                    if ((it as Configuration).state.toString() != "UNRESOLVED") {
+                        LOGGER.info("Will not migrate ${it} as this configuration is not UNRESOLVED")
+                        configsNotGettingLocked.add(it as Configuration)
+                    } else {
+                        it.resolutionStrategy.activateDependencyLocking()
+                        LOGGER.debug("Activated ${it} for dependency locking")
+                        configsWithActivatedDependencyLocking.add(it as Configuration)
+                    }
                 }
             }
             runClosureWhenPluginsAreSeen(configurationNames, closureToLockConfigurations)

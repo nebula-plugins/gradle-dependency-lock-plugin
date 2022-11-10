@@ -274,6 +274,47 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
         sub3LockFile.get('empty') == 'annotationProcessor,testAnnotationProcessor'
     }
 
+    def 'Migrating to Gradle core locking works'() {
+        when:
+        def nebulaPluginResult = runTasks('generateLock', 'saveLock')
+
+        then:
+        nebulaPluginResult.task(":generateLock").outcome == TaskOutcome.SUCCESS
+        nebulaPluginResult.task(":saveLock").outcome == TaskOutcome.SUCCESS
+
+        when:
+        new File("${projectDir}/gradle.properties").text = """
+            systemProp.nebula.features.coreLockingSupport=true
+            dependencyLock.additionalConfigurationsToLock=resolutionRules
+            """.stripIndent()
+
+        def result = runTasks('migrateToCoreLocks')
+
+        then:
+        result.task(":migrateToCoreLocks").outcome == TaskOutcome.SUCCESS
+
+        def rootLockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        def sub1LockFile = coreLockContent(new File(projectDir, 'sub1/gradle.lockfile'))
+        def sub2LockFile = coreLockContent(new File(projectDir, 'sub2/gradle.lockfile'))
+        def sub3LockFile = coreLockContent(new File(projectDir, 'sub3/gradle.lockfile'))
+
+        rootLockFile.get('test.rules:resolution-rules:1.0.0') == 'resolutionRules'
+        rootLockFile.get('empty') == 'annotationProcessor,compileClasspath,runtimeClasspath,testAnnotationProcessor,testCompileClasspath,testRuntimeClasspath'
+
+        sub1LockFile.get('org.apache.commons:commons-lang3:3.12.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+        sub1LockFile.get('test.rules:resolution-rules:1.0.0') == 'resolutionRules'
+        sub1LockFile.get('empty') == 'annotationProcessor,testAnnotationProcessor'
+
+        sub2LockFile.get('commons-io:commons-io:2.11.0') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+        sub2LockFile.get('org.apache.commons:commons-lang3:3.12.0') == 'runtimeClasspath,testRuntimeClasspath'
+        sub2LockFile.get('test.rules:resolution-rules:1.0.0') == 'resolutionRules'
+        sub2LockFile.get('empty') == 'annotationProcessor,testAnnotationProcessor'
+
+        sub3LockFile.get('commons-logging:commons-logging:1.2') == 'compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath'
+        sub3LockFile.get('test.rules:resolution-rules:1.0.0') == 'resolutionRules'
+        sub3LockFile.get('empty') == 'annotationProcessor,testAnnotationProcessor'
+    }
+
     private void setupRules() {
         def rulesFolder = new File(projectDir, 'rules')
         rulesFolder.mkdirs()
