@@ -19,11 +19,13 @@ import nebula.plugin.dependencylock.DependencyLockExtension
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 
 /**
  * The update task is a generate task, it simply reads in the old locked dependencies and then overwrites the desired
  * dependencies per user request.
  */
+@DisableCachingByDefault
 class UpdateLockTask extends GenerateLockTask {
     String description = 'Apply updates to a preexisting lock file and write to build/<specified name>'
 

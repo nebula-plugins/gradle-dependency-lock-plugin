@@ -23,7 +23,9 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.TaskExecutionException
+import org.gradle.work.DisableCachingByDefault
 
+@DisableCachingByDefault
 class CommitLockTask extends AbstractLockTask {
     @Internal
     String description = 'Commit the lock files if an gradle-scm-plugin implementation is applied'

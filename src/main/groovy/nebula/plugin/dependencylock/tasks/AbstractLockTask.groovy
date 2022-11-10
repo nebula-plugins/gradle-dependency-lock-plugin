@@ -17,7 +17,9 @@ package nebula.plugin.dependencylock.tasks
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Internal
+import org.gradle.work.DisableCachingByDefault
 
+@DisableCachingByDefault
 abstract class AbstractLockTask extends DefaultTask {
     @Internal
     String group = 'Locking'
