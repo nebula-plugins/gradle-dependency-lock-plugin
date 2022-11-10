@@ -10,16 +10,21 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 
 import java.nio.charset.StandardCharsets
 
+@DisableCachingByDefault
 class DiffLockTask extends AbstractLockTask {
     @Internal
     String description = 'Diff existing lock and generated lock file'
 
     @InputFile
     @Optional
+    @PathSensitive(PathSensitivity.NONE)
     File existingLockFile
 
     @Internal

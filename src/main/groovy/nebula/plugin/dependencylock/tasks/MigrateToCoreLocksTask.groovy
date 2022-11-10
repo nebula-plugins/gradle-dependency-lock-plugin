@@ -26,7 +26,9 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolveException
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 
+@DisableCachingByDefault
 class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
     @Internal
     String description = 'Migrates all dependencies to use core Gradle locks'

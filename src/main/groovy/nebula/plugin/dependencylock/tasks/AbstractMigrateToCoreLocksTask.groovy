@@ -21,7 +21,9 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
+import org.gradle.work.DisableCachingByDefault
 
+@DisableCachingByDefault
 abstract class AbstractMigrateToCoreLocksTask extends DefaultTask {
     @Internal
     String group = 'Locking'

@@ -33,7 +33,9 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 
+@DisableCachingByDefault
 class GenerateLockTask extends AbstractLockTask {
     private String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
     private String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"

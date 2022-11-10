@@ -26,7 +26,9 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 
+@DisableCachingByDefault
 class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
 
     @Internal
