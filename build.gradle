@@ -16,7 +16,7 @@
 import org.gradle.util.GradleVersion
 
 plugins {
-    id 'com.netflix.nebula.plugin-plugin' version '19.0.2'
+    id 'com.netflix.nebula.plugin-plugin' version '20.0.0'
     id 'com.netflix.nebula.optional-base' version '8.0.0'
     id "org.jetbrains.kotlin.jvm" version "1.7.20"
     id 'java-gradle-plugin'
@@ -70,15 +70,10 @@ gradlePlugin {
             displayName = 'Nebula Dependency Lock plugin'
             implementationClass = 'nebula.plugin.dependencylock.DependencyLockPlugin'
             description = 'Plugin to lock dynamic dependencies'
+            tags.set(['nebula', 'dependencies', 'lock'])
+
         }
     }
-}
-
-pluginBundle {
-    website = 'https://github.com/nebula-plugins/gradle-dependency-lock-plugin'
-    vcsUrl = 'https://github.com/nebula-plugins/gradle-dependency-lock-plugin.git'
-    description = 'Plugin to lock dynamic dependencies'
-    tags = ['nebula', 'dependencies', 'lock']
 }
 
 // Kotlin compiles first, stubbing Java dependencies, however it can't stub Groovy and we need to call Groovy code from Kotlin. For details see:
