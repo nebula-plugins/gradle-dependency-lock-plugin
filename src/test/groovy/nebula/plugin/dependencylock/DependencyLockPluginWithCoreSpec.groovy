@@ -94,7 +94,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
                 id 'java'
-                id 'com.github.johnrengelman.shadow' version '5.0.0'
+                id 'com.github.johnrengelman.shadow' version '7.1.0'
             }
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
@@ -166,7 +166,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
                 id 'java'
-                id 'com.github.johnrengelman.shadow' version '5.0.0'
+                id 'com.github.johnrengelman.shadow' version '7.1.0'
             }
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
@@ -371,7 +371,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         buildFile << """\
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id 'nebula.kotlin' version '1.3.41'
+  id "org.jetbrains.kotlin.jvm" version "1.8.0"
             }
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
@@ -436,7 +436,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         addSubproject("sub1", """
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id 'nebula.kotlin' version '1.3.41'
+                id "org.jetbrains.kotlin.jvm" version "1.8.0"
             }
             dependencies {
                 $configuration 'test.nebula:a:1.+'
@@ -560,7 +560,6 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
                 repositories { maven { url "https://plugins.gradle.org/m2/" } }
                 dependencies {
                     classpath "com.netflix.nebula:nebula-clojure-plugin:9.4.3"
-                    classpath "com.netflix.nebula:nebula-kotlin-plugin:1.3.40"
                 }
             }
             $plugins
@@ -608,14 +607,12 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         'java'           | true                | 'applied first'
         'java-library'   | true                | 'applied first'
         'nebula.clojure' | true                | 'applied first'
-        'nebula.kotlin'  | true                | 'applied first'
         'scala'          | true                | 'applied first'
 
         'groovy'         | false               | 'applied last'
         'java'           | false               | 'applied last'
         'java-library'   | false               | 'applied last'
         'nebula.clojure' | false               | 'applied last'
-        'nebula.kotlin'  | false               | 'applied last'
         'scala'          | false               | 'applied last'
     }
 

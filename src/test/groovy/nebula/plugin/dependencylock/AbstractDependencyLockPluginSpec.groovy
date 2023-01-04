@@ -21,11 +21,6 @@ class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
     def mavenrepo
     def projectName
 
-    //to avoid enableFeaturePreview('ONE_LOCKFILE_PER_PROJECT') has been deprecated
-    @Rule
-    public final ProvideSystemProperty provideSystemProperty = new ProvideSystemProperty("ignoreDeprecations", "true")
-
-
     def setup() {
         keepFiles = true
         new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.coreLockingSupport=true"
@@ -33,8 +28,6 @@ class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
         projectName = getProjectDir().getName().replaceAll(/_\d+/, '')
         settingsFile << """\
             rootProject.name = '${projectName}'
-
-            enableFeaturePreview('ONE_LOCKFILE_PER_PROJECT')
         """.stripIndent()
 
         def graph = new DependencyGraphBuilder()

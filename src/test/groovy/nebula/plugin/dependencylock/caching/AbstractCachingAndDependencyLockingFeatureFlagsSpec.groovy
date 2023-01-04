@@ -41,9 +41,6 @@ class AbstractCachingAndDependencyLockingFeatureFlagsSpec extends IntegrationTes
     File repo
     String uniqueId
 
-    //to avoid enableFeaturePreview('ONE_LOCKFILE_PER_PROJECT') has been deprecated
-    @Rule
-    public final ProvideSystemProperty provideSystemProperty = new ProvideSystemProperty("ignoreDeprecations", "true")
 
     def setupSpec() {
         if (wireMockServer != null && wireMockServer.isRunning()) {
@@ -69,8 +66,6 @@ class AbstractCachingAndDependencyLockingFeatureFlagsSpec extends IntegrationTes
         projectName = getProjectDir().getName().replaceAll(/_\d+/, '')
         settingsFile << """\
             rootProject.name = '${projectName}'
-
-            enableFeaturePreview('ONE_LOCKFILE_PER_PROJECT')
         """.stripIndent()
 
         serverUrl = wireMockServer.url('/').toString()

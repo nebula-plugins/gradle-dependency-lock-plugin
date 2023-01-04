@@ -16,11 +16,11 @@
 import org.gradle.util.GradleVersion
 
 plugins {
-    id 'com.netflix.nebula.plugin-plugin' version '20.0.0'
-    id 'com.netflix.nebula.optional-base' version '8.0.0'
+    id 'com.netflix.nebula.plugin-plugin' version '20.2.0'
+    id 'com.netflix.nebula.optional-base' version '9.0.0'
     id "org.jetbrains.kotlin.jvm" version "1.7.20"
     id 'java-gradle-plugin'
-    id "org.gradle.test-retry" version "1.4.1"
+    id "org.gradle.test-retry" version "1.5.0"
 }
 
 description 'Gradle plugin to allow locking of dynamic dependency versions'
@@ -96,6 +96,8 @@ if (GradleVersion.version(project.gradle.gradleVersion) >= (GradleVersion.versio
     compileKotlin.classpath += files(compileGroovy.destinationDir)
     classes.dependsOn compileKotlin
 }
+
+test.dependsOn jar
 
 tasks.withType(Test) {
     testLogging {
