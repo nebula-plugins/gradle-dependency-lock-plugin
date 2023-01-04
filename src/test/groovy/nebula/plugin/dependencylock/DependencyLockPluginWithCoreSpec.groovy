@@ -371,7 +371,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         buildFile << """\
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-  id "org.jetbrains.kotlin.jvm" version "1.8.0"
+                id "org.jetbrains.kotlin.jvm" version "1.8.0"
             }
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
@@ -483,7 +483,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         buildFile << """\
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id "nebula.clojure" version "9.4.3"
+                id "com.netflix.nebula.clojure" version "13.0.0"
             }
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
@@ -536,7 +536,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
                 testImplementation 'org.scalatest:scalatest_2.12:3.0.5'
                 testRuntimeOnly 'org.scala-lang.modules:scala-xml_2.12:1.1.1'
                 """.stripIndent()
-        } else if (languagePlugin == "nebula.clojure") {
+        } else if (languagePlugin == "com.netflix.nebula.clojure") {
             additionalDependencies = """
                 implementation 'org.clojure:clojure:1.8.0'
                 """.stripIndent()
@@ -559,7 +559,8 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             buildscript {
                 repositories { maven { url "https://plugins.gradle.org/m2/" } }
                 dependencies {
-                    classpath "com.netflix.nebula:nebula-clojure-plugin:9.4.3"
+                     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0"
+                     classpath "com.netflix.nebula:nebula-clojure-plugin:13.0.0"
                 }
             }
             $plugins
@@ -581,7 +582,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
         def actualLocks = lockedConfigurations(lockFile)
 
-        def projectLocks = languagePlugin == 'nebula.kotlin' ? getKotlinExpectedLocks() : expectedLocks
+        def projectLocks = expectedLocks
 
         projectLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
@@ -606,13 +607,15 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         'groovy'         | true                | 'applied first'
         'java'           | true                | 'applied first'
         'java-library'   | true                | 'applied first'
-        'nebula.clojure' | true                | 'applied first'
+        'com.netflix.nebula.clojure' | true                | 'applied first'
+        'org.jetbrains.kotlin.jvm' | true                | 'applied first'
         'scala'          | true                | 'applied first'
 
         'groovy'         | false               | 'applied last'
         'java'           | false               | 'applied last'
         'java-library'   | false               | 'applied last'
-        'nebula.clojure' | false               | 'applied last'
+        'org.jetbrains.kotlin.jvm' | false               | 'applied last'
+        'com.netflix.nebula.clojure' | false               | 'applied last'
         'scala'          | false               | 'applied last'
     }
 

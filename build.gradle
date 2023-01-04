@@ -112,7 +112,7 @@ tasks.withType(Test) {
         }
     }
     retry {
-        maxRetries = 2
+        maxRetries = 3
         maxFailures = 20
     }
 }

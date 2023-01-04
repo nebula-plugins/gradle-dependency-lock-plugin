@@ -2162,6 +2162,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
                     <artifactId>commons-logging</artifactId>
                     <version>1.1.1</version>
                   </dependency>
+                </dependencies>
               </dependencyManagement>
             </project>
         '''
@@ -2179,10 +2180,12 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         def result = runTasksSuccessfully('dI', '--dependency', 'recommender')
 
         then:
-        result.standardOutput.contains 'sample:recommender:1.1 -> 1.0'
+        result.standardOutput.contains outputMessage
 
         where:
-        platformType << ['platform', 'enforcedPlatform']
+        platformType       | outputMessage
+        'platform'         | 'sample:recommender:1.1 -> 1.0'
+        'enforcedPlatform' | 'sample:recommender:{strictly 1.1} -> 1.0'
     }
 
     def 'lock file is applied and local libs dont fail'() {

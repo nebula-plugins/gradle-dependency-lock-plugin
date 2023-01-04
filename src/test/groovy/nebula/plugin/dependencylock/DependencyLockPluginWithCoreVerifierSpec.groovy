@@ -356,9 +356,9 @@ empty=annotationProcessor,testAnnotationProcessor
     }
 
     @Unroll
-    def 'nebula.kotlin: fail when dependency is unresolvable upon update via #lockArg'() {
+    def 'org.jetbrains.kotlin.jvm: fail when dependency is unresolvable upon update via #lockArg'() {
         given:
-        createSingleProjectBaseline('nebula.kotlin')
+        createSingleProjectBaseline('org.jetbrains.kotlin.jvm')
 
         when:
         buildFile << MIX_OF_RESOLVABLE_AND_UNRESOLVABLE_DEPENDENCIES
@@ -374,9 +374,9 @@ empty=annotationProcessor,testAnnotationProcessor
     }
 
     @Unroll
-    def 'nebula.clojure: fail when dependency is unresolvable upon update via #lockArg'() {
+    def 'com.netflix.nebula.clojure: fail when dependency is unresolvable upon update via #lockArg'() {
         given:
-        createSingleProjectBaseline('nebula.clojure')
+        createSingleProjectBaseline('com.netflix.nebula.clojure')
 
         when:
         buildFile << MIX_OF_RESOLVABLE_AND_UNRESOLVABLE_DEPENDENCIES
@@ -392,11 +392,11 @@ empty=annotationProcessor,testAnnotationProcessor
     }
 
     def createSingleProjectBaseline(String languagePlugin = 'java', String conf = '') {
-        if (languagePlugin == 'nebula.kotlin') {
+        if (languagePlugin == 'org.jetbrains.kotlin.jvm') {
             createKotlinSingleProjectBaseline()
             return
         }
-        if (languagePlugin == 'nebula.clojure') {
+        if (languagePlugin == 'com.netflix.nebula.clojure') {
             createClojureSingleProjectBaseline()
             return
         }
@@ -550,13 +550,13 @@ empty=annotationProcessor,testAnnotationProcessor
                 buildscript {
                     repositories { maven { url "https://plugins.gradle.org/m2/" } }
                     dependencies {
-                        classpath "com.netflix.nebula:nebula-kotlin-plugin:1.3.+"
+                        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0"
                     }
                 }
                 plugins {
                     id 'com.netflix.nebula.dependency-lock'
                 }
-                apply plugin: 'nebula.kotlin'
+                apply plugin: "org.jetbrains.kotlin.jvm"
                 repositories {
                     ${mavenrepo.mavenRepositoryBlock}
                     mavenCentral()
@@ -607,13 +607,13 @@ empty=annotationProcessor,testAnnotationProcessor
                 buildscript {
                     repositories { maven { url "https://plugins.gradle.org/m2/" } }
                     dependencies {
-                        classpath "com.netflix.nebula:nebula-clojure-plugin:latest.release"
+                        classpath "com.netflix.nebula:nebula-clojure-plugin:13.0.0"
                     }
                 }
                 plugins {
                     id 'com.netflix.nebula.dependency-lock'
                 }
-                apply plugin: 'nebula.clojure'
+                apply plugin: 'com.netflix.nebula.clojure'
                 repositories {
                     ${mavenrepo.mavenRepositoryBlock}
                     mavenCentral()

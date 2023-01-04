@@ -45,12 +45,14 @@ class ConfigurationFiltersProjectSpec extends ProjectSpec {
             assert results.size() == 0
         } else if (GradleVersionUtils.currentGradleVersionIsLessThan('6.3')) {
             assert results.size() == 6
-        } else if (GradleVersionUtils.currentGradleVersionIsGreaterOrEqualThan('7.0')) {
+        } else if (GradleVersionUtils.currentGradleVersionIsGreaterOrEqualThan('7.0') && GradleVersionUtils.currentGradleVersionIsLessThan('8.0-rc-1')) {
             assert results.size() == 2
 
             Collection<String> configurationNames = results.collect { (it as Configuration).name }
             assert configurationNames.contains('default')
             assert configurationNames.contains('archives')
+        } else if (GradleVersionUtils.currentGradleVersionIsGreaterOrEqualThan('8.0-rc-1')) {
+            assert results.size() == 0
         } else {
             assert results.size() == 8
 
@@ -92,12 +94,14 @@ class ConfigurationFiltersProjectSpec extends ProjectSpec {
             assert results.size() == 0
         }  else if (GradleVersionUtils.currentGradleVersionIsLessThan('6.3')) {
             assert results.size() == 9
-        } else if (GradleVersionUtils.currentGradleVersionIsGreaterOrEqualThan('7.0')) {
+        } else if (GradleVersionUtils.currentGradleVersionIsGreaterOrEqualThan('7.0') && GradleVersionUtils.currentGradleVersionIsLessThan('8.0-rc-1')) {
             assert results.size() == 2
 
             Collection<String> configurationNames = results.collect { (it as Configuration).name }
             assert configurationNames.contains('default')
             assert configurationNames.contains('archives')
+        } else if (GradleVersionUtils.currentGradleVersionIsGreaterOrEqualThan('8.0-rc-1')) {
+            assert results.size() == 0
         } else {
             assert results.size() == 11
 
