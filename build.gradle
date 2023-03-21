@@ -16,7 +16,7 @@
 import org.gradle.util.GradleVersion
 
 plugins {
-    id 'com.netflix.nebula.plugin-plugin' version '20.4.0'
+    id 'com.netflix.nebula.plugin-plugin' version '20.5.0'
     id 'com.netflix.nebula.optional-base' version '9.0.0'
     id "org.jetbrains.kotlin.jvm" version "1.7.20"
     id 'java-gradle-plugin'
