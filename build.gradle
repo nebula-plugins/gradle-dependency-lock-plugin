@@ -44,7 +44,7 @@ dependencies {
         exclude module: 'groovy-all'
     }
 
-    implementation enforcedPlatform("com.fasterxml.jackson:jackson-bom:2.9.10.+")
+    implementation platform("com.fasterxml.jackson:jackson-bom:2.14.2")
 
     testImplementation 'com.netflix.nebula:gradle-git-scm-plugin:latest.release'
     testImplementation 'com.netflix.nebula:nebula-project-plugin:latest.release'
