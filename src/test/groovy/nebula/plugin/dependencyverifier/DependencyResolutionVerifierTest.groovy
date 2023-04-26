@@ -215,7 +215,7 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
             buildscript {
                 repositories { maven { url "https://plugins.gradle.org/m2/" } }
                 dependencies {
-                     classpath "com.github.spotbugs.snom:spotbugs-gradle-plugin:5.0.0-beta.4"
+                     classpath "com.github.spotbugs.snom:spotbugs-gradle-plugin:5.0.14"
                 }
             }            
             """.stripIndent()
