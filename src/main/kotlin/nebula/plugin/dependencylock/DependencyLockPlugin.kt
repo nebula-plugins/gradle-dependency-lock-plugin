@@ -21,6 +21,7 @@ import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
+import nebula.plugin.dependencylock.utils.NameMatcher
 import nebula.plugin.dependencylock.validation.UpdateDependenciesValidator
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifier
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
@@ -33,7 +34,6 @@ import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.internal.StartParameterInternal
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import org.gradle.util.NameMatcher
 import java.io.File
 import java.util.Objects
 
