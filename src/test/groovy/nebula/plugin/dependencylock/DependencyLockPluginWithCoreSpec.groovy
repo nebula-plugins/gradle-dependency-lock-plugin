@@ -94,7 +94,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
                 id 'java'
-                id 'com.github.johnrengelman.shadow' version '7.1.0'
+                id 'com.github.johnrengelman.shadow' version '8.1.1'
             }
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
@@ -166,7 +166,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
                 id 'java'
-                id 'com.github.johnrengelman.shadow' version '7.1.0'
+                id 'com.github.johnrengelman.shadow' version '8.1.1'
             }
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
@@ -537,6 +537,8 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
                 testRuntimeOnly 'org.scala-lang.modules:scala-xml_2.12:1.1.1'
                 """.stripIndent()
         } else if (languagePlugin == "com.netflix.nebula.clojure") {
+            //TODO: clojure plugin needs to be refactored to stop using project.convention
+            System.setProperty('ignoreDeprecations', 'true')
             additionalDependencies = """
                 implementation 'org.clojure:clojure:1.8.0'
                 """.stripIndent()
@@ -686,7 +688,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
                 }
               }
               dependencies {
-                classpath "gradle.plugin.com.github.spotbugs.snom:spotbugs-gradle-plugin:4.6.0"
+                classpath "com.github.spotbugs.snom:spotbugs-gradle-plugin:5.0.14"
               }
             }
             apply plugin: 'test.wrapper-plugin'
@@ -885,7 +887,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
                 }
               }
               dependencies {
-                classpath "com.netflix.nebula:nebula-project-plugin:7.0.9"
+                classpath "com.netflix.nebula:nebula-project-plugin:10.1.4"
               }
             }
             plugins {
@@ -946,7 +948,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
 
         where:
         facet       | plugin             | setParentSourceSet
-        'integTest' | 'nebula.integtest' | false
+        'integTest' | 'com.netflix.nebula.integtest' | false
 //        'smokeTest' | 'nebula.facet'     | true
 //        'examples'  | 'nebula.facet'     | true
     }

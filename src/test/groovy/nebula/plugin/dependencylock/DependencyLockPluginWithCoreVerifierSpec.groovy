@@ -376,6 +376,8 @@ empty=annotationProcessor,testAnnotationProcessor
     @Unroll
     def 'com.netflix.nebula.clojure: fail when dependency is unresolvable upon update via #lockArg'() {
         given:
+        //TODO: clojure plugin needs to be refactored to stop using project.convention
+        System.setProperty('ignoreDeprecations', 'true')
         createSingleProjectBaseline('com.netflix.nebula.clojure')
 
         when:
@@ -607,7 +609,7 @@ empty=annotationProcessor,testAnnotationProcessor
                 buildscript {
                     repositories { maven { url "https://plugins.gradle.org/m2/" } }
                     dependencies {
-                        classpath "com.netflix.nebula:nebula-clojure-plugin:13.0.0"
+                        classpath "com.netflix.nebula:nebula-clojure-plugin:13.0.1"
                     }
                 }
                 plugins {

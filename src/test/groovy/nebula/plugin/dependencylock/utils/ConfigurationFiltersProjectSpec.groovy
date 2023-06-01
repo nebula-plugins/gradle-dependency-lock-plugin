@@ -194,22 +194,11 @@ class ConfigurationFiltersProjectSpec extends ProjectSpec {
             deprecatedConfig
             nonDeprecatedConfig
         }
-
-        if (!GradleVersionUtils.currentGradleVersionIsLessThan("6.0")) {
-            project.configurations {
-                deprecatedConfig.deprecateForResolution('nonDeprecatedConfig')
-            }
-        }
-
         when:
         def hasAResolutionAlternative = ConfigurationFilters.safelyHasAResolutionAlternative(project.configurations.findByName('deprecatedConfig'))
 
         then:
-        if (!GradleVersionUtils.currentGradleVersionIsLessThan("6.0")) {
-            assert hasAResolutionAlternative
-        } else {
-            assert !hasAResolutionAlternative
-        }
+        assert !hasAResolutionAlternative
     }
 
     def 'verifies that a configuration does not have resolution alternatives'() {
@@ -217,12 +206,6 @@ class ConfigurationFiltersProjectSpec extends ProjectSpec {
         project.configurations {
             deprecatedConfig
             nonDeprecatedConfig
-        }
-
-        if (!GradleVersionUtils.currentGradleVersionIsLessThan("6.0")) {
-            project.configurations {
-                deprecatedConfig.deprecateForResolution('nonDeprecatedConfig')
-            }
         }
 
         when:

@@ -566,7 +566,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
                 }
               }
               dependencies {
-                classpath "com.netflix.nebula:nebula-project-plugin:7.0.9"
+                classpath "com.netflix.nebula:nebula-project-plugin:10.1.4"
               }
             }
             plugins {
@@ -625,9 +625,9 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
 
         where:
         facet       | plugin             | setParentSourceSet
-        'integTest' | 'nebula.integtest' | false
-        'smokeTest' | 'nebula.facet'     | true
-        'examples'  | 'nebula.facet'     | true
+        'integTest' | 'com.netflix.nebula.integtest' | false
+        'smokeTest' | 'com.netflix.nebula.facet'     | true
+        'examples'  | 'com.netflix.nebula.facet'     | true
     }
 
     @Unroll
@@ -657,7 +657,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
                 }
               }
               dependencies {
-                classpath "com.netflix.nebula:nebula-project-plugin:7.0.9"
+                classpath "com.netflix.nebula:nebula-project-plugin:10.1.4"
               }
             }
             plugins {
@@ -706,9 +706,9 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
 
         where:
         facet       | plugin             | setParentSourceSet
-        'integTest' | 'nebula.integtest' | false
-        'smokeTest' | 'nebula.facet'     | true
-        'examples'  | 'nebula.facet'     | true
+        'integTest' | 'com.netflix.nebula.integtest' | false
+        'smokeTest' | 'com.netflix.nebula.facet'     | true
+        'examples'  | 'com.netflix.nebula.facet'     | true
     }
 
     def 'migration does not lock all configurations by default'() {
