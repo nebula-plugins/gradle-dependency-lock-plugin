@@ -607,7 +607,10 @@ empty=annotationProcessor,testAnnotationProcessor
 
         buildFile << """\
                 buildscript {
-                    repositories { maven { url "https://plugins.gradle.org/m2/" } }
+                    repositories { 
+                    maven { url "https://plugins.gradle.org/m2/" }
+                    maven { url 'https://clojars.org/repo' }
+                    }
                     dependencies {
                         classpath "com.netflix.nebula:nebula-clojure-plugin:13.0.1"
                     }
@@ -619,6 +622,7 @@ empty=annotationProcessor,testAnnotationProcessor
                 repositories {
                     ${mavenrepo.mavenRepositoryBlock}
                     mavenCentral()
+                    maven { url 'https://clojars.org/repo' }
                 }
                 dependencies {
                     implementation 'org.clojure:clojure:1.8.0'

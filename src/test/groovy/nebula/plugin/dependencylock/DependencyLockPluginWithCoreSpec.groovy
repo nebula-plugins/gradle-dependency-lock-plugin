@@ -481,13 +481,21 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         buildFile.delete()
         buildFile.createNewFile()
         buildFile << """\
+buildscript {
+               repositories { 
+                maven { url "https://plugins.gradle.org/m2/" } 
+                maven { url 'https://clojars.org/repo' }
+                }
+            }
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
                 id "com.netflix.nebula.clojure" version "13.0.0"
             }
+            
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
                 mavenCentral()
+                maven { url 'https://clojars.org/repo' }
             }
             dependencies {
                 $configuration 'org.clojure:clojure:1.8.0'
@@ -559,7 +567,10 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         buildFile.createNewFile()
         buildFile << """\
             buildscript {
-                repositories { maven { url "https://plugins.gradle.org/m2/" } }
+                repositories { 
+                maven { url "https://plugins.gradle.org/m2/" } 
+                maven { url 'https://clojars.org/repo' }
+                }
                 dependencies {
                      classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0"
                      classpath "com.netflix.nebula:nebula-clojure-plugin:13.0.0"
@@ -569,6 +580,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
                 mavenCentral()
+                maven { url 'https://clojars.org/repo' }
             }
             dependencies {
                 implementation 'test.nebula:a:1.+'
@@ -686,6 +698,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
                 maven {
                   url "https://plugins.gradle.org/m2/"
                 }
+               maven { url 'https://clojars.org/repo' }
               }
               dependencies {
                 classpath "com.github.spotbugs.snom:spotbugs-gradle-plugin:5.0.14"
@@ -885,6 +898,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
                 maven {
                   url "https://plugins.gradle.org/m2/"
                 }
+                 maven { url 'https://clojars.org/repo' }
               }
               dependencies {
                 classpath "com.netflix.nebula:nebula-project-plugin:10.1.4"
@@ -898,6 +912,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
                 mavenCentral()
+                maven { url 'https://clojars.org/repo' }
             }
             dependencies {
                 implementation 'test.nebula:a:1.+'
