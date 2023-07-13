@@ -31,7 +31,7 @@ class DiffLockTask extends AbstractLockTask {
     File updatedLockFile
 
     @OutputDirectory
-    File outputDir = new File(project.buildDir, "dependency-lock")
+    File outputDir = new File(project.layout.buildDirectory.getAsFile().get(), "dependency-lock")
 
     @OutputFile
     File diffFile = new File(outputDir, "lockdiff.${this.diffFileExtension()}")

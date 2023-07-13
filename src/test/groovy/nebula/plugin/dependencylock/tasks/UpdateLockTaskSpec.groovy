@@ -33,7 +33,7 @@ class UpdateLockTaskSpec extends ProjectSpec {
 
     UpdateLockTask createTask() {
         def task = project.tasks.create(taskName, UpdateLockTask)
-        task.dependenciesLock = new File(project.buildDir, 'dependencies.lock')
+        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames = LockGenerator.DEFAULT_CONFIG_NAMES
         task
     }

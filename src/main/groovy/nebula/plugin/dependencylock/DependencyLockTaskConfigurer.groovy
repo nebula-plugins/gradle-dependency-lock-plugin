@@ -102,7 +102,7 @@ class DependencyLockTaskConfigurer {
     }
 
     private File getBuildDirLockFile(String lockFilename, DependencyLockExtension extension) {
-        new File(project.buildDir, lockFilename ?: extension.lockFile)
+        new File(project.layout.buildDirectory.getAsFile().get(), lockFilename ?: extension.lockFile)
     }
 
     private File getProjectDirGlobalLockFile(String lockFilename, DependencyLockExtension extension) {
@@ -110,7 +110,7 @@ class DependencyLockTaskConfigurer {
     }
 
     private File getBuildDirGlobalLockFile(String lockFilename, DependencyLockExtension extension) {
-        new File(project.buildDir, lockFilename ?: extension.globalLockFile)
+        new File(project.layout.buildDirectory.getAsFile().get(), lockFilename ?: extension.globalLockFile)
     }
 
     private void configureCommitTask(String clLockFileName, String globalLockFileName, TaskProvider<SaveLockTask> saveTask, DependencyLockExtension lockExtension,
@@ -358,7 +358,7 @@ class DependencyLockTaskConfigurer {
             if (existing.exists()) {
                 diffTask.existingLockFile = existing
             }
-            diffTask.updatedLockFile = new File(project.buildDir, lockFileName ?: extension.lockFile)
+            diffTask.updatedLockFile = new File(project.layout.buildDirectory.getAsFile().get(), lockFileName ?: extension.lockFile)
         }
 
         project.tasks.named(SAVE_LOCK_TASK_NAME).configure { save ->
