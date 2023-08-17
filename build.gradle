@@ -18,7 +18,7 @@ import org.gradle.util.GradleVersion
 plugins {
     id 'com.netflix.nebula.plugin-plugin' version '20.8.1'
     id 'com.netflix.nebula.optional-base' version '9.0.0'
-    id "org.jetbrains.kotlin.jvm" version "1.7.20"
+    id "org.jetbrains.kotlin.jvm" version "1.9.0"
     id 'java-gradle-plugin'
     id "org.gradle.test-retry" version "1.5.0"
 }
@@ -77,25 +77,15 @@ gradlePlugin {
     }
 }
 
-// Kotlin compiles first, stubbing Java dependencies, however it can't stub Groovy and we need to call Groovy code from Kotlin. For details see:
-// https://discuss.gradle.org/t/kotlin-groovy-and-java-compilation/14903/10
-if (GradleVersion.version(project.gradle.gradleVersion) >= (GradleVersion.version('6.1'))) {
-    tasks.named('compileGroovy') {
-        // Groovy only needs the declared dependencies
-        // and not the output of compileJava
-        classpath = sourceSets.main.compileClasspath
-    }
-    tasks.named('compileKotlin') {
-        // Kotlin also depends on the result of Groovy compilation
-        // which automatically makes it depend of compileGroovy
-        classpath += files(sourceSets.main.groovy.classesDirectory)
-    }
-
-} else {
-    compileGroovy.dependsOn = compileGroovy.taskDependencies.mutableValues - 'compileJava'
-    compileKotlin.dependsOn compileGroovy
-    compileKotlin.classpath += files(compileGroovy.destinationDir)
-    classes.dependsOn compileKotlin
+tasks.named('compileGroovy') {
+    // Groovy only needs the declared dependencies
+    // and not the output of compileJava
+    classpath = sourceSets.main.compileClasspath
+}
+tasks.named('compileKotlin') {
+    // Kotlin also depends on the result of Groovy compilation
+    // which automatically makes it depend of compileGroovy
+    libraries.from(files(sourceSets.main.groovy.classesDirectory))
 }
 
 test.dependsOn jar
