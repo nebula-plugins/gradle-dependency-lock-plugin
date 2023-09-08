@@ -168,31 +168,26 @@ class DependencyResolutionVerifier {
         }.all { conf ->
             logger.debug("$conf in ${project.name} has state ${conf.state}. Starting dependency resolution verification after task '${task.name}'.")
             try {
-                conf.resolvedConfiguration.resolvedArtifacts
-            } catch (e: Exception) {
-                when (e) {
-                    is ResolveException -> {
-                        e.causes.forEach { cause ->
-                            when (cause) {
-                                is ModuleVersionNotFoundException -> {
-                                    val dep: String = cause.selector.toString()
-                                    if (failedDepsByConf!!.containsKey(dep)) {
-                                        failedDepsByConf[dep]!!.add(conf)
-                                    } else {
-                                        failedDepsByConf[dep] = mutableSetOf(conf)
-                                    }
-                                }
-                                is LockOutOfDateException -> {
-                                    lockedDepsOutOfDate!!.add(cause.message.toString())
-                                }
+                conf.resolvedConfiguration.rethrowFailure()
+            } catch (e: ResolveException) {
+                e.causes.forEach { cause ->
+                    when (cause) {
+                        is ModuleVersionNotFoundException -> {
+                            val dep: String = cause.selector.toString()
+                            if (failedDepsByConf!!.containsKey(dep)) {
+                                failedDepsByConf[dep]!!.add(conf)
+                            } else {
+                                failedDepsByConf[dep] = mutableSetOf(conf)
                             }
                         }
-                    }
-
-                    else -> {
-                        logger.warn("Received an unhandled exception", e.message)
+                        is LockOutOfDateException -> {
+                            lockedDepsOutOfDate!!.add(cause.message.toString())
+                        }
                     }
                 }
+                return@all
+            } catch (e : Exception) {
+                logger.warn("Received an unhandled exception: {}", e.message)
                 return@all
             }
 
