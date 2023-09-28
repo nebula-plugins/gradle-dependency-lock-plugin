@@ -226,6 +226,14 @@ class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
                 repositories {
                     mavenCentral()
                 }
+                configurations.named('spotbugs').configure {
+                  resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+                       if (details.requested.group == 'org.ow2.asm') {
+                            details.useVersion '9.5'
+                            details.because "Asm 9.5 is required for JDK 21 support"
+                      }
+                  }
+                }
             }
             """.stripIndent()
 
