@@ -40,14 +40,12 @@ dependencies {
     implementation 'org.apache.commons:commons-lang3:3.12.0'
     implementation 'joda-time:joda-time:2.10'
     implementation 'com.netflix.nebula:nebula-gradle-interop:latest.release'
-    implementation 'com.netflix.nebula:gradle-scm-plugin:latest.release'
     implementation('com.netflix.nebula:nebula-dependencies-comparison:latest.release') {
         exclude module: 'groovy-all'
     }
 
     implementation platform("com.fasterxml.jackson:jackson-bom:2.14.2")
 
-    testImplementation 'com.netflix.nebula:gradle-git-scm-plugin:latest.release'
     testImplementation 'com.netflix.nebula:nebula-project-plugin:latest.release'
     testImplementation 'com.netflix.nebula:nebula-test:latest.release'
     testImplementation gradleTestKit()
