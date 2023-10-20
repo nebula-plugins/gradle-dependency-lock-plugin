@@ -22,7 +22,6 @@ import nebula.plugin.dependencylock.tasks.MigrateLockedDepsToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.plugin.dependencylock.tasks.UpdateLockTask
-import nebula.plugin.scm.ScmPlugin
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.UnknownTaskException
@@ -41,7 +40,7 @@ class DependencyLockTaskConfigurer {
 
     public static final String OVERRIDE_FILE = 'dependencyLock.overrideFile'
     public static final String GLOBAL_LOCK_CONFIG = '_global_'
-    
+
     public static final String GENERATE_GLOBAL_LOCK_TASK_NAME = 'generateGlobalLock'
     public static final String UPDATE_GLOBAL_LOCK_TASK_NAME = 'updateGlobalLock'
     public static final String UPDATE_LOCK_TASK_NAME = 'updateLock'
@@ -115,60 +114,38 @@ class DependencyLockTaskConfigurer {
 
     private void configureCommitTask(String clLockFileName, String globalLockFileName, TaskProvider<SaveLockTask> saveTask, DependencyLockExtension lockExtension,
                                      DependencyLockCommitExtension commitExtension, TaskProvider<SaveLockTask> globalSaveTask = null) {
-        project.plugins.withType(ScmPlugin) {
-            def hasCommitLockTask = false
-            try {
-                project.rootProject.tasks.named(COMMIT_LOCK_TASK_NAME)
-                hasCommitLockTask = true // if there is not an exception, then the task exists
-            } catch (UnknownTaskException ute) {
-                LOGGER.debug("Task $COMMIT_LOCK_TASK_NAME is not in the root project.", ute.getMessage())
-            }
-            if (!hasCommitLockTask) {
-                TaskProvider<CommitLockTask> commitTask = project.rootProject.tasks.register(COMMIT_LOCK_TASK_NAME, CommitLockTask)
-                commitTask.configure {
-                    it.mustRunAfter(saveTask)
-                    if (globalSaveTask) {
-                        it.mustRunAfter(globalSaveTask)
-                    }
-                    it.conventionMapping.with {
-                        scmFactory = { project.rootProject.scmFactory }
-                        commitMessage = {
-                            project.hasProperty('commitDependencyLock.message') ?
-                                    project['commitDependencyLock.message'] : commitExtension.message
-                        }
-                        patternsToCommit = {
-                            List<File> lockFiles = []
-                            def rootLock = new File(project.rootProject.projectDir, clLockFileName ?: lockExtension.lockFile)
-                            if (rootLock.exists()) {
-                                lockFiles << rootLock
-                            }
-                            def globalLock = new File(project.rootProject.projectDir, globalLockFileName ?: lockExtension.globalLockFile)
-                            if (globalLock.exists()) {
-                                lockFiles << globalLock
-                            }
-                            project.rootProject.subprojects.each {
-                                def potentialLock = new File(it.projectDir, clLockFileName ?: lockExtension.lockFile)
-                                if (potentialLock.exists()) {
-                                    lockFiles << potentialLock
-                                }
-                            }
-                            def patterns = lockFiles.collect {
-                                project.rootProject.projectDir.toURI().relativize(it.toURI()).path
-                            }
-                            LOGGER.info(patterns.toString())
-                            patterns
-                        }
-                        shouldCreateTag = {
-                            project.hasProperty('commitDependencyLock.tag') ?: commitExtension.shouldCreateTag
-                        }
-                        tag = {
-                            project.hasProperty('commitDependencyLock.tag') ? project['commitDependencyLock.tag'] : commitExtension.tag.call()
-                        }
-                        remoteRetries = { commitExtension.remoteRetries }
-                    }
+        def hasCommitLockTask = false
+        try {
+            project.rootProject.tasks.named(COMMIT_LOCK_TASK_NAME)
+            hasCommitLockTask = true // if there is not an exception, then the task exists
+        } catch (UnknownTaskException ute) {
+            LOGGER.debug("Task $COMMIT_LOCK_TASK_NAME is not in the root project.", ute.getMessage())
+        }
+        if (!hasCommitLockTask) {
+            TaskProvider<CommitLockTask> commitTask = project.rootProject.tasks.register(COMMIT_LOCK_TASK_NAME, CommitLockTask)
+            commitTask.configure {
+                it.mustRunAfter(saveTask)
+                if (globalSaveTask) {
+                    it.mustRunAfter(globalSaveTask)
                 }
+                String commitMessageValue = project.hasProperty('commitDependencyLock.message') ?
+                        project['commitDependencyLock.message'] : commitExtension.message
+                commitMessage.set(commitMessageValue)
+                patternsToCommit.set(getPatternsToCommit(clLockFileName, globalLockFileName, lockExtension))
+                remoteRetries.set(commitExtension.remoteRetries)
+                shouldCreateTag.set(project.hasProperty('commitDependencyLock.tag') ?: commitExtension.shouldCreateTag)
+                String tagValue = project.hasProperty('commitDependencyLock.tag') ? project['commitDependencyLock.tag'] : commitExtension.tag.call()
+                tag.set(tagValue)
+                rootDirPath.set(project.rootProject.projectDir.absolutePath)
             }
         }
+    }
+
+    private List<String> getPatternsToCommit(String clLockFileName, String globalLockFileName, DependencyLockExtension lockExtension ) {
+        List<String> patterns = []
+        patterns.add(clLockFileName ?: lockExtension.lockFile)
+        patterns.add(globalLockFileName ?: lockExtension.globalLockFile)
+        return patterns
     }
 
     private TaskProvider<SaveLockTask> configureSaveTask(String lockFilename, TaskProvider<GenerateLockTask> lockTask,
@@ -274,13 +251,13 @@ class DependencyLockTaskConfigurer {
                             aggregate.setCanBeConsumed(true)
                             aggregate.setCanBeResolved(true)
                             configurations
-                                .findAll { configuration ->
-                                    !configurationsToSkipForGlobalLockPrefixes.any { String prefix -> configuration.name.startsWith(prefix) }
-                                            && !extension.skippedConfigurationNamesPrefixes.any { String prefix -> configuration.name.startsWith(prefix) }
-                                }
-                                .each { configuration ->
-                                    aggregate.extendsFrom(configuration)
-                                }
+                                    .findAll { configuration ->
+                                        !configurationsToSkipForGlobalLockPrefixes.any { String prefix -> configuration.name.startsWith(prefix) }
+                                                && !extension.skippedConfigurationNamesPrefixes.any { String prefix -> configuration.name.startsWith(prefix) }
+                                    }
+                                    .each { configuration ->
+                                        aggregate.extendsFrom(configuration)
+                                    }
                             [project.dependencies.create(project.dependencies.project(path: subproject.path, configuration: aggregate.name))]
                         } else {
                             [project.dependencies.create(subproject)]

@@ -33,28 +33,4 @@ class DependencyLockConfigurationAvoidanceSpec extends IntegrationTestKitSpec {
         !result.output.contains("class ${CommitLockTask.class.name}")
         !result.output.contains("class ${DiffLockTask.class.name}")
     }
-
-    def 'task configuration avoidance - commitLock is registered with scm plugin'() {
-        given:
-        buildFile << """\
-            plugins {
-                id 'com.netflix.nebula.dependency-lock'
-                id 'java'
-                id 'com.netflix.nebula.gradle-scm'
-            }
-        """.stripIndent()
-
-        when:
-        def result = runTasks('-Dorg.gradle.internal.tasks.stats', 'help')
-
-        then:
-        result.output.contains('class org.gradle.configuration.Help 1')
-        !result.output.contains("class ${SaveLockTask.class.name}")
-        !result.output.contains("class ${GenerateLockTask.class.name}")
-        !result.output.contains("class ${UpdateLockTask.class.name}")
-        !result.output.contains("class ${MigrateToCoreLocksTask.class.name}")
-        !result.output.contains("class ${MigrateLockedDepsToCoreLocksTask.class.name}")
-        !result.output.contains("class ${CommitLockTask.class.name}")
-        !result.output.contains("class ${DiffLockTask.class.name}")
-    }
 }
