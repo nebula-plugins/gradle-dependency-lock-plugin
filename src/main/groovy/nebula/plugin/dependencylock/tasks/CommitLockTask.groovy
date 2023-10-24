@@ -111,12 +111,9 @@ abstract class CommitLockTask extends AbstractLockTask {
                             "find", rootDirPath.get(), "-type", "f", "-name", pattern, "-exec", "git",
                             "--git-dir=${rootDirPath.get()}/.git".toString(), "--work-tree=${rootDirPath.get()}".toString(),
                             "add", "{}", "\\;"]
-                    commandLineArgs.addAll(args)
                     execOperations.exec {
                         ignoreExitValue = true
                         it.setCommandLine(commandLineArgs)
-                        it.standardOutput = output
-                        it.errorOutput = error
                     }
                 } catch (Exception e) {
                     logger.error("Could not add pattern ${pattern}", e)
