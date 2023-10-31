@@ -155,31 +155,20 @@ class DependencyLockTaskConfigurer {
         saveLockTask.configure { saveTask ->
             saveTask.doFirst {
                 SaveLockTask globalSave = project.rootProject.tasks.findByName(SAVE_GLOBAL_LOCK_TASK_NAME) as SaveLockTask
-                if (globalSave?.outputLock?.exists()) {
+                if (globalSave?.outputLock?.isPresent() && globalSave?.outputLock?.get()?.exists()) {
                     throw new GradleException('Cannot save individual locks when global lock is in place, run deleteGlobalLock task')
                 }
             }
-            saveTask.conventionMapping.with {
-                generatedLock = { getBuildDirLockFile(lockFilename, extension) }
-                outputLock = { getProjectDirLockFile(lockFilename, extension) }
-            }
+            generatedLock.set(getBuildDirLockFile(lockFilename, extension))
+            outputLock.set(getProjectDirLockFile(lockFilename, extension))
+            saveTask.mustRunAfter lockTask, updateTask
         }
-        configureCommonSaveTask(saveLockTask, lockTask, updateTask)
-
         saveLockTask
     }
 
     private static void configureCommonSaveTask(TaskProvider<SaveLockTask> saveLockTask, TaskProvider<GenerateLockTask> lockTask,
                                                 TaskProvider<UpdateLockTask> updateTask) {
         saveLockTask.configure { saveTask ->
-            saveTask.mustRunAfter lockTask, updateTask
-            saveTask.outputs.upToDateWhen {
-                if (saveTask.generatedLock.exists() && saveTask.outputLock.exists()) {
-                    saveTask.generatedLock.text == saveTask.outputLock.text
-                } else {
-                    false
-                }
-            }
         }
     }
 
@@ -191,18 +180,15 @@ class DependencyLockTaskConfigurer {
             globalSaveTask.doFirst {
                 project.subprojects.each { Project sub ->
                     SaveLockTask save = sub.tasks.findByName(SAVE_LOCK_TASK_NAME) as SaveLockTask
-                    if (save && save.outputLock?.exists()) {
+                    if (save && save.outputLock.isPresent() && save.outputLock?.get()?.exists()) {
                         throw new GradleException('Cannot save global lock, one or more individual locks are in place, run deleteLock task')
                     }
                 }
             }
-            globalSaveTask.conventionMapping.with {
-                generatedLock = { getBuildDirGlobalLockFile(lockFilename, extension) }
-                outputLock = { getProjectDirGlobalLockFile(lockFilename, extension) }
-            }
+            generatedLock.set(getBuildDirGlobalLockFile(lockFilename, extension))
+            outputLock.set(getProjectDirGlobalLockFile(lockFilename, extension))
+            mustRunAfter globalLockTask, globalUpdateLockTask
         }
-        configureCommonSaveTask(globalSaveLockTask, globalLockTask, globalUpdateLockTask)
-
         globalSaveLockTask
     }
 
