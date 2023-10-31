@@ -113,12 +113,12 @@ class DependencyLockPlugin : Plugin<Project> {
         if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
             LOGGER.info("${project.name}: coreLockingSupport feature enabled")
             val coreLockingHelper = CoreLockingHelper(project)
-            coreLockingHelper.lockSelectedConfigurations(extension.configurationNames)
+            coreLockingHelper.lockSelectedConfigurations(extension.configurationNames.get())
 
             coreLockingHelper.disableCachingWhenUpdatingDependencies()
             coreLockingHelper.notifyWhenUsingOfflineMode()
 
-            val lockFile = File(project.projectDir, extension.lockFile)
+            val lockFile = File(project.projectDir, extension.lockFile.get())
 
             if (lockFile.exists()) {
                 if (startParameter.isWriteDependencyLocks) {
@@ -138,7 +138,7 @@ class DependencyLockPlugin : Plugin<Project> {
             val taskNames = startParameter.taskNames
             val hasUpdateTask = hasUpdateTask(taskNames)
             val hasGenerationTask = hasGenerationTask(taskNames)
-            val globalLockFile = File(project.projectDir, extension.globalLockFile)
+            val globalLockFile = File(project.projectDir, extension.globalLockFile.get())
 
             if (globalLockFile.exists() && !hasGenerationTask && !hasUpdateTask) {
                 // do not fail for generation or update tasks here. It's more readable when the task itself fails.
@@ -147,7 +147,7 @@ class DependencyLockPlugin : Plugin<Project> {
                         " - Legacy global lock: ${globalLockFile.absolutePath}")
             }
         } else {
-            val lockAfterEvaluating = if (project.hasProperty(LOCK_AFTER_EVALUATING)) project.property(LOCK_AFTER_EVALUATING).toString().toBoolean() else extension.lockAfterEvaluating
+            val lockAfterEvaluating = if (project.hasProperty(LOCK_AFTER_EVALUATING)) project.property(LOCK_AFTER_EVALUATING).toString().toBoolean() else extension.lockAfterEvaluating.get()
             if (lockAfterEvaluating) {
                 LOGGER.info("Delaying dependency lock apply until beforeResolve ($LOCK_AFTER_EVALUATING set to true)")
             } else {
@@ -186,17 +186,17 @@ class DependencyLockPlugin : Plugin<Project> {
     }
 
     private fun maybeApplyLock(conf: Configuration, extension: DependencyLockExtension, overrides: Map<*, *>, globalLockFileName: String?, lockFilename: String?) {
-        val shouldIgnoreLock = (extension.skippedConfigurationNamesPrefixes + DependencyLockTaskConfigurer.configurationsToSkipForGlobalLockPrefixes).any {
+        val shouldIgnoreLock = (extension.skippedConfigurationNamesPrefixes.get() + DependencyLockTaskConfigurer.configurationsToSkipForGlobalLockPrefixes).any {
             prefix -> conf.name.startsWith(prefix) && !conf.name.contains("resolutionRules")
         }
         if(shouldIgnoreLock) {
             return
         }
-        val globalLock = File(project.rootProject.projectDir, globalLockFileName ?: extension.globalLockFile)
+        val globalLock = File(project.rootProject.projectDir, globalLockFileName ?: extension.globalLockFile.get())
         val dependenciesLock = if (globalLock.exists()) {
             globalLock
         } else {
-            File(project.projectDir, lockFilename ?: extension.lockFile)
+            File(project.projectDir, lockFilename ?: extension.lockFile.get())
         }
 
         lockUsed = dependenciesLock.name
@@ -206,7 +206,7 @@ class DependencyLockPlugin : Plugin<Project> {
             val taskNames = project.gradle.startParameter.taskNames
             val hasUpdateTask = hasUpdateTask(taskNames)
 
-            val updates = if (project.hasProperty(UPDATE_DEPENDENCIES)) parseUpdates(project.property(UPDATE_DEPENDENCIES) as String) else extension.updateDependencies
+            val updates = if (project.hasProperty(UPDATE_DEPENDENCIES)) parseUpdates(project.property(UPDATE_DEPENDENCIES) as String) else extension.updateDependencies.get()
             UpdateDependenciesValidator.validate(
                 updates, overrides, hasUpdateTask,
                 hasTask(taskNames, GENERATION_TASK_NAMES - UPDATE_TASK_NAMES),

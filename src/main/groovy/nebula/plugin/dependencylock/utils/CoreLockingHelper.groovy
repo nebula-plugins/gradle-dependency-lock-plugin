@@ -131,7 +131,7 @@ class CoreLockingHelper {
         def additionalConfigurationsToLockViaProperty = project.hasProperty(ADDITIONAL_CONFIGS_TO_LOCK)
                 ? (project[ADDITIONAL_CONFIGS_TO_LOCK] as String).split(",") as Set<String>
                 : []
-        def additionalConfigurationsToLockViaExtension = dependencyLockExtension.additionalConfigurationsToLock as Set<String>
+        def additionalConfigurationsToLockViaExtension = dependencyLockExtension.additionalConfigurationsToLock.get() as Set<String>
         def additionalConfigNames = additionalConfigurationsToLockViaProperty + additionalConfigurationsToLockViaExtension
         additionalConfigNames
     }
