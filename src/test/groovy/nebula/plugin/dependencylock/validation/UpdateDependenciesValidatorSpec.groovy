@@ -6,11 +6,12 @@ import nebula.test.ProjectSpec
 
 class UpdateDependenciesValidatorSpec extends ProjectSpec {
     private static final HashMap<Object, Object> emptyMap = new HashMap<Object, Object>()
-    private static final DependencyLockExtension extension = DependencyLockExtension.newInstance()
+    private DependencyLockExtension extension
     private static final String pluginName = 'com.netflix.nebula.dependency-lock'
 
     def setup() {
         project.apply plugin: pluginName
+        extension = project.extensions.findByType(DependencyLockExtension)
     }
 
     def 'should not fail if valid coordinates'() {

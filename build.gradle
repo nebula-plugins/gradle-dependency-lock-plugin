@@ -88,7 +88,7 @@ tasks.named('compileKotlin') {
 
 test.dependsOn jar
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     testLogging {
         events "PASSED", "FAILED", "SKIPPED"
         afterSuite { desc, result ->
