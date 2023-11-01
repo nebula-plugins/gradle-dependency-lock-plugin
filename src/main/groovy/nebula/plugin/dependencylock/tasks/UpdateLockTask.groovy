@@ -15,7 +15,6 @@
  */
 package nebula.plugin.dependencylock.tasks
 
-import nebula.plugin.dependencylock.DependencyLockExtension
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.tasks.TaskAction
@@ -26,15 +25,15 @@ import org.gradle.work.DisableCachingByDefault
  * dependencies per user request.
  */
 @DisableCachingByDefault
-class UpdateLockTask extends GenerateLockTask {
+abstract class UpdateLockTask extends GenerateLockTask {
     String description = 'Apply updates to a preexisting lock file and write to build/<specified name>'
+
 
     @TaskAction
     @Override
     void lock() {
         if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
-            def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
-            def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile.get())
+            def globalLockFile = projectDirectory.file(globalLockFileName).get().asFile
             if (globalLockFile.exists()) {
                 throw new BuildCancelledException("Legacy global locks are not supported with core locking.\n" +
                         "Please remove global locks.\n" +

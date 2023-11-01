@@ -15,7 +15,6 @@
  */
 package nebula.plugin.dependencylock.tasks
 
-import nebula.plugin.dependencylock.DependencyLockExtension
 import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
 import nebula.plugin.dependencylock.DependencyLockWriter
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
@@ -27,16 +26,23 @@ import org.gradle.api.BuildCancelledException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault
-class GenerateLockTask extends AbstractLockTask {
+abstract class GenerateLockTask extends AbstractLockTask {
     private String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
     private String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
     private static final Logger LOGGER = Logging.getLogger(GenerateLockTask)
@@ -48,33 +54,45 @@ class GenerateLockTask extends AbstractLockTask {
     Collection<Configuration> configurations = []
 
     @Internal
-    Set<String> configurationNames
+    abstract SetProperty<String> getConfigurationNames()
 
     @Internal
-    Set<String> skippedConfigurationNames
-
-    @Internal
-    Closure filter = { group, name, version -> true }
+    abstract SetProperty<String> getSkippedConfigurationNames()
 
     @Input
     @Optional
-    Set<String> skippedDependencies = []
+    abstract SetProperty<String> getSkippedDependencies()
 
     @Internal
-    File dependenciesLock
+    abstract Property<File> getDependenciesLock()
 
     @Internal
-    Map<String, String> overrides
+    abstract MapProperty<String, String> getOverrides()
 
     @Input
     @Optional
-    Boolean includeTransitives = false
+    abstract Property<Boolean> getIncludeTransitives()
+
+    @Input
+    @Optional
+    abstract Property<String> getGlobalLockFileName()
+
+    @Internal
+    abstract DirectoryProperty getProjectDirectory()
+
+    @Internal
+    abstract Property<Closure> getFilter()
+
+    GenerateLockTask() {
+        includeTransitives.convention(false)
+        skippedDependencies.convention([])
+        filter.convention({ group, name, version -> true })
+    }
 
     @TaskAction
     void lock() {
         if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
-            def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
-            def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile.get())
+            def globalLockFile = projectDirectory.file(globalLockFileName).get().asFile
             if (globalLockFile.exists()) {
                 throw new BuildCancelledException("Legacy global locks are not supported with core locking.\n" +
                         "Please remove global locks.\n" +
@@ -88,12 +106,12 @@ class GenerateLockTask extends AbstractLockTask {
         if (DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
             throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
         }
-        Collection<Configuration> confs = getConfigurations() ?: lockableConfigurations(project, project, getConfigurationNames(), getSkippedConfigurationNames())
+        Collection<Configuration> confs = getConfigurations() ?: lockableConfigurations(project, configurationNames.get(), skippedConfigurationNames.get())
         Map dependencyMap = new GenerateLockFromConfigurations().lock(confs)
-        new DependencyLockWriter(getDependenciesLock(), getSkippedDependencies()).writeLock(dependencyMap)
+        new DependencyLockWriter(dependenciesLock.get(), skippedDependencies.get()).writeLock(dependencyMap)
     }
 
-    static Collection<Configuration> lockableConfigurations(Project taskProject, Project project, Set<String> configurationNames, Set<String> skippedConfigurationNamesPrefixes = []) {
+    static Collection<Configuration> lockableConfigurations(Project project, Set<String> configurationNames, Set<String> skippedConfigurationNamesPrefixes = []) {
         Set<Configuration> lockableConfigurations = []
         if (configurationNames.empty) {
             if (Configuration.class.declaredMethods.any { it.name == 'isCanBeResolved' }) {
@@ -189,7 +207,7 @@ class GenerateLockTask extends AbstractLockTask {
                 // Lock the version of each dependency specified in the build script as resolved by Gradle.
                 def resolvedDependencies = configuration.resolvedConfiguration.firstLevelModuleDependencies
                 def filteredResolvedDependencies = resolvedDependencies.findAll { ResolvedDependency resolved ->
-                    filter(resolved.moduleGroup, resolved.moduleName, resolved.moduleVersion)
+                    filter.get().call(resolved.moduleGroup, resolved.moduleName, resolved.moduleVersion)
                 }
 
                 filteredResolvedDependencies.each { ResolvedDependency resolved ->
@@ -206,13 +224,13 @@ class GenerateLockTask extends AbstractLockTask {
 
                         // If we don't include transitive dependencies, then we must lock the first-level "transitive"
                         // dependencies of each project dependency.
-                        if (!getIncludeTransitives()) {
+                        if (!includeTransitives.get()) {
                             handleSiblingTransitives(resolved, configuration.name, deps, peers)
                         }
                     }
 
                     // If requested, lock all the transitive dependencies of the declared top-level dependencies.
-                    if (getIncludeTransitives()) {
+                    if (includeTransitives.get()) {
                         deps[key].childrenVisited = true
                         resolved.children.each { handleTransitive(it, configuration.name, deps, peers, key) }
                     }
@@ -221,7 +239,7 @@ class GenerateLockTask extends AbstractLockTask {
 
             // Add all the overrides to the locked dependencies and record whether a specified override modified a
             // preexisting dependency.
-            getOverrides().each { String k, String overrideVersion ->
+            overrides.get().each { String k, String overrideVersion ->
                 def (overrideGroup, overrideArtifact) = k.tokenize(':')
                 deps.each { depLockKey, depValue ->
                     if (depLockKey.group == overrideGroup && depLockKey.artifact == overrideArtifact) {

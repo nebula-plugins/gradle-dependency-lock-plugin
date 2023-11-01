@@ -166,12 +166,6 @@ class DependencyLockTaskConfigurer {
         saveLockTask
     }
 
-    private static void configureCommonSaveTask(TaskProvider<SaveLockTask> saveLockTask, TaskProvider<GenerateLockTask> lockTask,
-                                                TaskProvider<UpdateLockTask> updateTask) {
-        saveLockTask.configure { saveTask ->
-        }
-    }
-
     private TaskProvider<SaveLockTask> configureGlobalSaveTask(String lockFilename, TaskProvider<GenerateLockTask> globalLockTask,
                                                                TaskProvider<UpdateLockTask> globalUpdateLockTask, DependencyLockExtension extension) {
         TaskProvider<SaveLockTask> globalSaveLockTask = project.tasks.register(SAVE_GLOBAL_LOCK_TASK_NAME, SaveLockTask)
@@ -192,46 +186,46 @@ class DependencyLockTaskConfigurer {
         globalSaveLockTask
     }
 
-    private TaskProvider<GenerateLockTask> configureGenerateLockTask(TaskProvider<GenerateLockTask> lockTask, String lockFilename, DependencyLockExtension extension, Map overrides) {
-        setupLockConventionMapping(lockTask, extension, overrides)
+    private TaskProvider<GenerateLockTask> configureGenerateLockTask(TaskProvider<GenerateLockTask> lockTask, String lockFilename, DependencyLockExtension extension, Map<String, String> overridesMap) {
         lockTask.configure {
-            it.conventionMapping.with {
-                dependenciesLock = { getBuildDirLockFile(lockFilename, extension) }
-                configurationNames = { extension.configurationNames.get() }
-                skippedConfigurationNames = { extension.skippedConfigurationNamesPrefixes.get() }
-            }
+            dependenciesLock.set(getBuildDirLockFile(lockFilename, extension))
+            configurationNames.set(extension.configurationNames)
+            skippedConfigurationNames.set(extension.skippedConfigurationNamesPrefixes)
+            projectDirectory.set(project.projectDir)
+            globalLockFileName.set(extension.globalLockFile)
+            includeTransitives.set(
+                    project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives'] as String) : extension.includeTransitives.get()
+            )
+            skippedDependencies.set(extension.skippedDependencies)
+            overrides.set(overridesMap)
+            filter.set(extension.dependencyFilter)
         }
 
         lockTask
     }
 
-    private void setupLockConventionMapping(TaskProvider<GenerateLockTask> task, DependencyLockExtension extension, Map overrideMap) {
-        task.configure { generateTask ->
-            generateTask.conventionMapping.with {
-                skippedDependencies = { extension.skippedDependencies.get() }
-                includeTransitives = {
-                    project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives'] as String) : extension.includeTransitives.get()
-                }
-                filter = { extension.dependencyFilter }
-                overrides = { overrideMap }
-            }
-        }
-    }
-
     private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateLockTask> globalLockTask, String lockFilename,
-                                                                   DependencyLockExtension extension, Map overrides) {
-        setupLockConventionMapping(globalLockTask, extension, overrides)
+                                                                   DependencyLockExtension extension, Map<String, String> overridesMap) {
         globalLockTask.configure { globalGenerateTask ->
             globalGenerateTask.doFirst {
                 project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
             }
+            includeTransitives.set(
+                    project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives'] as String) : extension.includeTransitives.get()
+            )
+            skippedDependencies.set(extension.skippedDependencies)
+            overrides.set(overridesMap)
+            filter.set(extension.dependencyFilter)
+            dependenciesLock.set(getBuildDirGlobalLockFile(lockFilename, extension))
+            projectDirectory.set(project.projectDir)
+            globalLockFileName.set(extension.globalLockFile)
+            dependenciesLock.set(getBuildDirGlobalLockFile(lockFilename, extension))
             globalGenerateTask.conventionMapping.with {
-                dependenciesLock = { getBuildDirGlobalLockFile(lockFilename, extension) }
                 configurations = {
                     def subprojects = project.subprojects.collect { subproject ->
                         def ext = subproject.getExtensions().findByType(DependencyLockExtension)
                         if (ext != null) {
-                            Collection<Configuration> lockableConfigurations = lockableConfigurations(project, subproject, ext.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
+                            Collection<Configuration> lockableConfigurations = lockableConfigurations(subproject, ext.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
                             Collection<Configuration> configurations = filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(subproject, ext.configurationNames.get(), lockableConfigurations)
                             Configuration aggregate = subproject.configurations.create("aggregateConfiguration")
                             aggregate.setCanBeConsumed(true)
@@ -253,10 +247,11 @@ class DependencyLockTaskConfigurer {
                     def conf = project.configurations.detachedConfiguration(subprojectsArray)
                     project.allprojects.each { it.configurations.add(conf) }
 
-                    [conf] + lockableConfigurations(project, project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
+                    [conf] + lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
                 }
             }
         }
+
 
         globalLockTask
     }

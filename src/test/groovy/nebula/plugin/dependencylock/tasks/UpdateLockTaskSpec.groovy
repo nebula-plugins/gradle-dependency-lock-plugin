@@ -64,7 +64,7 @@ class UpdateLockTaskSpec extends ProjectSpec {
         lockFile.text = lockText
 
         def task = createTask()
-        task.includeTransitives = true
+        task.includeTransitives.set(true)
 
         def updatedLock = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
@@ -87,6 +87,6 @@ class UpdateLockTaskSpec extends ProjectSpec {
         task.lock()
 
         then:
-        task.dependenciesLock.text == updatedLock
+        task.dependenciesLock.get().text == updatedLock
     }
 }
