@@ -16,10 +16,13 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
+import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.ProjectSpec
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Unroll
+
+import static nebula.plugin.dependencylock.utils.ConfigurationUtils.lockableConfigurations
 
 class GenerateLockTaskSpec extends ProjectSpec {
     final String taskName = 'generateLock'
@@ -40,6 +43,11 @@ class GenerateLockTaskSpec extends ProjectSpec {
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames.set(['testRuntimeClasspath'])
+        task.configure { generateLockTask ->
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+            }
+        }
 
         when:
         task.lock()
@@ -69,11 +77,18 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames.set project.configurations
+        Set<String> configurationNames = project.configurations
                 .stream()
                 .filter { it.isCanBeResolved() && (it?.getResolutionAlternatives()?.isEmpty() || !it?.getResolutionAlternatives()) }
                 .collect { it.name }
                 .toSet()
+        task.configurationNames.set configurationNames
+
+        task.configure { generateLockTask ->
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(project, configurationNames)
+            }
+        }
 
         when:
         task.lock()
@@ -103,12 +118,19 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock.set(new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock'))
-        task.configurationNames.set project.configurations
+        def configurationNames = project.configurations
                 .stream()
                 .filter { it.isCanBeResolved() && (it?.getResolutionAlternatives()?.isEmpty() || !it?.getResolutionAlternatives()) }
                 .collect { it.name }
                 .toSet()
-        task.skippedConfigurationNames.set(['zinc', 'incrementalAnalysis'])
+        task.configurationNames.set configurationNames
+        def skippedConfigurationNames = ['zinc', 'incrementalAnalysis'] as Set<String>
+        task.skippedConfigurationNames.set(skippedConfigurationNames)
+        task.configure { generateLockTask ->
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(project, configurationNames, skippedConfigurationNames)
+            }
+        }
 
         when:
         task.lock()
@@ -136,6 +158,11 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames.set(['testRuntimeClasspath'])
         task.skippedDependencies.set(['test.example:foo'])
         task.includeTransitives.set(true)
+        task.configure { generateLockTask ->
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+            }
+        }
 
         String lockText = '''\
             {
@@ -179,6 +206,12 @@ class GenerateLockTaskSpec extends ProjectSpec {
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock.set(new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock'))
         task.configurationNames.set( ['testRuntimeClasspath'])
+        task.configure { generateLockTask ->
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>)
+            }
+        }
+        task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
 
         when:
         task.lock()
@@ -224,6 +257,12 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set(new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'])
         task.includeTransitives.set(true)
+        task.configure { generateLockTask ->
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>)
+            }
+        }
+        task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
 
         when:
         task.lock()
@@ -277,6 +316,12 @@ class GenerateLockTaskSpec extends ProjectSpec {
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock.set new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames.set(['testRuntimeClasspath'])
+        task.configure { generateLockTask ->
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>)
+            }
+        }
+        task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
 
         when:
         task.lock()
@@ -351,6 +396,12 @@ class GenerateLockTaskSpec extends ProjectSpec {
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock.set new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames.set(['testRuntimeClasspath'])
+        task.configure { generateLockTask ->
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>)
+            }
+        }
+        task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
 
         when:
         task.lock()
@@ -398,6 +449,11 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames.set(['testRuntimeClasspath'])
         task.includeTransitives.set true
+        task.configure { generateLockTask ->
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+            }
+        }
 
         when:
         task.lock()
@@ -432,6 +488,11 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames.set(['testRuntimeClasspath'])
         task.includeTransitives.set true
+        task.configure { generateLockTask ->
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+            }
+        }
 
         when:
         task.lock()
@@ -469,6 +530,11 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames.set(['testRuntimeClasspath'])
         task.includeTransitives.set true
+        task.configure { generateLockTask ->
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+            }
+        }
 
         when:
         task.lock()
@@ -511,7 +577,11 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames.set(['testRuntimeClasspath'])
         task.includeTransitives.set true
-
+        task.configure { generateLockTask ->
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+            }
+        }
         when:
         task.lock()
 
@@ -555,7 +625,11 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames.set(['testRuntimeClasspath'])
         task.includeTransitives.set true
-
+        task.configure { generateLockTask ->
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+            }
+        }
         when:
         task.lock()
 
@@ -610,6 +684,11 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames.set(['testRuntimeClasspath'])
         task.filter.set(filter as Closure)
+        task.configure { generateLockTask ->
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+            }
+        }
 
         when:
         task.lock()

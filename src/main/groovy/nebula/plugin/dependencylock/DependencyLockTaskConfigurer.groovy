@@ -15,6 +15,7 @@
  */
 package nebula.plugin.dependencylock
 
+import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.tasks.CommitLockTask
 import nebula.plugin.dependencylock.tasks.DiffLockTask
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
@@ -22,6 +23,7 @@ import nebula.plugin.dependencylock.tasks.MigrateLockedDepsToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.plugin.dependencylock.tasks.UpdateLockTask
+import nebula.plugin.dependencylock.utils.ConfigurationUtils
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.UnknownTaskException
@@ -32,8 +34,8 @@ import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
 
-import static nebula.plugin.dependencylock.tasks.GenerateLockTask.filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject
-import static nebula.plugin.dependencylock.tasks.GenerateLockTask.lockableConfigurations
+import static nebula.plugin.dependencylock.utils.ConfigurationUtils.filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject
+import static nebula.plugin.dependencylock.utils.ConfigurationUtils.lockableConfigurations
 
 class DependencyLockTaskConfigurer {
     private static final Logger LOGGER = Logging.getLogger(DependencyLockTaskConfigurer)
@@ -187,7 +189,7 @@ class DependencyLockTaskConfigurer {
     }
 
     private TaskProvider<GenerateLockTask> configureGenerateLockTask(TaskProvider<GenerateLockTask> lockTask, String lockFilename, DependencyLockExtension extension, Map<String, String> overridesMap) {
-        lockTask.configure {
+        lockTask.configure {generateLockTask ->
             dependenciesLock.set(getBuildDirLockFile(lockFilename, extension))
             configurationNames.set(extension.configurationNames)
             skippedConfigurationNames.set(extension.skippedConfigurationNamesPrefixes)
@@ -198,7 +200,12 @@ class DependencyLockTaskConfigurer {
             )
             skippedDependencies.set(extension.skippedDependencies)
             overrides.set(overridesMap)
+            shouldIgnoreDependencyLock.set(isIgnoreDependencyLock(project))
             filter.set(extension.dependencyFilter)
+            peers.set(getProjectPeers())
+            generateLockTask.conventionMapping.with {
+                configurations = lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
+            }
         }
 
         lockTask
@@ -220,6 +227,8 @@ class DependencyLockTaskConfigurer {
             projectDirectory.set(project.projectDir)
             globalLockFileName.set(extension.globalLockFile)
             dependenciesLock.set(getBuildDirGlobalLockFile(lockFilename, extension))
+            shouldIgnoreDependencyLock.set(isIgnoreDependencyLock(project))
+            peers.set(getProjectPeers())
             globalGenerateTask.conventionMapping.with {
                 configurations = {
                     def subprojects = project.subprojects.collect { subproject ->
@@ -247,13 +256,17 @@ class DependencyLockTaskConfigurer {
                     def conf = project.configurations.detachedConfiguration(subprojectsArray)
                     project.allprojects.each { it.configurations.add(conf) }
 
-                    [conf] + lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
+                    [conf] + ConfigurationUtils.lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
                 }
             }
         }
 
 
         globalLockTask
+    }
+
+    private getProjectPeers() {
+        project.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) }
     }
 
     private TaskProvider<MigrateToCoreLocksTask> configureMigrateToCoreLocksTask(DependencyLockExtension extension) {
@@ -298,7 +311,7 @@ class DependencyLockTaskConfigurer {
         }
     }
 
-    public static boolean shouldIgnoreDependencyLock(Project project) {
+    static boolean isIgnoreDependencyLock(Project project) {
         if (project.hasProperty('dependencyLock.ignore')) {
             def prop = project.property('dependencyLock.ignore')
             (prop instanceof String) ? prop.toBoolean() : prop.asBoolean()
