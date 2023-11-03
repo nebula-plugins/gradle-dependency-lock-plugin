@@ -2,6 +2,8 @@ package nebula.plugin.dependencylock.diff
 
 import nebula.dependencies.comparison.DependencyDiff
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.component.*
 import org.gradle.api.artifacts.result.ComponentSelectionCause
 import org.gradle.api.artifacts.result.ResolvedComponentResult
@@ -21,14 +23,14 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
 
     // method constructs a map/list structure ready to be serialized with dependency paths with changes. Each group of paths
     // is marked with configuration names where those paths belong.
-    override fun generateDiffReport(project: Project, diffsByConfiguration: Map<String, List<DependencyDiff>> ): List<Map<String, Any>> {
+    override fun generateDiffReport(configurations: Collection<Configuration>, diffsByConfiguration: Map<String, List<DependencyDiff>> ): List<Map<String, Any>> {
         val pathsPerConfiguration: List<ConfigurationPaths> = diffsByConfiguration
             .filterKeys { name ->
-                val conf = project.configurations.findByName(name)
+                val conf = configurations.find { it.name == name }
                 conf != null && conf.isCanBeResolved
             }
             .map { (configurationName: String, differences: List<DependencyDiff>) ->
-            val completeDependencyTree: AnnotatedDependencyTree = constructPathsToAllDependencies(differences, project, configurationName)
+            val completeDependencyTree: AnnotatedDependencyTree = constructPathsToAllDependencies(differences, configurations, configurationName)
             val removedInsignificantChanges: AnnotatedDependencyTree = filterPathsWithSignificantChanges(completeDependencyTree)
             val removeAlreadyVisited: AnnotatedDependencyTree = filterPathsWithDuplicatedElements(removedInsignificantChanges)
             val removedInsignificantChangesAfterRemovingAlreadyVisited: AnnotatedDependencyTree = filterPathsWithSignificantChanges(removeAlreadyVisited)
@@ -50,12 +52,12 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
     }
 
     //this method constructs paths to all unique dependencies from module root within a configuration
-    private fun constructPathsToAllDependencies(differences: List<DependencyDiff>, project: Project, configurationName: String): AnnotatedDependencyTree {
+    private fun constructPathsToAllDependencies(differences: List<DependencyDiff>, configurations: Collection<Configuration>, configurationName: String): AnnotatedDependencyTree {
         val differencesByDependency: Map<String, DependencyDiff> = differences.associateBy { it.dependency }
 
         //build paths for all dependencies
         val pathStack: Deque<DependencyPathElement> = LinkedList()
-        val root = DependencyPathElement(project.configurations.getByName(configurationName).incoming.resolutionResult.root, null, null)
+        val root = DependencyPathElement(configurations.find { it.name == configurationName }!!.incoming.resolutionResult.root, null, null)
         pathStack.add(root)
         val visited = mutableSetOf<ResolvedDependencyResult>()
         while (!pathStack.isEmpty()) {

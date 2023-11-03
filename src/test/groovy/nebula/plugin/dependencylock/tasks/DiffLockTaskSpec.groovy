@@ -29,6 +29,7 @@ class DiffLockTaskSpec extends ProjectSpec {
             it.existingLockFile.set(existingLock)
             it.updatedLockFile.set(newLock)
             it.outputFile.set(getDiffFile())
+            it.configurations = project.configurations
         }
 
         when:
@@ -64,6 +65,7 @@ class DiffLockTaskSpec extends ProjectSpec {
             it.existingLockFile.set(existingLock)
             it.updatedLockFile.set(newLock)
             it.outputFile.set(getDiffFile())
+            it.configurations = project.configurations
         }
 
         when:
@@ -96,6 +98,7 @@ class DiffLockTaskSpec extends ProjectSpec {
             it.existingLockFile.set(existingLock)
             it.updatedLockFile.set(newLock)
             it.outputFile.set(getDiffFile())
+            it.configurations = project.configurations
         }
 
         when:
@@ -130,6 +133,7 @@ class DiffLockTaskSpec extends ProjectSpec {
             it.existingLockFile.set(existingLock)
             it.updatedLockFile.set(newLock)
             it.outputFile.set(getDiffFile())
+            it.configurations = project.configurations
         }
 
         when:
@@ -183,6 +187,7 @@ class DiffLockTaskSpec extends ProjectSpec {
             it.existingLockFile.set(existingLock)
             it.updatedLockFile.set(newLock)
             it.outputFile.set(getDiffFile())
+            it.configurations = project.configurations
         }
 
         when:
@@ -227,6 +232,7 @@ class DiffLockTaskSpec extends ProjectSpec {
             it.existingLockFile.set(existingLock)
             it.updatedLockFile.set(newLock)
             it.outputFile.set(getDiffFile())
+            it.configurations = project.configurations
         }
 
         when:
@@ -258,6 +264,7 @@ class DiffLockTaskSpec extends ProjectSpec {
             it.existingLockFile.set(existingLock)
             it.updatedLockFile.set(newLock)
             it.outputFile.set(getDiffFile())
+            it.configurations = project.configurations
         }
 
         when:
