@@ -24,6 +24,7 @@ import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.plugin.dependencylock.tasks.UpdateLockTask
 import nebula.plugin.dependencylock.utils.ConfigurationUtils
+import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.UnknownTaskException
@@ -327,9 +328,14 @@ class DependencyLockTaskConfigurer {
             diffTask.mustRunAfter(project.tasks.named(GENERATE_LOCK_TASK_NAME), project.tasks.named(UPDATE_LOCK_TASK_NAME))
             def existing = new File(project.projectDir, lockFileName ?: extension.lockFile.get())
             if (existing.exists()) {
-                diffTask.existingLockFile = existing
+                diffTask.existingLockFile.set(existing)
             }
-            diffTask.updatedLockFile = new File(project.layout.buildDirectory.getAsFile().get(), lockFileName ?: extension.lockFile.get())
+            diffTask.updatedLockFile.set(new File(project.layout.buildDirectory.getAsFile().get(), lockFileName ?: extension.lockFile.get()))
+            File dependencyLockFolder = new File(project.layout.buildDirectory.getAsFile().get(), "dependency-lock")
+            dependencyLockFolder.mkdirs()
+            File diffFile = new File(dependencyLockFolder, "lockdiff.${this.diffFileExtension()}")
+            diffTask.outputFile.set(diffFile)
+            diffTask.isPathAwareDependencyDiffEnabled.set(DependencyLockingFeatureFlags.isPathAwareDependencyDiffEnabled())
         }
 
         project.tasks.named(SAVE_LOCK_TASK_NAME).configure { save ->
@@ -337,6 +343,10 @@ class DependencyLockTaskConfigurer {
         }
 
         diffLockTask
+    }
+
+    private String diffFileExtension() {
+        DependencyLockingFeatureFlags.isPathAwareDependencyDiffEnabled() ? "json" : "txt"
     }
 
 }
