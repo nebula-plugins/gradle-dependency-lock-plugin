@@ -104,7 +104,7 @@ class CoreLockingHelper {
     private void runClosureOnConfigurations(Set<String> configurationNames, Closure closure, Collection<String> additionalBaseConfigurationsToLock) {
         Set<Configuration> configurationsToLock
         if (shouldLockAllConfigurations) {
-            configurationsToLock = GenerateLockTask.lockableConfigurations(project, configurationNames)
+            configurationsToLock = ConfigurationUtils.lockableConfigurations(project, configurationNames)
         } else {
             configurationsToLock = findConfigurationsToLock(configurationNames, additionalBaseConfigurationsToLock)
         }

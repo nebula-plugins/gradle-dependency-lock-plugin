@@ -202,7 +202,7 @@ class DependencyLockPlugin : Plugin<Project> {
         lockUsed = dependenciesLock.name
         reasons.add("com.netflix.nebula.dependency-lock locked with: $lockUsed")
 
-        if (!DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
+        if (!DependencyLockTaskConfigurer.isIgnoreDependencyLock(project)) {
             val taskNames = project.gradle.startParameter.taskNames
             val hasUpdateTask = hasUpdateTask(taskNames)
 

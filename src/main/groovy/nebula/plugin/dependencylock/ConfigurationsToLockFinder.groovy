@@ -20,6 +20,7 @@ package nebula.plugin.dependencylock
 
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import nebula.plugin.dependencylock.utils.ConfigurationFilters
+import nebula.plugin.dependencylock.utils.ConfigurationUtils
 import org.gradle.api.Project
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -68,7 +69,7 @@ class ConfigurationsToLockFinder {
 
     private Collection<String> gatherLockableConfigurationNames(Collection<String> configurationNames, Collection<String> gatheredConfigurations) {
         def lockableConfigurationNames = []
-        def lockableConfigurations = GenerateLockTask.lockableConfigurations(project, configurationNames as Set)
+        def lockableConfigurations = ConfigurationUtils.lockableConfigurations(project, configurationNames as Set)
         lockableConfigurations.each {
             lockableConfigurationNames.add(it.name)
         }

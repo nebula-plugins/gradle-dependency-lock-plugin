@@ -15,29 +15,22 @@
  */
 package nebula.plugin.dependencylock.tasks
 
-import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
 import nebula.plugin.dependencylock.DependencyLockWriter
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
-import nebula.plugin.dependencylock.utils.ConfigurationFilters
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import org.gradle.api.BuildCancelledException
-import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.logging.Logger
-import org.gradle.api.logging.Logging
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
@@ -45,7 +38,6 @@ import org.gradle.work.DisableCachingByDefault
 abstract class GenerateLockTask extends AbstractLockTask {
     private String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
     private String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
-    private static final Logger LOGGER = Logging.getLogger(GenerateLockTask)
 
     @Internal
     String description = 'Create a lock file in build/<configured name>'
@@ -83,10 +75,18 @@ abstract class GenerateLockTask extends AbstractLockTask {
     @Internal
     abstract Property<Closure> getFilter()
 
+    @Input
+    abstract Property<Boolean> getShouldIgnoreDependencyLock()
+
+    @Input
+    abstract ListProperty<LockKey> getPeers()
+
     GenerateLockTask() {
         includeTransitives.convention(false)
         skippedDependencies.convention([])
         filter.convention({ group, name, version -> true })
+        shouldIgnoreDependencyLock.convention(false)
+        peers.convention([])
     }
 
     @TaskAction
@@ -103,106 +103,26 @@ abstract class GenerateLockTask extends AbstractLockTask {
                     "Please use $WRITE_CORE_LOCK_TASK_TO_RUN\n" +
                     "or do a one-time migration with `./gradlew $MIGRATE_TO_CORE_LOCK_TASK_NAME` to preserve the current lock state")
         }
-        if (DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
+        if (shouldIgnoreDependencyLock.isPresent() && shouldIgnoreDependencyLock.get()) {
             throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
         }
-        Collection<Configuration> confs = getConfigurations() ?: lockableConfigurations(project, configurationNames.get(), skippedConfigurationNames.get())
-        Map dependencyMap = new GenerateLockFromConfigurations().lock(confs)
+        Map dependencyMap = new GenerateLockFromConfigurations(peers.get()).lock(getConfigurations())
         new DependencyLockWriter(dependenciesLock.get(), skippedDependencies.get()).writeLock(dependencyMap)
     }
 
-    static Collection<Configuration> lockableConfigurations(Project project, Set<String> configurationNames, Set<String> skippedConfigurationNamesPrefixes = []) {
-        Set<Configuration> lockableConfigurations = []
-        if (configurationNames.empty) {
-            if (Configuration.class.declaredMethods.any { it.name == 'isCanBeResolved' }) {
-                lockableConfigurations.addAll project.configurations.findAll {
-                    it.canBeResolved && !ConfigurationFilters.safelyHasAResolutionAlternative(it) &&
-                            // Always exclude compileOnly to avoid issues with kotlin plugin
-                            !it.name.endsWith("CompileOnly") &&
-                            it.name != "compileOnly"
-                }
-            } else {
-                lockableConfigurations.addAll project.configurations.asList()
-            }
-        } else {
-            lockableConfigurations.addAll configurationNames.collect { project.configurations.getByName(it) }
-        }
-
-        lockableConfigurations.removeAll {
-            Configuration configuration -> skippedConfigurationNamesPrefixes.any {
-                String prefix -> configuration.name.startsWith(prefix)
-            }
-        }
-        return lockableConfigurations
-    }
-
-    static Collection<Configuration> filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(Project subproject, Set<String> configurationNames, Collection<Configuration> lockableConfigurations) {
-        if (configurationNames.size() > 0) {
-            Collection<String> warnings = new HashSet<>()
-
-            Collection<Configuration> consumableLockableConfigurations = new ArrayList<>()
-            lockableConfigurations.each { conf ->
-                Collection<String> warningsForConfiguration = provideWarningsForConfiguration(conf, subproject)
-                warnings.addAll(warningsForConfiguration)
-                if (warningsForConfiguration.isEmpty()) {
-                    consumableLockableConfigurations.add(conf)
-                }
-            }
-
-            configurationNames.each { nameToLock ->
-                if (!lockableConfigurations.collect { it.name }.contains(nameToLock)) {
-                    Configuration confThatWillNotBeLocked = subproject.configurations.findByName(nameToLock)
-                    if (confThatWillNotBeLocked == null) {
-                        String message = "Global lock warning: project '${subproject.name}' requested locking a configuration which cannot be locked: '${nameToLock}'"
-                        warnings.add(message)
-                    } else {
-                        warnings.addAll(provideWarningsForConfiguration(confThatWillNotBeLocked, subproject))
-                    }
-                }
-            }
-
-            if (warnings.size() > 0) {
-                warnings.add("Requested configurations for global locks must be resolvable, consumable, and without resolution alternatives.\n" +
-                        "You can remove the configuration 'dependencyLock.configurationNames' to stop this customization.\n" +
-                        "If you wish to lock only specific configurations, please update 'dependencyLock.configurationNames' with other configurations.\n" +
-                        "Please read more about this at:\n" +
-                        "- https://docs.gradle.org/current/userguide/java_plugin.html#sec:java_plugin_and_dependency_management\n" +
-                        "- https://docs.gradle.org/current/userguide/java_library_plugin.html#sec:java_library_configurations_graph")
-                LOGGER.warn('--------------------\n' + warnings.sort().join("\n") + '\n--------------------')
-            }
-            return consumableLockableConfigurations
-        }
-
-        return lockableConfigurations
-    }
-
-    private static Collection<String> provideWarningsForConfiguration(Configuration conf, Project subproject) {
-        Collection<String> errorMessages = new HashSet<>()
-
-        if (!ConfigurationFilters.canSafelyBeConsumed(conf)) {
-            String message = "Global lock warning: project '${subproject.name}' requested locking a configuration which cannot be consumed: '${conf.name}'"
-            errorMessages.add(message)
-        }
-        if (!ConfigurationFilters.canSafelyBeResolved(conf)) {
-            String message = "Global lock warning: project '${subproject.name}' requested locking a configuration which cannot be resolved: '${conf.name}'"
-            errorMessages.add(message)
-        }
-        if (ConfigurationFilters.safelyHasAResolutionAlternative(conf)) {
-            String message = "Global lock warning: project '${subproject.name}' requested locking a deprecated configuration '${conf.name}' " +
-                    "which has resolution alternatives: ${conf.getResolutionAlternatives()}"
-            errorMessages.add(message)
-        }
-
-        return errorMessages
-    }
 
     class GenerateLockFromConfigurations {
+
+        private final List<LockKey> peers
+
+        GenerateLockFromConfigurations(List<LockKey> peers) {
+            this.peers = peers
+        }
+
         Map<LockKey, LockValue> lock(Collection<Configuration> confs) {
             Map<LockKey, LockValue> deps = [:].withDefault { new LockValue() }
 
             // Peers are all the projects in the build to which this plugin has been applied.
-            def peers = project.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) }
-
             confs.each { Configuration configuration ->
                 // Lock the version of each dependency specified in the build script as resolved by Gradle.
                 def resolvedDependencies = configuration.resolvedConfiguration.firstLevelModuleDependencies
@@ -299,7 +219,7 @@ abstract class GenerateLockTask extends AbstractLockTask {
             deps[key].transitive << parent
         }
 
-        private static def isKeyInPeerList(LockKey lockKey, List peers) {
+        private static def isKeyInPeerList(LockKey lockKey, List<LockKey> peers) {
             return peers.any {
                 it.group == lockKey.group && it.artifact == lockKey.artifact
             }
