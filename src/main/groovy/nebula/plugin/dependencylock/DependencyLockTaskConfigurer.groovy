@@ -336,6 +336,9 @@ class DependencyLockTaskConfigurer {
             File diffFile = new File(dependencyLockFolder, "lockdiff.${this.diffFileExtension()}")
             diffTask.outputFile.set(diffFile)
             diffTask.isPathAwareDependencyDiffEnabled.set(DependencyLockingFeatureFlags.isPathAwareDependencyDiffEnabled())
+            diffTask.conventionMapping.with {
+                configurations = project.configurations
+            }
         }
 
         project.tasks.named(SAVE_LOCK_TASK_NAME).configure { save ->
