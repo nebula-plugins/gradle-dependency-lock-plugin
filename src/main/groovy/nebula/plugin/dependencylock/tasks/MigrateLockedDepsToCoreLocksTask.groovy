@@ -19,17 +19,17 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.DependencyLockReader
-import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault
-class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
+abstract class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
 
     @Internal
     String description = "Migrates Nebula-locked dependencies to use core Gradle locks"
@@ -37,17 +37,18 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
     private static final Logger LOGGER = Logging.getLogger(MigrateLockedDepsToCoreLocksTask)
 
     @Internal
-    File inputLockFile
+    abstract Property<File> getInputLockFile()
 
     @TaskAction
     void migrateLockedDependencies() {
-        if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
+        if (isCoreLockingEnabled.get()) {
             def coreLockingHelper = new CoreLockingHelper(project)
-            coreLockingHelper.lockSelectedConfigurations(getConfigurationNames())
+            coreLockingHelper.lockSelectedConfigurations(configurationNames.get())
 
-            if (getInputLockFile().exists()) {
+            File inputLock = inputLockFile.get()
+            if (inputLock.exists()) {
                 LOGGER.warn("Migrating legacy locks to core Gradle locking. This will remove legacy locks.\n" +
-                        " - Legacy lock: ${getInputLockFile().absolutePath}\n" +
+                        " - Legacy lock: ${inputLock.absolutePath}\n" +
                         " - Core Gradle locks: ${project.projectDir.absoluteFile}/gradle.lockfile")
 
                 def lockReader = new DependencyLockReader(project)
@@ -56,7 +57,7 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
                 List<String> emptyLockedConfigs = new ArrayList<>()
 
                 def migrateConfigurationClosure = {
-                    def locks = lockReader.readLocks(it, getInputLockFile(), new HashMap<>())
+                    def locks = lockReader.readLocks(it, inputLock, new HashMap<>())
 
                     if (locks != null) {
                         for (Map.Entry<String, ArrayList<String>> entry : locks.entrySet()) {
@@ -81,9 +82,9 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
                             emptyLockedConfigs.add(it.name)
                     }
                 }
-                coreLockingHelper.migrateLockedConfigurations(getConfigurationNames(), migrateConfigurationClosure)
+                coreLockingHelper.migrateLockedConfigurations(configurationNames.get(), migrateConfigurationClosure)
 
-                def configLockFile = outputLock
+                def configLockFile = outputLock.get()
                 if (!configLockFile.exists()) {
                     configLockFile.createNewFile()
                     configLockFile.write("# This is a file for dependency locking, migrated from Nebula locks.\n" +
@@ -96,20 +97,20 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
                     configLockFile.append("empty=${emptyLockedConfigs.join(',')}")
                 }
 
-                deleteInputLockFile()
+                deleteInputLockFile(inputLock)
             } else {
                 throw new BuildCancelledException("Stopping migration. There is no lockfile at expected location:\n" +
-                        "${getInputLockFile().path}")
+                        "${inputLock.path}")
             }
         }
     }
 
-    private void deleteInputLockFile() {
+    private void deleteInputLockFile(File inputLock) {
         def failureToDeleteInputLockFileMessage = "Failed to delete legacy locks.\n" +
                 "Please remove the legacy lockfile manually.\n" +
-                " - Legacy lock: ${getInputLockFile().absolutePath}"
+                " - Legacy lock: ${inputLock.absolutePath}"
         try {
-            if (!getInputLockFile().delete()) {
+            if (!inputLock.delete()) {
                 throw new BuildCancelledException(failureToDeleteInputLockFileMessage)
             }
         } catch (Exception e) {
