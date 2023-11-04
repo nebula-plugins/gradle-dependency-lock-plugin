@@ -106,22 +106,22 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
 {
     "_global_": {
         "commons-io:commons-io": {
-            "firstLevelTransitive": [
+            "locked": "2.11.0",
+            "transitive": [
                 "$moduleName:sub2"
-            ],
-            "locked": "2.11.0"
+            ]
         },
         "commons-logging:commons-logging": {
-            "firstLevelTransitive": [
+            "locked": "1.2",
+            "transitive": [
                 "$moduleName:sub3"
-            ],
-            "locked": "1.2"
+            ]
         },
         "$moduleName:sub1": {
-            "firstLevelTransitive": [
+            "project": true,
+            "transitive": [
                 "$moduleName:sub2"
-            ],
-            "project": true
+            ]
         },
         "$moduleName:sub2": {
             "project": true
@@ -130,11 +130,10 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
             "project": true
         },
         "org.apache.commons:commons-lang3": {
-            "firstLevelTransitive": [
-                "$moduleName:sub1",
+            "locked": "3.12.0",
+            "transitive": [
                 "$moduleName:sub1"
-            ],
-            "locked": "3.12.0"
+            ]
         }
     },
     "resolutionRules": {
@@ -178,10 +177,10 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
                 "project": true
             },
             "test.rules:resolution-rules": {
-                "firstLevelTransitive": [
+                "locked": "1.0.0",
+                "transitive": [
                     ":$moduleName"
-                ],
-                "locked": "1.0.0"
+                ]
             }""".stripIndent(), ['resolutionRules'])
 
         def sub2LockText = LockGenerator.duplicateIntoConfigs("""\
@@ -189,10 +188,10 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
             "locked": "2.11.0"
         },
         "org.apache.commons:commons-lang3": {
-            "firstLevelTransitive": [
+            "locked": "3.12.0",
+            "transitive": [
                 "$moduleName:sub1"
-            ],
-            "locked": "3.12.0"
+            ]
         },
         "$moduleName:sub1": {
             "project": true
@@ -209,10 +208,10 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
             "project": true
         },
         "test.rules:resolution-rules": {
-            "firstLevelTransitive": [
+            "locked": "1.0.0",
+            "transitive": [
                 ":$moduleName"
-            ],
-            "locked": "1.0.0"
+            ]
         }""".stripIndent(), ['resolutionRules'])
 
         def sub3LockText = LockGenerator.duplicateIntoConfigs('''\
@@ -224,10 +223,10 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
                 "project": true
             },
             "test.rules:resolution-rules": {
-                "firstLevelTransitive": [
+                "locked": "1.0.0",
+                "transitive": [
                     ":$moduleName"
-                ],
-                "locked": "1.0.0"
+                ]
             }""".stripIndent(), ['resolutionRules'])
 
         rootLockFile.text == rootLockText
