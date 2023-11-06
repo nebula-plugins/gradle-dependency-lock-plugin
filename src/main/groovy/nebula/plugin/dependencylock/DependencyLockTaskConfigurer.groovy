@@ -15,6 +15,7 @@
  */
 package nebula.plugin.dependencylock
 
+import nebula.plugin.dependencylock.model.ConfigurationResolutionData
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.tasks.CommitLockTask
 import nebula.plugin.dependencylock.tasks.DiffLockTask
@@ -205,7 +206,13 @@ class DependencyLockTaskConfigurer {
             filter.set(extension.dependencyFilter)
             peers.set(getProjectPeers())
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
+                configurationResolutionData = lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get()).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
 
@@ -231,7 +238,7 @@ class DependencyLockTaskConfigurer {
             shouldIgnoreDependencyLock.set(isIgnoreDependencyLock(project))
             peers.set(getProjectPeers())
             globalGenerateTask.conventionMapping.with {
-                configurations = {
+                configurationResolutionData = {
                     def subprojects = project.subprojects.collect { subproject ->
                         def ext = subproject.getExtensions().findByType(DependencyLockExtension)
                         if (ext != null) {
@@ -257,11 +264,18 @@ class DependencyLockTaskConfigurer {
                     def conf = project.configurations.detachedConfiguration(subprojectsArray)
                     project.allprojects.each { it.configurations.add(conf) }
 
-                    [conf] + ConfigurationUtils.lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
+                    def configs = [conf] + ConfigurationUtils.lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
+                    configs.findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+                }
+
                 }
             }
-        }
-
 
         globalLockTask
     }

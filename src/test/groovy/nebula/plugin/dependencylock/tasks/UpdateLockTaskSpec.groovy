@@ -16,6 +16,7 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
+import nebula.plugin.dependencylock.model.ConfigurationResolutionData
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.ProjectSpec
 
@@ -39,7 +40,13 @@ class UpdateLockTaskSpec extends ProjectSpec {
         task.configurationNames = LockGenerator.DEFAULT_CONFIG_NAMES
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(project, LockGenerator.DEFAULT_CONFIG_NAMES as Set<String>)
+                configurationResolutionData = lockableConfigurations(project, LockGenerator.DEFAULT_CONFIG_NAMES as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
         task

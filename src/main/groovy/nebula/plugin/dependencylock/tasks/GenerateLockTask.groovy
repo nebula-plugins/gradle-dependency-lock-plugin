@@ -17,12 +17,13 @@ package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.DependencyLockWriter
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
+import nebula.plugin.dependencylock.model.ConfigurationResolutionData
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import org.gradle.api.BuildCancelledException
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.artifacts.result.DependencyResult
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
@@ -41,9 +42,6 @@ abstract class GenerateLockTask extends AbstractLockTask {
 
     @Internal
     String description = 'Create a lock file in build/<configured name>'
-
-    @Internal
-    Collection<Configuration> configurations = []
 
     @Internal
     abstract SetProperty<String> getConfigurationNames()
@@ -81,6 +79,9 @@ abstract class GenerateLockTask extends AbstractLockTask {
     @Input
     abstract ListProperty<LockKey> getPeers()
 
+    @Internal
+    Collection<ConfigurationResolutionData> configurationResolutionData = []
+
     GenerateLockTask() {
         includeTransitives.convention(false)
         skippedDependencies.convention([])
@@ -106,7 +107,7 @@ abstract class GenerateLockTask extends AbstractLockTask {
         if (shouldIgnoreDependencyLock.isPresent() && shouldIgnoreDependencyLock.get()) {
             throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
         }
-        Map dependencyMap = new GenerateLockFromConfigurations(peers.get()).lock(getConfigurations())
+        Map dependencyMap = new GenerateLockFromConfigurations(peers.get()).lock(getConfigurationResolutionData())
         new DependencyLockWriter(dependenciesLock.get(), skippedDependencies.get()).writeLock(dependencyMap)
     }
 
@@ -119,100 +120,76 @@ abstract class GenerateLockTask extends AbstractLockTask {
             this.peers = peers
         }
 
-        Map<LockKey, LockValue> lock(Collection<Configuration> confs) {
+        Map<LockKey, LockValue> lock(Collection<ConfigurationResolutionData> confs) {
             Map<LockKey, LockValue> deps = [:].withDefault { new LockValue() }
-
-            // Peers are all the projects in the build to which this plugin has been applied.
-            confs.each { Configuration configuration ->
-                // Lock the version of each dependency specified in the build script as resolved by Gradle.
-                def resolvedDependencies = configuration.resolvedConfiguration.firstLevelModuleDependencies
-                def filteredResolvedDependencies = resolvedDependencies.findAll { ResolvedDependency resolved ->
-                    filter.get().call(resolved.moduleGroup, resolved.moduleName, resolved.moduleVersion)
+            confs.each { configurationResolutionData ->
+                def resolvedComponent = configurationResolutionData.resolvedComponentResult.get()
+                def resolvedDirectDependencies = resolvedComponent.dependencies
+                def filteredResolvedDirectDependencies = resolvedDirectDependencies.findAll { ResolvedDependencyResult resolved ->
+                    filter.get().call(resolved.selected.moduleVersion.group, resolved.selected.moduleVersion.name, resolved.selected.moduleVersion.version)
                 }
-
-                filteredResolvedDependencies.each { ResolvedDependency resolved ->
-                    def key = new LockKey(group: resolved.moduleGroup, artifact: resolved.moduleName, configuration: configuration.name)
+                filteredResolvedDirectDependencies.each { ResolvedDependencyResult resolved ->
+                    def key = new LockKey(group: resolved.selected.moduleVersion.group, artifact: resolved.selected.moduleVersion.name, configuration: configurationResolutionData.configurationName)
 
                     // If this dependency does not exist in our list of peers, it is a standard dependency. Otherwise, it is
                     // a project dependency.
                     if (!isKeyInPeerList(key, peers)) {
-                        deps[key].locked = resolved.moduleVersion
+                        deps[key].locked = resolved.selected.moduleVersion.version
                     } else {
                         // Project dependencies don't have a version so they must be treated differently. Record the project
                         // as an explicit dependency, but do not lock it to a version.
                         deps[key].project = true
-
-                        // If we don't include transitive dependencies, then we must lock the first-level "transitive"
-                        // dependencies of each project dependency.
-                        if (!includeTransitives.get()) {
-                            handleSiblingTransitives(resolved, configuration.name, deps, peers)
-                        }
                     }
 
                     // If requested, lock all the transitive dependencies of the declared top-level dependencies.
-                    if (includeTransitives.get()) {
-                        deps[key].childrenVisited = true
-                        resolved.children.each { handleTransitive(it, configuration.name, deps, peers, key) }
+                    def resolvedTransitiveDependencies = configurationResolutionData.allDependencies.findAll {
+                        DependencyResult dependencyResult ->
+                            dependencyResult instanceof ResolvedDependencyResult &&
+                                    dependencyResult.from != resolvedComponent &&
+                                    dependencyResult.from != dependencyResult &&
+                                    dependencyResult.from == resolved.selected
+                    }
+                    deps[key].childrenVisited = true
+                    resolvedTransitiveDependencies.each {
+                        handleTransitive(it, configurationResolutionData, deps, peers, key)
+                    }
+                }
+
+                // Add all the overrides to the locked dependencies and record whether a specified override modified a
+                // preexisting dependency.
+                overrides.get().each { String k, String overrideVersion ->
+                    def (overrideGroup, overrideArtifact) = k.tokenize(':')
+                    deps.each { depLockKey, depValue ->
+                        if (depLockKey.group == overrideGroup && depLockKey.artifact == overrideArtifact) {
+                            depValue.viaOverride = overrideVersion
+                        }
                     }
                 }
             }
-
-            // Add all the overrides to the locked dependencies and record whether a specified override modified a
-            // preexisting dependency.
-            overrides.get().each { String k, String overrideVersion ->
-                def (overrideGroup, overrideArtifact) = k.tokenize(':')
-                deps.each { depLockKey, depValue ->
-                    if (depLockKey.group == overrideGroup && depLockKey.artifact == overrideArtifact) {
-                        depValue.viaOverride = overrideVersion
-                    }
-                }
-            }
-
             return deps
         }
 
-        private void handleSiblingTransitives(ResolvedDependency sibling, String configName, Map<LockKey, LockValue> deps, List peers) {
-            def parent = new LockKey(group: sibling.moduleGroup, artifact: sibling.moduleName, configuration: sibling.configuration)
-            sibling.children.each { ResolvedDependency dependency ->
-                def key = new LockKey(group: dependency.moduleGroup, artifact: dependency.moduleName, configuration: configName)
-
-                // Record the project[s] from which this dependency originated.
-                deps[key].firstLevelTransitive << parent
-
-                // Lock the transitive dependencies of each project dependency, recursively.
-                if (isKeyInPeerList(key, peers)) {
-                    deps[key].project = true
-
-                    // Multiple configurations may specify dependencies on the same project, and multiple projects might
-                    // also be dependent on the same project. We only need to record the top-level transitive dependencies
-                    // once for each project. Flag a project as visited as soon as we encounter it.
-                    if ((dependency.children.size() > 0) && !deps[key].childrenVisited) {
-                        deps[key].childrenVisited = true
-                        handleSiblingTransitives(dependency, configName, deps, peers)
-                    }
-                } else {
-                    deps[key].locked = dependency.moduleVersion
-                }
-            }
-        }
-
-        private void handleTransitive(ResolvedDependency transitive, String configName, Map<LockKey, LockValue> deps, List peers, LockKey parent) {
-            def key = new LockKey(group: transitive.moduleGroup, artifact: transitive.moduleName, configuration: configName)
+        private void handleTransitive(ResolvedDependencyResult transitive, ConfigurationResolutionData configurationResolutionData, Map<LockKey, LockValue> deps, List peers, LockKey parent) {
+            def key = new LockKey(group: transitive.selected.moduleVersion.group, artifact: transitive.selected.moduleVersion.name, configuration: configurationResolutionData.configurationName)
 
             // Multiple dependencies may share any subset of their transitive dependencies. Each dependency only needs to be
             // visited once so flag it once we visit it.
             if (!deps[key].childrenVisited) {
-
                 // Lock each dependency and its children, recursively. Don't forget transitive project dependencies.
                 if (!isKeyInPeerList(key, peers)) {
-                    deps[key].locked = transitive.moduleVersion
+                    deps[key].locked = transitive.selected.moduleVersion.version
                 } else {
                     deps[key].project = true
                 }
-                if (transitive.children.size() > 0) {
-                    deps[key].childrenVisited = true
+                def resolvedTransitiveDependencies = configurationResolutionData.allDependencies.findAll {
+                    DependencyResult dependencyResult ->
+                        dependencyResult instanceof ResolvedDependencyResult &&
+                                dependencyResult.from == transitive.selected
+                } as List<ResolvedDependencyResult>
+                deps[key].childrenVisited = true
+                resolvedTransitiveDependencies.each { ResolvedDependencyResult resolved ->
+                    handleTransitive(resolved, configurationResolutionData, deps, peers, key)
                 }
-                transitive.children.each { handleTransitive(it, configName, deps, peers, key) }
             }
 
             // Record the dependencies from which this artifact originated transitively.

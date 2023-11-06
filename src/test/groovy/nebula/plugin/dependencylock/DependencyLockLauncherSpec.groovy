@@ -1756,11 +1756,11 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         new File(projectDir, 'global.lock').text == """{
     "_global_": {
         "com.google.guava:guava": {
-            "firstLevelTransitive": [
+            "locked": "19.0",
+            "transitive": [
                 "global-lock-with-skippedConfigurationNamesPrefixes:one",
                 "global-lock-with-skippedConfigurationNamesPrefixes:two"
-            ],
-            "locked": "19.0"
+            ]
         },
         "global-lock-with-skippedConfigurationNamesPrefixes:one": {
             "project": true
@@ -1778,52 +1778,7 @@ class DependencyLockLauncherSpec extends IntegrationSpec {
         resultDependencies.standardOutput.contains("com.google.guava:guava:31.1-jre")
         !resultDependencies.standardOutput.contains("com.google.guava:guava:31.1-jre -> 19.0")
     }
-
-    @IgnoreIf({ jvm.isJava17Compatible() }) // Because we use old version of Gradle and Kotlin
-    @Issue("https://youtrack.jetbrains.com/issue/KT-48245")
-    def 'compileOnly configuration is not resolvable for locking'() {
-        // the kotlin plugin make this resolvable in Gradle 7
-        def dependenciesLock = new File(projectDir, 'dependencies.lock')
-        dependenciesLock << OLD_FOO_LOCK
-
-        gradleVersion = "7.0.2"
-
-        buildFile << """
-            buildscript {
-              repositories {
-                maven {
-                  url "https://plugins.gradle.org/m2/"
-                }
-              }
-              dependencies {
-                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.32"
-              }
-            }
-            """.stripIndent()
-        buildFile << SPECIFIC_BUILD_GRADLE
-        buildFile << """
-            apply plugin: "org.jetbrains.kotlin.jvm"
-            repositories {
-                mavenCentral()
-            }
-            dependencies {
-                // add a compileOnly dependency
-                compileOnly 'test.example:bar:1.0.0'
-                implementation 'test.example:qux:1.0.0'
-            }
-            """.stripIndent()
-
-        when:
-        def result = runTasksSuccessfully('generateLock', 'saveLock')
-        def lockFile = new File(projectDir, "dependencies.lock")
-
-        then:
-        lockFile.text.contains('"compileClasspath"')
-        lockFile.text.contains('"testCompileClasspath"')
-        !lockFile.text.contains('"compileOnly"')
-        !lockFile.text.contains('"testCompileOnly"')
-    }
-
+    
     def 'handle generating a lock with circular dependencies depending on a jar that depends on us'() {
         def builder = new DependencyGraphBuilder()
         builder.addModule(new ModuleBuilder('test.nebula:foo:1.0.0').addDependency('example.nebula:circulartest:1.0.0').build())

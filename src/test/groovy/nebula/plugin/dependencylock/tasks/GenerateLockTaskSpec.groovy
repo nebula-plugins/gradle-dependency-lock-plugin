@@ -16,6 +16,7 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
+import nebula.plugin.dependencylock.model.ConfigurationResolutionData
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.ProjectSpec
@@ -45,7 +46,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames.set(['testRuntimeClasspath'])
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
 
@@ -86,7 +93,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
 
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(project, configurationNames)
+                configurationResolutionData = lockableConfigurations(project, configurationNames).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
 
@@ -128,7 +141,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.skippedConfigurationNames.set(skippedConfigurationNames)
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(project, configurationNames, skippedConfigurationNames)
+                configurationResolutionData = lockableConfigurations(project, configurationNames, skippedConfigurationNames).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
 
@@ -160,7 +179,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.includeTransitives.set(true)
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
 
@@ -208,7 +233,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames.set( ['testRuntimeClasspath'])
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>)
+                configurationResolutionData = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
         task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
@@ -259,7 +290,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.includeTransitives.set(true)
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>)
+                configurationResolutionData = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
         task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
@@ -318,7 +355,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames.set(['testRuntimeClasspath'])
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>)
+                configurationResolutionData = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
         task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
@@ -331,23 +374,23 @@ class GenerateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntimeClasspath": {
                     "test.example:baz": {
-                        "firstLevelTransitive": [
+                        "locked": "2.0.0",
+                        "transitive": [
                             "test.nebula:common",
                             "test.nebula:lib"
-                        ],
-                        "locked": "2.0.0"
+                        ]
                     },
                     "test.example:foo": {
-                        "firstLevelTransitive": [
+                        "locked": "2.0.1",
+                        "transitive": [
                             "test.nebula:common"
-                        ],
-                        "locked": "2.0.1"
+                        ]
                     },
                     "test.nebula:common": {
-                        "firstLevelTransitive": [
+                        "project": true,
+                        "transitive": [
                             "test.nebula:lib"
-                        ],
-                        "project": true
+                        ]
                     },
                     "test.nebula:lib": {
                         "project": true
@@ -398,7 +441,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames.set(['testRuntimeClasspath'])
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>)
+                configurationResolutionData = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
         task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
@@ -411,26 +460,26 @@ class GenerateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntimeClasspath": {
                     "test.example:foo": {
-                        "firstLevelTransitive": [
+                        "locked": "2.0.1",
+                        "transitive": [
                             "test.nebula:model"
-                        ],
-                        "locked": "2.0.1"
+                        ]
                     },
                     "test.nebula:common": {
-                        "firstLevelTransitive": [
+                        "project": true,
+                        "transitive": [
                             "test.nebula:lib"
-                        ],
-                        "project": true
+                        ]
                     },
                     "test.nebula:lib": {
                         "project": true
                     },
                     "test.nebula:model": {
-                        "firstLevelTransitive": [
+                        "project": true,
+                        "transitive": [
                             "test.nebula:common",
                             "test.nebula:lib"
-                        ],
-                        "project": true
+                        ]
                     }
                 }
             }'''.stripIndent()
@@ -451,7 +500,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.includeTransitives.set true
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
 
@@ -490,7 +545,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.includeTransitives.set true
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
 
@@ -532,7 +593,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.includeTransitives.set true
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
 
@@ -579,7 +646,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.includeTransitives.set true
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
         when:
@@ -627,7 +700,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.includeTransitives.set true
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
         when:
@@ -686,7 +765,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.filter.set(filter as Closure)
         task.configure { generateLockTask ->
             generateLockTask.conventionMapping.with {
-                configurations = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>)
+                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                    new ConfigurationResolutionData(
+                            it.name,
+                            it.incoming.resolutionResult.getAllDependencies(),
+                            it.incoming.resolutionResult.rootComponent
+                    )
+                }
             }
         }
 
