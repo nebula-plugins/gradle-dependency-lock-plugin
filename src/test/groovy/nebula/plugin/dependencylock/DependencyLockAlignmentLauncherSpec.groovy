@@ -13,6 +13,7 @@
  */
 package nebula.plugin.dependencylock
 
+import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifierKt
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
@@ -27,7 +28,7 @@ import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 
 @Subject(DependencyResolutionVerifierKt)
-class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
+class DependencyLockAlignmentLauncherSpec extends BaseIntegrationTestKitSpec {
     def setup() {
         definePluginOutsideOfPluginBlock = true
         keepFiles = true

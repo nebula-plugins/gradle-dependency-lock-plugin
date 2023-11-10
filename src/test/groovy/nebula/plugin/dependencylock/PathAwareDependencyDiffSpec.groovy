@@ -1,6 +1,7 @@
 package nebula.plugin.dependencylock
 
 import groovy.json.JsonSlurper
+import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraph
@@ -11,7 +12,7 @@ import nebula.test.dependencies.maven.Pom
 import nebula.test.dependencies.maven.ArtifactType
 import nebula.test.dependencies.repositories.MavenRepo
 
-class PathAwareDependencyDiffSpec extends IntegrationTestKitSpec {
+class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
 
     private File repoDir
 

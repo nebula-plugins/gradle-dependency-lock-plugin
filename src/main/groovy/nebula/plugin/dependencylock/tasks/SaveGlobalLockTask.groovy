@@ -20,15 +20,15 @@ import org.gradle.api.tasks.Input
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault
-abstract class SaveLockTask extends AbstractSaveLockTask {
+abstract class SaveGlobalLockTask extends AbstractSaveLockTask {
 
     @Input
-    abstract Property<Boolean> getProjectHasGlobalLockFile()
+    abstract Property<Boolean> getAnySubprojectHasLockFile()
 
     @Override
     void verifyIfCanSaveLock() {
-        if (projectHasGlobalLockFile.isPresent() && projectHasGlobalLockFile.get()) {
-            throw new IllegalStateException("Cannot save individual locks when global lock is in place, run deleteGlobalLock task.")
+        if (anySubprojectHasLockFile.isPresent() && anySubprojectHasLockFile.get()) {
+            throw new IllegalStateException("Cannot save global lock, one or more individual locks are in place, run deleteLock task")
         }
     }
 

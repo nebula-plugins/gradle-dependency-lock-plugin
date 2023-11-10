@@ -18,6 +18,7 @@
 
 package nebula.plugin.dependencylock
 
+import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.IntegrationTestKitSpec
 import org.gradle.testkit.runner.TaskOutcome
@@ -27,7 +28,7 @@ import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 
-class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
+class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec {
     def mavenForRules
 
     def setup() {

@@ -18,6 +18,7 @@
 
 package nebula.plugin.dependencyverifier
 
+import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
@@ -28,7 +29,7 @@ import spock.lang.Subject
 import spock.lang.Unroll
 
 @Subject(DependencyResolutionVerifierKt)
-class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
+class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
     def mavenrepo
 
     def setup() {

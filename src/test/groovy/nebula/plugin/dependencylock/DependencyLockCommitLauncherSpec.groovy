@@ -15,13 +15,13 @@
  */
 package nebula.plugin.dependencylock
 
+import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
-import nebula.test.IntegrationSpec
 import org.ajoberstar.grgit.Grgit
 
 import java.nio.file.Files
 
-class DependencyLockCommitLauncherSpec extends IntegrationSpec {
+class DependencyLockCommitLauncherSpec extends BaseIntegrationTestKitSpec {
 
     protected Grgit git
     protected Grgit originGit
@@ -35,28 +35,29 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec {
         origin.mkdirs()
 
         ['build.gradle', 'settings.gradle'].each {
-            Files.move(new File(projectDir, it).toPath(), new File(origin, it).toPath())
+            def file = new File(projectDir, it)
+            if(!file.exists()) {
+                file.createNewFile()
+            }
+            Files.move(file.toPath(), new File(origin, it).toPath())
         }
 
         originGit = Grgit.init(dir: origin)
-
-        originGit.add(patterns: ['build.gradle', 'settings.gradle', '.gitignore', 'gradle.properties'] as Set)
+        originGit.add(patterns: ['build.gradle', 'settings.gradle', '.gitignore'] as Set)
         originGit.commit(message: 'Initial checkout')
 
         git = Grgit.clone(dir: projectDir, uri: origin.absolutePath) as Grgit
 
-        new File(projectDir, '.gitignore') << '''.gradle-test-kit/
-.gradle/
+        new File(projectDir, '.gitignore') << '''.gradle-test-kit
+.gradle
 build/
 gradle.properties'''.stripIndent()
-
-        // Enable configuration cache :)
-        new File(projectDir, 'gradle.properties') << '''org.gradle.configuration-cache=true'''.stripIndent()
         def gradleProperties = new File(projectDir, "gradle.properties")
         gradleProperties.createNewFile()
         gradleProperties << "systemProp.nebula.features.coreLockingSupport=false"
-
-
+        // Enable configuration cache :)
+        gradleProperties << '''org.gradle.configuration-cache=true'''.stripIndent()
+        git.add(patterns: ['build.gradle', 'settings.gradle', '.gitignore'])
         git.commit(message: 'Setup')
         git.push()
     }
@@ -74,7 +75,7 @@ gradle.properties'''.stripIndent()
         buildFile << DependencyLockLauncherSpec.BUILD_GRADLE
 
         when:
-        runTasksSuccessfully('generateLock', 'saveLock', 'commitLock')
+        runTasks('generateLock', 'saveLock', 'commitLock')
 
         then:
         def lockFile = new File(projectDir, 'dependencies.lock')
@@ -89,6 +90,9 @@ gradle.properties'''.stripIndent()
         sub2.mkdirs()
 
         buildFile << """\
+            plugins {
+               id 'com.netflix.nebula.dependency-lock'
+            }
             subprojects {
                 apply plugin: 'java'
                 apply plugin: 'com.netflix.nebula.dependency-lock'
@@ -115,7 +119,7 @@ gradle.properties'''.stripIndent()
 
 
         when:
-        runTasksSuccessfully('generateLock', 'saveLock', 'commitLock')
+        runTasks('generateLock', 'saveLock', 'commitLock')
 
         then:
         new File(projectDir, 'sub1/dependencies.lock').exists()
@@ -129,7 +133,9 @@ gradle.properties'''.stripIndent()
         sub2.mkdirs()
 
         buildFile << """\
-            apply plugin: 'com.netflix.nebula.dependency-lock'
+            plugins {
+               id 'com.netflix.nebula.dependency-lock'
+            }
             subprojects {
                 apply plugin: 'java'
                 apply plugin: 'com.netflix.nebula.dependency-lock'
@@ -155,7 +161,7 @@ gradle.properties'''.stripIndent()
         '''.stripIndent()
 
         when:
-        runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock', 'commitLock', '--info')
+        runTasks('generateGlobalLock', 'saveGlobalLock', 'commitLock', '--info')
 
         then:
         new File(projectDir, 'global.lock').exists()
