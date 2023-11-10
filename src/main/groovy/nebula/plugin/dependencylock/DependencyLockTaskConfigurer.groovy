@@ -19,11 +19,13 @@ import nebula.plugin.dependencylock.model.ConfigurationResolutionData
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.tasks.CommitLockTask
 import nebula.plugin.dependencylock.tasks.DiffLockTask
+import nebula.plugin.dependencylock.tasks.GenerateGlobalLockTask
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import nebula.plugin.dependencylock.tasks.MigrateLockedDepsToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.plugin.dependencylock.tasks.UpdateLockTask
+import nebula.plugin.dependencylock.tasks.UpdateGlobalLockTask
 import nebula.plugin.dependencylock.utils.ConfigurationUtils
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import org.gradle.api.GradleException
@@ -84,10 +86,10 @@ class DependencyLockTaskConfigurer {
         TaskProvider<GenerateLockTask> globalLockTask
         TaskProvider<UpdateLockTask> globalUpdateLock
         if (project == project.rootProject) {
-            globalLockTask = project.tasks.register(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateLockTask)
+            globalLockTask = project.tasks.register(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateGlobalLockTask)
             configureGlobalLockTask(globalLockTask, globalLockFilename, extension, overrides)
 
-            globalUpdateLock = project.tasks.register(UPDATE_GLOBAL_LOCK_TASK_NAME, UpdateLockTask)
+            globalUpdateLock = project.tasks.register(UPDATE_GLOBAL_LOCK_TASK_NAME, UpdateGlobalLockTask)
             configureGlobalLockTask(globalUpdateLock, globalLockFilename, extension, overrides)
 
             globalSave = configureGlobalSaveTask(globalLockFilename, globalLockTask, globalUpdateLock, extension)
@@ -205,21 +207,21 @@ class DependencyLockTaskConfigurer {
             shouldIgnoreDependencyLock.set(isIgnoreDependencyLock(project))
             filter.set(extension.dependencyFilter)
             peers.set(getProjectPeers())
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get()).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            configurationResolutionData.set(
+                    lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get()).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
         }
 
         lockTask
     }
 
-    private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateLockTask> globalLockTask, String lockFilename,
+    private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateGlobalLockTask> globalLockTask, String lockFilename,
                                                                    DependencyLockExtension extension, Map<String, String> overridesMap) {
         globalLockTask.configure { globalGenerateTask ->
             globalGenerateTask.doFirst {
