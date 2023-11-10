@@ -23,6 +23,7 @@ import nebula.plugin.dependencylock.tasks.GenerateGlobalLockTask
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import nebula.plugin.dependencylock.tasks.MigrateLockedDepsToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
+import nebula.plugin.dependencylock.tasks.SaveGlobalLockTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.plugin.dependencylock.tasks.UpdateLockTask
 import nebula.plugin.dependencylock.tasks.UpdateGlobalLockTask
@@ -74,7 +75,7 @@ class DependencyLockTaskConfigurer {
         TaskProvider<UpdateLockTask> updateLockTask = project.tasks.register(UPDATE_LOCK_TASK_NAME, UpdateLockTask)
         configureGenerateLockTask(updateLockTask, lockFilename, extension, overrides)
 
-        TaskProvider<SaveLockTask> saveTask = configureSaveTask(lockFilename, genLockTask, updateLockTask, extension)
+        TaskProvider<SaveLockTask> saveTask = configureSaveTask(lockFilename, globalLockFilename, genLockTask, updateLockTask, extension)
         createDeleteLock(saveTask)
 
         configureMigrateToCoreLocksTask(extension)
@@ -92,7 +93,7 @@ class DependencyLockTaskConfigurer {
             globalUpdateLock = project.tasks.register(UPDATE_GLOBAL_LOCK_TASK_NAME, UpdateGlobalLockTask)
             configureGlobalLockTask(globalUpdateLock, globalLockFilename, extension, overrides)
 
-            globalSave = configureGlobalSaveTask(globalLockFilename, globalLockTask, globalUpdateLock, extension)
+            globalSave = configureGlobalSaveTask(lockFilename, globalLockFilename, globalLockTask, globalUpdateLock, extension)
 
             createDeleteGlobalLock(globalSave)
         }
@@ -103,6 +104,10 @@ class DependencyLockTaskConfigurer {
     }
 
     private File getProjectDirLockFile(String lockFilename, DependencyLockExtension extension) {
+        getProjectDirLockFile(project, lockFilename, extension)
+    }
+
+    private File getProjectDirLockFile(Project project, String lockFilename, DependencyLockExtension extension) {
         new File(project.projectDir, lockFilename ?: extension.lockFile.get())
     }
 
@@ -111,11 +116,11 @@ class DependencyLockTaskConfigurer {
     }
 
     private File getProjectDirGlobalLockFile(String lockFilename, DependencyLockExtension extension) {
-        new File(project.projectDir, lockFilename ?: extension.globalLockFile.get())
+        new File(project.rootProject.projectDir, lockFilename ?: extension.globalLockFile.get())
     }
 
     private File getBuildDirGlobalLockFile(String lockFilename, DependencyLockExtension extension) {
-        new File(project.layout.buildDirectory.getAsFile().get(), lockFilename ?: extension.globalLockFile.get())
+        new File(project.rootProject.layout.buildDirectory.getAsFile().get(), lockFilename ?: extension.globalLockFile.get())
     }
 
     private void configureCommitTask(String clLockFileName, String globalLockFileName, TaskProvider<SaveLockTask> saveTask, DependencyLockExtension lockExtension,
@@ -154,17 +159,12 @@ class DependencyLockTaskConfigurer {
         return patterns
     }
 
-    private TaskProvider<SaveLockTask> configureSaveTask(String lockFilename, TaskProvider<GenerateLockTask> lockTask,
+    private TaskProvider<SaveLockTask> configureSaveTask(String lockFilename, String globalLockFilename, TaskProvider<GenerateLockTask> lockTask,
                                                          TaskProvider<UpdateLockTask> updateTask, DependencyLockExtension extension) {
         TaskProvider<SaveLockTask> saveLockTask = project.tasks.register(SAVE_LOCK_TASK_NAME, SaveLockTask)
 
         saveLockTask.configure { saveTask ->
-            saveTask.doFirst {
-                SaveLockTask globalSave = project.rootProject.tasks.findByName(SAVE_GLOBAL_LOCK_TASK_NAME) as SaveLockTask
-                if (globalSave?.outputLock?.isPresent() && globalSave?.outputLock?.get()?.exists()) {
-                    throw new GradleException('Cannot save individual locks when global lock is in place, run deleteGlobalLock task')
-                }
-            }
+            projectHasGlobalLockFile.set(getProjectDirGlobalLockFile(globalLockFilename, extension).exists())
             generatedLock.set(getBuildDirLockFile(lockFilename, extension))
             outputLock.set(getProjectDirLockFile(lockFilename, extension))
             saveTask.mustRunAfter lockTask, updateTask
@@ -172,21 +172,14 @@ class DependencyLockTaskConfigurer {
         saveLockTask
     }
 
-    private TaskProvider<SaveLockTask> configureGlobalSaveTask(String lockFilename, TaskProvider<GenerateLockTask> globalLockTask,
+    private TaskProvider<SaveLockTask> configureGlobalSaveTask(String lockFilename, String globalLockFileName, TaskProvider<GenerateLockTask> globalLockTask,
                                                                TaskProvider<UpdateLockTask> globalUpdateLockTask, DependencyLockExtension extension) {
-        TaskProvider<SaveLockTask> globalSaveLockTask = project.tasks.register(SAVE_GLOBAL_LOCK_TASK_NAME, SaveLockTask)
+        TaskProvider<SaveLockTask> globalSaveLockTask = project.tasks.register(SAVE_GLOBAL_LOCK_TASK_NAME, SaveGlobalLockTask)
 
         globalSaveLockTask.configure { globalSaveTask ->
-            globalSaveTask.doFirst {
-                project.subprojects.each { Project sub ->
-                    SaveLockTask save = sub.tasks.findByName(SAVE_LOCK_TASK_NAME) as SaveLockTask
-                    if (save && save.outputLock.isPresent() && save.outputLock?.get()?.exists()) {
-                        throw new GradleException('Cannot save global lock, one or more individual locks are in place, run deleteLock task')
-                    }
-                }
-            }
-            generatedLock.set(getBuildDirGlobalLockFile(lockFilename, extension))
-            outputLock.set(getProjectDirGlobalLockFile(lockFilename, extension))
+            anySubprojectHasLockFile.set(project.subprojects.any { getProjectDirLockFile(it, lockFilename, extension).exists()  })
+            generatedLock.set(getBuildDirGlobalLockFile(globalLockFileName, extension))
+            outputLock.set(getProjectDirGlobalLockFile(globalLockFileName, extension))
             mustRunAfter globalLockTask, globalUpdateLockTask
         }
         globalSaveLockTask

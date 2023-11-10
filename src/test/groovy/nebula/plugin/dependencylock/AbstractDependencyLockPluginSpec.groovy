@@ -1,5 +1,6 @@
 package nebula.plugin.dependencylock
 
+import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencylock.utils.GradleVersionUtils
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
@@ -9,7 +10,7 @@ import org.gradle.util.GradleVersion
 import org.junit.Rule
 import org.junit.contrib.java.lang.system.ProvideSystemProperty
 
-class AbstractDependencyLockPluginSpec extends IntegrationTestKitSpec {
+abstract class AbstractDependencyLockPluginSpec extends BaseIntegrationTestKitSpec {
     def expectedLocks = [
             'annotationProcessor',
             'compileClasspath',

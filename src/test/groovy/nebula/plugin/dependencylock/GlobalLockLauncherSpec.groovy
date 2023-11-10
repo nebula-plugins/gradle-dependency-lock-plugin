@@ -13,13 +13,13 @@
  */
 package nebula.plugin.dependencylock
 
-
+import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
 
-class GlobalLockLauncherSpec extends IntegrationTestKitSpec {
+class GlobalLockLauncherSpec extends BaseIntegrationTestKitSpec {
 
     def setup() {
         definePluginOutsideOfPluginBlock = true
