@@ -18,7 +18,6 @@ import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.plugin.dependencylock.utils.GradleVersionUtils
-import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
@@ -445,6 +444,9 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << PRE_DIFF_FOO_LOCK
         buildFile << BUILD_GRADLE
+
+        //TODO make diff lock config cache compatible
+        disableConfigurationCache()
 
         when:
         runTasks('generateLock', 'diffLock')
@@ -1056,6 +1058,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
                 }
             '''.stripIndent())
 
+        //TODO make diff lock config cache compatible
+        disableConfigurationCache()
         when:
         runTasks('generateLock', 'diffLock')
 
@@ -1071,6 +1075,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     }
 
     def 'diffLock in multiproject with no locks'() {
+        //TODO make diff lock config cache compatible
+        disableConfigurationCache()
         setupCommonMultiproject()
 
         when:

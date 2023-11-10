@@ -45,15 +45,16 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames.set(['testRuntimeClasspath'])
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            generateLockTask.configurationResolutionData.set(
+                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
+
         }
 
         when:
@@ -92,15 +93,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames.set configurationNames
 
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(project, configurationNames).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            generateLockTask.configurationResolutionData.set(
+                    lockableConfigurations(project, configurationNames).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
         }
 
         when:
@@ -140,15 +141,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         def skippedConfigurationNames = ['zinc', 'incrementalAnalysis'] as Set<String>
         task.skippedConfigurationNames.set(skippedConfigurationNames)
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(project, configurationNames, skippedConfigurationNames).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            generateLockTask.configurationResolutionData.set(
+                    lockableConfigurations(project,configurationNames, skippedConfigurationNames).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
         }
 
         when:
@@ -178,15 +179,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.skippedDependencies.set(['test.example:foo'])
         task.includeTransitives.set(true)
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            generateLockTask.configurationResolutionData.set(
+                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
         }
 
         String lockText = '''\
@@ -232,15 +233,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set(new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock'))
         task.configurationNames.set( ['testRuntimeClasspath'])
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            generateLockTask.configurationResolutionData.set(
+                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
         }
         task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
 
@@ -289,15 +290,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames.set(['testRuntimeClasspath'])
         task.includeTransitives.set(true)
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            generateLockTask.configurationResolutionData.set(
+                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
         }
         task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
 
@@ -354,15 +355,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames.set(['testRuntimeClasspath'])
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            generateLockTask.configurationResolutionData.set(
+                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
         }
         task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
 
@@ -440,15 +441,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames.set(['testRuntimeClasspath'])
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(app, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            generateLockTask.configurationResolutionData.set(
+                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
         }
         task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
 
@@ -499,15 +500,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames.set(['testRuntimeClasspath'])
         task.includeTransitives.set true
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            generateLockTask.configurationResolutionData.set(
+                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
         }
 
         when:
@@ -544,15 +545,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames.set(['testRuntimeClasspath'])
         task.includeTransitives.set true
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            generateLockTask.configurationResolutionData.set(
+                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
         }
 
         when:
@@ -592,15 +593,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames.set(['testRuntimeClasspath'])
         task.includeTransitives.set true
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            generateLockTask.configurationResolutionData.set(
+                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
         }
 
         when:
@@ -645,15 +646,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames.set(['testRuntimeClasspath'])
         task.includeTransitives.set true
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            generateLockTask.configurationResolutionData.set(
+                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
         }
         when:
         task.lock()
@@ -699,15 +700,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames.set(['testRuntimeClasspath'])
         task.includeTransitives.set true
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            generateLockTask.configurationResolutionData.set(
+                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
         }
         when:
         task.lock()
@@ -764,15 +765,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames.set(['testRuntimeClasspath'])
         task.filter.set(filter as Closure)
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            generateLockTask.configurationResolutionData.set(
+                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                        new ConfigurationResolutionData(
+                                it.name,
+                                it.incoming.resolutionResult.getAllDependencies(),
+                                it.incoming.resolutionResult.rootComponent
+                        )
+                    }
+            )
         }
 
         when:
