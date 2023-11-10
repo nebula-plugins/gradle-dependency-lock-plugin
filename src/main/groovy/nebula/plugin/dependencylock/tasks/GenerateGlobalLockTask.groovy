@@ -21,13 +21,13 @@ import org.gradle.api.tasks.Internal
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault
-abstract class GenerateLockTask extends AbstractGenerateLockTask {
+abstract class GenerateGlobalLockTask extends AbstractGenerateLockTask {
     @Internal
-    abstract ListProperty<ConfigurationResolutionData> getConfigurationResolutionData()
+    Collection<ConfigurationResolutionData> configurationResolutionData = []
 
     @Override
     List<ConfigurationResolutionData> resolveConfigurations() {
-        return configurationResolutionData.get()
+        return getConfigurationResolutionData()
     }
 }
 

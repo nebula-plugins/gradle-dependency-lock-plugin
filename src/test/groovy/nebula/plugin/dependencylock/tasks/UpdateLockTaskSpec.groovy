@@ -39,15 +39,13 @@ class UpdateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames = LockGenerator.DEFAULT_CONFIG_NAMES
         task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = lockableConfigurations(project, LockGenerator.DEFAULT_CONFIG_NAMES as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                    new ConfigurationResolutionData(
-                            it.name,
-                            it.incoming.resolutionResult.getAllDependencies(),
-                            it.incoming.resolutionResult.rootComponent
-                    )
-                }
-            }
+            configurationResolutionData.set(lockableConfigurations(project, LockGenerator.DEFAULT_CONFIG_NAMES as Set<String>).findAll { it.isCanBeResolved() }.collect {
+                new ConfigurationResolutionData(
+                        it.name,
+                        it.incoming.resolutionResult.getAllDependencies(),
+                        it.incoming.resolutionResult.rootComponent
+                )
+            })
         }
         task
     }

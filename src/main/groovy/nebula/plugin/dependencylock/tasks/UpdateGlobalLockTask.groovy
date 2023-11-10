@@ -25,7 +25,7 @@ import org.gradle.work.DisableCachingByDefault
  * dependencies per user request.
  */
 @DisableCachingByDefault
-abstract class UpdateLockTask extends GenerateLockTask {
+abstract class UpdateGlobalLockTask extends GenerateGlobalLockTask {
     String description = 'Apply updates to a preexisting lock file and write to build/<specified name>'
 
     @TaskAction
