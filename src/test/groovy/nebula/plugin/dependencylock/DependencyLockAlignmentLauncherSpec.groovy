@@ -32,6 +32,9 @@ class DependencyLockAlignmentLauncherSpec extends BaseIntegrationTestKitSpec {
     def setup() {
         definePluginOutsideOfPluginBlock = true
         keepFiles = true
+
+        //TODO make task listener changes for config cache
+        disableConfigurationCache()
     }
 
     @Unroll

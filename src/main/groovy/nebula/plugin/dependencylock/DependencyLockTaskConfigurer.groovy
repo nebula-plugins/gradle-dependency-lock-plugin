@@ -217,9 +217,7 @@ class DependencyLockTaskConfigurer {
     private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateGlobalLockTask> globalLockTask, String lockFilename,
                                                                    DependencyLockExtension extension, Map<String, String> overridesMap) {
         globalLockTask.configure { globalGenerateTask ->
-            globalGenerateTask.doFirst {
-                project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
-            }
+            project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
             includeTransitives.set(
                     project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives'] as String) : extension.includeTransitives.get()
             )

@@ -15,13 +15,13 @@
  */
 package nebula.plugin.dependencylock
 
-import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
+import nebula.test.IntegrationTestKitSpec
 import org.ajoberstar.grgit.Grgit
 
 import java.nio.file.Files
 
-class DependencyLockCommitLauncherSpec extends BaseIntegrationTestKitSpec {
+class DependencyLockCommitLauncherSpec extends IntegrationTestKitSpec {
 
     protected Grgit git
     protected Grgit originGit
@@ -53,7 +53,6 @@ class DependencyLockCommitLauncherSpec extends BaseIntegrationTestKitSpec {
 build/
 gradle.properties'''.stripIndent()
         def gradleProperties = new File(projectDir, "gradle.properties")
-        gradleProperties.createNewFile()
         gradleProperties << "systemProp.nebula.features.coreLockingSupport=false"
         // Enable configuration cache :)
         gradleProperties << '''org.gradle.configuration-cache=true'''.stripIndent()

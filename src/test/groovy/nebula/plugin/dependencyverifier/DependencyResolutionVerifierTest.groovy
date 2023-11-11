@@ -46,6 +46,9 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         def transitiveNotAvailableDep = new File(mavenrepo.getMavenRepoDir(), "transitive/not/available/a")
         transitiveNotAvailableDep.deleteDir() // to create a missing transitive dependency
+
+        //TODO make task listener changes for config cache
+        disableConfigurationCache()
     }
 
     @Unroll
