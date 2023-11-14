@@ -200,7 +200,8 @@ class DependencyLockTaskConfigurer {
             shouldIgnoreDependencyLock.set(isIgnoreDependencyLock(project))
             filter.set(extension.dependencyFilter)
             peers.set(getProjectPeers())
-            configurationResolutionData.set(
+            generateLockTask.conventionMapping.with {
+                configurationResolutionData = {
                     lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get()).findAll { it.isCanBeResolved() }.collect {
                         new ConfigurationResolutionData(
                                 it.name,
@@ -208,7 +209,8 @@ class DependencyLockTaskConfigurer {
                                 it.incoming.resolutionResult.rootComponent
                         )
                     }
-            )
+                }
+            }
         }
 
         lockTask
