@@ -16,18 +16,17 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.model.ConfigurationResolutionData
-import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.Internal
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault
 abstract class GenerateLockTask extends AbstractGenerateLockTask {
     @Internal
-    abstract ListProperty<ConfigurationResolutionData> getConfigurationResolutionData()
+    Collection<ConfigurationResolutionData> configurationResolutionData = []
 
     @Override
     List<ConfigurationResolutionData> resolveConfigurations() {
-        return configurationResolutionData.get()
+        return getConfigurationResolutionData()
     }
 }
 
