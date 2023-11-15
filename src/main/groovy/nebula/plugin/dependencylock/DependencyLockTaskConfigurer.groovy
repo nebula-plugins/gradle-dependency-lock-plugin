@@ -202,7 +202,7 @@ class DependencyLockTaskConfigurer {
             peers.set(getProjectPeers())
             generateLockTask.conventionMapping.with {
                 configurationResolutionData = {
-                    lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get()).findAll { it.isCanBeResolved() }.collect {
+                    lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes).findAll { it.isCanBeResolved() }.collect {
                         new ConfigurationResolutionData(
                                 it.name,
                                 it.incoming.resolutionResult.getAllDependencies(),
@@ -237,7 +237,7 @@ class DependencyLockTaskConfigurer {
                     def subprojects = project.subprojects.collect { subproject ->
                         def ext = subproject.getExtensions().findByType(DependencyLockExtension)
                         if (ext != null) {
-                            Collection<Configuration> lockableConfigurations = lockableConfigurations(subproject, ext.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
+                            Collection<Configuration> lockableConfigurations = lockableConfigurations(subproject, ext.configurationNames.get(), extension.skippedConfigurationNamesPrefixes)
                             Collection<Configuration> configurations = filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(subproject, ext.configurationNames.get(), lockableConfigurations)
                             Configuration aggregate = subproject.configurations.create("aggregateConfiguration")
                             aggregate.setCanBeConsumed(true)
@@ -245,7 +245,7 @@ class DependencyLockTaskConfigurer {
                             configurations
                                     .findAll { configuration ->
                                         !configurationsToSkipForGlobalLockPrefixes.any { String prefix -> configuration.name.startsWith(prefix) }
-                                                && !extension.skippedConfigurationNamesPrefixes.get().any { String prefix -> configuration.name.startsWith(prefix) }
+                                                && !extension.skippedConfigurationNamesPrefixes.any { String prefix -> configuration.name.startsWith(prefix) }
                                     }
                                     .each { configuration ->
                                         aggregate.extendsFrom(configuration)
@@ -259,7 +259,7 @@ class DependencyLockTaskConfigurer {
                     def conf = project.configurations.detachedConfiguration(subprojectsArray)
                     project.allprojects.each { it.configurations.add(conf) }
 
-                    def configs = [conf] + ConfigurationUtils.lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
+                    def configs = [conf] + ConfigurationUtils.lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes)
                     configs.findAll { it.isCanBeResolved() }.collect {
                         new ConfigurationResolutionData(
                                 it.name,

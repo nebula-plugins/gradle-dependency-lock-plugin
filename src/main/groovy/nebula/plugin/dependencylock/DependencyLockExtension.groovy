@@ -23,7 +23,6 @@ abstract class DependencyLockExtension {
         lockFile.convention('dependencies.lock')
         globalLockFile.convention('global.lock')
         configurationNames.convention([])
-        skippedConfigurationNamesPrefixes.convention([])
         updateDependencies.convention([])
         skippedDependencies.convention([])
         includeTransitives.convention(false)
@@ -37,7 +36,6 @@ abstract class DependencyLockExtension {
     abstract Property<String> getLockFile()
     abstract Property<String> getGlobalLockFile()
     abstract SetProperty<String> getConfigurationNames()
-    abstract SetProperty<String> getSkippedConfigurationNamesPrefixes()
     abstract SetProperty<String> getUpdateDependencies()
     abstract SetProperty<String> getSkippedDependencies()
     abstract Property<Boolean> getIncludeTransitives()
@@ -46,6 +44,8 @@ abstract class DependencyLockExtension {
     abstract Property<Boolean> getUpdateDependenciesFailOnSimultaneousTaskUsage()
     abstract Property<Boolean> getUpdateDependenciesFailOnNonSpecifiedDependenciesToUpdate()
     abstract SetProperty<String> getAdditionalConfigurationsToLock()
+
+    Set<String> skippedConfigurationNamesPrefixes = [] as Set
 
     Closure dependencyFilter = { String group, String name, String version -> true }
 }
