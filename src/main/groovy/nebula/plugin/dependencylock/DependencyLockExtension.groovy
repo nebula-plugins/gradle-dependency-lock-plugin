@@ -24,7 +24,6 @@ abstract class DependencyLockExtension {
         globalLockFile.convention('global.lock')
         configurationNames.convention([])
         updateDependencies.convention([])
-        skippedDependencies.convention([])
         includeTransitives.convention(false)
         lockAfterEvaluating.convention(true)
         updateDependenciesFailOnInvalidCoordinates.convention(true)
@@ -37,13 +36,14 @@ abstract class DependencyLockExtension {
     abstract Property<String> getGlobalLockFile()
     abstract SetProperty<String> getConfigurationNames()
     abstract SetProperty<String> getUpdateDependencies()
-    abstract SetProperty<String> getSkippedDependencies()
     abstract Property<Boolean> getIncludeTransitives()
     abstract Property<Boolean> getLockAfterEvaluating()
     abstract Property<Boolean> getUpdateDependenciesFailOnInvalidCoordinates()
     abstract Property<Boolean> getUpdateDependenciesFailOnSimultaneousTaskUsage()
     abstract Property<Boolean> getUpdateDependenciesFailOnNonSpecifiedDependenciesToUpdate()
     abstract SetProperty<String> getAdditionalConfigurationsToLock()
+
+    Set<String> skippedDependencies = [] as Set
 
     Set<String> skippedConfigurationNamesPrefixes = [] as Set
 
