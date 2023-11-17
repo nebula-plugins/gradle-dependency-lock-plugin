@@ -2240,4 +2240,30 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         then:
         noExceptionThrown()
     }
+
+
+    def 'can use dependency lock when project adds dependencies after evaluation'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << OLD_FOO_LOCK
+
+        buildFile << """\
+        plugins {
+            id 'java'
+            id 'com.netflix.nebula.dependency-lock'
+        }
+
+        repositories { maven { url '${Fixture.repo}' } }
+        dependencies {
+            implementation 'test.example:foo:1.0.1'
+        }
+        
+        afterEvaluate {
+            project.dependencies.add("implementation", "test.example:baz:1.0.0")
+        }
+    """
+        writeHelloWorld()
+        expect:
+        runTasks('build')
+    }
+
 }
