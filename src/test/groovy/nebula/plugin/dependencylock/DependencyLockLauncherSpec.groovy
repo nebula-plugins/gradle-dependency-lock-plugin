@@ -24,7 +24,6 @@ import nebula.test.dependencies.ModuleBuilder
 import org.gradle.util.GradleVersion
 import org.junit.Rule
 import org.junit.contrib.java.lang.system.ProvideSystemProperty
-import spock.lang.Ignore
 import spock.lang.IgnoreIf
 import spock.lang.Issue
 import spock.lang.Unroll
@@ -37,11 +36,6 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     @Rule
     public final ProvideSystemProperty provideSystemProperty = new ProvideSystemProperty("ignoreDeprecations", "false")
 
-    def setup() {
-
-        // Enable configuration cache :)
-    //    new File(projectDir, 'gradle.properties') << '''org.gradle.configuration-cache=true'''.stripIndent()
-    }
 
     static final String SPECIFIC_BUILD_GRADLE = """\
         plugins {
@@ -1632,86 +1626,6 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
 
         then:
         result.output.contains('\\--- com.hazelcast:hazelcast:3.6-RC1\n')
-    }
-
-    @Ignore('Android plugin incompatible with Gradle 3.0')
-    @Issue('#95')
-    def 'locking applied to Android variant configurations'() {
-        buildFile << """\
-            buildscript {
-                repositories {
-                    mavenCentral()
-                }
-                dependencies {
-                    classpath 'com.android.tools.build:gradle:2.1.2'
-                }
-            }
-
-            apply plugin: 'com.netflix.nebula.dependency-lock'
-            apply plugin: 'com.android.application'
-
-            repositories {
-                mavenCentral()
-            }
-
-            android {
-                compileSdkVersion 20
-                buildToolsVersion '20.0.0'
-
-                defaultConfig {
-                    applicationId "com.netflix.dependencylocktest"
-                    minSdkVersion 15
-                    targetSdkVersion 23
-                    versionCode 1
-                    versionName '1.0'
-                }
-                buildTypes {
-                    release {
-                        minifyEnabled false
-                        proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-                    }
-                }
-            }
-
-            gradle.addBuildListener(new BuildAdapter() {
-                void buildFinished(BuildResult result) {
-                   def confsWithDependencies = project.configurations.findAll { !it.dependencies.empty }.collect { '"' + it.name + '"' }
-                   println "configurations=" + confsWithDependencies
-                }
-            })
-
-            dependencies {
-                implementation 'commons-io:commons-io:2.4'
-            }
-        """.stripIndent()
-
-        when:
-        def generateResult = runTasks('generateLock', 'saveLock')
-
-        then: 'all configurations are in the lock file'
-        def configList = generateResult.output.readLines().find {
-            it.startsWith("configurations=")
-        }.split("configurations=")[1]
-        def configurations = Eval.me(configList)
-        def lockFile = new File(projectDir, 'dependencies.lock')
-        def json = new JsonSlurper().parseText(lockFile.text)
-        configurations.each {
-            assert json.keySet().contains(it)
-        }
-
-        when: 'all configurations are locked to the specified version'
-        def originalLockFile = new File('dependencies.lock.orig')
-        lockFile.renameTo(originalLockFile)
-        lockFile.withWriter { w ->
-            originalLockFile.eachLine { line ->
-                w << line.replaceAll('2\\.4', '2.3')
-            }
-        }
-        def dependenciesResult = runTasks('dependencies')
-
-        then:
-        dependenciesResult.output.contains('\\--- commons-io:commons-io:2.4 -> 2.3\n')
-        !dependenciesResult.output.contains('\\--- commons-io:commons-io:2.4\n')
     }
 
     def 'deprecated lock format message is not output for an empty file'() {
