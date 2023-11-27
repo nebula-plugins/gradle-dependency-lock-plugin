@@ -125,7 +125,7 @@ abstract class AbstractGenerateLockTask extends AbstractLockTask {
             confs.each { configurationResolutionData ->
                 def resolvedComponent = configurationResolutionData.resolvedComponentResult.get()
                 def resolvedDirectDependencies = resolvedComponent.dependencies
-                def filteredResolvedDirectDependencies = resolvedDirectDependencies.findAll { ResolvedDependencyResult resolved ->
+                def filteredResolvedDirectDependencies = resolvedDirectDependencies.findAll { it instanceof ResolvedDependencyResult}.findAll { ResolvedDependencyResult resolved ->
                     filter.get().call(resolved.selected.moduleVersion.group, resolved.selected.moduleVersion.name, resolved.selected.moduleVersion.version)
                 }
                 filteredResolvedDirectDependencies.each { ResolvedDependencyResult resolved ->
