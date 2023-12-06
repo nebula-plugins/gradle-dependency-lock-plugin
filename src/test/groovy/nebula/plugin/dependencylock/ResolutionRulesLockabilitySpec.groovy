@@ -18,8 +18,8 @@
 
 package nebula.plugin.dependencylock
 
+import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencylock.util.LockGenerator
-import nebula.test.IntegrationTestKitSpec
 import org.gradle.testkit.runner.TaskOutcome
 
 import java.util.jar.Attributes
@@ -27,7 +27,7 @@ import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 
-class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
+class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec {
     def mavenForRules
 
     def setup() {
@@ -94,6 +94,8 @@ class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
     }
 
     def 'global locking works'() {
+        disableConfigurationCache()
+
         when:
         def result = runTasks('generateGlobalLock', 'saveGlobalLock')
 
