@@ -26,10 +26,8 @@ class DiffLockTaskSpec extends ProjectSpec {
                 '''.stripIndent())
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
-            it.existingLockFile.set(existingLock)
-            it.updatedLockFile.set(newLock)
-            it.outputFile.set(getDiffFile())
-            it.configurations = project.configurations
+            it.existingLockFile = existingLock
+            it.updatedLockFile = newLock
         }
 
         when:
@@ -41,7 +39,7 @@ class DiffLockTaskSpec extends ProjectSpec {
             updated:
               test.nebula:a: 1.0.0 -> 1.1.0
             '''.stripIndent()
-        realizedTask.outputFile.get().text == expected
+        realizedTask.diffFile.text == expected
     }
 
     def 'should handle new dependency'() {
@@ -62,10 +60,8 @@ class DiffLockTaskSpec extends ProjectSpec {
                 '''.stripIndent())
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
-            it.existingLockFile.set(existingLock)
-            it.updatedLockFile.set(newLock)
-            it.outputFile.set(getDiffFile())
-            it.configurations = project.configurations
+            it.existingLockFile = existingLock
+            it.updatedLockFile = newLock
         }
 
         when:
@@ -77,7 +73,7 @@ class DiffLockTaskSpec extends ProjectSpec {
             new:
               test.nebula:a: 1.0.0
             '''.stripIndent()
-        realizedTask.outputFile.get().text == expected
+        realizedTask.diffFile.text == expected
     }
 
     def 'should handle no existing locks'() {
@@ -95,10 +91,8 @@ class DiffLockTaskSpec extends ProjectSpec {
                 '''.stripIndent())
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
-            it.existingLockFile.set(existingLock)
-            it.updatedLockFile.set(newLock)
-            it.outputFile.set(getDiffFile())
-            it.configurations = project.configurations
+            it.existingLockFile = existingLock
+            it.updatedLockFile = newLock
         }
 
         when:
@@ -106,7 +100,7 @@ class DiffLockTaskSpec extends ProjectSpec {
         realizedTask.diffLocks()
 
         then:
-        realizedTask.outputFile.get().text == '''\
+        realizedTask.diffFile.text == '''\
             new:
               test.nebula:a: 1.0.0
             '''.stripIndent()
@@ -130,10 +124,8 @@ class DiffLockTaskSpec extends ProjectSpec {
                 '''.stripIndent())
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
-            it.existingLockFile.set(existingLock)
-            it.updatedLockFile.set(newLock)
-            it.outputFile.set(getDiffFile())
-            it.configurations = project.configurations
+            it.existingLockFile = existingLock
+            it.updatedLockFile = newLock
         }
 
         when:
@@ -141,7 +133,7 @@ class DiffLockTaskSpec extends ProjectSpec {
         realizedTask.diffLocks()
 
         then:
-        realizedTask.outputFile.get().text == '''\
+        realizedTask.diffFile.text == '''\
             removed:
               test.nebula:a
             '''.stripIndent()
@@ -184,10 +176,8 @@ class DiffLockTaskSpec extends ProjectSpec {
                 '''.stripIndent(), ['testCompile', 'testCompileClasspath', 'testRuntime', 'testRuntimeClasspath'])
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
-            it.existingLockFile.set(existingLock)
-            it.updatedLockFile.set(newLock)
-            it.outputFile.set(getDiffFile())
-            it.configurations = project.configurations
+            it.existingLockFile = existingLock
+            it.updatedLockFile = newLock
         }
 
         when:
@@ -195,7 +185,7 @@ class DiffLockTaskSpec extends ProjectSpec {
         realizedTask.diffLocks()
 
         then:
-        realizedTask.outputFile.get().text == '''\
+        realizedTask.diffFile.text == '''\
             updated:
               test.nebula:a: 1.0.0 -> 1.1.0
               test.nebula:testlib: 2.0.0 -> 2.0.2
@@ -229,10 +219,8 @@ class DiffLockTaskSpec extends ProjectSpec {
                 '''.stripIndent(), ['testCompileClasspath', 'testRuntimeClasspath'])
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
-            it.existingLockFile.set(existingLock)
-            it.updatedLockFile.set(newLock)
-            it.outputFile.set(getDiffFile())
-            it.configurations = project.configurations
+            it.existingLockFile = existingLock
+            it.updatedLockFile = newLock
         }
 
         when:
@@ -246,7 +234,7 @@ class DiffLockTaskSpec extends ProjectSpec {
                 1.0.0 -> 1.1.0 [compileClasspath,runtimeClasspath]
                 1.0.0 -> 1.1.1 [testCompileClasspath,testRuntimeClasspath]
             '''.stripIndent()
-        realizedTask.outputFile.get().text == expected
+        realizedTask.diffFile.text == expected
     }
 
     def 'should handle being run when no new locks exist'() {
@@ -261,10 +249,8 @@ class DiffLockTaskSpec extends ProjectSpec {
 
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
-            it.existingLockFile.set(existingLock)
-            it.updatedLockFile.set(newLock)
-            it.outputFile.set(getDiffFile())
-            it.configurations = project.configurations
+            it.existingLockFile = existingLock
+            it.updatedLockFile = newLock
         }
 
         when:
@@ -272,14 +258,8 @@ class DiffLockTaskSpec extends ProjectSpec {
         realizedTask.diffLocks()
 
         then:
-        realizedTask.outputFile.get().text == '''\
+        realizedTask.diffFile.text == '''\
             --no updated locks to diff--
             '''.stripIndent()
-    }
-
-    private File getDiffFile() {
-        File dependencyLockFolder = new File(project.layout.buildDirectory.getAsFile().get(), "dependency-lock")
-        dependencyLockFolder.mkdirs()
-        return new File(dependencyLockFolder, "lockdiff.txt")
     }
 }

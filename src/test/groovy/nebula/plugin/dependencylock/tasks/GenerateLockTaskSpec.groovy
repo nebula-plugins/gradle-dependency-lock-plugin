@@ -16,14 +16,10 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
-import nebula.plugin.dependencylock.model.ConfigurationResolutionData
-import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.ProjectSpec
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Unroll
-
-import static nebula.plugin.dependencylock.utils.ConfigurationUtils.lockableConfigurations
 
 class GenerateLockTaskSpec extends ProjectSpec {
     final String taskName = 'generateLock'
@@ -42,22 +38,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames.set(['testRuntimeClasspath'])
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-
-        }
+        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
+        task.configurationNames = ['testRuntimeClasspath']
 
         when:
         task.lock()
@@ -74,7 +56,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.get().text == lockText
+        task.dependenciesLock.text == lockText
     }
 
     def 'simple lock for all lockable configurations'() {
@@ -86,27 +68,12 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        Set<String> configurationNames = project.configurations
+        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
+        task.configurationNames = project.configurations
                 .stream()
                 .filter { it.isCanBeResolved() && (it?.getResolutionAlternatives()?.isEmpty() || !it?.getResolutionAlternatives()) }
                 .collect { it.name }
                 .toSet()
-        task.configurationNames.set configurationNames
-
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, configurationNames).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-        }
 
         when:
         task.lock()
@@ -117,7 +84,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     "test.example:foo": {
                         "locked": "2.0.1"
                     }'''.stripIndent())
-        task.dependenciesLock.get().text == lockText
+        task.dependenciesLock.text == lockText
     }
 
     def 'simple lock for all lockable configurations - without skippedConfigurationsPrefixes'() {
@@ -135,28 +102,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set(new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock'))
-        def configurationNames = project.configurations
+        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
+        task.configurationNames = project.configurations
                 .stream()
                 .filter { it.isCanBeResolved() && (it?.getResolutionAlternatives()?.isEmpty() || !it?.getResolutionAlternatives()) }
                 .collect { it.name }
                 .toSet()
-        task.configurationNames.set configurationNames
-        def skippedConfigurationNames = ['zinc', 'incrementalAnalysis'] as Set<String>
-        task.skippedConfigurationNames.set(skippedConfigurationNames)
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project,configurationNames, skippedConfigurationNames).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-        }
+        task.skippedConfigurationNames = ['zinc', 'incrementalAnalysis']
 
         when:
         task.lock()
@@ -167,9 +119,9 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     "test.example:foo": {
                         "locked": "2.0.1"
                     }'''.stripIndent())
-        task.dependenciesLock.get().text == lockText
-        !task.dependenciesLock.get().text.contains('"zinc"')
-        !task.dependenciesLock.get().text.contains('"incrementalAnalysisTest"')
+        task.dependenciesLock.text == lockText
+        !task.dependenciesLock.text.contains('"zinc"')
+        !task.dependenciesLock.text.contains('"incrementalAnalysisTest"')
     }
 
     def 'skip dependencies via transitives when configured'() {
@@ -180,23 +132,10 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set(new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock'))
-        task.configurationNames.set(['testRuntimeClasspath'])
-        task.skippedDependencies.set(['test.example:foo'])
-        task.includeTransitives.set(true)
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-        }
+        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
+        task.configurationNames = ['testRuntimeClasspath']
+        task.skippedDependencies = ['test.example:foo']
+        task.includeTransitives = true
 
         String lockText = '''\
             {
@@ -217,7 +156,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.lock()
 
         then:
-        task.dependenciesLock.get().text == lockText
+        task.dependenciesLock.text == lockText
     }
 
     def 'multiproject inter-project dependencies should be excluded'() {
@@ -238,22 +177,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set(new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock'))
-        task.configurationNames.set( ['testRuntimeClasspath'])
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-        }
-        task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
+        task.dependenciesLock = new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
+        task.configurationNames = ['testRuntimeClasspath']
 
         when:
         task.lock()
@@ -270,7 +195,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.get().text == lockText
+        task.dependenciesLock.text == lockText
     }
 
     def 'multiproject inter-project dependencies should be excluded when coming in transitively'() {
@@ -296,23 +221,9 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set(new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock'))
-        task.configurationNames.set(['testRuntimeClasspath'])
-        task.includeTransitives.set(true)
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-        }
-        task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
+        task.dependenciesLock = new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
+        task.configurationNames = ['testRuntimeClasspath']
+        task.includeTransitives = true
 
         when:
         task.lock()
@@ -332,7 +243,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.get().text == lockText
+        task.dependenciesLock.text == lockText
     }
 
     def 'multiproject inter-project dependencies should lock first levels'() {
@@ -364,22 +275,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames.set(['testRuntimeClasspath'])
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-        }
-        task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
+        task.dependenciesLock = new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
+        task.configurationNames = ['testRuntimeClasspath']
 
         when:
         task.lock()
@@ -389,30 +286,30 @@ class GenerateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntimeClasspath": {
                     "test.example:baz": {
-                        "locked": "2.0.0",
-                        "transitive": [
+                        "firstLevelTransitive": [
                             "test.nebula:common",
                             "test.nebula:lib"
-                        ]
+                        ],
+                        "locked": "2.0.0"
                     },
                     "test.example:foo": {
-                        "locked": "2.0.1",
-                        "transitive": [
+                        "firstLevelTransitive": [
                             "test.nebula:common"
-                        ]
+                        ],
+                        "locked": "2.0.1"
                     },
                     "test.nebula:common": {
-                        "project": true,
-                        "transitive": [
+                        "firstLevelTransitive": [
                             "test.nebula:lib"
-                        ]
+                        ],
+                        "project": true
                     },
                     "test.nebula:lib": {
                         "project": true
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.get().text == lockText
+        task.dependenciesLock.text == lockText
     }
 
     def 'multiproject inter-project dependencies no locked'() {
@@ -452,22 +349,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames.set(['testRuntimeClasspath'])
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-        }
-        task.peers.set(app.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) })
+        task.dependenciesLock = new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
+        task.configurationNames = ['testRuntimeClasspath']
 
         when:
         task.lock()
@@ -477,30 +360,30 @@ class GenerateLockTaskSpec extends ProjectSpec {
             {
                 "testRuntimeClasspath": {
                     "test.example:foo": {
-                        "locked": "2.0.1",
-                        "transitive": [
+                        "firstLevelTransitive": [
                             "test.nebula:model"
-                        ]
+                        ],
+                        "locked": "2.0.1"
                     },
                     "test.nebula:common": {
-                        "project": true,
-                        "transitive": [
+                        "firstLevelTransitive": [
                             "test.nebula:lib"
-                        ]
+                        ],
+                        "project": true
                     },
                     "test.nebula:lib": {
                         "project": true
                     },
                     "test.nebula:model": {
-                        "project": true,
-                        "transitive": [
+                        "firstLevelTransitive": [
                             "test.nebula:common",
                             "test.nebula:lib"
-                        ]
+                        ],
+                        "project": true
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.get().text == lockText
+        task.dependenciesLock.text == lockText
     }
 
     def 'simple transitive lock'() {
@@ -512,22 +395,9 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames.set(['testRuntimeClasspath'])
-        task.includeTransitives.set true
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-        }
+        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
+        task.configurationNames = ['testRuntimeClasspath']
+        task.includeTransitives = true
 
         when:
         task.lock()
@@ -547,7 +417,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.get().text == lockText
+        task.dependenciesLock.text == lockText
     }
 
     def 'check circular dependency does not loop infinitely'() {
@@ -559,22 +429,9 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames.set(['testRuntimeClasspath'])
-        task.includeTransitives.set true
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-        }
+        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
+        task.configurationNames = ['testRuntimeClasspath']
+        task.includeTransitives = true
 
         when:
         task.lock()
@@ -597,7 +454,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.get().text == lockText
+        task.dependenciesLock.text == lockText
     }
 
     def 'check for deeper circular dependency'() {
@@ -609,22 +466,9 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames.set(['testRuntimeClasspath'])
-        task.includeTransitives.set true
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-        }
+        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
+        task.configurationNames = ['testRuntimeClasspath']
+        task.includeTransitives = true
 
         when:
         task.lock()
@@ -651,7 +495,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.get().text == lockText
+        task.dependenciesLock.text == lockText
     }
 
     def 'one level transitive test'() {
@@ -664,22 +508,10 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames.set(['testRuntimeClasspath'])
-        task.includeTransitives.set true
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-        }
+        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
+        task.configurationNames = ['testRuntimeClasspath']
+        task.includeTransitives = true
+
         when:
         task.lock()
 
@@ -708,7 +540,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.get().text == lockText
+        task.dependenciesLock.text == lockText
     }
 
     def 'multi-level transitive test'() {
@@ -720,22 +552,10 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames.set(['testRuntimeClasspath'])
-        task.includeTransitives.set true
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-        }
+        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
+        task.configurationNames = ['testRuntimeClasspath']
+        task.includeTransitives = true
+
         when:
         task.lock()
 
@@ -773,7 +593,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.get().text == lockText
+        task.dependenciesLock.text == lockText
     }
 
     @Unroll
@@ -787,28 +607,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames.set(['testRuntimeClasspath'])
-        task.filter.set(filter as Closure)
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, ['testRuntimeClasspath'] as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-        }
+        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
+        task.configurationNames = ['testRuntimeClasspath']
+        task.filter = filter as Closure
 
         when:
         task.lock()
 
         then:
-        task.dependenciesLock.get().text == lockText
+        task.dependenciesLock.text == lockText
 
         where:
         methodName << ["negative filter", "positive filter"]

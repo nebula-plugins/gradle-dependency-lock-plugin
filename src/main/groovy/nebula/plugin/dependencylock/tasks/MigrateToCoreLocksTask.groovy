@@ -29,15 +29,15 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault
-abstract class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
+class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
     @Internal
     String description = 'Migrates all dependencies to use core Gradle locks'
 
     @TaskAction
     void migrateUnlockedDependencies() {
-        if (isCoreLockingEnabled.get()) {
+        if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
             def coreLockingHelper = new CoreLockingHelper(project)
-            coreLockingHelper.lockSelectedConfigurations(configurationNames.get())
+            coreLockingHelper.lockSelectedConfigurations(getConfigurationNames())
 
             Map<String, List<String>> dependenciesInConfigs = new HashMap<>()
 
@@ -56,9 +56,9 @@ abstract class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
                     }
                 }
             }
-            coreLockingHelper.migrateUnlockedDependenciesClosure(configurationNames.get(), migratingUnlockedDependenciesClosure)
+            coreLockingHelper.migrateUnlockedDependenciesClosure(getConfigurationNames(), migratingUnlockedDependenciesClosure)
 
-            writeDependenciesIntoLockFile(dependenciesInConfigs, outputLock.get())
+            writeDependenciesIntoLockFile(dependenciesInConfigs, outputLock)
         }
     }
 

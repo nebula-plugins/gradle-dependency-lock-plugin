@@ -13,7 +13,6 @@
  */
 package nebula.plugin.dependencylock
 
-import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifierKt
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
@@ -28,13 +27,10 @@ import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 
 @Subject(DependencyResolutionVerifierKt)
-class DependencyLockAlignmentLauncherSpec extends BaseIntegrationTestKitSpec {
+class DependencyLockAlignmentLauncherSpec extends IntegrationTestKitSpec {
     def setup() {
         definePluginOutsideOfPluginBlock = true
         keepFiles = true
-
-        //TODO make task listener changes for config cache
-        disableConfigurationCache()
     }
 
     @Unroll

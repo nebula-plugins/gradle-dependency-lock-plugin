@@ -15,21 +15,28 @@
  */
 package nebula.plugin.dependencylock.tasks
 
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault
-abstract class SaveLockTask extends AbstractSaveLockTask {
+class SaveLockTask extends AbstractLockTask {
+    @Internal
+    String description = 'Move the generated lock file into the project directory'
 
-    @Input
-    abstract Property<Boolean> getProjectHasGlobalLockFile()
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    File generatedLock
 
-    @Override
-    void verifyIfCanSaveLock() {
-        if (projectHasGlobalLockFile.isPresent() && projectHasGlobalLockFile.get()) {
-            throw new IllegalStateException("Cannot save individual locks when global lock is in place, run deleteGlobalLock task.")
-        }
+    @OutputFile
+    File outputLock
+
+    @TaskAction
+    void saveLock() {
+        getOutputLock().text = getGeneratedLock().text
     }
-
 }

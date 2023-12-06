@@ -113,12 +113,12 @@ class DependencyLockPlugin : Plugin<Project> {
         if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
             LOGGER.info("${project.name}: coreLockingSupport feature enabled")
             val coreLockingHelper = CoreLockingHelper(project)
-            coreLockingHelper.lockSelectedConfigurations(extension.configurationNames.get())
+            coreLockingHelper.lockSelectedConfigurations(extension.configurationNames)
 
             coreLockingHelper.disableCachingWhenUpdatingDependencies()
             coreLockingHelper.notifyWhenUsingOfflineMode()
 
-            val lockFile = File(project.projectDir, extension.lockFile.get())
+            val lockFile = File(project.projectDir, extension.lockFile)
 
             if (lockFile.exists()) {
                 if (startParameter.isWriteDependencyLocks) {
@@ -138,7 +138,7 @@ class DependencyLockPlugin : Plugin<Project> {
             val taskNames = startParameter.taskNames
             val hasUpdateTask = hasUpdateTask(taskNames)
             val hasGenerationTask = hasGenerationTask(taskNames)
-            val globalLockFile = File(project.projectDir, extension.globalLockFile.get())
+            val globalLockFile = File(project.projectDir, extension.globalLockFile)
 
             if (globalLockFile.exists() && !hasGenerationTask && !hasUpdateTask) {
                 // do not fail for generation or update tasks here. It's more readable when the task itself fails.
@@ -147,7 +147,7 @@ class DependencyLockPlugin : Plugin<Project> {
                         " - Legacy global lock: ${globalLockFile.absolutePath}")
             }
         } else {
-            val lockAfterEvaluating = if (project.hasProperty(LOCK_AFTER_EVALUATING)) project.property(LOCK_AFTER_EVALUATING).toString().toBoolean() else extension.lockAfterEvaluating.get()
+            val lockAfterEvaluating = if (project.hasProperty(LOCK_AFTER_EVALUATING)) project.property(LOCK_AFTER_EVALUATING).toString().toBoolean() else extension.lockAfterEvaluating
             if (lockAfterEvaluating) {
                 LOGGER.info("Delaying dependency lock apply until beforeResolve ($LOCK_AFTER_EVALUATING set to true)")
             } else {
@@ -192,21 +192,21 @@ class DependencyLockPlugin : Plugin<Project> {
         if(shouldIgnoreLock) {
             return
         }
-        val globalLock = File(project.rootProject.projectDir, globalLockFileName ?: extension.globalLockFile.get())
+        val globalLock = File(project.rootProject.projectDir, globalLockFileName ?: extension.globalLockFile)
         val dependenciesLock = if (globalLock.exists()) {
             globalLock
         } else {
-            File(project.projectDir, lockFilename ?: extension.lockFile.get())
+            File(project.projectDir, lockFilename ?: extension.lockFile)
         }
 
         lockUsed = dependenciesLock.name
         reasons.add("com.netflix.nebula.dependency-lock locked with: $lockUsed")
 
-        if (!DependencyLockTaskConfigurer.isIgnoreDependencyLock(project)) {
+        if (!DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
             val taskNames = project.gradle.startParameter.taskNames
             val hasUpdateTask = hasUpdateTask(taskNames)
 
-            val updates = if (project.hasProperty(UPDATE_DEPENDENCIES)) parseUpdates(project.property(UPDATE_DEPENDENCIES) as String) else extension.updateDependencies.get()
+            val updates = if (project.hasProperty(UPDATE_DEPENDENCIES)) parseUpdates(project.property(UPDATE_DEPENDENCIES) as String) else extension.updateDependencies
             UpdateDependenciesValidator.validate(
                 updates, overrides, hasUpdateTask,
                 hasTask(taskNames, GENERATION_TASK_NAMES - UPDATE_TASK_NAMES),

@@ -15,18 +15,277 @@
  */
 package nebula.plugin.dependencylock.tasks
 
-import nebula.plugin.dependencylock.model.ConfigurationResolutionData
+import nebula.plugin.dependencylock.DependencyLockExtension
+import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
+import nebula.plugin.dependencylock.DependencyLockWriter
+import nebula.plugin.dependencylock.exceptions.DependencyLockException
+import nebula.plugin.dependencylock.model.LockKey
+import nebula.plugin.dependencylock.model.LockValue
+import nebula.plugin.dependencylock.utils.ConfigurationFilters
+import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
+import org.gradle.api.BuildCancelledException
+import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault
-abstract class GenerateLockTask extends AbstractGenerateLockTask {
-    @Internal
-    Collection<ConfigurationResolutionData> configurationResolutionData = []
+class GenerateLockTask extends AbstractLockTask {
+    private String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
+    private String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
+    private static final Logger LOGGER = Logging.getLogger(GenerateLockTask)
 
-    @Override
-    List<ConfigurationResolutionData> resolveConfigurations() {
-        return getConfigurationResolutionData()
+    @Internal
+    String description = 'Create a lock file in build/<configured name>'
+
+    @Internal
+    Collection<Configuration> configurations = []
+
+    @Internal
+    Set<String> configurationNames
+
+    @Internal
+    Set<String> skippedConfigurationNames
+
+    @Internal
+    Closure filter = { group, name, version -> true }
+
+    @Input
+    @Optional
+    Set<String> skippedDependencies = []
+
+    @Internal
+    File dependenciesLock
+
+    @Internal
+    Map<String, String> overrides
+
+    @Input
+    @Optional
+    Boolean includeTransitives = false
+
+    @TaskAction
+    void lock() {
+        if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
+            def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
+            def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile)
+            if (globalLockFile.exists()) {
+                throw new BuildCancelledException("Legacy global locks are not supported with core locking.\n" +
+                        "Please remove global locks.\n" +
+                        " - Global locks: ${globalLockFile.absolutePath}")
+            }
+
+            throw new BuildCancelledException("generateLock is not supported with core locking.\n" +
+                    "Please use $WRITE_CORE_LOCK_TASK_TO_RUN\n" +
+                    "or do a one-time migration with `./gradlew $MIGRATE_TO_CORE_LOCK_TASK_NAME` to preserve the current lock state")
+        }
+        if (DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
+            throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
+        }
+        Collection<Configuration> confs = getConfigurations() ?: lockableConfigurations(project, project, getConfigurationNames(), getSkippedConfigurationNames())
+        Map dependencyMap = new GenerateLockFromConfigurations().lock(confs)
+        new DependencyLockWriter(getDependenciesLock(), getSkippedDependencies()).writeLock(dependencyMap)
+    }
+
+    static Collection<Configuration> lockableConfigurations(Project taskProject, Project project, Set<String> configurationNames, Set<String> skippedConfigurationNamesPrefixes = []) {
+        Set<Configuration> lockableConfigurations = []
+        if (configurationNames.empty) {
+            if (Configuration.class.declaredMethods.any { it.name == 'isCanBeResolved' }) {
+                lockableConfigurations.addAll project.configurations.findAll {
+                    it.canBeResolved && !ConfigurationFilters.safelyHasAResolutionAlternative(it) &&
+                            // Always exclude compileOnly to avoid issues with kotlin plugin
+                            !it.name.endsWith("CompileOnly") &&
+                            it.name != "compileOnly"
+                }
+            } else {
+                lockableConfigurations.addAll project.configurations.asList()
+            }
+        } else {
+            lockableConfigurations.addAll configurationNames.collect { project.configurations.getByName(it) }
+        }
+
+        lockableConfigurations.removeAll {
+            Configuration configuration -> skippedConfigurationNamesPrefixes.any {
+                String prefix -> configuration.name.startsWith(prefix)
+            }
+        }
+        return lockableConfigurations
+    }
+
+    static Collection<Configuration> filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(Project subproject, Set<String> configurationNames, Collection<Configuration> lockableConfigurations) {
+        if (configurationNames.size() > 0) {
+            Collection<String> warnings = new HashSet<>()
+
+            Collection<Configuration> consumableLockableConfigurations = new ArrayList<>()
+            lockableConfigurations.each { conf ->
+                Collection<String> warningsForConfiguration = provideWarningsForConfiguration(conf, subproject)
+                warnings.addAll(warningsForConfiguration)
+                if (warningsForConfiguration.isEmpty()) {
+                    consumableLockableConfigurations.add(conf)
+                }
+            }
+
+            configurationNames.each { nameToLock ->
+                if (!lockableConfigurations.collect { it.name }.contains(nameToLock)) {
+                    Configuration confThatWillNotBeLocked = subproject.configurations.findByName(nameToLock)
+                    if (confThatWillNotBeLocked == null) {
+                        String message = "Global lock warning: project '${subproject.name}' requested locking a configuration which cannot be locked: '${nameToLock}'"
+                        warnings.add(message)
+                    } else {
+                        warnings.addAll(provideWarningsForConfiguration(confThatWillNotBeLocked, subproject))
+                    }
+                }
+            }
+
+            if (warnings.size() > 0) {
+                warnings.add("Requested configurations for global locks must be resolvable, consumable, and without resolution alternatives.\n" +
+                        "You can remove the configuration 'dependencyLock.configurationNames' to stop this customization.\n" +
+                        "If you wish to lock only specific configurations, please update 'dependencyLock.configurationNames' with other configurations.\n" +
+                        "Please read more about this at:\n" +
+                        "- https://docs.gradle.org/current/userguide/java_plugin.html#sec:java_plugin_and_dependency_management\n" +
+                        "- https://docs.gradle.org/current/userguide/java_library_plugin.html#sec:java_library_configurations_graph")
+                LOGGER.warn('--------------------\n' + warnings.sort().join("\n") + '\n--------------------')
+            }
+            return consumableLockableConfigurations
+        }
+
+        return lockableConfigurations
+    }
+
+    private static Collection<String> provideWarningsForConfiguration(Configuration conf, Project subproject) {
+        Collection<String> errorMessages = new HashSet<>()
+
+        if (!ConfigurationFilters.canSafelyBeConsumed(conf)) {
+            String message = "Global lock warning: project '${subproject.name}' requested locking a configuration which cannot be consumed: '${conf.name}'"
+            errorMessages.add(message)
+        }
+        if (!ConfigurationFilters.canSafelyBeResolved(conf)) {
+            String message = "Global lock warning: project '${subproject.name}' requested locking a configuration which cannot be resolved: '${conf.name}'"
+            errorMessages.add(message)
+        }
+        if (ConfigurationFilters.safelyHasAResolutionAlternative(conf)) {
+            String message = "Global lock warning: project '${subproject.name}' requested locking a deprecated configuration '${conf.name}' " +
+                    "which has resolution alternatives: ${conf.getResolutionAlternatives()}"
+            errorMessages.add(message)
+        }
+
+        return errorMessages
+    }
+
+    class GenerateLockFromConfigurations {
+        Map<LockKey, LockValue> lock(Collection<Configuration> confs) {
+            Map<LockKey, LockValue> deps = [:].withDefault { new LockValue() }
+
+            // Peers are all the projects in the build to which this plugin has been applied.
+            def peers = project.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) }
+
+            confs.each { Configuration configuration ->
+                // Lock the version of each dependency specified in the build script as resolved by Gradle.
+                def resolvedDependencies = configuration.resolvedConfiguration.firstLevelModuleDependencies
+                def filteredResolvedDependencies = resolvedDependencies.findAll { ResolvedDependency resolved ->
+                    filter(resolved.moduleGroup, resolved.moduleName, resolved.moduleVersion)
+                }
+
+                filteredResolvedDependencies.each { ResolvedDependency resolved ->
+                    def key = new LockKey(group: resolved.moduleGroup, artifact: resolved.moduleName, configuration: configuration.name)
+
+                    // If this dependency does not exist in our list of peers, it is a standard dependency. Otherwise, it is
+                    // a project dependency.
+                    if (!isKeyInPeerList(key, peers)) {
+                        deps[key].locked = resolved.moduleVersion
+                    } else {
+                        // Project dependencies don't have a version so they must be treated differently. Record the project
+                        // as an explicit dependency, but do not lock it to a version.
+                        deps[key].project = true
+
+                        // If we don't include transitive dependencies, then we must lock the first-level "transitive"
+                        // dependencies of each project dependency.
+                        if (!getIncludeTransitives()) {
+                            handleSiblingTransitives(resolved, configuration.name, deps, peers)
+                        }
+                    }
+
+                    // If requested, lock all the transitive dependencies of the declared top-level dependencies.
+                    if (getIncludeTransitives()) {
+                        deps[key].childrenVisited = true
+                        resolved.children.each { handleTransitive(it, configuration.name, deps, peers, key) }
+                    }
+                }
+            }
+
+            // Add all the overrides to the locked dependencies and record whether a specified override modified a
+            // preexisting dependency.
+            getOverrides().each { String k, String overrideVersion ->
+                def (overrideGroup, overrideArtifact) = k.tokenize(':')
+                deps.each { depLockKey, depValue ->
+                    if (depLockKey.group == overrideGroup && depLockKey.artifact == overrideArtifact) {
+                        depValue.viaOverride = overrideVersion
+                    }
+                }
+            }
+
+            return deps
+        }
+
+        private void handleSiblingTransitives(ResolvedDependency sibling, String configName, Map<LockKey, LockValue> deps, List peers) {
+            def parent = new LockKey(group: sibling.moduleGroup, artifact: sibling.moduleName, configuration: sibling.configuration)
+            sibling.children.each { ResolvedDependency dependency ->
+                def key = new LockKey(group: dependency.moduleGroup, artifact: dependency.moduleName, configuration: configName)
+
+                // Record the project[s] from which this dependency originated.
+                deps[key].firstLevelTransitive << parent
+
+                // Lock the transitive dependencies of each project dependency, recursively.
+                if (isKeyInPeerList(key, peers)) {
+                    deps[key].project = true
+
+                    // Multiple configurations may specify dependencies on the same project, and multiple projects might
+                    // also be dependent on the same project. We only need to record the top-level transitive dependencies
+                    // once for each project. Flag a project as visited as soon as we encounter it.
+                    if ((dependency.children.size() > 0) && !deps[key].childrenVisited) {
+                        deps[key].childrenVisited = true
+                        handleSiblingTransitives(dependency, configName, deps, peers)
+                    }
+                } else {
+                    deps[key].locked = dependency.moduleVersion
+                }
+            }
+        }
+
+        private void handleTransitive(ResolvedDependency transitive, String configName, Map<LockKey, LockValue> deps, List peers, LockKey parent) {
+            def key = new LockKey(group: transitive.moduleGroup, artifact: transitive.moduleName, configuration: configName)
+
+            // Multiple dependencies may share any subset of their transitive dependencies. Each dependency only needs to be
+            // visited once so flag it once we visit it.
+            if (!deps[key].childrenVisited) {
+
+                // Lock each dependency and its children, recursively. Don't forget transitive project dependencies.
+                if (!isKeyInPeerList(key, peers)) {
+                    deps[key].locked = transitive.moduleVersion
+                } else {
+                    deps[key].project = true
+                }
+                if (transitive.children.size() > 0) {
+                    deps[key].childrenVisited = true
+                }
+                transitive.children.each { handleTransitive(it, configName, deps, peers, key) }
+            }
+
+            // Record the dependencies from which this artifact originated transitively.
+            deps[key].transitive << parent
+        }
+
+        private static def isKeyInPeerList(LockKey lockKey, List peers) {
+            return peers.any {
+                it.group == lockKey.group && it.artifact == lockKey.artifact
+            }
+        }
     }
 }
 

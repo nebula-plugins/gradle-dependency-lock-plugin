@@ -15,37 +15,18 @@
  */
 package nebula.plugin.dependencylock
 
-import org.gradle.api.provider.Property
-import org.gradle.api.provider.SetProperty
-
-abstract class DependencyLockExtension {
-    DependencyLockExtension() {
-        lockFile.convention('dependencies.lock')
-        globalLockFile.convention('global.lock')
-        configurationNames.convention([])
-        updateDependencies.convention([])
-        includeTransitives.convention(false)
-        lockAfterEvaluating.convention(true)
-        updateDependenciesFailOnInvalidCoordinates.convention(true)
-        updateDependenciesFailOnSimultaneousTaskUsage.convention(true)
-        updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.convention(true)
-        additionalConfigurationsToLock.convention([])
-    }
-
-    abstract Property<String> getLockFile()
-    abstract Property<String> getGlobalLockFile()
-    abstract SetProperty<String> getConfigurationNames()
-    abstract SetProperty<String> getUpdateDependencies()
-    abstract Property<Boolean> getIncludeTransitives()
-    abstract Property<Boolean> getLockAfterEvaluating()
-    abstract Property<Boolean> getUpdateDependenciesFailOnInvalidCoordinates()
-    abstract Property<Boolean> getUpdateDependenciesFailOnSimultaneousTaskUsage()
-    abstract Property<Boolean> getUpdateDependenciesFailOnNonSpecifiedDependenciesToUpdate()
-    abstract SetProperty<String> getAdditionalConfigurationsToLock()
-
-    Set<String> skippedDependencies = [] as Set
-
+class DependencyLockExtension {
+    String lockFile = 'dependencies.lock'
+    String globalLockFile = 'global.lock'
+    Set<String> configurationNames = [] as Set
     Set<String> skippedConfigurationNamesPrefixes = [] as Set
-
     Closure dependencyFilter = { String group, String name, String version -> true }
+    Set<String> updateDependencies = [] as Set
+    Set<String> skippedDependencies = [] as Set
+    boolean includeTransitives = false
+    boolean lockAfterEvaluating = true
+    boolean updateDependenciesFailOnInvalidCoordinates = true
+    boolean updateDependenciesFailOnSimultaneousTaskUsage = true
+    boolean updateDependenciesFailOnNonSpecifiedDependenciesToUpdate = true
+    Set<String> additionalConfigurationsToLock = [] as Set
 }

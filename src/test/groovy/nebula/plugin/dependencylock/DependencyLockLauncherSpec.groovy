@@ -13,17 +13,19 @@
  */
 package nebula.plugin.dependencylock
 
+import com.google.common.base.Throwables
 import groovy.json.JsonSlurper
-import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.plugin.dependencylock.utils.GradleVersionUtils
+import nebula.test.IntegrationSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
 import org.gradle.util.GradleVersion
 import org.junit.Rule
 import org.junit.contrib.java.lang.system.ProvideSystemProperty
+import spock.lang.Ignore
 import spock.lang.IgnoreIf
 import spock.lang.Issue
 import spock.lang.Unroll
@@ -31,18 +33,18 @@ import spock.lang.Unroll
 import java.nio.file.Files
 import java.nio.file.Paths
 
-class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
+class DependencyLockLauncherSpec extends IntegrationSpec {
 
     @Rule
     public final ProvideSystemProperty provideSystemProperty = new ProvideSystemProperty("ignoreDeprecations", "false")
 
+    def setup() {
+        fork = false
+    }
 
     static final String SPECIFIC_BUILD_GRADLE = """\
-        plugins {
-            id 'java'
-            id 'com.netflix.nebula.dependency-lock'
-        }
-
+        apply plugin: 'java'
+        apply plugin: 'com.netflix.nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.0.1'
@@ -51,11 +53,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     """.stripIndent()
 
     static final String BUILD_GRADLE = """\
-        plugins {
-            id 'java'
-            id 'com.netflix.nebula.dependency-lock'
-        }
-
+        apply plugin: 'java'
+        apply plugin: 'com.netflix.nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.+'
@@ -63,11 +62,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     """.stripIndent()
 
     static final String NEW_BUILD_GRADLE = """\
-        plugins {
-            id 'java'
-            id 'com.netflix.nebula.dependency-lock'
-        }
-
+        apply plugin: 'java'
+        apply plugin: 'com.netflix.nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:2.+'
@@ -128,12 +124,11 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         Fixture.createFixtureIfNotCreated()
     }
 
-
     def 'plugin allows normal gradle operation'() {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        runTasks('build')
+        runTasksSuccessfully('build')
 
         then:
         noExceptionThrown()
@@ -146,10 +141,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        def result = runTasks('dependencies')
+        def result = runTasksSuccessfully('dependencies')
 
         then:
-        result.output.contains 'test.example:foo:1.0.1 -> 1.0.0'
+        result.standardOutput.contains 'test.example:foo:1.0.1 -> 1.0.0'
     }
 
     def 'lock file contributes to dependencyInsight'() {
@@ -159,19 +154,19 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        def fooResult = runTasks('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'foo')
+        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'foo')
 
         then:
-        fooResult.output.contains 'locked to 1.0.0'
-        fooResult.output.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
+        fooResult.standardOutput.contains 'locked to 1.0.0'
+        fooResult.standardOutput.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
 
         when:
-        def bazResult = runTasks('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'baz')
+        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'baz')
 
         then:
-        !bazResult.output.contains('locked')
-        !bazResult.output.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
-        bazResult.output.contains('baz:1.0.0')
+        !bazResult.standardOutput.contains('locked')
+        !bazResult.standardOutput.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
+        bazResult.standardOutput.contains('baz:1.0.0')
     }
 
     def 'override lock file contributes to dependencyInsight'() {
@@ -186,21 +181,21 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        def fooResult = runTasks('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'foo', '-PdependencyLock.overrideFile=override.lock')
+        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'foo', '-PdependencyLock.overrideFile=override.lock')
 
         then:
-        fooResult.output.contains 'locked to 2.0.0'
-        fooResult.output.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
-        fooResult.output.contains('com.netflix.nebula.dependency-lock using override file: override.lock')
+        fooResult.standardOutput.contains 'locked to 2.0.0'
+        fooResult.standardOutput.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
+        fooResult.standardOutput.contains('com.netflix.nebula.dependency-lock using override file: override.lock')
 
         when:
-        def bazResult = runTasks('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'baz', '-PdependencyLock.overrideFile=override.lock')
+        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'baz', '-PdependencyLock.overrideFile=override.lock')
 
         then:
-        !bazResult.output.contains('locked')
-        !bazResult.output.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
-        !bazResult.output.contains('com.netflix.nebula.dependency-lock using override file: override.lock')
-        bazResult.output.contains('baz:1.0.0')
+        !bazResult.standardOutput.contains('locked')
+        !bazResult.standardOutput.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
+        !bazResult.standardOutput.contains('com.netflix.nebula.dependency-lock using override file: override.lock')
+        bazResult.standardOutput.contains('baz:1.0.0')
     }
 
     def 'override lock property contributes to dependencyInsight'() {
@@ -210,21 +205,21 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        def fooResult = runTasks('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'foo', '-PdependencyLock.override=test.example:foo:2.0.1')
+        def fooResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'foo', '-PdependencyLock.override=test.example:foo:2.0.1')
 
         then:
-        fooResult.output.contains 'locked to 2.0.1'
-        fooResult.output.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
-        fooResult.output.contains('com.netflix.nebula.dependency-lock using override: test.example:foo:2.0.1')
+        fooResult.standardOutput.contains 'locked to 2.0.1'
+        fooResult.standardOutput.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
+        fooResult.standardOutput.contains('com.netflix.nebula.dependency-lock using override: test.example:foo:2.0.1')
 
         when:
-        def bazResult = runTasks('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'baz', '-PdependencyLock.override=test.example:foo:2.0.1')
+        def bazResult = runTasksSuccessfully('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'baz', '-PdependencyLock.override=test.example:foo:2.0.1')
 
         then:
-        !bazResult.output.contains('locked')
-        !bazResult.output.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
-        !bazResult.output.contains('com.netflix.nebula.dependency-lock using override: test.example:foo:2.0.1')
-        bazResult.output.contains('baz:1.0.0')
+        !bazResult.standardOutput.contains('locked')
+        !bazResult.standardOutput.contains('com.netflix.nebula.dependency-lock locked with: dependencies.lock')
+        !bazResult.standardOutput.contains('com.netflix.nebula.dependency-lock using override: test.example:foo:2.0.1')
+        bazResult.standardOutput.contains('baz:1.0.0')
     }
 
     @Issue('#79')
@@ -235,11 +230,11 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        def result = runTasks('gL', 'dependencies')
+        def result = runTasksSuccessfully('gL', 'dependencies')
 
         then:
 
-        !result.output.contains('test.example:foo:1.0.1 -> 1.0.0')
+        !result.standardOutput.contains('test.example:foo:1.0.1 -> 1.0.0')
     }
 
     @Issue('#79')
@@ -250,10 +245,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << SPECIFIC_BUILD_GRADLE
 
         when:
-        def result = runTasks(':generateLock', 'dependencies')
+        def result = runTasksSuccessfully(':generateLock', 'dependencies')
 
         then:
-        !result.output.contains('test.example:foo:1.0.1 -> 1.0.0')
+        !result.standardOutput.contains('test.example:foo:1.0.1 -> 1.0.0')
     }
 
     @Issue('#79')
@@ -263,10 +258,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         new File(projectDir, 'sub2/dependencies.lock').text = PRE_DIFF_FOO_LOCK
 
         when:
-        def result = runTasks('sub1:generateLock', ':sub2:dependencies')
+        def result = runTasksSuccessfully('sub1:generateLock', ':sub2:dependencies')
 
         then:
-        result.output.contains('test.example:foo:1.+ -> 1.0.0')
+        result.standardOutput.contains('test.example:foo:1.+ -> 1.0.0')
     }
 
     @Issue('#79')
@@ -276,10 +271,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         new File(projectDir, 'sub2/dependencies.lock').text = PRE_DIFF_FOO_LOCK
 
         when:
-        def result = runTasks('sub1:generateLock', 'sub1:dependencies')
+        def result = runTasksSuccessfully('sub1:generateLock', 'sub1:dependencies')
 
         then:
-        !result.output.contains('test.example:foo:2.0.0 -> 1.0.0')
+        !result.standardOutput.contains('test.example:foo:2.0.0 -> 1.0.0')
     }
 
     @Issue('#79')
@@ -304,11 +299,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent()
 
         buildFile << """\
-            plugins {
-                    id 'com.netflix.nebula.dependency-lock'
-              }
             allprojects {
-                apply plugin: 'com.netflix.nebula.dependency-lock'
+                ${applyPlugin(DependencyLockPlugin)}
                 group = 'test'
             }
             subprojects {
@@ -322,10 +314,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         '''.stripIndent()
 
         when:
-        def result = runTasks(':middle:sub0:generateLock', ':middle:sub0:dependencies')
+        def result = runTasksSuccessfully(':middle:sub0:generateLock', ':middle:sub0:dependencies')
 
         then:
-        !result.output.contains('test.example:foo:2.0.0 -> 1.0.0')
+        !result.standardOutput.contains('test.example:foo:2.0.0 -> 1.0.0')
     }
 
     def 'lock file name can be customized'() {
@@ -337,7 +329,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """
 
         when:
-        def result = runTasks('generateLock', 'saveLock')
+        def result = runTasksSuccessfully('generateLock', 'saveLock')
 
         then:
         def dependenciesLock = new File(projectDir, 'custom.lock')
@@ -357,10 +349,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        def result = runTasks('dependencies')
+        def result = runTasksSuccessfully('dependencies')
 
         then:
-        result.output.contains 'test.example:foo:1.+ -> 1.0.1'
+        result.standardOutput.contains 'test.example:foo:1.+ -> 1.0.1'
     }
 
     def 'deprecated lock file is applied correctly and emits warning'() {
@@ -370,7 +362,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        def s = runTasks('-PdependencyLock.overrideFile=test.lock', 'generateLock', 'saveLock')
+        def s = runTasksSuccessfully('-PdependencyLock.overrideFile=test.lock', 'generateLock', 'saveLock')
 
         then:
         def outputDepLock = new JsonSlurper().parse(new File(projectDir, 'dependencies.lock'))
@@ -380,14 +372,14 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             depMap['test.example:foo'].viaOverride == '1.0.0'
         }
 
-        s.output.contains('is using a deprecated format')
+        s.standardOutput.contains('is using a deprecated format')
     }
 
     def 'create lock'() {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasks('generateLock')
+        runTasksSuccessfully('generateLock')
 
         then:
         new File(projectDir, 'build/dependencies.lock').text == FOO_LOCK
@@ -395,10 +387,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
 
     def 'create lock with skipped dependencies'() {
         buildFile << """\
-            plugins {
-                id 'java'
-                id 'com.netflix.nebula.dependency-lock'
-            }
+            apply plugin: 'java'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             repositories { maven { url '${Fixture.repo}' } }
             dependencyLock {
                 skippedDependencies = [ 'test.example:foo' ]
@@ -416,7 +406,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             '''.stripIndent())
 
         when:
-        runTasks('generateLock')
+        runTasksSuccessfully('generateLock')
 
         then:
         new File(projectDir, 'build/dependencies.lock').text.replaceAll("\\s", "") == lockWithSkips.replaceAll("\\s", "")
@@ -428,7 +418,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasks('generateLock', 'saveLock')
+        runTasksSuccessfully('generateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == FOO_LOCK
@@ -439,11 +429,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         dependenciesLock << PRE_DIFF_FOO_LOCK
         buildFile << BUILD_GRADLE
 
-        //TODO make diff lock config cache compatible
-        disableConfigurationCache()
-
         when:
-        runTasks('generateLock', 'diffLock')
+        runTasksSuccessfully('generateLock', 'diffLock')
 
         then:
         final String MY_DIFF = '''\
@@ -457,20 +444,20 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        def result = runTasksAndFail('generateLock', '-PdependencyLock.ignore=true')
+        def result = runTasks('generateLock', '-PdependencyLock.ignore=true')
 
         then:
-        result.output.contains('Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)')
+        Throwables.getRootCause(result.failure).message == 'Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)'
     }
 
     def 'generateGlobalLock fails if dependency locks are ignored'() {
         buildFile << BUILD_GRADLE
 
         when:
-        def result = runTasksAndFail('generateGlobalLock', '-PdependencyLock.ignore=true')
+        def result = runTasks('generateGlobalLock', '-PdependencyLock.ignore=true')
 
         then:
-        result.output.contains('Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)')
+        Throwables.getRootCause(result.failure).message == 'Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)'
     }
 
     def 'trigger failure with bad lock file'() {
@@ -483,10 +470,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        def result = runTasksAndFail('dependencies')
+        def result = runTasksWithFailure('dependencies')
 
         then:
-        result.output.contains('unreadable or invalid json')
+        result.failure.cause.cause.message.contains('unreadable or invalid json')
     }
 
     def 'existing lock ignored while updating lock'() {
@@ -495,7 +482,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasks('generateLock', 'saveLock')
+        runTasksSuccessfully('generateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == FOO_LOCK
@@ -505,7 +492,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasks('-PdependencyLock.override=test.example:foo:2.0.1', 'generateLock', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.override=test.example:foo:2.0.1', 'generateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
@@ -517,7 +504,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasks('-PdependencyLock.updateDependencies=test.example:foo', '-PdependencyLock.override=test.example:foo:2.0.1', 'updateLock', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.updateDependencies=test.example:foo', '-PdependencyLock.override=test.example:foo:2.0.1', 'updateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
@@ -528,7 +515,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         dependenciesLock << REMOVE_UPDATE_LOCK
         buildFile.text = BUILD_GRADLE
         when:
-        runTasks('-PdependencyLock.updateDependencies=test.example:baz', 'updateLock', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.updateDependencies=test.example:baz', 'updateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == FOO_LOCK
@@ -540,10 +527,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile.text = BUILD_GRADLE
 
         when:
-        def result = runTasksAndFail('updateLock', 'saveLock')
+        def result = runTasksWithFailure('updateLock', 'saveLock')
 
         then:
-        result.output.contains("Usage of `updateLock` task requires specific modules to update. Please specify dependencies to update")
+        result.standardError.contains("Usage of `updateLock` task requires specific modules to update. Please specify dependencies to update")
     }
 
     def 'update lock uses property when intending to run with no dependencies to update passed in'() {
@@ -551,7 +538,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         dependenciesLock << REMOVE_UPDATE_LOCK
         buildFile.text = BUILD_GRADLE
         when:
-        runTasks('-PdependencyLock.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate=false', 'updateLock', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate=false', 'updateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == FOO_LOCK
@@ -563,7 +550,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasks('-PdependencyLock.overrideFile=test.lock', 'generateLock', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.overrideFile=test.lock', 'generateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
@@ -572,24 +559,27 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     def 'command line overrideFile fails if file is non existent'() {
         buildFile << BUILD_GRADLE
 
-        expect:
-        runTasksAndFail('-PdependencyLock.overrideFile=test.lock', 'generateLock')
+        when:
+        def result = runTasksWithFailure('-PdependencyLock.overrideFile=test.lock', 'generateLock')
+
+        then:
+        result.failure != null
     }
 
     def 'multiple runs each generate a lock'() {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasks('generateLock', 'saveLock')
+        runTasksSuccessfully('generateLock', 'saveLock')
 
         then:
         def savedLock = new File(projectDir, 'dependencies.lock')
         savedLock.text == FOO_LOCK
 
+        buildFile << NEW_BUILD_GRADLE
 
         when:
-        buildFile.text = NEW_BUILD_GRADLE
-        runTasks('generateLock')
+        runTasksSuccessfully('generateLock')
 
         then:
         new File(projectDir, 'build/dependencies.lock').text != savedLock.text
@@ -599,17 +589,17 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasks('generateLock', 'saveLock')
+        runTasksSuccessfully('generateLock', 'saveLock')
 
         then:
         def savedLock = new File(projectDir, 'dependencies.lock')
         def firstRun = savedLock.text
         firstRun == FOO_LOCK
 
+        buildFile << NEW_BUILD_GRADLE
 
         when:
-        buildFile.text = NEW_BUILD_GRADLE
-        runTasks('generateLock', 'saveLock')
+        runTasksSuccessfully('generateLock', 'saveLock')
 
         then:
         savedLock.text != firstRun
@@ -622,9 +612,6 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         sub2.mkdirs()
 
         buildFile << """\
-            plugins {
-                id 'com.netflix.nebula.dependency-lock'
-            }
             subprojects {
                 apply plugin: 'java'
                 apply plugin: 'com.netflix.nebula.dependency-lock'
@@ -658,7 +645,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         '''.stripIndent()
 
         when:
-        runTasks('-PdependencyLock.overrideFile=override.lock', 'generateLock', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.overrideFile=override.lock', 'generateLock', 'saveLock')
 
         then:
         String lockText1 = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
@@ -682,15 +669,12 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         addSubproject('sub2')
 
         buildFile << """\
-            plugins {
-                id 'com.netflix.nebula.dependency-lock'
-            }
-            allprojects { apply plugin: 'com.netflix.nebula.dependency-lock' }
+            allprojects { ${applyPlugin(DependencyLockPlugin)} }
             subprojects { apply plugin: 'java' }
         """.stripIndent()
 
         when:
-        runTasks('generateLock')
+        runTasksSuccessfully('generateLock')
 
         then:
         noExceptionThrown()
@@ -700,7 +684,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasks('generateGlobalLock')
+        runTasksSuccessfully('generateGlobalLock')
 
         then:
         new File(projectDir, 'build/global.lock').text == FOO_LOCK
@@ -720,11 +704,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent())
 
         buildFile << """\
-            plugins {
-                id 'com.netflix.nebula.dependency-lock'
-            }
             allprojects {
-                apply plugin: 'com.netflix.nebula.dependency-lock'
+                ${applyPlugin(DependencyLockPlugin)}
                 group = 'test'
             }
             subprojects {
@@ -742,7 +723,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent()
 
         when:
-        runTasks('generateGlobalLock')
+        runTasksSuccessfully('generateGlobalLock')
 
         then:
         String globalLockText = '''\
@@ -811,11 +792,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent())
 
         buildFile << """\
-             plugins {
-                id 'com.netflix.nebula.dependency-lock'
-            }
             allprojects {
-                apply plugin: 'com.netflix.nebula.dependency-lock'
+                ${applyPlugin(DependencyLockPlugin)}
                 group = 'test'
             }
             subprojects {
@@ -828,7 +806,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent()
 
         when:
-        runTasks('generateGlobalLock')
+        runTasksSuccessfully('generateGlobalLock')
 
         then:
         String globalLockText = '''\
@@ -890,11 +868,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent())
 
         buildFile << """\
-             plugins {
-                id 'com.netflix.nebula.dependency-lock'
-            }
             allprojects {
-                apply plugin: 'com.netflix.nebula.dependency-lock'
+                ${applyPlugin(DependencyLockPlugin)}
                 group = 'test'
             }
             subprojects {
@@ -908,7 +883,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent()
 
         when:
-        runTasks('generateGlobalLock', '--warning-mode', 'all')
+        runTasksSuccessfully('generateGlobalLock', '--warning-mode', 'all')
 
         then:
         String globalLockText = '''\
@@ -941,11 +916,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent())
 
         buildFile << """\
-             plugins {
-                id 'com.netflix.nebula.dependency-lock'
-            }
             allprojects {
-                apply plugin: 'com.netflix.nebula.dependency-lock'
+                ${applyPlugin(DependencyLockPlugin)}
                 group = 'test'
             }
             subprojects {
@@ -960,16 +932,16 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         when:
         def result
         if (GradleVersionUtils.currentGradleVersionIsLessThan("6.0")) {
-            result = runTasks('generateGlobalLock', '--warning-mode', 'all')
+            result = runTasksSuccessfully('generateGlobalLock', '--warning-mode', 'all')
         } else {
             result = runTasks('generateGlobalLock', '--warning-mode', 'all')
         }
 
         then:
-        assert result.output.contains('Global lock warning: project \'sub1\' requested locking a configuration which cannot be consumed: \'compileClasspath\'')
-        assert result.output.contains('Requested configurations for global locks must be resolvable, consumable, and without resolution alternatives.')
-        assert result.output.contains('You can remove the configuration \'dependencyLock.configurationNames\' to stop this customization.')
-        assert result.output.contains('If you wish to lock only specific configurations, please update \'dependencyLock.configurationNames\' with other configurations.')
+        assert result.standardOutput.contains('Global lock warning: project \'sub1\' requested locking a configuration which cannot be consumed: \'compileClasspath\'')
+        assert result.standardOutput.contains('Requested configurations for global locks must be resolvable, consumable, and without resolution alternatives.')
+        assert result.standardOutput.contains('You can remove the configuration \'dependencyLock.configurationNames\' to stop this customization.')
+        assert result.standardOutput.contains('If you wish to lock only specific configurations, please update \'dependencyLock.configurationNames\' with other configurations.')
 
         def globalLockFile = new File(projectDir, 'build/global.lock')
         assert globalLockFile.exists()
@@ -985,7 +957,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         setupCommonMultiproject()
 
         when:
-        runTasks('generateGlobalLock', 'saveGlobalLock')
+        runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock')
 
         then:
         // Should this be an empty result? Check OneNote
@@ -1015,7 +987,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         setupCommonMultiproject()
 
         when:
-        runTasks('generateLock', 'saveLock')
+        runTasksSuccessfully('generateLock', 'saveLock')
 
         then:
         String lockText = '''\
@@ -1052,10 +1024,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
                 }
             '''.stripIndent())
 
-        //TODO make diff lock config cache compatible
-        disableConfigurationCache()
         when:
-        runTasks('generateLock', 'diffLock')
+        runTasksSuccessfully('generateLock', 'diffLock')
 
         then:
         String lockText1 = ''
@@ -1069,12 +1039,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     }
 
     def 'diffLock in multiproject with no locks'() {
-        //TODO make diff lock config cache compatible
-        disableConfigurationCache()
         setupCommonMultiproject()
 
         when:
-        runTasks('diffLock')
+        runTasksSuccessfully('diffLock')
 
         then:
         String lockText1 = '''\
@@ -1128,7 +1096,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             }'''.stripIndent()
 
         when:
-        runTasks('generateGlobalLock')
+        runTasksSuccessfully('generateGlobalLock')
 
         then:
         new File(projectDir, 'build/global.lock').text == globalLockText
@@ -1136,27 +1104,34 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
 
     def 'throw exception when saving global lock, if individual locks are present'() {
         setupCommonMultiproject()
-        runTasks('generateLock', 'saveLock')
-        runTasks('generateGlobalLock')
+        runTasksSuccessfully('generateLock', 'saveLock')
+        runTasksSuccessfully('generateGlobalLock')
 
-        expect:
-        runTasksAndFail('saveGlobalLock')
+        when:
+        def result = runTasksWithFailure('saveGlobalLock')
+
+        then:
+        result.failure != null
     }
 
     def 'throw exception when saving lock, if global locks are present'() {
         setupCommonMultiproject()
-        runTasks('generateGlobalLock', 'saveGlobalLock')
-        runTasks('generateLock')
+        runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock')
+        runTasksSuccessfully('generateLock')
 
-        expect:runTasksAndFail('saveLock')
+        when:
+        def result = runTasksWithFailure('saveLock')
+
+        then:
+        result.failure != null
     }
 
     def 'delete global lock'() {
         setupCommonMultiproject()
-        runTasks('generateGlobalLock', 'saveGlobalLock')
+        runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock')
 
         when:
-        runTasks('deleteGlobalLock')
+        runTasksSuccessfully('deleteGlobalLock')
 
         then:
         !(new File(projectDir, 'global.lock').exists())
@@ -1164,10 +1139,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
 
     def 'delete locks'() {
         setupCommonMultiproject()
-        runTasks('generateLock', 'saveLock')
+        runTasksSuccessfully('generateLock', 'saveLock')
 
         when:
-        runTasks('deleteLock')
+        runTasksSuccessfully('deleteLock')
 
         then:
         !(new File(projectDir, 'dependencies.lock').exists())
@@ -1177,10 +1152,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
 
     def 'only the update dependency and its transitives are updated'() {
         buildFile << """\
-            plugins {
-                id 'java'
-                id 'com.netflix.nebula.dependency-lock'
-            }
+            apply plugin: 'java'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             repositories { maven { url '${Fixture.repo}' } }
             dependencyLock {
                 includeTransitives = true
@@ -1228,7 +1201,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         )
 
         when:
-        runTasks('updateLock', '-PdependencyLock.updateDependencies=test.example:bar')
+        runTasksSuccessfully('updateLock', '-PdependencyLock.updateDependencies=test.example:bar')
 
         then:
         new File(projectDir, 'build/dependencies.lock').text == updatedLock
@@ -1236,10 +1209,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
 
     def 'only the update dependency, its transitives and dependencies without requested versions are updated'() {
         buildFile << """\
-            plugins {
-                id 'java'
-                id 'com.netflix.nebula.dependency-lock'
-            }
+            apply plugin: 'java'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             repositories { maven { url '${Fixture.repo}' } }
             dependencyLock {
                 includeTransitives = true
@@ -1294,7 +1265,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         )
 
         when:
-        runTasks('updateLock', '-PdependencyLock.updateDependencies=test.example:qux')
+        runTasksSuccessfully('updateLock', '-PdependencyLock.updateDependencies=test.example:qux')
 
         then:
         new File(projectDir, 'build/dependencies.lock').text == updatedLock
@@ -1338,13 +1309,13 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         '''.stripIndent(), ['compileClasspath', 'testCompileClasspath'])
 
         when:
-        runTasks('generateLock', 'saveLock', '-PdependencyLock.override=test.example:foo:1.0.0')
+        runTasksSuccessfully('generateLock', 'saveLock', '-PdependencyLock.override=test.example:foo:1.0.0')
 
         then:
         lockFile.text == lockText
 
         when:
-        runTasks('updateLock', 'saveLock', '-PdependencyLock.updateDependencies=test.example:qux')
+        runTasksSuccessfully('updateLock', 'saveLock', '-PdependencyLock.updateDependencies=test.example:qux')
 
         then:
         def updateLockText = LockGenerator.duplicateIntoConfigs('''\
@@ -1405,13 +1376,13 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         '''.stripIndent())
 
         when:
-        runTasks('generateLock', 'saveLock', '-PdependencyLock.override=test.example:foo:1.0.0')
+        runTasksSuccessfully('generateLock', 'saveLock', '-PdependencyLock.override=test.example:foo:1.0.0')
 
         then:
         lockFile.text == lockText
 
         when:
-        runTasks('updateLock', 'saveLock', '-PdependencyLock.updateDependencies=test.example:qux')
+        runTasksSuccessfully('updateLock', 'saveLock', '-PdependencyLock.updateDependencies=test.example:qux')
 
         then:
         def updateLockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
@@ -1438,10 +1409,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         setupCommonMultiproject()
 
         when:
-        def result = runTasksAndFail('updateLock', '-PdependencyLock.updateDependencies=test:sub1')
+        def result = runTasks('updateLock', '-PdependencyLock.updateDependencies=test:sub1')
 
         then:
-        result.output.contains('Dependency locks cannot be updated. An update was requested for a project dependency (test:sub1)')
+        Throwables.getRootCause(result.failure).message == 'Dependency locks cannot be updated. An update was requested for a project dependency (test:sub1)'
     }
 
     def 'update fails if updateDependencies has malformed coordiantes'() {
@@ -1450,22 +1421,21 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        def result = runTasksAndFail('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', 'updateLock', 'saveLock')
+        def result = runTasks('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', 'updateLock', 'saveLock')
 
 
         then:
-        result.output.contains("updateDependencies list is invalid")
-        result.output.contains("test.example:foo:2.0.1 contains more elements than groupId:module")
+        def message = Throwables.getRootCause(result.failure).message
+        message.contains("updateDependencies list is invalid")
+        message.contains("test.example:foo:2.0.1 contains more elements than groupId:module")
     }
 
     def 'command line override respected while updating lock with malformed coordinates with extension'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << FOO_LOCK
         buildFile << """
-        plugins { 
-            id 'java'
-            id 'com.netflix.nebula.dependency-lock'
-        }
+        apply plugin: 'java'
+        apply plugin: 'com.netflix.nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.+'
@@ -1476,7 +1446,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent()
 
         when:
-        runTasks('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', 'updateLock', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', 'updateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
@@ -1488,7 +1458,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        runTasks('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', '-PdependencyLock.updateDependenciesFailOnInvalidCoordinates=false', 'updateLock', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', '-PdependencyLock.updateDependenciesFailOnInvalidCoordinates=false', 'updateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
@@ -1498,10 +1468,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << FOO_LOCK
         buildFile << """
-         plugins { 
-            id 'java'
-            id 'com.netflix.nebula.dependency-lock'
-        }
+        apply plugin: 'java'
+        apply plugin: 'com.netflix.nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.+'
@@ -1512,7 +1480,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent()
 
         when:
-        runTasks('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', '-PdependencyLock.updateDependenciesFailOnInvalidCoordinates=false', 'updateLock', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', '-PdependencyLock.updateDependenciesFailOnInvalidCoordinates=false', 'updateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
@@ -1522,10 +1490,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
         dependenciesLock << FOO_LOCK
         buildFile << """
-        plugins { 
-            id 'java'
-            id 'com.netflix.nebula.dependency-lock'
-        }
+        apply plugin: 'java'
+        apply plugin: 'com.netflix.nebula.dependency-lock'
         repositories { maven { url '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.+'
@@ -1536,7 +1502,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent()
 
         when:
-        runTasks('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', '-PdependencyLock.updateDependenciesFailOnInvalidCoordinates=false', 'updateLock', 'saveLock')
+        runTasksSuccessfully('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', '-PdependencyLock.updateDependenciesFailOnInvalidCoordinates=false', 'updateLock', 'saveLock')
 
         then:
         new File(projectDir, 'dependencies.lock').text == NEW_FOO_LOCK
@@ -1553,11 +1519,9 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
                 }
             }
 
-            plugins { 
-                id 'java'
-                id 'com.netflix.nebula.dependency-lock'
-            }
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             apply plugin: 'com.netflix.nebula.resolution-rules'
+            apply plugin: 'java'
 
             repositories {
                 mavenCentral()
@@ -1571,7 +1535,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent()
 
         when:
-        runTasks('generateLock')
+        runTasksSuccessfully('generateLock')
 
         then:
         noExceptionThrown()
@@ -1613,7 +1577,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent()
 
         when:
-        runTasks('generateLock', 'saveLock')
+        runTasksSuccessfully('generateLock', 'saveLock')
 
         then:
         noExceptionThrown()
@@ -1622,10 +1586,90 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << buildFileText.replace('com.hazelcast:hazelcast:3.6-RC1', 'com.hazelcast:hazelcast:3.6-EA2')
 
         when:
-        def result = runTasks('dependencies')
+        def result = runTasksSuccessfully('dependencies')
 
         then:
-        result.output.contains('\\--- com.hazelcast:hazelcast:3.6-RC1\n')
+        result.standardOutput.contains('\\--- com.hazelcast:hazelcast:3.6-RC1\n')
+    }
+
+    @Ignore('Android plugin incompatible with Gradle 3.0')
+    @Issue('#95')
+    def 'locking applied to Android variant configurations'() {
+        buildFile << """\
+            buildscript {
+                repositories {
+                    mavenCentral()
+                }
+                dependencies {
+                    classpath 'com.android.tools.build:gradle:2.1.2'
+                }
+            }
+
+            apply plugin: 'com.netflix.nebula.dependency-lock'
+            apply plugin: 'com.android.application'
+
+            repositories {
+                mavenCentral()
+            }
+
+            android {
+                compileSdkVersion 20
+                buildToolsVersion '20.0.0'
+
+                defaultConfig {
+                    applicationId "com.netflix.dependencylocktest"
+                    minSdkVersion 15
+                    targetSdkVersion 23
+                    versionCode 1
+                    versionName '1.0'
+                }
+                buildTypes {
+                    release {
+                        minifyEnabled false
+                        proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+                    }
+                }
+            }
+
+            gradle.addBuildListener(new BuildAdapter() {
+                void buildFinished(BuildResult result) {
+                   def confsWithDependencies = project.configurations.findAll { !it.dependencies.empty }.collect { '"' + it.name + '"' }
+                   println "configurations=" + confsWithDependencies
+                }
+            })
+
+            dependencies {
+                implementation 'commons-io:commons-io:2.4'
+            }
+        """.stripIndent()
+
+        when:
+        def generateResult = runTasksSuccessfully('generateLock', 'saveLock')
+
+        then: 'all configurations are in the lock file'
+        def configList = generateResult.standardOutput.readLines().find {
+            it.startsWith("configurations=")
+        }.split("configurations=")[1]
+        def configurations = Eval.me(configList)
+        def lockFile = new File(projectDir, 'dependencies.lock')
+        def json = new JsonSlurper().parseText(lockFile.text)
+        configurations.each {
+            assert json.keySet().contains(it)
+        }
+
+        when: 'all configurations are locked to the specified version'
+        def originalLockFile = new File('dependencies.lock.orig')
+        lockFile.renameTo(originalLockFile)
+        lockFile.withWriter { w ->
+            originalLockFile.eachLine { line ->
+                w << line.replaceAll('2\\.4', '2.3')
+            }
+        }
+        def dependenciesResult = runTasksSuccessfully('dependencies')
+
+        then:
+        dependenciesResult.standardOutput.contains('\\--- commons-io:commons-io:2.4 -> 2.3\n')
+        !dependenciesResult.standardOutput.contains('\\--- commons-io:commons-io:2.4\n')
     }
 
     def 'deprecated lock format message is not output for an empty file'() {
@@ -1635,10 +1679,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << BUILD_GRADLE
 
         when:
-        def result = runTasks('dependencies')
+        def result = runTasksSuccessfully('dependencies')
 
         then:
-        !result.output.contains("is using a deprecated lock format")
+        !result.standardOutput.contains("is using a deprecated lock format")
     }
 
     @Unroll
@@ -1660,9 +1704,6 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             """.stripIndent())
 
         buildFile << """\
-            plugins { 
-                id 'com.netflix.nebula.dependency-lock'
-            }
             allprojects {
                 apply plugin: 'com.netflix.nebula.dependency-lock'
             }
@@ -1673,7 +1714,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             """.stripIndent()
 
         when:
-        runTasks('generateGlobalLock', 'saveGlobalLock', 'dependencyReport')
+        runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock', 'dependencyReport')
 
         then:
         noExceptionThrown()
@@ -1687,9 +1728,6 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         addSubproject('two')
 
         buildFile << """\
-            plugins { 
-                id 'com.netflix.nebula.dependency-lock'
-            }
             allprojects {
                 apply plugin: 'com.netflix.nebula.dependency-lock'
                 dependencyLock {
@@ -1712,17 +1750,17 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             """.stripIndent()
 
         when:
-        def result = runTasks('generateGlobalLock', 'saveGlobalLock')
+        def result = runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock')
 
         then: "Guava is locked to 19.0"
         new File(projectDir, 'global.lock').text == """{
     "_global_": {
         "com.google.guava:guava": {
-            "locked": "19.0",
-            "transitive": [
+            "firstLevelTransitive": [
                 "global-lock-with-skippedConfigurationNamesPrefixes:one",
                 "global-lock-with-skippedConfigurationNamesPrefixes:two"
-            ]
+            ],
+            "locked": "19.0"
         },
         "global-lock-with-skippedConfigurationNamesPrefixes:one": {
             "project": true
@@ -1734,27 +1772,71 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
 }"""
 
         when:
-        def resultDependencies = runTasks(':one:dependencies')
+        def resultDependencies = runTasksSuccessfully(':one:dependencies')
 
         then:
-        resultDependencies.output.contains("com.google.guava:guava:31.1-jre")
-        !resultDependencies.output.contains("com.google.guava:guava:31.1-jre -> 19.0")
+        resultDependencies.standardOutput.contains("com.google.guava:guava:31.1-jre")
+        !resultDependencies.standardOutput.contains("com.google.guava:guava:31.1-jre -> 19.0")
     }
-    
+
+    @IgnoreIf({ jvm.isJava17Compatible() }) // Because we use old version of Gradle and Kotlin
+    @Issue("https://youtrack.jetbrains.com/issue/KT-48245")
+    def 'compileOnly configuration is not resolvable for locking'() {
+        // the kotlin plugin make this resolvable in Gradle 7
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << OLD_FOO_LOCK
+
+        gradleVersion = "7.0.2"
+
+        buildFile << """
+            buildscript {
+              repositories {
+                maven {
+                  url "https://plugins.gradle.org/m2/"
+                }
+              }
+              dependencies {
+                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.32"
+              }
+            }
+            """.stripIndent()
+        buildFile << SPECIFIC_BUILD_GRADLE
+        buildFile << """
+            apply plugin: "org.jetbrains.kotlin.jvm"
+            repositories {
+                mavenCentral()
+            }
+            dependencies {
+                // add a compileOnly dependency
+                compileOnly 'test.example:bar:1.0.0'
+                implementation 'test.example:qux:1.0.0'
+            }
+            """.stripIndent()
+
+        when:
+        def result = runTasksSuccessfully('generateLock', 'saveLock')
+        def lockFile = new File(projectDir, "dependencies.lock")
+
+        then:
+        lockFile.text.contains('"compileClasspath"')
+        lockFile.text.contains('"testCompileClasspath"')
+        !lockFile.text.contains('"compileOnly"')
+        !lockFile.text.contains('"testCompileOnly"')
+    }
+
     def 'handle generating a lock with circular dependencies depending on a jar that depends on us'() {
         def builder = new DependencyGraphBuilder()
         builder.addModule(new ModuleBuilder('test.nebula:foo:1.0.0').addDependency('example.nebula:circulartest:1.0.0').build())
         def generator = new GradleDependencyGenerator(builder.build(), "$projectDir/repo")
         generator.generateTestMavenRepo()
         buildFile << """\
-            plugins { 
+            plugins {
                 id 'java'
                 id 'nebula.maven-publish' version '5.1.5'
-                id 'com.netflix.nebula.dependency-lock'
             }
-
             group = 'example.nebula'
             version = '1.1.0'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             
             repositories {
                 ${generator.mavenRepositoryBlock}
@@ -1772,7 +1854,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             '''.stripIndent()
 
         when:
-        runTasks('generateLock')
+        runTasksSuccessfully('generateLock')
 
         then:
         noExceptionThrown()
@@ -1793,14 +1875,14 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         def generator = new GradleDependencyGenerator(builder.build(), "$projectDir/repo")
         generator.generateTestMavenRepo()
         buildFile << """\
-            plugins { 
+            plugins {
                 id 'java'
                 id 'project-report'
                 id 'nebula.maven-publish' version '5.1.5'
-                id 'com.netflix.nebula.dependency-lock'
             }
             group = 'example.nebula'
             version = '1.1.0'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             
             repositories {
                 ${generator.mavenRepositoryBlock}
@@ -1831,9 +1913,11 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             '''.stripIndent())
 
         when:
-        def result = runTasks('dependencyReport', 'build')
+        def result = runTasksSuccessfully('dependencyReport', 'build')
 
         then:
+        println result?.standardError
+        println result?.standardOutput
         noExceptionThrown()
     }
 
@@ -1850,13 +1934,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent())
 
         buildFile << """\
-
-            plugins {
-                id 'com.netflix.nebula.dependency-lock'
-            }
-
             allprojects {
-                apply plugin: 'com.netflix.nebula.dependency-lock'
+                ${applyPlugin(DependencyLockPlugin)}
                 group = 'test'
 
                 dependencyLock {
@@ -1894,12 +1973,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
               }
             }
 
-            plugins {
-                id 'com.netflix.nebula.dependency-lock'
-            }
-
             allprojects {
-                apply plugin: 'com.netflix.nebula.dependency-lock'
+                ${applyPlugin(DependencyLockPlugin)}
                 group = 'test'
 
                 dependencyLock {
@@ -1930,12 +2005,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent())
 
         buildFile << """\
-            plugins {
-                id 'com.netflix.nebula.dependency-lock'
-            }
-
             allprojects {
-                apply plugin: 'com.netflix.nebula.dependency-lock'
+                ${applyPlugin(DependencyLockPlugin)}
                 group = 'test'
 
                 dependencyLock {
@@ -1957,8 +2028,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << """\
             plugins {
                 id 'java'
-                id 'com.netflix.nebula.dependency-lock'
             }
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             
             repositories {
                 ${generator.mavenRepositoryBlock}
@@ -1990,10 +2061,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         def generator = new GradleDependencyGenerator(builder.build(), "$projectDir/repo")
         generator.generateTestMavenRepo()
         buildFile << """\
-           plugins {
+            plugins {
                 id 'java'
-                id 'com.netflix.nebula.dependency-lock'
             }
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             
             repositories {
                 ${generator.mavenRepositoryBlock}
@@ -2027,13 +2098,13 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         setupCommonMultiprojectWithPlugins()
 
         when:
-        def zincDependencyInsight = runTasks(':sub1:dI', '--dependency', 'scala', '--configuration', 'zinc')
+        def zincDependencyInsight = runTasksSuccessfully(':sub1:dI', '--dependency', 'scala', '--configuration', 'zinc')
 
         then:
-        zincDependencyInsight.output.contains('org.scala-sbt:zinc_2.13')
+        zincDependencyInsight.standardOutput.contains('org.scala-sbt:zinc_2.13')
 
         when:
-        runTasks('generateGlobalLock', 'saveGlobalLock')
+        runTasksSuccessfully('generateGlobalLock', 'saveGlobalLock')
 
         then:
         String globalLockText = '''\
@@ -2097,10 +2168,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         '''
 
         buildFile << """\
-            plugins { 
-                id 'java'
-                id 'com.netflix.nebula.dependency-lock'
-            }
+            apply plugin: 'java'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             repositories { maven { url '${repo.absolutePath}' } }
             dependencies {
                 implementation($platformType('sample:recommender:1.1'))
@@ -2108,10 +2177,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent()
 
         when:
-        def result = runTasks('dI', '--dependency', 'recommender')
+        def result = runTasksSuccessfully('dI', '--dependency', 'recommender')
 
         then:
-        result.output.contains outputMessage
+        result.standardOutput.contains outputMessage
 
         where:
         platformType       | outputMessage
@@ -2127,10 +2196,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         dependenciesLock << OLD_FOO_LOCK
 
         buildFile << """\
-            plugins { 
-                id 'java'
-                id 'com.netflix.nebula.dependency-lock'
-            }
+            apply plugin: 'java'
+            apply plugin: 'com.netflix.nebula.dependency-lock'
             repositories { maven { url '${Fixture.repo}' } }
             repositories { flatDir { dirs 'libs' } }
             dependencies {
@@ -2141,43 +2208,17 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent()
 
         when:
-        def result = runTasks('dependencies')
+        def result = runTasksSuccessfully('dependencies')
 
         then:
-        result.output.contains 'test.example:foo:1.0.1 -> 1.0.0'
+        result.standardOutput.contains 'test.example:foo:1.0.1 -> 1.0.0'
     }
 
     def 'does not fail with configuration caching enabled'() {
         when:
-        runTasks('help', '--configuration-cache')
+        runTasksSuccessfully('help', '--configuration-cache')
 
         then:
         noExceptionThrown()
     }
-
-
-    def 'can use dependency lock when project adds dependencies after evaluation'() {
-        def dependenciesLock = new File(projectDir, 'dependencies.lock')
-        dependenciesLock << OLD_FOO_LOCK
-
-        buildFile << """\
-        plugins {
-            id 'java'
-            id 'com.netflix.nebula.dependency-lock'
-        }
-
-        repositories { maven { url '${Fixture.repo}' } }
-        dependencies {
-            implementation 'test.example:foo:1.0.1'
-        }
-        
-        afterEvaluate {
-            project.dependencies.add("implementation", "test.example:baz:1.0.0")
-        }
-    """
-        writeHelloWorld()
-        expect:
-        runTasks('build')
-    }
-
 }

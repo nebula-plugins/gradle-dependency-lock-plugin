@@ -24,15 +24,15 @@ class UpdateDependenciesValidator {
             val validateCoordinates =
                 if (project.hasProperty(VALIDATE_DEPENDENCY_COORDINATES)) project.property(
                     VALIDATE_DEPENDENCY_COORDINATES
-                ).toString().toBoolean() else extension.updateDependenciesFailOnInvalidCoordinates.get()
+                ).toString().toBoolean() else extension.updateDependenciesFailOnInvalidCoordinates
             val validateSimultaneousTasks =
                 if (project.hasProperty(VALIDATE_SIMULTANEOUS_TASKS)) project.property(
                     VALIDATE_SIMULTANEOUS_TASKS
-                ).toString().toBoolean() else extension.updateDependenciesFailOnSimultaneousTaskUsage.get()
+                ).toString().toBoolean() else extension.updateDependenciesFailOnSimultaneousTaskUsage
             val validateSpecifiedDependenciesToUpdate =
                 if (project.hasProperty(VALIDATE_SPECIFIED_DEPENDENCIES_TO_UPDATE)) project.property(
                     VALIDATE_SPECIFIED_DEPENDENCIES_TO_UPDATE
-                ).toString().toBoolean() else extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.get()
+                ).toString().toBoolean() else extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate
 
             validateCoordinates(updateDependencies, validateCoordinates)
             validateSimultaneousTasks(hasUpdateTask, hasGenerateTask, validateSimultaneousTasks)

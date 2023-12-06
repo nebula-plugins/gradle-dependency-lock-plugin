@@ -15,20 +15,13 @@
  */
 package nebula.plugin.dependencylock
 
-import nebula.plugin.dependencylock.model.ConfigurationResolutionData
-import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.tasks.CommitLockTask
 import nebula.plugin.dependencylock.tasks.DiffLockTask
-import nebula.plugin.dependencylock.tasks.GenerateGlobalLockTask
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
 import nebula.plugin.dependencylock.tasks.MigrateLockedDepsToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
-import nebula.plugin.dependencylock.tasks.SaveGlobalLockTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.plugin.dependencylock.tasks.UpdateLockTask
-import nebula.plugin.dependencylock.tasks.UpdateGlobalLockTask
-import nebula.plugin.dependencylock.utils.ConfigurationUtils
-import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.UnknownTaskException
@@ -39,8 +32,8 @@ import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
 
-import static nebula.plugin.dependencylock.utils.ConfigurationUtils.filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject
-import static nebula.plugin.dependencylock.utils.ConfigurationUtils.lockableConfigurations
+import static nebula.plugin.dependencylock.tasks.GenerateLockTask.filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject
+import static nebula.plugin.dependencylock.tasks.GenerateLockTask.lockableConfigurations
 
 class DependencyLockTaskConfigurer {
     private static final Logger LOGGER = Logging.getLogger(DependencyLockTaskConfigurer)
@@ -75,7 +68,7 @@ class DependencyLockTaskConfigurer {
         TaskProvider<UpdateLockTask> updateLockTask = project.tasks.register(UPDATE_LOCK_TASK_NAME, UpdateLockTask)
         configureGenerateLockTask(updateLockTask, lockFilename, extension, overrides)
 
-        TaskProvider<SaveLockTask> saveTask = configureSaveTask(lockFilename, globalLockFilename, genLockTask, updateLockTask, extension)
+        TaskProvider<SaveLockTask> saveTask = configureSaveTask(lockFilename, genLockTask, updateLockTask, extension)
         createDeleteLock(saveTask)
 
         configureMigrateToCoreLocksTask(extension)
@@ -87,13 +80,13 @@ class DependencyLockTaskConfigurer {
         TaskProvider<GenerateLockTask> globalLockTask
         TaskProvider<UpdateLockTask> globalUpdateLock
         if (project == project.rootProject) {
-            globalLockTask = project.tasks.register(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateGlobalLockTask)
+            globalLockTask = project.tasks.register(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateLockTask)
             configureGlobalLockTask(globalLockTask, globalLockFilename, extension, overrides)
 
-            globalUpdateLock = project.tasks.register(UPDATE_GLOBAL_LOCK_TASK_NAME, UpdateGlobalLockTask)
+            globalUpdateLock = project.tasks.register(UPDATE_GLOBAL_LOCK_TASK_NAME, UpdateLockTask)
             configureGlobalLockTask(globalUpdateLock, globalLockFilename, extension, overrides)
 
-            globalSave = configureGlobalSaveTask(lockFilename, globalLockFilename, globalLockTask, globalUpdateLock, extension)
+            globalSave = configureGlobalSaveTask(globalLockFilename, globalLockTask, globalUpdateLock, extension)
 
             createDeleteGlobalLock(globalSave)
         }
@@ -104,23 +97,19 @@ class DependencyLockTaskConfigurer {
     }
 
     private File getProjectDirLockFile(String lockFilename, DependencyLockExtension extension) {
-        getProjectDirLockFile(project, lockFilename, extension)
-    }
-
-    private File getProjectDirLockFile(Project project, String lockFilename, DependencyLockExtension extension) {
-        new File(project.projectDir, lockFilename ?: extension.lockFile.get())
+        new File(project.projectDir, lockFilename ?: extension.lockFile)
     }
 
     private File getBuildDirLockFile(String lockFilename, DependencyLockExtension extension) {
-        new File(project.layout.buildDirectory.getAsFile().get(), lockFilename ?: extension.lockFile.get())
+        new File(project.layout.buildDirectory.getAsFile().get(), lockFilename ?: extension.lockFile)
     }
 
     private File getProjectDirGlobalLockFile(String lockFilename, DependencyLockExtension extension) {
-        new File(project.rootProject.projectDir, lockFilename ?: extension.globalLockFile.get())
+        new File(project.projectDir, lockFilename ?: extension.globalLockFile)
     }
 
     private File getBuildDirGlobalLockFile(String lockFilename, DependencyLockExtension extension) {
-        new File(project.rootProject.layout.buildDirectory.getAsFile().get(), lockFilename ?: extension.globalLockFile.get())
+        new File(project.layout.buildDirectory.getAsFile().get(), lockFilename ?: extension.globalLockFile)
     }
 
     private void configureCommitTask(String clLockFileName, String globalLockFileName, TaskProvider<SaveLockTask> saveTask, DependencyLockExtension lockExtension,
@@ -154,91 +143,110 @@ class DependencyLockTaskConfigurer {
 
     private List<String> getPatternsToCommit(String clLockFileName, String globalLockFileName, DependencyLockExtension lockExtension ) {
         List<String> patterns = []
-        patterns.add(clLockFileName ?: lockExtension.lockFile.get())
-        patterns.add(globalLockFileName ?: lockExtension.globalLockFile.get())
+        patterns.add(clLockFileName ?: lockExtension.lockFile)
+        patterns.add(globalLockFileName ?: lockExtension.globalLockFile)
         return patterns
     }
 
-    private TaskProvider<SaveLockTask> configureSaveTask(String lockFilename, String globalLockFilename, TaskProvider<GenerateLockTask> lockTask,
+    private TaskProvider<SaveLockTask> configureSaveTask(String lockFilename, TaskProvider<GenerateLockTask> lockTask,
                                                          TaskProvider<UpdateLockTask> updateTask, DependencyLockExtension extension) {
         TaskProvider<SaveLockTask> saveLockTask = project.tasks.register(SAVE_LOCK_TASK_NAME, SaveLockTask)
 
         saveLockTask.configure { saveTask ->
-            projectHasGlobalLockFile.set(getProjectDirGlobalLockFile(globalLockFilename, extension).exists())
-            generatedLock.set(getBuildDirLockFile(lockFilename, extension))
-            outputLock.set(getProjectDirLockFile(lockFilename, extension))
-            saveTask.mustRunAfter lockTask, updateTask
+            saveTask.doFirst {
+                SaveLockTask globalSave = project.rootProject.tasks.findByName(SAVE_GLOBAL_LOCK_TASK_NAME) as SaveLockTask
+                if (globalSave?.outputLock?.exists()) {
+                    throw new GradleException('Cannot save individual locks when global lock is in place, run deleteGlobalLock task')
+                }
+            }
+            saveTask.conventionMapping.with {
+                generatedLock = { getBuildDirLockFile(lockFilename, extension) }
+                outputLock = { getProjectDirLockFile(lockFilename, extension) }
+            }
         }
+        configureCommonSaveTask(saveLockTask, lockTask, updateTask)
+
         saveLockTask
     }
 
-    private TaskProvider<SaveLockTask> configureGlobalSaveTask(String lockFilename, String globalLockFileName, TaskProvider<GenerateLockTask> globalLockTask,
+    private static void configureCommonSaveTask(TaskProvider<SaveLockTask> saveLockTask, TaskProvider<GenerateLockTask> lockTask,
+                                                TaskProvider<UpdateLockTask> updateTask) {
+        saveLockTask.configure { saveTask ->
+            saveTask.mustRunAfter lockTask, updateTask
+            saveTask.outputs.upToDateWhen {
+                if (saveTask.generatedLock.exists() && saveTask.outputLock.exists()) {
+                    saveTask.generatedLock.text == saveTask.outputLock.text
+                } else {
+                    false
+                }
+            }
+        }
+    }
+
+    private TaskProvider<SaveLockTask> configureGlobalSaveTask(String lockFilename, TaskProvider<GenerateLockTask> globalLockTask,
                                                                TaskProvider<UpdateLockTask> globalUpdateLockTask, DependencyLockExtension extension) {
-        TaskProvider<SaveLockTask> globalSaveLockTask = project.tasks.register(SAVE_GLOBAL_LOCK_TASK_NAME, SaveGlobalLockTask)
+        TaskProvider<SaveLockTask> globalSaveLockTask = project.tasks.register(SAVE_GLOBAL_LOCK_TASK_NAME, SaveLockTask)
 
         globalSaveLockTask.configure { globalSaveTask ->
-            anySubprojectHasLockFile.set(project.subprojects.any { getProjectDirLockFile(it, lockFilename, extension).exists()  })
-            generatedLock.set(getBuildDirGlobalLockFile(globalLockFileName, extension))
-            outputLock.set(getProjectDirGlobalLockFile(globalLockFileName, extension))
-            mustRunAfter globalLockTask, globalUpdateLockTask
+            globalSaveTask.doFirst {
+                project.subprojects.each { Project sub ->
+                    SaveLockTask save = sub.tasks.findByName(SAVE_LOCK_TASK_NAME) as SaveLockTask
+                    if (save && save.outputLock?.exists()) {
+                        throw new GradleException('Cannot save global lock, one or more individual locks are in place, run deleteLock task')
+                    }
+                }
+            }
+            globalSaveTask.conventionMapping.with {
+                generatedLock = { getBuildDirGlobalLockFile(lockFilename, extension) }
+                outputLock = { getProjectDirGlobalLockFile(lockFilename, extension) }
+            }
         }
+        configureCommonSaveTask(globalSaveLockTask, globalLockTask, globalUpdateLockTask)
+
         globalSaveLockTask
     }
 
-    private TaskProvider<GenerateLockTask> configureGenerateLockTask(TaskProvider<GenerateLockTask> lockTask, String lockFilename, DependencyLockExtension extension, Map<String, String> overridesMap) {
-        lockTask.configure {generateLockTask ->
-            dependenciesLock.set(getBuildDirLockFile(lockFilename, extension))
-            configurationNames.set(extension.configurationNames)
-            skippedConfigurationNames.set(extension.skippedConfigurationNamesPrefixes)
-            projectDirectory.set(project.projectDir)
-            globalLockFileName.set(extension.globalLockFile)
-            includeTransitives.set(
-                    project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives'] as String) : extension.includeTransitives.get()
-            )
-            skippedDependencies.set(extension.skippedDependencies)
-            overrides.set(overridesMap)
-            shouldIgnoreDependencyLock.set(isIgnoreDependencyLock(project))
-            filter.set(extension.dependencyFilter)
-            peers.set(getProjectPeers())
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
+    private TaskProvider<GenerateLockTask> configureGenerateLockTask(TaskProvider<GenerateLockTask> lockTask, String lockFilename, DependencyLockExtension extension, Map overrides) {
+        setupLockConventionMapping(lockTask, extension, overrides)
+        lockTask.configure {
+            it.conventionMapping.with {
+                dependenciesLock = { getBuildDirLockFile(lockFilename, extension) }
+                configurationNames = { extension.configurationNames }
+                skippedConfigurationNames = { extension.skippedConfigurationNamesPrefixes }
             }
         }
 
         lockTask
     }
 
-    private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateGlobalLockTask> globalLockTask, String lockFilename,
-                                                                   DependencyLockExtension extension, Map<String, String> overridesMap) {
+    private void setupLockConventionMapping(TaskProvider<GenerateLockTask> task, DependencyLockExtension extension, Map overrideMap) {
+        task.configure { generateTask ->
+            generateTask.conventionMapping.with {
+                skippedDependencies = { extension.skippedDependencies }
+                includeTransitives = {
+                    project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives'] as String) : extension.includeTransitives
+                }
+                filter = { extension.dependencyFilter }
+                overrides = { overrideMap }
+            }
+        }
+    }
+
+    private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateLockTask> globalLockTask, String lockFilename,
+                                                                   DependencyLockExtension extension, Map overrides) {
+        setupLockConventionMapping(globalLockTask, extension, overrides)
         globalLockTask.configure { globalGenerateTask ->
-            project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
-            includeTransitives.set(
-                    project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives'] as String) : extension.includeTransitives.get()
-            )
-            skippedDependencies.set(extension.skippedDependencies)
-            overrides.set(overridesMap)
-            filter.set(extension.dependencyFilter)
-            dependenciesLock.set(getBuildDirGlobalLockFile(lockFilename, extension))
-            projectDirectory.set(project.projectDir)
-            globalLockFileName.set(extension.globalLockFile)
-            dependenciesLock.set(getBuildDirGlobalLockFile(lockFilename, extension))
-            shouldIgnoreDependencyLock.set(isIgnoreDependencyLock(project))
-            peers.set(getProjectPeers())
+            globalGenerateTask.doFirst {
+                project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
+            }
             globalGenerateTask.conventionMapping.with {
-                configurationResolutionData = {
+                dependenciesLock = { getBuildDirGlobalLockFile(lockFilename, extension) }
+                configurations = {
                     def subprojects = project.subprojects.collect { subproject ->
                         def ext = subproject.getExtensions().findByType(DependencyLockExtension)
                         if (ext != null) {
-                            Collection<Configuration> lockableConfigurations = lockableConfigurations(subproject, ext.configurationNames.get(), extension.skippedConfigurationNamesPrefixes)
-                            Collection<Configuration> configurations = filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(subproject, ext.configurationNames.get(), lockableConfigurations)
+                            Collection<Configuration> lockableConfigurations = lockableConfigurations(project, subproject, ext.configurationNames, extension.skippedConfigurationNamesPrefixes)
+                            Collection<Configuration> configurations = filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(subproject, ext.configurationNames, lockableConfigurations)
                             Configuration aggregate = subproject.configurations.create("aggregateConfiguration")
                             aggregate.setCanBeConsumed(true)
                             aggregate.setCanBeResolved(true)
@@ -259,43 +267,33 @@ class DependencyLockTaskConfigurer {
                     def conf = project.configurations.detachedConfiguration(subprojectsArray)
                     project.allprojects.each { it.configurations.add(conf) }
 
-                    def configs = [conf] + ConfigurationUtils.lockableConfigurations(project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes)
-                    configs.findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-
+                    [conf] + lockableConfigurations(project, project, extension.configurationNames, extension.skippedConfigurationNamesPrefixes)
                 }
             }
+        }
 
         globalLockTask
-    }
-
-    private getProjectPeers() {
-        project.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) }
     }
 
     private TaskProvider<MigrateToCoreLocksTask> configureMigrateToCoreLocksTask(DependencyLockExtension extension) {
         def migrateLockedDepsToCoreLocksTask = project.tasks.register(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME, MigrateLockedDepsToCoreLocksTask)
         def migrateToCoreLocksTask = project.tasks.register(MIGRATE_TO_CORE_LOCKS_TASK_NAME, MigrateToCoreLocksTask)
-        def lockFile = new File(project.projectDir, extension.lockFile.get())
+        def lockFile = new File(project.projectDir, extension.lockFile)
         def dependencyLock = new File(project.projectDir, "gradle.lockfile")
 
         migrateLockedDepsToCoreLocksTask.configure {
-            configurationNames.set(extension.configurationNames)
-            inputLockFile.set(lockFile)
-            outputLock.set(dependencyLock)
-            isCoreLockingEnabled.set(DependencyLockingFeatureFlags.isCoreLockingEnabled())
+            it.conventionMapping.with {
+                configurationNames = { extension.configurationNames }
+                inputLockFile = { lockFile }
+                outputLock = { dependencyLock }
+            }
         }
 
         migrateToCoreLocksTask.configure {
-            configurationNames.set(extension.configurationNames)
-            outputLock.set(dependencyLock)
-            isCoreLockingEnabled.set(DependencyLockingFeatureFlags.isCoreLockingEnabled())
+            it.conventionMapping.with {
+                configurationNames = { extension.configurationNames }
+                outputLock = { dependencyLock }
+            }
             it.dependsOn project.tasks.named(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME)
         }
 
@@ -319,7 +317,7 @@ class DependencyLockTaskConfigurer {
         }
     }
 
-    static boolean isIgnoreDependencyLock(Project project) {
+    public static boolean shouldIgnoreDependencyLock(Project project) {
         if (project.hasProperty('dependencyLock.ignore')) {
             def prop = project.property('dependencyLock.ignore')
             (prop instanceof String) ? prop.toBoolean() : prop.asBoolean()
@@ -333,19 +331,11 @@ class DependencyLockTaskConfigurer {
 
         diffLockTask.configure { diffTask ->
             diffTask.mustRunAfter(project.tasks.named(GENERATE_LOCK_TASK_NAME), project.tasks.named(UPDATE_LOCK_TASK_NAME))
-            def existing = new File(project.projectDir, lockFileName ?: extension.lockFile.get())
+            def existing = new File(project.projectDir, lockFileName ?: extension.lockFile)
             if (existing.exists()) {
-                diffTask.existingLockFile.set(existing)
+                diffTask.existingLockFile = existing
             }
-            diffTask.updatedLockFile.set(new File(project.layout.buildDirectory.getAsFile().get(), lockFileName ?: extension.lockFile.get()))
-            File dependencyLockFolder = new File(project.layout.buildDirectory.getAsFile().get(), "dependency-lock")
-            dependencyLockFolder.mkdirs()
-            File diffFile = new File(dependencyLockFolder, "lockdiff.${this.diffFileExtension()}")
-            diffTask.outputFile.set(diffFile)
-            diffTask.isPathAwareDependencyDiffEnabled.set(DependencyLockingFeatureFlags.isPathAwareDependencyDiffEnabled())
-            diffTask.conventionMapping.with {
-                configurations = project.configurations
-            }
+            diffTask.updatedLockFile = new File(project.layout.buildDirectory.getAsFile().get(), lockFileName ?: extension.lockFile)
         }
 
         project.tasks.named(SAVE_LOCK_TASK_NAME).configure { save ->
@@ -353,10 +343,6 @@ class DependencyLockTaskConfigurer {
         }
 
         diffLockTask
-    }
-
-    private String diffFileExtension() {
-        DependencyLockingFeatureFlags.isPathAwareDependencyDiffEnabled() ? "json" : "txt"
     }
 
 }

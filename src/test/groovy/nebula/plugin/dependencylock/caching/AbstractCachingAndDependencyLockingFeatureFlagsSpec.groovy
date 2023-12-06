@@ -22,7 +22,6 @@ import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.junit.Stubbing
-import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraph
 import nebula.test.dependencies.DependencyGraphBuilder
@@ -31,7 +30,7 @@ import nebula.test.dependencies.ModuleBuilder
 import org.junit.Rule
 import org.junit.contrib.java.lang.system.ProvideSystemProperty
 
-class AbstractCachingAndDependencyLockingFeatureFlagsSpec extends BaseIntegrationTestKitSpec {
+class AbstractCachingAndDependencyLockingFeatureFlagsSpec extends IntegrationTestKitSpec {
     static WireMockServer wireMockServer
     static WireMock testClient
     static Stubbing wm

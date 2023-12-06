@@ -18,7 +18,6 @@
 
 package nebula.plugin.dependencylock
 
-import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.IntegrationTestKitSpec
 import org.gradle.testkit.runner.TaskOutcome
@@ -28,7 +27,7 @@ import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 
-class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec {
+class ResolutionRulesLockabilitySpec extends IntegrationTestKitSpec {
     def mavenForRules
 
     def setup() {
@@ -107,22 +106,22 @@ class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec {
 {
     "_global_": {
         "commons-io:commons-io": {
-            "locked": "2.11.0",
-            "transitive": [
+            "firstLevelTransitive": [
                 "$moduleName:sub2"
-            ]
+            ],
+            "locked": "2.11.0"
         },
         "commons-logging:commons-logging": {
-            "locked": "1.2",
-            "transitive": [
+            "firstLevelTransitive": [
                 "$moduleName:sub3"
-            ]
+            ],
+            "locked": "1.2"
         },
         "$moduleName:sub1": {
-            "project": true,
-            "transitive": [
+            "firstLevelTransitive": [
                 "$moduleName:sub2"
-            ]
+            ],
+            "project": true
         },
         "$moduleName:sub2": {
             "project": true
@@ -131,10 +130,11 @@ class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec {
             "project": true
         },
         "org.apache.commons:commons-lang3": {
-            "locked": "3.12.0",
-            "transitive": [
+            "firstLevelTransitive": [
+                "$moduleName:sub1",
                 "$moduleName:sub1"
-            ]
+            ],
+            "locked": "3.12.0"
         }
     },
     "resolutionRules": {
@@ -178,10 +178,10 @@ class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec {
                 "project": true
             },
             "test.rules:resolution-rules": {
-                "locked": "1.0.0",
-                "transitive": [
+                "firstLevelTransitive": [
                     ":$moduleName"
-                ]
+                ],
+                "locked": "1.0.0"
             }""".stripIndent(), ['resolutionRules'])
 
         def sub2LockText = LockGenerator.duplicateIntoConfigs("""\
@@ -189,10 +189,10 @@ class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec {
             "locked": "2.11.0"
         },
         "org.apache.commons:commons-lang3": {
-            "locked": "3.12.0",
-            "transitive": [
+            "firstLevelTransitive": [
                 "$moduleName:sub1"
-            ]
+            ],
+            "locked": "3.12.0"
         },
         "$moduleName:sub1": {
             "project": true
@@ -209,10 +209,10 @@ class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec {
             "project": true
         },
         "test.rules:resolution-rules": {
-            "locked": "1.0.0",
-            "transitive": [
+            "firstLevelTransitive": [
                 ":$moduleName"
-            ]
+            ],
+            "locked": "1.0.0"
         }""".stripIndent(), ['resolutionRules'])
 
         def sub3LockText = LockGenerator.duplicateIntoConfigs('''\
@@ -224,10 +224,10 @@ class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec {
                 "project": true
             },
             "test.rules:resolution-rules": {
-                "locked": "1.0.0",
-                "transitive": [
+                "firstLevelTransitive": [
                     ":$moduleName"
-                ]
+                ],
+                "locked": "1.0.0"
             }""".stripIndent(), ['resolutionRules'])
 
         rootLockFile.text == rootLockText

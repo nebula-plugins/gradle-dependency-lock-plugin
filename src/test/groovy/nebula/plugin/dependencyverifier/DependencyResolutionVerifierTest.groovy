@@ -18,7 +18,6 @@
 
 package nebula.plugin.dependencyverifier
 
-import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
@@ -29,7 +28,7 @@ import spock.lang.Subject
 import spock.lang.Unroll
 
 @Subject(DependencyResolutionVerifierKt)
-class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
+class DependencyResolutionVerifierTest extends IntegrationTestKitSpec {
     def mavenrepo
 
     def setup() {
@@ -46,9 +45,6 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         def transitiveNotAvailableDep = new File(mavenrepo.getMavenRepoDir(), "transitive/not/available/a")
         transitiveNotAvailableDep.deleteDir() // to create a missing transitive dependency
-
-        //TODO make task listener changes for config cache
-        disableConfigurationCache()
     }
 
     @Unroll
@@ -393,6 +389,42 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         where:
         tasks << [['build'], ['build', '--parallel']]
+    }
+
+    @IgnoreIf({ jvm.isJava17Compatible() })
+    @Unroll
+    def 'with Gradle version #gradleVersionToTest - expecting #expecting'() {
+        given:
+        gradleVersion = gradleVersionToTest
+        setupSingleProject()
+
+        if (expecting == 'error') {
+            buildFile << """
+                dependencies {
+                    implementation 'not.available:a:1.0.0' // dependency is not found
+                }
+                """.stripIndent()
+        }
+
+        when:
+        def results
+        def tasks = ['dependencies', '--configuration', 'compileClasspath']
+
+        if (expecting == 'error') {
+            results = runTasksAndFail(*tasks)
+        } else {
+            results = runTasks(*tasks)
+        }
+
+        then:
+        results.output.contains('Task :dependencies')
+
+        where:
+        gradleVersionToTest | expecting
+        '6.9'               | 'error'
+        '6.9'               | 'no error'
+        '6.0.1'             | 'error'
+        '6.0.1'             | 'no error'
     }
 
     @Unroll
@@ -1133,6 +1165,55 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         assert results.output.contains('> Task :included-project:sub1:dependencies')
         assert results.output.contains("1. Failed to resolve 'not.available:b:1.0.0' for project 'sub1'")
         assert results.output.contains('FAIL')
+    }
+
+    @IgnoreIf({ jvm.isJava17Compatible() })
+    @Unroll
+    def 'with Gradle version #gradleVersionToTest - expecting #expecting - using task with configuration dependencies'() {
+        given:
+        gradleVersion = gradleVersionToTest
+        setupSingleProject()
+
+        buildFile << taskThatRequiresConfigurationDependencies()
+
+        if (expecting == 'error') {
+            buildFile << """
+                dependencies {
+                    implementation 'not.available:a:1.0.0' // dependency is not found
+                }
+                """.stripIndent()
+        }
+
+        when:
+        def results
+        def tasks = ['dependencies', '--configuration', 'compileClasspath']
+
+        if (expecting == 'error') {
+            results = runTasksAndFail(*tasks)
+        } else {
+            results = runTasks(*tasks)
+        }
+
+        then:
+        if (expecting == 'error') {
+            assert results.output.contains('Execution failed for task \':taskWithConfigurationDependencies\'')
+            assert results.output.contains("1. Failed to resolve 'not.available:a:1.0.0' for project")
+        } else {
+            assert results.output.contains('Task :dependencies')
+        }
+
+        where:
+        gradleVersionToTest | expecting
+        '6.0.1'             | 'error'
+        '6.0.1'             | 'no error'
+        '5.6.4'             | 'error'
+        '5.6.4'             | 'no error'
+        '5.1'               | 'error'
+        '5.1'               | 'no error'
+        '4.10.3'            | 'error'
+        '4.10.3'            | 'no error'
+        '4.9'               | 'error'
+        '4.9'               | 'no error'
     }
 
     private static String taskThatRequiresConfigurationDependencies() {

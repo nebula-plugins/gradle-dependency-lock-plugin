@@ -16,11 +16,8 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
-import nebula.plugin.dependencylock.model.ConfigurationResolutionData
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.ProjectSpec
-
-import static nebula.plugin.dependencylock.utils.ConfigurationUtils.lockableConfigurations
 
 class UpdateLockTaskSpec extends ProjectSpec {
     final String taskName = 'updateLock'
@@ -38,19 +35,6 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def task = project.tasks.create(taskName, UpdateLockTask)
         task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
         task.configurationNames = LockGenerator.DEFAULT_CONFIG_NAMES
-        task.configure { generateLockTask ->
-            generateLockTask.conventionMapping.with {
-                configurationResolutionData = {
-                    lockableConfigurations(project, LockGenerator.DEFAULT_CONFIG_NAMES as Set<String>).findAll { it.isCanBeResolved() }.collect {
-                        new ConfigurationResolutionData(
-                                it.name,
-                                it.incoming.resolutionResult.getAllDependencies(),
-                                it.incoming.resolutionResult.rootComponent
-                        )
-                    }
-                }
-            }
-        }
         task
     }
 
@@ -80,7 +64,7 @@ class UpdateLockTaskSpec extends ProjectSpec {
         lockFile.text = lockText
 
         def task = createTask()
-        task.includeTransitives.set(true)
+        task.includeTransitives = true
 
         def updatedLock = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
@@ -103,6 +87,6 @@ class UpdateLockTaskSpec extends ProjectSpec {
         task.lock()
 
         then:
-        task.dependenciesLock.get().text == updatedLock
+        task.dependenciesLock.text == updatedLock
     }
 }

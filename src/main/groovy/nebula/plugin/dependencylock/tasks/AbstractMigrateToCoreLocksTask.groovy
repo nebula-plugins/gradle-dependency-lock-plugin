@@ -17,10 +17,9 @@ package nebula.plugin.dependencylock.tasks
 
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.provider.Property
-import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.work.DisableCachingByDefault
 
@@ -30,12 +29,9 @@ abstract class AbstractMigrateToCoreLocksTask extends DefaultTask {
     String group = 'Locking'
 
     @OutputFile
-    abstract Property<File> getOutputLock()
+    File outputLock
 
     @Input
-    abstract SetProperty<String> getConfigurationNames()
-
-    @Input
-    abstract Property<Boolean> getIsCoreLockingEnabled()
+    Set<String> configurationNames
 
 }
