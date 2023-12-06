@@ -172,6 +172,7 @@ class DependencyLockTaskConfigurer {
     private static void configureCommonSaveTask(TaskProvider<SaveLockTask> saveLockTask, TaskProvider<GenerateLockTask> lockTask,
                                                 TaskProvider<UpdateLockTask> updateTask) {
         saveLockTask.configure { saveTask ->
+            saveTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             saveTask.mustRunAfter lockTask, updateTask
             saveTask.outputs.upToDateWhen {
                 if (saveTask.generatedLock.exists() && saveTask.outputLock.exists()) {
@@ -221,6 +222,7 @@ class DependencyLockTaskConfigurer {
 
     private void setupLockConventionMapping(TaskProvider<GenerateLockTask> task, DependencyLockExtension extension, Map overrideMap) {
         task.configure { generateTask ->
+            generateTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             generateTask.conventionMapping.with {
                 skippedDependencies = { extension.skippedDependencies }
                 includeTransitives = {
@@ -236,6 +238,7 @@ class DependencyLockTaskConfigurer {
                                                                    DependencyLockExtension extension, Map overrides) {
         setupLockConventionMapping(globalLockTask, extension, overrides)
         globalLockTask.configure { globalGenerateTask ->
+            globalGenerateTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             globalGenerateTask.doFirst {
                 project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
             }
@@ -287,6 +290,8 @@ class DependencyLockTaskConfigurer {
                 inputLockFile = { lockFile }
                 outputLock = { dependencyLock }
             }
+            it.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
+
         }
 
         migrateToCoreLocksTask.configure {
@@ -295,6 +300,7 @@ class DependencyLockTaskConfigurer {
                 outputLock = { dependencyLock }
             }
             it.dependsOn project.tasks.named(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME)
+            it.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
         }
 
         migrateToCoreLocksTask
@@ -304,6 +310,7 @@ class DependencyLockTaskConfigurer {
         TaskProvider<Delete> deleteLockTask = project.tasks.register('deleteLock', Delete)
 
         deleteLockTask.configure { it ->
+            it.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             it.delete saveLock.map { it.outputLock }
         }
 
@@ -313,6 +320,7 @@ class DependencyLockTaskConfigurer {
         TaskProvider<Delete> deleteGlobalLockTask = project.tasks.register('deleteGlobalLock', Delete)
 
         deleteGlobalLockTask.configure { it ->
+            it.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             it.delete saveGlobalLock.map { it.outputLock }
         }
     }
@@ -330,6 +338,7 @@ class DependencyLockTaskConfigurer {
         TaskProvider<DiffLockTask> diffLockTask = project.tasks.register(DIFF_LOCK_TASK_NAME, DiffLockTask)
 
         diffLockTask.configure { diffTask ->
+            diffTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             diffTask.mustRunAfter(project.tasks.named(GENERATE_LOCK_TASK_NAME), project.tasks.named(UPDATE_LOCK_TASK_NAME))
             def existing = new File(project.projectDir, lockFileName ?: extension.lockFile)
             if (existing.exists()) {

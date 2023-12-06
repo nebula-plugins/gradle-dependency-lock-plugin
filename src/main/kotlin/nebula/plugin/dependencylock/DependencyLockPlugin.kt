@@ -31,13 +31,15 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.ExternalDependency
+import org.gradle.api.configuration.BuildFeatures
 import org.gradle.api.internal.StartParameterInternal
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import java.io.File
 import java.util.Objects
+import javax.inject.Inject
 
-class DependencyLockPlugin : Plugin<Project> {
+class DependencyLockPlugin @Inject constructor(val buildFeatures: BuildFeatures) : Plugin<Project> {
 
     companion object {
         const val EXTENSION_NAME = "dependencyLock"
@@ -88,12 +90,7 @@ class DependencyLockPlugin : Plugin<Project> {
 
         val startParameter = project.gradle.startParameter as StartParameterInternal
         val isMigratingToCoreLocks = startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)
-        var isConfigurationCache = false
-        try {
-            val method = StartParameterInternal::class.java.getMethod("isConfigurationCache")
-            isConfigurationCache = method.invoke(startParameter) as Boolean
-        } catch (ignore: Exception) {
-        }
+        var isConfigurationCache = buildFeatures.configurationCache.active.isPresent && buildFeatures.configurationCache.active.get()
         if (!isMigratingToCoreLocks && !isConfigurationCache) {
             /* MigrateToCoreLocks can be involved with migrating dependencies that were previously unlocked.
                Verifying resolution based on the base lockfiles causes a `LockOutOfDateException` from the initial DependencyLockingArtifactVisitor state

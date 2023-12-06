@@ -1,9 +1,9 @@
 package nebula.plugin.dependencylock
 
+import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
-import nebula.test.IntegrationSpec
 
-class DependencyLockPluginIntegrationSpec extends IntegrationSpec {
+class DependencyLockPluginIntegrationSpec extends BaseIntegrationTestKitSpec {
     def setupSpec() {
         Fixture.createFixtureIfNotCreated()
     }
@@ -33,10 +33,10 @@ class DependencyLockPluginIntegrationSpec extends IntegrationSpec {
         """.stripIndent()
 
         when:
-        def result = runTasksSuccessfully('dependencies')
+        def result = runTasks('dependencies')
 
         then:
-        result.standardOutput.contains('\\--- test.example:foo:latest.release -> 1.0.1\n')
+        result.output.contains('\\--- test.example:foo:latest.release -> 1.0.1\n')
     }
 
     def 'able to modify configuration in beforeResolve block'() {
@@ -67,10 +67,10 @@ class DependencyLockPluginIntegrationSpec extends IntegrationSpec {
             """.stripIndent()
 
         when:
-        def result = runTasksSuccessfully('dependencies')
+        def result = runTasks('dependencies')
 
         then:
-        result.standardOutput.contains('+--- test.example:foo:latest.release -> 1.0.0\n')
-        result.standardOutput.contains('\\--- test.example:bar:latest.release -> 1.0.0\n')
+        result.output.contains('+--- test.example:foo:latest.release -> 1.0.0\n')
+        result.output.contains('\\--- test.example:bar:latest.release -> 1.0.0\n')
     }
 }

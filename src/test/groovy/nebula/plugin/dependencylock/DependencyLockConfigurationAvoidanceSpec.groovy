@@ -1,5 +1,6 @@
 package nebula.plugin.dependencylock
 
+import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencylock.tasks.CommitLockTask
 import nebula.plugin.dependencylock.tasks.DiffLockTask
 import nebula.plugin.dependencylock.tasks.GenerateLockTask
@@ -7,10 +8,9 @@ import nebula.plugin.dependencylock.tasks.MigrateLockedDepsToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.plugin.dependencylock.tasks.UpdateLockTask
-import nebula.test.IntegrationTestKitSpec
 
 
-class DependencyLockConfigurationAvoidanceSpec extends IntegrationTestKitSpec {
+class DependencyLockConfigurationAvoidanceSpec extends BaseIntegrationTestKitSpec {
     def 'task configuration avoidance'() {
         given:
         buildFile << """\
