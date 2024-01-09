@@ -28,8 +28,8 @@ jobs:
       - uses: actions/checkout@v1
       - name: Setup git user
         run: |
-          git config --global user.name "$(git --no-pager log --format=format:'%an' -n 1)"
-          git config --global user.email "$(git --no-pager log --format=format:'%ae' -n 1)"
+          git config --global user.name "Nebula Plugin Maintainers"
+          git config --global user.email "nebula-plugins-oss@netflix.com"
       - name: Set up JDK 8
         uses: actions/setup-java@v2
         with:
@@ -70,6 +70,10 @@ jobs:
       NETFLIX_OSS_SONATYPE_PASSWORD: ${{ secrets.ORG_SONATYPE_PASSWORD }}
     steps:
       - uses: actions/checkout@v1
+      - name: Setup git user
+        run: |
+          git config --global user.name "Nebula Plugin Maintainers"
+          git config --global user.email "nebula-plugins-oss@netflix.com"
       - name: Setup jdk 8
         uses: actions/setup-java@v1
         with:
@@ -109,8 +113,8 @@ jobs:
       - uses: actions/checkout@v1
       - name: Setup git user
         run: |
-          git config --global user.name "$(git --no-pager log --format=format:'%an' -n 1)"
-          git config --global user.email "$(git --no-pager log --format=format:'%ae' -n 1)"
+          git config --global user.name "Nebula Plugin Maintainers"
+          git config --global user.email "nebula-plugins-oss@netflix.com"
       - name: Setup jdk 8
         uses: actions/setup-java@v1
         with:
@@ -139,3 +143,4 @@ jobs:
           startsWith(github.ref, 'refs/tags/v') &&
           (!contains(github.ref, '-rc.'))
         run: ./gradlew --info --stacktrace -Dgradle.publish.key=${{ secrets.gradlePublishKey }} -Dgradle.publish.secret=${{ secrets.gradlePublishSecret }} -Prelease.useLastTag=true final
+
