@@ -99,9 +99,10 @@ class GenerateLockTask extends AbstractLockTask {
             if (Configuration.class.declaredMethods.any { it.name == 'isCanBeResolved' }) {
                 lockableConfigurations.addAll project.configurations.findAll {
                     it.canBeResolved && !ConfigurationFilters.safelyHasAResolutionAlternative(it) &&
-                            // Always exclude compileOnly to avoid issues with kotlin plugin
+                            // Always exclude compileOnly and build tools configurations to avoid issues with kotlin plugin
                             !it.name.endsWith("CompileOnly") &&
-                            it.name != "compileOnly"
+                            it.name != "compileOnly" &&
+                            it.name != "kotlinBuildToolsApiClasspath"
                 }
             } else {
                 lockableConfigurations.addAll project.configurations.asList()
