@@ -552,7 +552,7 @@ empty=annotationProcessor,testAnnotationProcessor
                 buildscript {
                     repositories { maven { url "https://plugins.gradle.org/m2/" } }
                     dependencies {
-                        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0"
+                        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22"
                     }
                 }
                 plugins {
@@ -574,7 +574,7 @@ empty=annotationProcessor,testAnnotationProcessor
         def kotlinVersion
         def jetbrainsAnnotationsVersion
         try {
-            kotlinVersion = results.output.findAll("org.jetbrains.kotlin:kotlin-stdlib-common.*").first().split(':')[2]
+            kotlinVersion = results.output.findAll("org.jetbrains.kotlin:kotlin-stdlib.*").first().split(':')[2]
             jetbrainsAnnotationsVersion = results.output.findAll("org.jetbrains:annotations.*").first().split(':')[2]
         } catch (Exception e) {
             throw new Exception("Could not find needed version(s) for this test", e)
