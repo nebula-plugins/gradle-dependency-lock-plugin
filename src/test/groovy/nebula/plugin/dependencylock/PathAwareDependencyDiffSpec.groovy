@@ -146,7 +146,7 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
             }
         
             apply plugin: 'java'
-            repositories { maven { url '${repoDir.absolutePath}' } }
+            repositories { maven { url = '${repoDir.absolutePath}' } }
 
             dependencyLock {
                 includeTransitives = true
@@ -263,8 +263,8 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         
             apply plugin: 'java'
             repositories { 
-                maven { url '${repo.root.absoluteFile.toURI()}' }
-                maven { url '${repoDir.absolutePath}' }
+                maven { url = '${repo.root.absoluteFile.toURI()}' }
+                maven { url = '${repoDir.absolutePath}' }
             }
 
             dependencyLock {
@@ -336,12 +336,12 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         buildFile << """\
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id "nebula.resolution-rules" version "9.0.0"
+                id "com.netflix.nebula.resolution-rules" version "11.4.1"
             }
         
             apply plugin: 'java'
             repositories { 
-                maven { url '${repoDir.absolutePath}' }
+                maven { url = '${repoDir.absolutePath}' }
             }
 
             dependencyLock {
@@ -444,12 +444,12 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         buildFile << """\
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id "nebula.resolution-rules" version "9.0.0"
+                id "com.netflix.nebula.resolution-rules" version "11.4.1"
             }
         
             apply plugin: 'java'
             repositories { 
-                maven { url '${repoDir.absolutePath}' }
+                maven { url = '${repoDir.absolutePath}' }
             }
 
             dependencyLock {
@@ -557,12 +557,12 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         buildFile << """\
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id "nebula.resolution-rules" version "9.0.0"
+                id "com.netflix.nebula.resolution-rules" version "11.4.1"
             }
         
             apply plugin: 'java'
             repositories { 
-                maven { url '${repoDir.absolutePath}' }
+                maven { url = '${repoDir.absolutePath}' }
             }
 
             dependencyLock {
@@ -631,12 +631,12 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         buildFile << """\
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id "nebula.resolution-rules" version "9.0.0"
+                id "com.netflix.nebula.resolution-rules" version "11.4.1"
             }
         
             apply plugin: 'java'
             repositories { 
-                maven { url '${repoDir.absolutePath}' }
+                maven { url = '${repoDir.absolutePath}' }
             }
 
             dependencyLock {
@@ -703,12 +703,12 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         buildFile << """\
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id "nebula.resolution-rules" version "9.0.0"
+                id "com.netflix.nebula.resolution-rules" version "11.4.1"
             }
         
             apply plugin: 'java'
             repositories { 
-                maven { url '${repoDir.absolutePath}' }
+                maven { url = '${repoDir.absolutePath}' }
             }
 
             dependencyLock {
@@ -780,12 +780,12 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         buildFile << """\
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id "nebula.resolution-rules" version "9.0.0"
+                id "com.netflix.nebula.resolution-rules" version "11.4.1"
             }
         
             apply plugin: 'java'
             repositories { 
-                maven { url '${repoDir.absolutePath}' }
+                maven { url = '${repoDir.absolutePath}' }
             }
 
             dependencyLock {
@@ -818,7 +818,7 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
             allprojects {
                 apply plugin: 'java-library'
                 apply plugin: 'com.netflix.nebula.dependency-lock'
-                repositories { maven { url '${repoDir.absolutePath}' } }
+                repositories { maven { url = '${repoDir.absolutePath}' } }
 
                 group = 'test'
                 
@@ -949,7 +949,7 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
             allprojects {
                 apply plugin: 'java-library'
                 apply plugin: 'com.netflix.nebula.dependency-lock'
-                repositories { maven { url '${repoDir.absolutePath}' } }
+                repositories { maven { url = '${repoDir.absolutePath}' } }
 
                 group = 'test'
                 
@@ -992,7 +992,7 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         
             apply plugin: 'java'
             repositories { 
-                maven { url '${repoDir.absolutePath}' }
+                maven { url = '${repoDir.absolutePath}' }
             }
 
             dependencyLock {
@@ -1035,12 +1035,12 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         buildFile << """\
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id "nebula.resolution-rules" version "9.0.0"
+                id "com.netflix.nebula.resolution-rules" version "11.4.1"
             }
         
             apply plugin: 'java'
             repositories { 
-                maven { url '${repoDir.absolutePath}' }
+                maven { url = '${repoDir.absolutePath}' }
             }
 
             dependencyLock {
@@ -1155,7 +1155,7 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         
             apply plugin: 'java'
             repositories { 
-                maven { url '${repoDir.absolutePath}' }
+                maven { url = '${repoDir.absolutePath}' }
             }
 
             dependencyLock {

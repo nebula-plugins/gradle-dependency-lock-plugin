@@ -33,12 +33,11 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.deprecation.DeprecationLogger
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault
 class GenerateLockTask extends AbstractLockTask {
-    private String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
-    private String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
     private static final Logger LOGGER = Logging.getLogger(GenerateLockTask)
 
     @Internal
@@ -72,25 +71,31 @@ class GenerateLockTask extends AbstractLockTask {
 
     @TaskAction
     void lock() {
-        if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
-            def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
-            def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile)
-            if (globalLockFile.exists()) {
-                throw new BuildCancelledException("Legacy global locks are not supported with core locking.\n" +
-                        "Please remove global locks.\n" +
-                        " - Global locks: ${globalLockFile.absolutePath}")
-            }
+        //TODO: address Invocation of Task.project at execution time has been deprecated.
+        DeprecationLogger.whileDisabled {
+            final String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
+            final String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
+            if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
+                def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
+                def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile)
+                if (globalLockFile.exists()) {
+                    throw new BuildCancelledException("Legacy global locks are not supported with core locking.\n" +
+                            "Please remove global locks.\n" +
+                            " - Global locks: ${globalLockFile.absolutePath}")
+                }
 
-            throw new BuildCancelledException("generateLock is not supported with core locking.\n" +
-                    "Please use $WRITE_CORE_LOCK_TASK_TO_RUN\n" +
-                    "or do a one-time migration with `./gradlew $MIGRATE_TO_CORE_LOCK_TASK_NAME` to preserve the current lock state")
+                throw new BuildCancelledException("generateLock is not supported with core locking.\n" +
+                        "Please use $WRITE_CORE_LOCK_TASK_TO_RUN\n" +
+                        "or do a one-time migration with `./gradlew $MIGRATE_TO_CORE_LOCK_TASK_NAME` to preserve the current lock state")
+            }
+            if (DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
+                throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
+            }
+            Collection<Configuration> confs = getConfigurations() ?: lockableConfigurations(project, project, getConfigurationNames(), getSkippedConfigurationNames())
+            Map dependencyMap = new GenerateLockFromConfigurations().lock(confs)
+            new DependencyLockWriter(getDependenciesLock(), getSkippedDependencies()).writeLock(dependencyMap)
         }
-        if (DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
-            throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
-        }
-        Collection<Configuration> confs = getConfigurations() ?: lockableConfigurations(project, project, getConfigurationNames(), getSkippedConfigurationNames())
-        Map dependencyMap = new GenerateLockFromConfigurations().lock(confs)
-        new DependencyLockWriter(getDependenciesLock(), getSkippedDependencies()).writeLock(dependencyMap)
+
     }
 
     static Collection<Configuration> lockableConfigurations(Project taskProject, Project project, Set<String> configurationNames, Set<String> skippedConfigurationNamesPrefixes = []) {

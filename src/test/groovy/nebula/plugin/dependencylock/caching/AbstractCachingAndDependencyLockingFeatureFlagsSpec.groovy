@@ -84,7 +84,7 @@ class AbstractCachingAndDependencyLockingFeatureFlagsSpec extends BaseIntegratio
             }
             repositories {
                 maven { 
-                  url "$serverUrl"
+                  url = "$serverUrl"
                   allowInsecureProtocol = true
                   metadataSources {
                       mavenPom()

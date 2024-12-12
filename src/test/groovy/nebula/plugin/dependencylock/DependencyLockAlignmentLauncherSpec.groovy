@@ -53,7 +53,7 @@ class DependencyLockAlignmentLauncherSpec extends BaseIntegrationTestKitSpec {
 
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
-                maven { url '${mavenForRules.absolutePath}' }
+                maven { url = '${mavenForRules.absolutePath}' }
             }
 
             dependencies {
@@ -118,7 +118,7 @@ class DependencyLockAlignmentLauncherSpec extends BaseIntegrationTestKitSpec {
 
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
-                maven { url '${mavenForRules.absolutePath}' }
+                maven { url = '${mavenForRules.absolutePath}' }
             }
 
             dependencies {

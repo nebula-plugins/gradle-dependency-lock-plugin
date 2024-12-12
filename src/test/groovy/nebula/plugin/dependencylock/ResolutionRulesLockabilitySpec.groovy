@@ -50,7 +50,7 @@ class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec {
             allprojects {
                 repositories {
                     mavenCentral()
-                    maven { url '${mavenForRules.absolutePath}' }
+                    maven { url = '${mavenForRules.absolutePath}' }
                 }
             }
             dependencies {

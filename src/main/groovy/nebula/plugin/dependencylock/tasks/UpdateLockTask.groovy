@@ -19,6 +19,7 @@ import nebula.plugin.dependencylock.DependencyLockExtension
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.deprecation.DeprecationLogger
 import org.gradle.work.DisableCachingByDefault
 
 /**
@@ -32,18 +33,22 @@ class UpdateLockTask extends GenerateLockTask {
     @TaskAction
     @Override
     void lock() {
-        if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
-            def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
-            def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile)
-            if (globalLockFile.exists()) {
-                throw new BuildCancelledException("Legacy global locks are not supported with core locking.\n" +
-                        "Please remove global locks.\n" +
-                        " - Global locks: ${globalLockFile.absolutePath}")
-            }
+        //TODO: address Invocation of Task.project at execution time has been deprecated.
+        DeprecationLogger.whileDisabled {
+            if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
+                def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
+                def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile)
+                if (globalLockFile.exists()) {
+                    throw new BuildCancelledException("Legacy global locks are not supported with core locking.\n" +
+                            "Please remove global locks.\n" +
+                            " - Global locks: ${globalLockFile.absolutePath}")
+                }
 
-            throw new BuildCancelledException("updateLock is not supported with core locking.\n" +
-                    "Please use `./gradlew dependencies --update-locks group1:module1,group2:module2`")
+                throw new BuildCancelledException("updateLock is not supported with core locking.\n" +
+                        "Please use `./gradlew dependencies --update-locks group1:module1,group2:module2`")
+            }
+            super.lock()
         }
-        super.lock()
+
     }
 }

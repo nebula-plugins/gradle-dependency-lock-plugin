@@ -31,6 +31,7 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.internal.deprecation.DeprecationLogger
 
 import static nebula.plugin.dependencylock.tasks.GenerateLockTask.filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject
 import static nebula.plugin.dependencylock.tasks.GenerateLockTask.lockableConfigurations
@@ -154,9 +155,12 @@ class DependencyLockTaskConfigurer {
 
         saveLockTask.configure { saveTask ->
             saveTask.doFirst {
-                SaveLockTask globalSave = project.rootProject.tasks.findByName(SAVE_GLOBAL_LOCK_TASK_NAME) as SaveLockTask
-                if (globalSave?.outputLock?.exists()) {
-                    throw new GradleException('Cannot save individual locks when global lock is in place, run deleteGlobalLock task')
+                //TODO: address Invocation of Task.project at execution time has been deprecated.
+                DeprecationLogger.whileDisabled {
+                    SaveLockTask globalSave = project.rootProject.tasks.findByName(SAVE_GLOBAL_LOCK_TASK_NAME) as SaveLockTask
+                    if (globalSave?.outputLock?.exists()) {
+                        throw new GradleException('Cannot save individual locks when global lock is in place, run deleteGlobalLock task')
+                    }
                 }
             }
             saveTask.conventionMapping.with {
@@ -190,10 +194,13 @@ class DependencyLockTaskConfigurer {
 
         globalSaveLockTask.configure { globalSaveTask ->
             globalSaveTask.doFirst {
-                project.subprojects.each { Project sub ->
-                    SaveLockTask save = sub.tasks.findByName(SAVE_LOCK_TASK_NAME) as SaveLockTask
-                    if (save && save.outputLock?.exists()) {
-                        throw new GradleException('Cannot save global lock, one or more individual locks are in place, run deleteLock task')
+                //TODO: address Invocation of Task.project at execution time has been deprecated.
+                DeprecationLogger.whileDisabled {
+                    project.subprojects.each { Project sub ->
+                        SaveLockTask save = sub.tasks.findByName(SAVE_LOCK_TASK_NAME) as SaveLockTask
+                        if (save && save.outputLock?.exists()) {
+                            throw new GradleException('Cannot save global lock, one or more individual locks are in place, run deleteLock task')
+                        }
                     }
                 }
             }
@@ -240,7 +247,10 @@ class DependencyLockTaskConfigurer {
         globalLockTask.configure { globalGenerateTask ->
             globalGenerateTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             globalGenerateTask.doFirst {
-                project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
+                //TODO: address Invocation of Task.project at execution time has been deprecated.
+                DeprecationLogger.whileDisabled {
+                    project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
+                }
             }
             globalGenerateTask.conventionMapping.with {
                 dependenciesLock = { getBuildDirGlobalLockFile(lockFilename, extension) }

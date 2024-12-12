@@ -14,7 +14,7 @@ class DependencyLockPluginIntegrationSpec extends BaseIntegrationTestKitSpec {
                 id 'java'
             }
 
-            repositories { maven { url '${Fixture.repo}' } }
+            repositories { maven { url = '${Fixture.repo}' } }
 
             dependencies {
                 implementation 'test.example:foo:latest.release'
@@ -45,7 +45,7 @@ class DependencyLockPluginIntegrationSpec extends BaseIntegrationTestKitSpec {
                 id 'java'
             }
 
-            repositories { maven { url '${Fixture.repo}' } }
+            repositories { maven { url = '${Fixture.repo}' } }
 
             configurations.all { configuration ->
                 incoming.beforeResolve {

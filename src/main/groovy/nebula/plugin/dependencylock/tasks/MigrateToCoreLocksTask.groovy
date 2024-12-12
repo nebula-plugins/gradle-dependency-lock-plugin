@@ -26,6 +26,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolveException
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.deprecation.DeprecationLogger
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault
@@ -35,30 +36,33 @@ class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
 
     @TaskAction
     void migrateUnlockedDependencies() {
-        if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
-            def coreLockingHelper = new CoreLockingHelper(project)
-            coreLockingHelper.lockSelectedConfigurations(getConfigurationNames())
+        //TODO: address Invocation of Task.project at execution time has been deprecated.
+        DeprecationLogger.whileDisabled {
+            if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
+                def coreLockingHelper = new CoreLockingHelper(project)
+                coreLockingHelper.lockSelectedConfigurations(getConfigurationNames())
 
-            Map<String, List<String>> dependenciesInConfigs = new HashMap<>()
+                Map<String, List<String>> dependenciesInConfigs = new HashMap<>()
 
-            def migratingUnlockedDependenciesClosure = {
-                HashSet<String> unlockedDependencies = MigrateToCoreLocksTask.findUnlockedDependencies(it)
+                def migratingUnlockedDependenciesClosure = {
+                    HashSet<String> unlockedDependencies = MigrateToCoreLocksTask.findUnlockedDependencies(it)
 
-                if (unlockedDependencies.size() > 0) {
+                    if (unlockedDependencies.size() > 0) {
 
-                    unlockedDependencies.toList().each { lockedDependency ->
-                        if (dependenciesInConfigs.containsKey(lockedDependency)) {
-                            if (!dependenciesInConfigs[lockedDependency].contains(it.name))
-                                dependenciesInConfigs[lockedDependency].add(it.name)
-                        } else {
-                            dependenciesInConfigs.put(lockedDependency, [it.name])
+                        unlockedDependencies.toList().each { lockedDependency ->
+                            if (dependenciesInConfigs.containsKey(lockedDependency)) {
+                                if (!dependenciesInConfigs[lockedDependency].contains(it.name))
+                                    dependenciesInConfigs[lockedDependency].add(it.name)
+                            } else {
+                                dependenciesInConfigs.put(lockedDependency, [it.name])
+                            }
                         }
                     }
                 }
-            }
-            coreLockingHelper.migrateUnlockedDependenciesClosure(getConfigurationNames(), migratingUnlockedDependenciesClosure)
+                coreLockingHelper.migrateUnlockedDependenciesClosure(getConfigurationNames(), migratingUnlockedDependenciesClosure)
 
-            writeDependenciesIntoLockFile(dependenciesInConfigs, outputLock)
+                writeDependenciesIntoLockFile(dependenciesInConfigs, outputLock)
+            }
         }
     }
 

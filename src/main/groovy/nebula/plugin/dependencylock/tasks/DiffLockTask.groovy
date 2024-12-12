@@ -13,6 +13,7 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.deprecation.DeprecationLogger
 import org.gradle.work.DisableCachingByDefault
 
 import java.nio.charset.StandardCharsets
@@ -42,23 +43,26 @@ class DiffLockTask extends AbstractLockTask {
 
     @TaskAction
     def diffLocks() {
-        ConfigurationsSet existingLock = readLocks(existingLockFile)
-        ConfigurationsSet newLock = readLocks(updatedLockFile)
-        if (DependencyLockingFeatureFlags.isPathAwareDependencyDiffEnabled()) {
-            Map<String, List<DependencyDiff>> diffByConfiguration = new DependenciesComparison().performDiffByConfiguration(existingLock, newLock)
-            DiffReportGenerator generator = Class.forName("nebula.plugin.dependencylock.diff.PathAwareDiffReportGenerator").newInstance() as DiffReportGenerator
-            def lockDiff = generator.generateDiffReport(project, diffByConfiguration)
-            outputDir.mkdirs()
-            diffFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(lockDiff))
-        } else {
-            if (newLock.isEmpty()) {
+        //TODO: address Invocation of Task.project at execution time has been deprecated.
+        DeprecationLogger.whileDisabled {
+            ConfigurationsSet existingLock = readLocks(existingLockFile)
+            ConfigurationsSet newLock = readLocks(updatedLockFile)
+            if (DependencyLockingFeatureFlags.isPathAwareDependencyDiffEnabled()) {
+                Map<String, List<DependencyDiff>> diffByConfiguration = new DependenciesComparison().performDiffByConfiguration(existingLock, newLock)
+                DiffReportGenerator generator = Class.forName("nebula.plugin.dependencylock.diff.PathAwareDiffReportGenerator").newInstance() as DiffReportGenerator
+                def lockDiff = generator.generateDiffReport(project, diffByConfiguration)
                 outputDir.mkdirs()
-                diffFile.withPrintWriter(StandardCharsets.UTF_8.displayName()) { writer ->
-                    writer.println('--no updated locks to diff--')
-                }
+                diffFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(lockDiff))
             } else {
-                List<DependencyDiff> diff = new DependenciesComparison().performDiff(existingLock, newLock)
-                writeDiff(diff)
+                if (newLock.isEmpty()) {
+                    outputDir.mkdirs()
+                    diffFile.withPrintWriter(StandardCharsets.UTF_8.displayName()) { writer ->
+                        writer.println('--no updated locks to diff--')
+                    }
+                } else {
+                    List<DependencyDiff> diff = new DependenciesComparison().performDiff(existingLock, newLock)
+                    writeDiff(diff)
+                }
             }
         }
     }

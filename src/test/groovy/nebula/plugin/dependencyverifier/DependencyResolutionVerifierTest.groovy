@@ -214,7 +214,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         given:
         buildFile << """
             buildscript {
-                repositories { maven { url "https://plugins.gradle.org/m2/" } }
+                repositories { maven { url = "https://plugins.gradle.org/m2/" } }
                 dependencies {
                      classpath "com.github.spotbugs.snom:spotbugs-gradle-plugin:5.0.14"
                 }

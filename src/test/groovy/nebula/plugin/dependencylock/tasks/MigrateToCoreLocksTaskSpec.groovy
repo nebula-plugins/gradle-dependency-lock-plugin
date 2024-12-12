@@ -562,7 +562,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
             buildscript {
               repositories {
                 maven {
-                  url "https://plugins.gradle.org/m2/"
+                  url = "https://plugins.gradle.org/m2/"
                 }
               }
               dependencies {
@@ -653,7 +653,7 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
             buildscript {
               repositories {
                 maven {
-                  url "https://plugins.gradle.org/m2/"
+                  url = "https://plugins.gradle.org/m2/"
                 }
               }
               dependencies {

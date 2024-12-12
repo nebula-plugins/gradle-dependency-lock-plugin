@@ -45,7 +45,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     static final String SPECIFIC_BUILD_GRADLE = """\
         apply plugin: 'java'
         apply plugin: 'com.netflix.nebula.dependency-lock'
-        repositories { maven { url '${Fixture.repo}' } }
+        repositories { maven { url = '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.0.1'
             implementation 'test.example:baz:1.0.0'
@@ -55,7 +55,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     static final String BUILD_GRADLE = """\
         apply plugin: 'java'
         apply plugin: 'com.netflix.nebula.dependency-lock'
-        repositories { maven { url '${Fixture.repo}' } }
+        repositories { maven { url = '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.+'
         }
@@ -64,7 +64,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     static final String NEW_BUILD_GRADLE = """\
         apply plugin: 'java'
         apply plugin: 'com.netflix.nebula.dependency-lock'
-        repositories { maven { url '${Fixture.repo}' } }
+        repositories { maven { url = '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:2.+'
         }
@@ -304,7 +304,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
                 group = 'test'
             }
             subprojects {
-                repositories { maven { url '${Fixture.repo}' } }
+                repositories { maven { url = '${Fixture.repo}' } }
             }
         """.stripIndent()
 
@@ -389,7 +389,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << """\
             apply plugin: 'java'
             apply plugin: 'com.netflix.nebula.dependency-lock'
-            repositories { maven { url '${Fixture.repo}' } }
+            repositories { maven { url = '${Fixture.repo}' } }
             dependencyLock {
                 skippedDependencies = [ 'test.example:foo' ]
             }
@@ -612,7 +612,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             subprojects {
                 apply plugin: 'java'
                 apply plugin: 'com.netflix.nebula.dependency-lock'
-                repositories { maven { url '${Fixture.repo}' } }
+                repositories { maven { url = '${Fixture.repo}' } }
             }
         """.stripIndent()
 
@@ -708,7 +708,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             }
             subprojects {
                 apply plugin: 'java'
-                repositories { maven { url '${Fixture.repo}' } }
+                repositories { maven { url = '${Fixture.repo}' } }
             }
             dependencyLock {
                 includeTransitives = true
@@ -797,7 +797,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             }
             subprojects {
                 apply plugin: 'java'
-                repositories { maven { url '${Fixture.repo}' } }
+                repositories { maven { url = '${Fixture.repo}' } }
             }
             dependencyLock {
                 includeTransitives = true
@@ -874,7 +874,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             }
             subprojects {
                 apply plugin: 'java'
-                repositories { maven { url '${Fixture.repo}' } }
+                repositories { maven { url = '${Fixture.repo}' } }
             }
             
             dependencyLock {
@@ -923,7 +923,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             }
             subprojects {
                 apply plugin: 'java'
-                repositories { maven { url '${Fixture.repo}' } }
+                repositories { maven { url = '${Fixture.repo}' } }
             }
             dependencyLock {
                 includeTransitives = true
@@ -1155,7 +1155,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << """\
             apply plugin: 'java'
             apply plugin: 'com.netflix.nebula.dependency-lock'
-            repositories { maven { url '${Fixture.repo}' } }
+            repositories { maven { url = '${Fixture.repo}' } }
             dependencyLock {
                 includeTransitives = true
             }
@@ -1212,7 +1212,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << """\
             apply plugin: 'java'
             apply plugin: 'com.netflix.nebula.dependency-lock'
-            repositories { maven { url '${Fixture.repo}' } }
+            repositories { maven { url = '${Fixture.repo}' } }
             dependencyLock {
                 includeTransitives = true
             }
@@ -1436,7 +1436,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << """
         apply plugin: 'java'
         apply plugin: 'com.netflix.nebula.dependency-lock'
-        repositories { maven { url '${Fixture.repo}' } }
+        repositories { maven { url = '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.+'
         }
@@ -1470,7 +1470,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << """
         apply plugin: 'java'
         apply plugin: 'com.netflix.nebula.dependency-lock'
-        repositories { maven { url '${Fixture.repo}' } }
+        repositories { maven { url = '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.+'
         }
@@ -1492,7 +1492,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << """
         apply plugin: 'java'
         apply plugin: 'com.netflix.nebula.dependency-lock'
-        repositories { maven { url '${Fixture.repo}' } }
+        repositories { maven { url = '${Fixture.repo}' } }
         dependencies {
             implementation 'test.example:foo:1.+'
         }
@@ -1899,7 +1899,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             }
             subprojects {
                 apply plugin: 'java'
-                repositories { maven { url '${Fixture.repo}' } }
+                repositories { maven { url = '${Fixture.repo}' } }
             }
         """.stripIndent()
     }
@@ -1920,7 +1920,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             buildscript {
               repositories {
                 maven {
-                  url "https://plugins.gradle.org/m2/"
+                  url = "https://plugins.gradle.org/m2/"
                 }
               }
               dependencies {
@@ -1940,7 +1940,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
                 apply plugin: 'scala'
                 apply plugin: "com.github.spotbugs"
                 repositories { 
-                    maven { url '${Fixture.repo}' } 
+                    maven { url = '${Fixture.repo}' } 
                     mavenCentral()
                 }
             }
@@ -1970,7 +1970,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             }
             subprojects {
                 apply plugin: 'java-library'
-                repositories { maven { url '${Fixture.repo}' } }
+                repositories { maven { url = '${Fixture.repo}' } }
             }
         """.stripIndent()
     }
@@ -2126,7 +2126,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << """\
             apply plugin: 'java'
             apply plugin: 'com.netflix.nebula.dependency-lock'
-            repositories { maven { url '${repo.absolutePath}' } }
+            repositories { maven { url = '${repo.absolutePath}' } }
             dependencies {
                 implementation($platformType('sample:recommender:1.1'))
             }
@@ -2154,7 +2154,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         buildFile << """\
             apply plugin: 'java'
             apply plugin: 'com.netflix.nebula.dependency-lock'
-            repositories { maven { url '${Fixture.repo}' } }
+            repositories { maven { url = '${Fixture.repo}' } }
             repositories { flatDir { dirs 'libs' } }
             dependencies {
                 implementation 'test.example:foo:1.0.1'

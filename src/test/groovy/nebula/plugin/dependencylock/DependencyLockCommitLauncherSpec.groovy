@@ -92,7 +92,7 @@ gradle.properties'''.stripIndent()
             subprojects {
                 apply plugin: 'java'
                 apply plugin: 'com.netflix.nebula.dependency-lock'
-                repositories { maven { url '${Fixture.repo}' } }
+                repositories { maven { url = '${Fixture.repo}' } }
             }
         """.stripIndent()
 
@@ -133,7 +133,7 @@ gradle.properties'''.stripIndent()
             subprojects {
                 apply plugin: 'java'
                 apply plugin: 'com.netflix.nebula.dependency-lock'
-                repositories { maven { url '${Fixture.repo}' } }
+                repositories { maven { url = '${Fixture.repo}' } }
             }
         """.stripIndent()
 
