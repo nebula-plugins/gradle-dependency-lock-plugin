@@ -20,7 +20,6 @@ plugins {
     id 'com.netflix.nebula.optional-base' version '9.0.0'
     id "org.jetbrains.kotlin.jvm" version "2.1.0"
     id 'java-gradle-plugin'
-    id "org.gradle.test-retry" version "1.5.0"
 }
 
 description 'Gradle plugin to allow locking of dynamic dependency versions'
@@ -101,7 +100,7 @@ tasks.withType(Test).configureEach {
             }
         }
     }
-    retry {
+    develocity.testRetry {
         maxRetries = 3
         maxFailures = 20
     }
