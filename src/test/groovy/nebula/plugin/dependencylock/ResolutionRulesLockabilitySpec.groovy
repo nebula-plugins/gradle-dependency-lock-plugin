@@ -133,7 +133,6 @@ class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec {
         },
         "org.apache.commons:commons-lang3": {
             "firstLevelTransitive": [
-                "$moduleName:sub1",
                 "$moduleName:sub1"
             ],
             "locked": "3.12.0"

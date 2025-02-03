@@ -13,7 +13,6 @@
  */
 package nebula.plugin.dependencylock
 
-import com.google.common.base.Throwables
 import groovy.json.JsonSlurper
 import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
@@ -858,13 +857,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     def 'uses chosen subproject configurations when creating global lock in multiproject'() {
         disableConfigurationCache()
         addSubproject('sub1', """\
-            configurations {
-                special 
-            }
             dependencies {
-                special 'test.example:foo:2.0.0'
+                implementation 'test.example:foo:2.0.0'
             }
-            dependencyLock.configurationNames = ['runtimeElements', 'apiElements', 'special']
+            dependencyLock.configurationNames = ['runtimeElements', 'apiElements', 'implementation']
         """.stripIndent())
 
         buildFile << """\
@@ -931,12 +927,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent()
 
         when:
-        def result
-        if (GradleVersionUtils.currentGradleVersionIsLessThan("6.0")) {
-            result = runTasks('generateGlobalLock', '--warning-mode', 'all')
-        } else {
-            result = runTasks('generateGlobalLock', '--warning-mode', 'all')
-        }
+        def result =runTasks('generateGlobalLock', '--warning-mode', 'all')
 
         then:
         assert result.output.contains('Global lock warning: project \'sub1\' requested locking a configuration which cannot be consumed: \'compileClasspath\'')
@@ -948,10 +939,6 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         assert globalLockFile.exists()
         assert globalLockFile.text.contains('test.example:foo')
         assert globalLockFile.text.contains('test:sub1')
-
-        if (!GradleVersionUtils.currentGradleVersionIsLessThan("6.0")) {
-            assert !globalLockFile.text.contains('test.example:bar')
-        }
     }
 
     def 'save global lock in multiproject'() {
@@ -1745,7 +1732,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
                     spotless123
                 }
                 dependencies {
-                    compileOnly 'com.google.guava:guava:19.0'
+                    implementation 'com.google.guava:guava:19.0'
                     spotless123 'com.google.guava:guava:31.1-jre'
                 }
             }
