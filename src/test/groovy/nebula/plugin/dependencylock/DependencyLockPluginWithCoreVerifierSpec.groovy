@@ -526,6 +526,7 @@ empty=annotationProcessor,testAnnotationProcessor
         def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
         def actualLocks = lockedConfigurations(lockFile)
 
+        expectedLocks += ["scalaToolchainRuntimeClasspath"]
         expectedLocks.each {
             assert actualLocks.contains(it): "There is a missing lockfile: $it"
         }

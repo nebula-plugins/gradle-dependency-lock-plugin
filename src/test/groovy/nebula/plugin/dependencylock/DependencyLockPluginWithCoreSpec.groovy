@@ -544,6 +544,8 @@ buildscript {
                 testImplementation 'org.scalatest:scalatest_2.12:3.0.5'
                 testRuntimeOnly 'org.scala-lang.modules:scala-xml_2.12:1.1.1'
                 """.stripIndent()
+            expectedLocks += ["scalaToolchainRuntimeClasspath"]
+
         } else if (languagePlugin == "com.netflix.nebula.clojure") {
             //TODO: clojure plugin needs to be refactored to stop using project.convention
             System.setProperty('ignoreDeprecations', 'true')
