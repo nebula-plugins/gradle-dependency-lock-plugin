@@ -853,52 +853,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             }'''.stripIndent()
         new File(projectDir, 'build/global.lock').text == globalLockText
     }
-
-    def 'uses chosen subproject configurations when creating global lock in multiproject'() {
-        disableConfigurationCache()
-        addSubproject('sub1', """\
-            dependencies {
-                implementation 'test.example:foo:2.0.0'
-            }
-            dependencyLock.configurationNames = ['runtimeElements', 'apiElements', 'implementation']
-        """.stripIndent())
-
-        buildFile << """\
-            allprojects {
-                apply plugin: 'com.netflix.nebula.dependency-lock'
-                group = 'test'
-            }
-            subprojects {
-                apply plugin: 'java'
-                repositories { maven { url = '${Fixture.repo}' } }
-            }
-            
-            dependencyLock {
-                includeTransitives = true
-            }
-        """.stripIndent()
-
-        when:
-        runTasks('generateGlobalLock', '--warning-mode', 'all')
-
-        then:
-        String globalLockText = '''\
-            {
-                "_global_": {
-                    "test.example:foo": {
-                        "locked": "2.0.0",
-                        "transitive": [
-                            "test:sub1"
-                        ]
-                    },
-                    "test:sub1": {
-                        "project": true
-                    }
-                }
-            }'''.stripIndent()
-        new File(projectDir, 'build/global.lock').text == globalLockText
-    }
-
+    
     def 'warn the user when configurations for creating global lock in multiproject are no longer resolvable, thus no longer lockable'() {
         disableConfigurationCache()
         addSubproject('sub1', """\

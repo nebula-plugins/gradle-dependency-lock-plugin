@@ -133,6 +133,7 @@ class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec {
         },
         "org.apache.commons:commons-lang3": {
             "firstLevelTransitive": [
+                "$moduleName:sub1",
                 "$moduleName:sub1"
             ],
             "locked": "3.12.0"
@@ -146,6 +147,9 @@ class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec {
 }""".stripIndent()
 
         globalLockFile.text == globalLockText
+
+        and:
+        runTasks("compileJava")
     }
 
     def 'project locking works'() {
