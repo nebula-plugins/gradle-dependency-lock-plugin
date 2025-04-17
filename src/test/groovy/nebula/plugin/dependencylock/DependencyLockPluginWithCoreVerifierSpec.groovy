@@ -553,7 +553,7 @@ empty=annotationProcessor,testAnnotationProcessor
                 buildscript {
                     repositories { maven { url = "https://plugins.gradle.org/m2/" } }
                     dependencies {
-                        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22"
+                        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20"
                     }
                 }
                 plugins {
