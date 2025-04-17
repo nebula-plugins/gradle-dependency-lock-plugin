@@ -17,7 +17,7 @@ Inspired by [Bundler](http://bundler.io)
 
 # Quick Start
 
-Refer to the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/nebula.dependency-lock) for instructions on how to apply the plugin.
+Refer to the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/com.netflix.nebula.dependency-lock) for instructions on how to apply the plugin.
 
 # Documentation
 
