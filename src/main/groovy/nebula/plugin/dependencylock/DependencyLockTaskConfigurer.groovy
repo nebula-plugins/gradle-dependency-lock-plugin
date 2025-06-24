@@ -158,7 +158,7 @@ class DependencyLockTaskConfigurer {
                 //TODO: address Invocation of Task.project at execution time has been deprecated.
                 DeprecationLogger.whileDisabled {
                     SaveLockTask globalSave = project.rootProject.tasks.findByName(SAVE_GLOBAL_LOCK_TASK_NAME) as SaveLockTask
-                    if (globalSave?.outputLock?.exists()) {
+                    if (globalSave && globalSave.outputLock &&  globalSave.outputLock.exists()) {
                         throw new GradleException('Cannot save individual locks when global lock is in place, run deleteGlobalLock task')
                     }
                 }
@@ -276,11 +276,24 @@ class DependencyLockTaskConfigurer {
                             [project.dependencies.create(subproject)]
                         }
                     }.flatten()
-                    def subprojectsArray = subprojects.toArray(new Dependency[subprojects.size()])
-                    def conf = project.configurations.detachedConfiguration(subprojectsArray)
-                    project.allprojects.each { it.configurations.add(conf) }
 
-                    [conf] + lockableConfigurations(project, project, extension.configurationNames, extension.skippedConfigurationNamesPrefixes)
+
+                    // Create a regular configuration instead of a detached one for Gradle 9.x compatibility
+                    // Use a unique name that doesn't conflict with Gradle's reserved names
+                    def subprojectsArray = subprojects.toArray(new Dependency[subprojects.size()])
+
+                    List<Configuration> configurations = []
+                    project.allprojects.each { p->
+                        def conf = p.configurations.create("globalLockConfig${System.currentTimeMillis()}") {
+                            canBeConsumed = true
+                            canBeResolved = true
+                            transitive = true
+                        }
+                        conf.dependencies.addAll(subprojectsArray)
+                        configurations.add(conf)
+                    }
+
+                    configurations + lockableConfigurations(project, project, extension.configurationNames, extension.skippedConfigurationNamesPrefixes)
                 }
             }
         }

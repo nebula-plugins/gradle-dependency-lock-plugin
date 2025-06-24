@@ -36,7 +36,7 @@ class DependencyLockWriter {
         }
 
         filteredSkippedDeps.each { key, lock ->
-            def configuration = key.configuration.startsWith('detachedConfiguration') ? GLOBAL_LOCK_CONFIG : key.configuration
+            def configuration = key.configuration.startsWith('globalLockConfig') ? GLOBAL_LOCK_CONFIG : key.configuration
             def depMap = result[configuration]["${key.group}:${key.artifact}"]
             if (lock.locked) {
                 depMap['locked'] = lock.locked

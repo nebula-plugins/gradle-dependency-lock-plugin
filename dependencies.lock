@@ -1,0 +1,352 @@
+{
+    "apiDependenciesMetadata": {
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "2.2.0"
+        }
+    },
+    "compileClasspath": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.14.2"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.2.1"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "3.0.0"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.12.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10"
+        },
+        "org.apache.commons:commons-lang3": {
+            "locked": "3.12.0"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "2.2.0"
+        }
+    },
+    "implementationDependenciesMetadata": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.14.2"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.2.1"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "3.0.0"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.12.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10"
+        },
+        "org.apache.commons:commons-lang3": {
+            "locked": "3.12.0"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "2.2.0"
+        }
+    },
+    "integTestCompileClasspath": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.14.2"
+        },
+        "com.github.stefanbirkner:system-rules": {
+            "locked": "1.19.0"
+        },
+        "com.github.tomakehurst:wiremock": {
+            "locked": "2.17.0"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.2.1"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "3.0.0"
+        },
+        "com.netflix.nebula:nebula-project-plugin": {
+            "locked": "12.0.0"
+        },
+        "com.netflix.nebula:nebula-test": {
+            "locked": "11.0.0"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.12.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10"
+        },
+        "org.ajoberstar.grgit:grgit-core": {
+            "locked": "4.1.1"
+        },
+        "org.apache.commons:commons-lang3": {
+            "locked": "3.12.0"
+        },
+        "org.eclipse.jgit:org.eclipse.jgit": {
+            "locked": "5.13.0.202109080827-r"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "2.2.0"
+        }
+    },
+    "integTestImplementationDependenciesMetadata": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.14.2"
+        },
+        "com.github.stefanbirkner:system-rules": {
+            "locked": "1.19.0"
+        },
+        "com.github.tomakehurst:wiremock": {
+            "locked": "2.17.0"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.2.1"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "3.0.0"
+        },
+        "com.netflix.nebula:nebula-project-plugin": {
+            "locked": "12.0.0"
+        },
+        "com.netflix.nebula:nebula-test": {
+            "locked": "11.0.0"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.12.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10"
+        },
+        "org.ajoberstar.grgit:grgit-core": {
+            "locked": "4.1.1"
+        },
+        "org.apache.commons:commons-lang3": {
+            "locked": "3.12.0"
+        },
+        "org.eclipse.jgit:org.eclipse.jgit": {
+            "locked": "5.13.0.202109080827-r"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "2.2.0"
+        }
+    },
+    "integTestRuntimeClasspath": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.14.2"
+        },
+        "com.github.stefanbirkner:system-rules": {
+            "locked": "1.19.0"
+        },
+        "com.github.tomakehurst:wiremock": {
+            "locked": "2.17.0"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.2.1"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "3.0.0"
+        },
+        "com.netflix.nebula:nebula-project-plugin": {
+            "locked": "12.0.0"
+        },
+        "com.netflix.nebula:nebula-test": {
+            "locked": "11.0.0"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.12.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10"
+        },
+        "org.ajoberstar.grgit:grgit-core": {
+            "locked": "4.1.1"
+        },
+        "org.apache.commons:commons-lang3": {
+            "locked": "3.12.0"
+        },
+        "org.eclipse.jgit:org.eclipse.jgit": {
+            "locked": "5.13.0.202109080827-r"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "2.2.0"
+        }
+    },
+    "kotlinCompilerClasspath": {
+        "org.jetbrains.kotlin:kotlin-compiler-embeddable": {
+            "locked": "2.2.0"
+        }
+    },
+    "kotlinCompilerPluginClasspathIntegTest": {
+        "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable": {
+            "locked": "2.2.0"
+        }
+    },
+    "kotlinCompilerPluginClasspathMain": {
+        "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable": {
+            "locked": "2.2.0"
+        }
+    },
+    "kotlinCompilerPluginClasspathTest": {
+        "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable": {
+            "locked": "2.2.0"
+        }
+    },
+    "kotlinInternalAbiValidation": {
+        "org.jetbrains.kotlin:abi-tools": {
+            "locked": "2.2.0"
+        }
+    },
+    "kotlinKlibCommonizerClasspath": {
+        "org.jetbrains.kotlin:kotlin-klib-commonizer-embeddable": {
+            "locked": "2.2.0"
+        }
+    },
+    "runtimeClasspath": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.14.2"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.2.1"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "3.0.0"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.12.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10"
+        },
+        "org.apache.commons:commons-lang3": {
+            "locked": "3.12.0"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "2.2.0"
+        }
+    },
+    "testCompileClasspath": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.14.2"
+        },
+        "com.github.stefanbirkner:system-rules": {
+            "locked": "1.19.0"
+        },
+        "com.github.tomakehurst:wiremock": {
+            "locked": "2.17.0"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.2.1"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "3.0.0"
+        },
+        "com.netflix.nebula:nebula-project-plugin": {
+            "locked": "12.0.0"
+        },
+        "com.netflix.nebula:nebula-test": {
+            "locked": "11.0.0"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.12.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10"
+        },
+        "org.ajoberstar.grgit:grgit-core": {
+            "locked": "4.1.1"
+        },
+        "org.apache.commons:commons-lang3": {
+            "locked": "3.12.0"
+        },
+        "org.eclipse.jgit:org.eclipse.jgit": {
+            "locked": "5.13.0.202109080827-r"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "2.2.0"
+        }
+    },
+    "testImplementationDependenciesMetadata": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.14.2"
+        },
+        "com.github.stefanbirkner:system-rules": {
+            "locked": "1.19.0"
+        },
+        "com.github.tomakehurst:wiremock": {
+            "locked": "2.17.0"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.2.1"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "3.0.0"
+        },
+        "com.netflix.nebula:nebula-project-plugin": {
+            "locked": "12.0.0"
+        },
+        "com.netflix.nebula:nebula-test": {
+            "locked": "11.0.0"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.12.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10"
+        },
+        "org.ajoberstar.grgit:grgit-core": {
+            "locked": "4.1.1"
+        },
+        "org.apache.commons:commons-lang3": {
+            "locked": "3.12.0"
+        },
+        "org.eclipse.jgit:org.eclipse.jgit": {
+            "locked": "5.13.0.202109080827-r"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "2.2.0"
+        }
+    },
+    "testRuntimeClasspath": {
+        "com.fasterxml.jackson:jackson-bom": {
+            "locked": "2.14.2"
+        },
+        "com.github.stefanbirkner:system-rules": {
+            "locked": "1.19.0"
+        },
+        "com.github.tomakehurst:wiremock": {
+            "locked": "2.17.0"
+        },
+        "com.netflix.nebula:nebula-dependencies-comparison": {
+            "locked": "0.2.1"
+        },
+        "com.netflix.nebula:nebula-gradle-interop": {
+            "locked": "3.0.0"
+        },
+        "com.netflix.nebula:nebula-project-plugin": {
+            "locked": "12.0.0"
+        },
+        "com.netflix.nebula:nebula-test": {
+            "locked": "11.0.0"
+        },
+        "com.squareup.moshi:moshi": {
+            "locked": "1.12.0"
+        },
+        "joda-time:joda-time": {
+            "locked": "2.10"
+        },
+        "org.ajoberstar.grgit:grgit-core": {
+            "locked": "4.1.1"
+        },
+        "org.apache.commons:commons-lang3": {
+            "locked": "3.12.0"
+        },
+        "org.eclipse.jgit:org.eclipse.jgit": {
+            "locked": "5.13.0.202109080827-r"
+        },
+        "org.jetbrains.kotlin:kotlin-stdlib": {
+            "locked": "2.2.0"
+        }
+    }
+}

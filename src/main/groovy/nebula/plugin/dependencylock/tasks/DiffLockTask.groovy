@@ -37,7 +37,7 @@ class DiffLockTask extends AbstractLockTask {
     @OutputFile
     File diffFile = new File(outputDir, "lockdiff.${this.diffFileExtension()}")
 
-    private String diffFileExtension() {
+    String diffFileExtension() {
         DependencyLockingFeatureFlags.isPathAwareDependencyDiffEnabled() ? "json" : "txt"
     }
 
@@ -68,7 +68,7 @@ class DiffLockTask extends AbstractLockTask {
     }
 
     ConfigurationsSet readLocks(File file) {
-        if (!(file?.exists())) {
+        if (!file || !file.exists()) {
             return new ConfigurationsSet([:])
         }
         def contents = new JsonSlurper().parse(file)

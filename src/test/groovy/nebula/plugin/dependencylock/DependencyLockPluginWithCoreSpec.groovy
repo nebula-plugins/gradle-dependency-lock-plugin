@@ -371,7 +371,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         buildFile << """\
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id "org.jetbrains.kotlin.jvm" version "1.8.0"
+                id "org.jetbrains.kotlin.jvm" version "2.2.0"
             }
             repositories {
                 ${mavenrepo.mavenRepositoryBlock}
@@ -436,7 +436,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         addSubproject("sub1", """
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id "org.jetbrains.kotlin.jvm" version "1.8.0"
+                id "org.jetbrains.kotlin.jvm" version "2.2.0"
             }
             dependencies {
                 $configuration 'test.nebula:a:1.+'
@@ -489,7 +489,7 @@ buildscript {
             }
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id "com.netflix.nebula.clojure" version "13.0.0"
+                id "com.netflix.nebula.clojure" version "14.2.2"
             }
             
             repositories {
@@ -574,8 +574,8 @@ buildscript {
                 maven { url = 'https://clojars.org/repo' }
                 }
                 dependencies {
-                     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0"
-                     classpath "com.netflix.nebula:nebula-clojure-plugin:13.0.0"
+                     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.0"
+                     classpath "com.netflix.nebula:nebula-clojure-plugin:14.2.2"
                 }
             }
             $plugins
