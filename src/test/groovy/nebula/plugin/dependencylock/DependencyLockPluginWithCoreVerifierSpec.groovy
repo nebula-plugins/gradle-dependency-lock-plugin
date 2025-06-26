@@ -613,7 +613,7 @@ empty=annotationProcessor,testAnnotationProcessor
                     maven { url = 'https://clojars.org/repo' }
                     }
                     dependencies {
-                        classpath "com.netflix.nebula:nebula-clojure-plugin:13.0.1"
+                        classpath "com.netflix.nebula:nebula-clojure-plugin:14.2.2"
                     }
                 }
                 plugins {

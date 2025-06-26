@@ -26,7 +26,7 @@ class GlobalLockLauncherSpec extends BaseIntegrationTestKitSpec {
         disableConfigurationCache()
     }
 
-    def 'global lock selective dependency updates'() {
+    def 'global lock selective dependency updates'(){
         def graph = new DependencyGraphBuilder()
                 .addModule('apricot:a:1.0.0')
                 .addModule(new ModuleBuilder('beetroot:b:1.0.0').addDependency('apricot:a:1.0.0').build())

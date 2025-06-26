@@ -11,6 +11,6 @@ inline fun <T> T.groovyClosure(crossinline call: () -> Unit) = object : Closure<
     }
 }
 
-inline fun <U> Any.action(crossinline call: U.() -> Unit) = Action<U> { call(it) }
+inline fun <U : Any> Any.action(crossinline call: U.() -> Unit) = Action<U> { call(it) }
 
 fun Project.findStringProperty(name: String): String? = if (hasProperty(name)) property(name) as String? else null

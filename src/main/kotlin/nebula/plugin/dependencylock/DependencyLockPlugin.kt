@@ -153,9 +153,9 @@ class DependencyLockPlugin @Inject constructor(val buildFeatures: BuildFeatures)
 
             // We do this twice to catch resolves that happen during build evaluation, and ensure that we clobber configurations made during evaluation
             disableCachingForGenerateLock()
-            project.gradle.taskGraph.whenReady(groovyClosure {
+            project.gradle.taskGraph.whenReady {
                 disableCachingForGenerateLock()
-            })
+            }
 
             project.configurations.all({ conf ->
                 if (lockAfterEvaluating) {

@@ -16,9 +16,9 @@
 import org.gradle.util.GradleVersion
 
 plugins {
-    id 'com.netflix.nebula.plugin-plugin' version '21.2.2'
+    id 'com.netflix.nebula.plugin-plugin' version '22.0.2'
     id 'com.netflix.nebula.optional-base' version '9.0.0'
-    id "org.jetbrains.kotlin.jvm" version "2.1.0"
+    id "org.jetbrains.kotlin.jvm" version "2.2.0"
     id 'java-gradle-plugin'
 }
 
@@ -103,24 +103,6 @@ tasks.withType(Test).configureEach {
     develocity.testRetry {
         maxRetries = 3
         maxFailures = 20
-    }
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
-}
-
-idea {
-    project {
-        jdkName = '1.8'
-        languageLevel = '1.8'
-    }
-}
-
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
-    kotlinOptions {
-        jvmTarget = '1.8'
     }
 }
 
