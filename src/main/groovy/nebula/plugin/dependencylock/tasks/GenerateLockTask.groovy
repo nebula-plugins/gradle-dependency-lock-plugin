@@ -106,6 +106,7 @@ class GenerateLockTask extends AbstractLockTask {
                     it.canBeResolved && !ConfigurationFilters.safelyHasAResolutionAlternative(it) &&
                             // Always exclude compileOnly and build tools configurations to avoid issues with kotlin plugin
                             !it.name.endsWith("CompileOnly") &&
+                            !it.name.endsWith("DependenciesMetadata") &&
                             it.name != "compileOnly" &&
                             it.name != "kotlinBuildToolsApiClasspath"
                 }
