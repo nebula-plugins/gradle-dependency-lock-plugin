@@ -17,7 +17,6 @@ import groovy.json.JsonSlurper
 import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.plugin.dependencylock.util.LockGenerator
-import nebula.plugin.dependencylock.utils.GradleVersionUtils
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
@@ -40,7 +39,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     def setup() {
         definePluginOutsideOfPluginBlock = true
     }
-    
+
     static final String SPECIFIC_BUILD_GRADLE = """\
         apply plugin: 'java'
         apply plugin: 'com.netflix.nebula.dependency-lock'
@@ -1943,6 +1942,44 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
 
         then:
         result.output.contains 'test.example:foo:1.0.1 -> 1.0.0'
+    }
+
+    def 'does not lock DependenciesMetadata configurations'() {
+        buildFile << """\
+            buildscript {
+                repositories { maven { url = "https://plugins.gradle.org/m2/" } }
+                dependencies {
+                     classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20"
+                }
+            }
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+            apply plugin: "org.jetbrains.kotlin.jvm" // the *DependenciesMetadata configurations are resolved by the Kotlin Multiplatform plugin
+            repositories { mavenCentral() }
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-stdlib:2.2.0'
+            }
+            """.stripIndent()
+
+        when: "show configurations and ensure that the *DependenciesMetadata configurations exist"
+        def result = runTasks('dependencies')
+
+        then:
+        result.output.contains('apiDependenciesMetadata')
+        result.output.contains('compileOnlyDependenciesMetadata')
+        result.output.contains('implementationDependenciesMetadata')
+        result.output.contains('testApiDependenciesMetadata')
+        result.output.contains('testCompileOnlyDependenciesMetadata')
+        result.output.contains('testImplementationDependenciesMetadata')
+
+        when: "update locks"
+        runTasks('generateLock', 'saveLock')
+
+        then: "lockfile should not contain *DependenciesMetadata configurations"
+        def lockFile = new File(projectDir, 'dependencies.lock')
+        !lockFile.text.contains('implementationDependenciesMetadata')
+        lockFile.text.contains('org.jetbrains.kotlin:kotlin-stdlib')
     }
 
     def 'does not fail with configuration caching enabled'() {
