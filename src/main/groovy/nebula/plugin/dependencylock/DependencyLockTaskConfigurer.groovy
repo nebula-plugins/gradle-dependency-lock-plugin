@@ -155,10 +155,12 @@ class DependencyLockTaskConfigurer {
 
         saveLockTask.configure { saveTask ->
             saveTask.doFirst {
-                //TODO: address Invocation of Task.project at execution time has been deprecated.
-                DeprecationLogger.whileDisabled {
-                    SaveLockTask globalSave = project.rootProject.tasks.findByName(SAVE_GLOBAL_LOCK_TASK_NAME) as SaveLockTask
-                    if (globalSave && globalSave.outputLock &&  globalSave.outputLock.exists()) {
+                // Check if global lock file exists directly without accessing task objects
+                // to avoid triggering lazy task realization during parallel execution
+                def rootExtension = project.rootProject.extensions.findByType(DependencyLockExtension)
+                if (rootExtension) {
+                    File globalLockFile = new File(project.rootProject.projectDir, lockFilename ?: rootExtension.globalLockFile)
+                    if (globalLockFile.exists()) {
                         throw new GradleException('Cannot save individual locks when global lock is in place, run deleteGlobalLock task')
                     }
                 }
@@ -194,12 +196,14 @@ class DependencyLockTaskConfigurer {
 
         globalSaveLockTask.configure { globalSaveTask ->
             globalSaveTask.doFirst {
-                //TODO: address Invocation of Task.project at execution time has been deprecated.
-                DeprecationLogger.whileDisabled {
-                    project.subprojects.each { Project sub ->
-                        SaveLockTask save = sub.tasks.findByName(SAVE_LOCK_TASK_NAME) as SaveLockTask
-                        if (save && save.outputLock?.exists()) {
-                            throw new GradleException('Cannot save global lock, one or more individual locks are in place, run deleteLock task')
+                // Check if any subproject lock files exist directly without accessing task objects
+                // to avoid triggering lazy task realization during parallel execution
+                project.subprojects.each { Project sub ->
+                    def subExtension = sub.extensions.findByType(DependencyLockExtension)
+                    if (subExtension) {
+                        File subLockFile = new File(sub.projectDir, lockFilename ?: subExtension.lockFile)
+                        if (subLockFile.exists()) {
+                            throw new GradleException("Cannot save global lock, one or more individual locks are in place (found: ${subLockFile}), run deleteLock task")
                         }
                     }
                 }
