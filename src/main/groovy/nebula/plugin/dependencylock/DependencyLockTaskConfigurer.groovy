@@ -52,6 +52,9 @@ class DependencyLockTaskConfigurer {
     public static final String COMMIT_LOCK_TASK_NAME = 'commitLock'
     public static final String SAVE_LOCK_TASK_NAME = 'saveLock'
     public static final String SAVE_GLOBAL_LOCK_TASK_NAME = 'saveGlobalLock'
+    // TODO: Remove this property when generateGlobalLock and saveGlobalLock tasks are removed
+    // This property allows users to disable global lock functionality during migration to individual locks
+    public static final String DISABLE_GLOBAL_LOCK = 'dependencyLock.disableGlobalLock'
 
     // these get skipped for subproject's configurations
     public static final Set<String> configurationsToSkipForGlobalLockPrefixes = ['checkstyle', 'findbugs', 'findbugsPlugins', 'jacocoAgent', 'jacocoAnt', 'spotbugs', 'spotbugsPlugins', 'zinc', 'pmd', 'resolutionRules', 'spotless', 'scalaToolchain']
@@ -60,6 +63,11 @@ class DependencyLockTaskConfigurer {
 
     DependencyLockTaskConfigurer(Project project) {
         this.project = project
+    }
+
+    private boolean isGlobalLockDisabled() {
+        return project.hasProperty(DISABLE_GLOBAL_LOCK) &&
+               Boolean.parseBoolean(project.property(DISABLE_GLOBAL_LOCK) as String)
     }
 
     String configureTasks(String globalLockFilename, String lockFilename, DependencyLockExtension extension, DependencyLockCommitExtension commitExtension, Map overrides) {
@@ -76,11 +84,11 @@ class DependencyLockTaskConfigurer {
 
         TaskProvider<DiffLockTask> diffLockTask = configureDiffLockTask(lockFilename, extension)
 
-        // configure global lock only on rootProject
+        // configure global lock only on rootProject (unless disabled via property)
         TaskProvider<SaveLockTask> globalSave = null
         TaskProvider<GenerateLockTask> globalLockTask
         TaskProvider<UpdateLockTask> globalUpdateLock
-        if (project == project.rootProject) {
+        if (project == project.rootProject && !isGlobalLockDisabled()) {
             globalLockTask = project.tasks.register(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateLockTask)
             configureGlobalLockTask(globalLockTask, globalLockFilename, extension, overrides)
 
@@ -155,10 +163,14 @@ class DependencyLockTaskConfigurer {
 
         saveLockTask.configure { saveTask ->
             saveTask.doFirst {
+                // Skip global lock check if global locks are disabled
+                if (isGlobalLockDisabled()) {
+                    return
+                }
                 //TODO: address Invocation of Task.project at execution time has been deprecated.
                 DeprecationLogger.whileDisabled {
                     SaveLockTask globalSave = project.rootProject.tasks.findByName(SAVE_GLOBAL_LOCK_TASK_NAME) as SaveLockTask
-                    if (globalSave && globalSave.outputLock &&  globalSave.outputLock.exists()) {
+                    if (globalSave && globalSave.outputLock && globalSave.outputLock.exists()) {
                         throw new GradleException('Cannot save individual locks when global lock is in place, run deleteGlobalLock task')
                     }
                 }
