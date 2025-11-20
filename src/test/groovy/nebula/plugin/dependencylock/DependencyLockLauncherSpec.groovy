@@ -1989,4 +1989,45 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         then:
         noExceptionThrown()
     }
+
+    def 'generateLock and saveLock work when global lock is disabled via property'() {
+        addSubproject('sub1', """\
+            dependencies {
+                implementation 'test.example:foo:2.0.0'
+            }
+        """.stripIndent())
+
+        buildFile << """\
+            allprojects {
+                apply plugin: 'com.netflix.nebula.dependency-lock'
+                group = 'test'
+                ext.set('dependencyLock.disableGlobalLock', 'true')
+            }
+            subprojects {
+                apply plugin: 'java'
+                repositories { maven { url = '${Fixture.repo}' } }
+            }
+        """.stripIndent()
+
+        when:
+        def result = runTasks('generateLock', 'saveLock')
+
+        then:
+        result.output.contains(':generateLock')
+        result.output.contains(':saveLock')
+        result.output.contains(':sub1:generateLock')
+        result.output.contains(':sub1:saveLock')
+
+        and: 'individual lock files are created'
+        String lockText1 = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
+                "test.example:foo": {
+                    "locked": "2.0.0"
+                }
+            '''.stripIndent())
+        new File(projectDir, 'sub1/dependencies.lock').text.replaceAll("\\s", "") == lockText1.replaceAll("\\s", "")
+
+        and: 'global lock tasks are not created'
+        !result.output.contains('generateGlobalLock')
+        !result.output.contains('saveGlobalLock')
+    }
 }
