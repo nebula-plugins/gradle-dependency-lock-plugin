@@ -52,6 +52,7 @@ class DependencyLockTaskConfigurer {
     public static final String COMMIT_LOCK_TASK_NAME = 'commitLock'
     public static final String SAVE_LOCK_TASK_NAME = 'saveLock'
     public static final String SAVE_GLOBAL_LOCK_TASK_NAME = 'saveGlobalLock'
+    public static final String DISABLE_GLOBAL_LOCK = 'dependencyLock.disableGlobalLock'
 
     // these get skipped for subproject's configurations
     public static final Set<String> configurationsToSkipForGlobalLockPrefixes = ['checkstyle', 'findbugs', 'findbugsPlugins', 'jacocoAgent', 'jacocoAnt', 'spotbugs', 'spotbugsPlugins', 'zinc', 'pmd', 'resolutionRules', 'spotless', 'scalaToolchain']
@@ -63,8 +64,8 @@ class DependencyLockTaskConfigurer {
     }
 
     private boolean isGlobalLockDisabled() {
-        return project.hasProperty(DependencyLockPlugin.DISABLE_GLOBAL_LOCK) &&
-               Boolean.parseBoolean(project.property(DependencyLockPlugin.DISABLE_GLOBAL_LOCK) as String)
+        return project.hasProperty(DISABLE_GLOBAL_LOCK) &&
+               Boolean.parseBoolean(project.property(DISABLE_GLOBAL_LOCK) as String)
     }
 
     String configureTasks(String globalLockFilename, String lockFilename, DependencyLockExtension extension, DependencyLockCommitExtension commitExtension, Map overrides) {

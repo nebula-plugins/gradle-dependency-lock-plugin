@@ -55,7 +55,6 @@ class DependencyLockPlugin @Inject constructor(val buildFeatures: BuildFeatures)
             "dependencyLock.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate"
         const val OVERRIDE = "dependencyLock.override"
         const val OVERRIDE_FILE = "dependencyLock.overrideFile"
-        const val DISABLE_GLOBAL_LOCK = "dependencyLock.disableGlobalLock"
         const val GENERATE_GLOBAL_LOCK_TASK_NAME = "generateGlobalLock"
         const val UPDATE_GLOBAL_LOCK_TASK_NAME = "updateGlobalLock"
         const val GENERATE_LOCK_TASK_NAME = "generateLock"
