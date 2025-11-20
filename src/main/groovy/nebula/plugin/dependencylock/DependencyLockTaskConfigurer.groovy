@@ -52,6 +52,8 @@ class DependencyLockTaskConfigurer {
     public static final String COMMIT_LOCK_TASK_NAME = 'commitLock'
     public static final String SAVE_LOCK_TASK_NAME = 'saveLock'
     public static final String SAVE_GLOBAL_LOCK_TASK_NAME = 'saveGlobalLock'
+    // TODO: Remove this property when generateGlobalLock and saveGlobalLock tasks are removed
+    // This property allows users to disable global lock functionality during migration to individual locks
     public static final String DISABLE_GLOBAL_LOCK = 'dependencyLock.disableGlobalLock'
 
     // these get skipped for subproject's configurations
