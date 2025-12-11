@@ -15,10 +15,52 @@
  */
 package nebula.plugin.dependencyverifier
 
-class DependencyResolutionVerifierExtension {
-    boolean shouldFailTheBuild = true
-    Set<String> configurationsToExclude = [] as Set
-    String missingVersionsMessageAddition = ''
-    String resolvedVersionDoesNotEqualLockedVersionMessageAddition = ''
-    Set<String> tasksToExclude = [] as Set
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
+
+/**
+ * Extension for configuring dependency resolution verification.
+ * Uses Gradle's Property API for lazy configuration and configuration cache compatibility.
+ */
+abstract class DependencyResolutionVerifierExtension {
+    /**
+     * Whether to fail the build when verification issues are found.
+     * Default: true
+     */
+    abstract Property<Boolean> getShouldFailTheBuild()
+    
+    /**
+     * Configuration names to exclude from verification.
+     * Default: empty set
+     */
+    abstract SetProperty<String> getConfigurationsToExclude()
+    
+    /**
+     * Additional message to append when missing versions are detected.
+     * Default: empty string
+     */
+    abstract Property<String> getMissingVersionsMessageAddition()
+    
+    /**
+     * Additional message to append when resolved version doesn't match locked version.
+     * Default: empty string
+     */
+    abstract Property<String> getResolvedVersionDoesNotEqualLockedVersionMessageAddition()
+    
+    /**
+     * Task names to exclude from verification.
+     * Default: empty set
+     */
+    abstract SetProperty<String> getTasksToExclude()
+    
+    /**
+     * Constructor sets default conventions for all properties.
+     */
+    DependencyResolutionVerifierExtension() {
+        shouldFailTheBuild.convention(true)
+        configurationsToExclude.convention([] as Set)
+        missingVersionsMessageAddition.convention('')
+        resolvedVersionDoesNotEqualLockedVersionMessageAddition.convention('')
+        tasksToExclude.convention([] as Set)
+    }
 }

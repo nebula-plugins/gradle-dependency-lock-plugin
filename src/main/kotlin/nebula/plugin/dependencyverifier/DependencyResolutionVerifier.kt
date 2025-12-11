@@ -98,7 +98,7 @@ class DependencyResolutionVerifier {
                     if (task.project != project) {
                         return
                     }
-                    if (extension.tasksToExclude.contains(task.name)) {
+                    if (extension.tasksToExclude.get().contains(task.name)) {
                         return
                     }
                     if (providedErrorMessageForThisProject) {
@@ -161,7 +161,7 @@ class DependencyResolutionVerifier {
     private fun collectDependencyResolutionErrorsAfterExecute(task: Task) {
         val failedDepsByConf = failedDependenciesPerProjectForConfigurations[uniqueProjectKey(project)]
         val lockedDepsOutOfDate = lockedDepsOutOfDatePerProject[uniqueProjectKey(project)]
-        val configurationsToExclude = if (configurationsToExcludeOverride.isNotEmpty()) configurationsToExcludeOverride else extension.configurationsToExclude
+        val configurationsToExclude = if (configurationsToExcludeOverride.isNotEmpty()) configurationsToExcludeOverride else extension.configurationsToExclude.get()
 
         task.project.configurations.matching { // returns a live collection
             configurationIsResolvedAndMatches(it, configurationsToExclude)
@@ -293,7 +293,7 @@ class DependencyResolutionVerifier {
         if (depsMissingVersions.size > 0) {
             messages.add("The following dependencies are missing a version: ${depsMissingVersions.joinToString()}\n" +
                     "Please add a version to fix this. If you have been using a BOM, perhaps these dependencies are no longer managed. \n"
-                    + extension.missingVersionsMessageAddition)
+                    + extension.missingVersionsMessageAddition.get())
         }
         return messages
     }
@@ -327,7 +327,7 @@ class DependencyResolutionVerifier {
         }
 
         if (depsWhereResolvedVersionIsNotTheLockedVersionByConf.isNotEmpty()) {
-            messages.add("Please update your dependency locks or your build file constraints.\n" + extension.resolvedVersionDoesNotEqualLockedVersionMessageAddition)
+            messages.add("Please update your dependency locks or your build file constraints.\n" + extension.resolvedVersionDoesNotEqualLockedVersionMessageAddition.get())
         }
         return messages
     }
@@ -347,7 +347,7 @@ class DependencyResolutionVerifier {
         return if (project.hasProperty(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD)) {
             (project.property(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD) as String).toBoolean()
         } else {
-            extension.shouldFailTheBuild
+            extension.shouldFailTheBuild.get()
         }
     }
 
