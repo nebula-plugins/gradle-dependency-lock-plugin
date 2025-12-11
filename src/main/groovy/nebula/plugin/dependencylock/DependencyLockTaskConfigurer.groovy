@@ -234,6 +234,9 @@ class DependencyLockTaskConfigurer {
             // Set configuration names
             it.configurationNames.set(extension.configurationNames)
             it.skippedConfigurationNames.set(extension.skippedConfigurationNamesPrefixes)
+            
+            // Always regenerate lock files - dependency changes in build.gradle aren't tracked as task inputs
+            it.outputs.upToDateWhen { false }
         }
 
         lockTask

@@ -49,7 +49,7 @@ abstract class GenerateLockTask extends AbstractLockTask {
     String description = 'Create a lock file in build/<configured name>'
 
     @Internal
-    Collection<Configuration> configurations = []
+    Collection<Configuration> configurations = null
 
     @Internal
     abstract SetProperty<String> getConfigurationNames()
@@ -96,7 +96,19 @@ abstract class GenerateLockTask extends AbstractLockTask {
             if (DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
                 throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
             }
-            Collection<Configuration> confs = getConfigurations() ?: lockableConfigurations(project, project, getConfigurationNames().getOrElse([] as Set), getSkippedConfigurationNames().getOrElse([] as Set))
+            // Use explicit configurations if set, otherwise auto-detect lockable configurations
+            def explicitConfs = getConfigurations()
+            Collection<Configuration> confs = (explicitConfs != null) ? explicitConfs : 
+                lockableConfigurations(project, project, getConfigurationNames().getOrElse([] as Set), getSkippedConfigurationNames().getOrElse([] as Set))
+            // Check resolved dependencies
+            def testRuntimeConf = confs.find { it.name == 'testRuntimeClasspath' || it.name == 'runtimeClasspath' }
+            if (testRuntimeConf) {
+                System.err.println "Dependencies in ${testRuntimeConf.name}:"
+                testRuntimeConf.resolvedConfiguration.firstLevelModuleDependencies.each { dep ->
+                    System.err.println "  - ${dep.moduleGroup}:${dep.moduleName}:${dep.moduleVersion}"
+                }
+            }
+            
             Map dependencyMap = new GenerateLockFromConfigurations().lock(confs)
             new DependencyLockWriter(getDependenciesLock().get().asFile, getSkippedDependencies().getOrElse([] as Set)).writeLock(dependencyMap)
         }
