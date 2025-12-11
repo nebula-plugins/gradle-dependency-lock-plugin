@@ -333,24 +333,18 @@ class DependencyLockTaskConfigurer {
     private TaskProvider<MigrateToCoreLocksTask> configureMigrateToCoreLocksTask(DependencyLockExtension extension) {
         def migrateLockedDepsToCoreLocksTask = project.tasks.register(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME, MigrateLockedDepsToCoreLocksTask)
         def migrateToCoreLocksTask = project.tasks.register(MIGRATE_TO_CORE_LOCKS_TASK_NAME, MigrateToCoreLocksTask)
-        def lockFile = new File(project.projectDir, extension.lockFile.get())
-        def dependencyLock = new File(project.projectDir, "gradle.lockfile")
 
         migrateLockedDepsToCoreLocksTask.configure {
-            it.conventionMapping.with {
-                configurationNames = { extension.configurationNames.get() }
-                inputLockFile = { lockFile }
-                outputLock = { dependencyLock }
-            }
+            it.configurationNames.set(extension.configurationNames)
+            it.inputLockFile.set(project.layout.projectDirectory.file(extension.lockFile))
+            it.outputLock.set(project.layout.projectDirectory.file("gradle.lockfile"))
             it.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
 
         }
 
         migrateToCoreLocksTask.configure {
-            it.conventionMapping.with {
-                configurationNames = { extension.configurationNames.get() }
-                outputLock = { dependencyLock }
-            }
+            it.configurationNames.set(extension.configurationNames)
+            it.outputLock.set(project.layout.projectDirectory.file("gradle.lockfile"))
             it.dependsOn project.tasks.named(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME)
             it.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
         }
