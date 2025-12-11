@@ -170,15 +170,14 @@ class DependencyLockTaskConfigurer {
                 //TODO: address Invocation of Task.project at execution time has been deprecated.
                 DeprecationLogger.whileDisabled {
                     SaveLockTask globalSave = project.rootProject.tasks.findByName(SAVE_GLOBAL_LOCK_TASK_NAME) as SaveLockTask
-                    if (globalSave && globalSave.outputLock && globalSave.outputLock.exists()) {
+                    if (globalSave && globalSave.outputLock.isPresent() && globalSave.outputLock.get().asFile.exists()) {
                         throw new GradleException('Cannot save individual locks when global lock is in place, run deleteGlobalLock task')
                     }
                 }
             }
-            saveTask.conventionMapping.with {
-                generatedLock = { getBuildDirLockFile(lockFilename, extension) }
-                outputLock = { getProjectDirLockFile(lockFilename, extension) }
-            }
+            // Set input and output files using Property API
+            saveTask.generatedLock.set(project.layout.buildDirectory.file(lockFilename ?: extension.lockFile.get()))
+            saveTask.outputLock.set(project.layout.projectDirectory.file(lockFilename ?: extension.lockFile.get()))
         }
         configureCommonSaveTask(saveLockTask, lockTask, updateTask)
 
@@ -191,8 +190,10 @@ class DependencyLockTaskConfigurer {
             saveTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             saveTask.mustRunAfter lockTask, updateTask
             saveTask.outputs.upToDateWhen {
-                if (saveTask.generatedLock.exists() && saveTask.outputLock.exists()) {
-                    saveTask.generatedLock.text == saveTask.outputLock.text
+                def generated = saveTask.generatedLock.get().asFile
+                def output = saveTask.outputLock.get().asFile
+                if (generated.exists() && output.exists()) {
+                    generated.text == output.text
                 } else {
                     false
                 }
@@ -210,16 +211,15 @@ class DependencyLockTaskConfigurer {
                 DeprecationLogger.whileDisabled {
                     project.subprojects.each { Project sub ->
                         SaveLockTask save = sub.tasks.findByName(SAVE_LOCK_TASK_NAME) as SaveLockTask
-                        if (save && save.outputLock?.exists()) {
+                        if (save && save.outputLock.isPresent() && save.outputLock.get().asFile.exists()) {
                             throw new GradleException('Cannot save global lock, one or more individual locks are in place, run deleteLock task')
                         }
                     }
                 }
             }
-            globalSaveTask.conventionMapping.with {
-                generatedLock = { getBuildDirGlobalLockFile(lockFilename, extension) }
-                outputLock = { getProjectDirGlobalLockFile(lockFilename, extension) }
-            }
+            // Set input and output files using Property API
+            globalSaveTask.generatedLock.set(project.layout.buildDirectory.file(lockFilename ?: extension.globalLockFile.get()))
+            globalSaveTask.outputLock.set(project.layout.projectDirectory.file(lockFilename ?: extension.globalLockFile.get()))
         }
         configureCommonSaveTask(globalSaveLockTask, globalLockTask, globalUpdateLockTask)
 
