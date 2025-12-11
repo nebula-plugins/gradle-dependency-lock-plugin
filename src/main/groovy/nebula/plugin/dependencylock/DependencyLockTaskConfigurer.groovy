@@ -227,35 +227,43 @@ class DependencyLockTaskConfigurer {
     }
 
     private TaskProvider<GenerateLockTask> configureGenerateLockTask(TaskProvider<GenerateLockTask> lockTask, String lockFilename, DependencyLockExtension extension, Map overrides) {
-        setupLockConventionMapping(lockTask, extension, overrides)
+        setupLockProperties(lockTask, extension, overrides)
         lockTask.configure {
-            it.conventionMapping.with {
-                dependenciesLock = { getBuildDirLockFile(lockFilename, extension) }
-                configurationNames = { extension.configurationNames.get() }
-                skippedConfigurationNames = { extension.skippedConfigurationNamesPrefixes.get() }
-            }
+            // Set output file
+            it.dependenciesLock.set(project.layout.buildDirectory.file(lockFilename ?: extension.lockFile.get()))
+            // Set configuration names
+            it.configurationNames.set(extension.configurationNames)
+            it.skippedConfigurationNames.set(extension.skippedConfigurationNamesPrefixes)
         }
 
         lockTask
     }
 
-    private void setupLockConventionMapping(TaskProvider<GenerateLockTask> task, DependencyLockExtension extension, Map overrideMap) {
+    private void setupLockProperties(TaskProvider<GenerateLockTask> task, DependencyLockExtension extension, Map overrideMap) {
         task.configure { generateTask ->
             generateTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
-            generateTask.conventionMapping.with {
-                skippedDependencies = { extension.skippedDependencies.get() }
-                includeTransitives = {
-                    project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives'] as String) : extension.includeTransitives.get()
-                }
-                filter = { extension.dependencyFilter }
-                overrides = { overrideMap }
-            }
+            
+            // Set skipped dependencies
+            generateTask.skippedDependencies.set(extension.skippedDependencies)
+            
+            // Set includeTransitives with provider that checks project property first, then extension
+            generateTask.includeTransitives.set(
+                project.providers.gradleProperty('dependencyLock.includeTransitives')
+                    .map { it.toBoolean() }
+                    .orElse(extension.includeTransitives)
+            )
+            
+            // Set filter (kept as Closure for backward compatibility)
+            generateTask.filter = extension.dependencyFilter
+            
+            // Set overrides
+            generateTask.overrides.set(overrideMap)
         }
     }
 
     private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateLockTask> globalLockTask, String lockFilename,
                                                                    DependencyLockExtension extension, Map overrides) {
-        setupLockConventionMapping(globalLockTask, extension, overrides)
+        setupLockProperties(globalLockTask, extension, overrides)
         globalLockTask.configure { globalGenerateTask ->
             globalGenerateTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             globalGenerateTask.doFirst {
@@ -264,8 +272,14 @@ class DependencyLockTaskConfigurer {
                     project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
                 }
             }
+            
+            // Set output file
+            globalGenerateTask.dependenciesLock.set(project.layout.buildDirectory.file(lockFilename ?: extension.globalLockFile.get()))
+            
+            // TODO: Refactor this to not use conventionMapping. The global lock's configuration logic is complex
+            // because it creates aggregate configurations at execution time. This needs a proper Property-based solution.
+            // For now, keeping conventionMapping for this specific case to maintain functionality.
             globalGenerateTask.conventionMapping.with {
-                dependenciesLock = { getBuildDirGlobalLockFile(lockFilename, extension) }
                 configurations = {
                     def subprojects = project.subprojects.collect { subproject ->
                         def ext = subproject.getExtensions().findByType(DependencyLockExtension)

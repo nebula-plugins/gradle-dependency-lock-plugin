@@ -38,8 +38,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames = ['testRuntimeClasspath']
+        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(['testRuntimeClasspath'] as Set)
 
         when:
         task.lock()
@@ -56,7 +56,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.text == lockText
+        task.dependenciesLock.asFile.get().text == lockText
     }
 
     def 'simple lock for all lockable configurations'() {
@@ -68,12 +68,12 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames = project.configurations
+        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(project.configurations
                 .stream()
                 .filter { it.isCanBeResolved() && (it?.getResolutionAlternatives()?.isEmpty() || !it?.getResolutionAlternatives()) }
                 .collect { it.name }
-                .toSet()
+                .toSet())
 
         when:
         task.lock()
@@ -84,7 +84,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     "test.example:foo": {
                         "locked": "2.0.1"
                     }'''.stripIndent())
-        task.dependenciesLock.text == lockText
+        task.dependenciesLock.asFile.get().text == lockText
     }
 
     def 'simple lock for all lockable configurations - without skippedConfigurationsPrefixes'() {
@@ -102,13 +102,13 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames = project.configurations
+        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(project.configurations
                 .stream()
                 .filter { it.isCanBeResolved() && (it?.getResolutionAlternatives()?.isEmpty() || !it?.getResolutionAlternatives()) }
                 .collect { it.name }
-                .toSet()
-        task.skippedConfigurationNames = ['zinc', 'incrementalAnalysis']
+                .toSet())
+        task.skippedConfigurationNames.set(['zinc', 'incrementalAnalysis'] as Set)
 
         when:
         task.lock()
@@ -119,9 +119,9 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     "test.example:foo": {
                         "locked": "2.0.1"
                     }'''.stripIndent())
-        task.dependenciesLock.text == lockText
-        !task.dependenciesLock.text.contains('"zinc"')
-        !task.dependenciesLock.text.contains('"incrementalAnalysisTest"')
+        task.dependenciesLock.asFile.get().text == lockText
+        !task.dependenciesLock.asFile.get().text.contains('"zinc"')
+        !task.dependenciesLock.asFile.get().text.contains('"incrementalAnalysisTest"')
     }
 
     def 'skip dependencies via transitives when configured'() {
@@ -132,10 +132,10 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames = ['testRuntimeClasspath']
-        task.skippedDependencies = ['test.example:foo']
-        task.includeTransitives = true
+        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(['testRuntimeClasspath'] as Set)
+        task.skippedDependencies.set(['test.example:foo'] as Set)
+        task.includeTransitives.set(true)
 
         String lockText = '''\
             {
@@ -156,7 +156,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.lock()
 
         then:
-        task.dependenciesLock.text == lockText
+        task.dependenciesLock.asFile.get().text == lockText
     }
 
     def 'multiproject inter-project dependencies should be excluded'() {
@@ -177,8 +177,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock = new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames = ['testRuntimeClasspath']
+        task.dependenciesLock.set(app.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(['testRuntimeClasspath'] as Set)
 
         when:
         task.lock()
@@ -195,7 +195,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.text == lockText
+        task.dependenciesLock.asFile.get().text == lockText
     }
 
     def 'multiproject inter-project dependencies should be excluded when coming in transitively'() {
@@ -221,9 +221,9 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock = new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames = ['testRuntimeClasspath']
-        task.includeTransitives = true
+        task.dependenciesLock.set(app.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(['testRuntimeClasspath'] as Set)
+        task.includeTransitives.set(true)
 
         when:
         task.lock()
@@ -243,7 +243,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.text == lockText
+        task.dependenciesLock.asFile.get().text == lockText
     }
 
     def 'multiproject inter-project dependencies should lock first levels'() {
@@ -275,8 +275,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock = new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames = ['testRuntimeClasspath']
+        task.dependenciesLock.set(app.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(['testRuntimeClasspath'] as Set)
 
         when:
         task.lock()
@@ -309,7 +309,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.text == lockText
+        task.dependenciesLock.asFile.get().text == lockText
     }
 
     def 'multiproject inter-project dependencies no locked'() {
@@ -349,8 +349,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock = new File(app.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames = ['testRuntimeClasspath']
+        task.dependenciesLock.set(app.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(['testRuntimeClasspath'] as Set)
 
         when:
         task.lock()
@@ -383,7 +383,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.text == lockText
+        task.dependenciesLock.asFile.get().text == lockText
     }
 
     def 'simple transitive lock'() {
@@ -395,9 +395,9 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames = ['testRuntimeClasspath']
-        task.includeTransitives = true
+        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(['testRuntimeClasspath'] as Set)
+        task.includeTransitives.set(true)
 
         when:
         task.lock()
@@ -417,7 +417,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.text == lockText
+        task.dependenciesLock.asFile.get().text == lockText
     }
 
     def 'check circular dependency does not loop infinitely'() {
@@ -429,9 +429,9 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames = ['testRuntimeClasspath']
-        task.includeTransitives = true
+        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(['testRuntimeClasspath'] as Set)
+        task.includeTransitives.set(true)
 
         when:
         task.lock()
@@ -454,7 +454,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.text == lockText
+        task.dependenciesLock.asFile.get().text == lockText
     }
 
     def 'check for deeper circular dependency'() {
@@ -466,9 +466,9 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames = ['testRuntimeClasspath']
-        task.includeTransitives = true
+        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(['testRuntimeClasspath'] as Set)
+        task.includeTransitives.set(true)
 
         when:
         task.lock()
@@ -495,7 +495,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.text == lockText
+        task.dependenciesLock.asFile.get().text == lockText
     }
 
     def 'one level transitive test'() {
@@ -508,9 +508,9 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames = ['testRuntimeClasspath']
-        task.includeTransitives = true
+        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(['testRuntimeClasspath'] as Set)
+        task.includeTransitives.set(true)
 
         when:
         task.lock()
@@ -540,7 +540,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.text == lockText
+        task.dependenciesLock.asFile.get().text == lockText
     }
 
     def 'multi-level transitive test'() {
@@ -552,9 +552,9 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames = ['testRuntimeClasspath']
-        task.includeTransitives = true
+        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(['testRuntimeClasspath'] as Set)
+        task.includeTransitives.set(true)
 
         when:
         task.lock()
@@ -593,7 +593,7 @@ class GenerateLockTaskSpec extends ProjectSpec {
                     }
                 }
             }'''.stripIndent()
-        task.dependenciesLock.text == lockText
+        task.dependenciesLock.asFile.get().text == lockText
     }
 
     @Unroll
@@ -607,15 +607,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
         }
 
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock = new File(project.layout.buildDirectory.getAsFile().get(), 'dependencies.lock')
-        task.configurationNames = ['testRuntimeClasspath']
+        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(['testRuntimeClasspath'] as Set)
         task.filter = filter as Closure
 
         when:
         task.lock()
 
         then:
-        task.dependenciesLock.text == lockText
+        task.dependenciesLock.asFile.get().text == lockText
 
         where:
         methodName << ["negative filter", "positive filter"]
