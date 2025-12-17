@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew clean build:*)",
+      "Bash(./gradlew test:*)",
+      "Bash(git stash:*)",
+      "Bash(./gradlew clean test --no-daemon)",
+      "Bash(tee:*)",
+      "Bash(./gradlew --stop)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(done)",
+      "Bash(./gradlew clean:*)",
+      "Bash(xargs cat:*)",
+      "Bash(./gradlew compileGroovy compileKotlin:*)",
+      "Bash(xargs:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

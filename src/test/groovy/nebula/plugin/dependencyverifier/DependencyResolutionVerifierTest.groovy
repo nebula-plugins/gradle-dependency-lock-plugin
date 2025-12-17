@@ -216,7 +216,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
             buildscript {
                 repositories { maven { url = "https://plugins.gradle.org/m2/" } }
                 dependencies {
-                     classpath "com.github.spotbugs.snom:spotbugs-gradle-plugin:5.0.14"
+                     classpath "com.github.spotbugs:com.github.spotbugs.gradle.plugin:6.4.8"
                 }
             }            
             """.stripIndent()
@@ -230,8 +230,8 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
                 configurations.named('spotbugs').configure {
                   resolutionStrategy.eachDependency { DependencyResolveDetails details ->
                        if (details.requested.group == 'org.ow2.asm') {
-                            details.useVersion '9.5'
-                            details.because "Asm 9.5 is required for JDK 21 support"
+                            details.useVersion '9.9'
+                            details.because "Asm 9.9 is required for JDK 25 support"
                       }
                   }
                 }
