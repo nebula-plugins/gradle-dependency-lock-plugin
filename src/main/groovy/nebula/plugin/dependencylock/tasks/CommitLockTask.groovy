@@ -55,7 +55,7 @@ abstract class CommitLockTask extends AbstractLockTask {
     @Optional
     abstract Property<Integer> getRemoteRetries()
 
-    @Input
+    @Internal
     abstract Property<String> getRootDirPath()
 
     private final ExecOperations execOperations
