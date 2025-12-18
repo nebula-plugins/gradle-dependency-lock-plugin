@@ -26,8 +26,10 @@ class DiffLockTaskSpec extends ProjectSpec {
                 '''.stripIndent())
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
-            it.existingLockFile = existingLock
-            it.updatedLockFile = newLock
+            it.existingLockFile.set(existingLock)
+            it.updatedLockFile.set(newLock)
+            it.outputDir.set(project.layout.buildDirectory.dir("dependency-lock"))
+            it.diffFile.set(it.outputDir.file("lockdiff.txt"))
         }
 
         when:
@@ -39,7 +41,7 @@ class DiffLockTaskSpec extends ProjectSpec {
             updated:
               test.nebula:a: 1.0.0 -> 1.1.0
             '''.stripIndent()
-        realizedTask.diffFile.text == expected
+        realizedTask.diffFile.asFile.get().text == expected
     }
 
     def 'should handle new dependency'() {
@@ -60,8 +62,10 @@ class DiffLockTaskSpec extends ProjectSpec {
                 '''.stripIndent())
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
-            it.existingLockFile = existingLock
-            it.updatedLockFile = newLock
+            it.existingLockFile.set(existingLock)
+            it.updatedLockFile.set(newLock)
+            it.outputDir.set(project.layout.buildDirectory.dir("dependency-lock"))
+            it.diffFile.set(it.outputDir.file("lockdiff.txt"))
         }
 
         when:
@@ -73,7 +77,7 @@ class DiffLockTaskSpec extends ProjectSpec {
             new:
               test.nebula:a: 1.0.0
             '''.stripIndent()
-        realizedTask.diffFile.text == expected
+        realizedTask.diffFile.asFile.get().text == expected
     }
 
     def 'should handle no existing locks'() {
@@ -91,8 +95,10 @@ class DiffLockTaskSpec extends ProjectSpec {
                 '''.stripIndent())
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
-            it.existingLockFile = existingLock
-            it.updatedLockFile = newLock
+            it.existingLockFile.set(existingLock)
+            it.updatedLockFile.set(newLock)
+            it.outputDir.set(project.layout.buildDirectory.dir("dependency-lock"))
+            it.diffFile.set(it.outputDir.file("lockdiff.txt"))
         }
 
         when:
@@ -100,7 +106,7 @@ class DiffLockTaskSpec extends ProjectSpec {
         realizedTask.diffLocks()
 
         then:
-        realizedTask.diffFile.text == '''\
+        realizedTask.diffFile.asFile.get().text == '''\
             new:
               test.nebula:a: 1.0.0
             '''.stripIndent()
@@ -124,8 +130,10 @@ class DiffLockTaskSpec extends ProjectSpec {
                 '''.stripIndent())
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
-            it.existingLockFile = existingLock
-            it.updatedLockFile = newLock
+            it.existingLockFile.set(existingLock)
+            it.updatedLockFile.set(newLock)
+            it.outputDir.set(project.layout.buildDirectory.dir("dependency-lock"))
+            it.diffFile.set(it.outputDir.file("lockdiff.txt"))
         }
 
         when:
@@ -133,7 +141,7 @@ class DiffLockTaskSpec extends ProjectSpec {
         realizedTask.diffLocks()
 
         then:
-        realizedTask.diffFile.text == '''\
+        realizedTask.diffFile.asFile.get().text == '''\
             removed:
               test.nebula:a
             '''.stripIndent()
@@ -176,8 +184,10 @@ class DiffLockTaskSpec extends ProjectSpec {
                 '''.stripIndent(), ['testCompile', 'testCompileClasspath', 'testRuntime', 'testRuntimeClasspath'])
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
-            it.existingLockFile = existingLock
-            it.updatedLockFile = newLock
+            it.existingLockFile.set(existingLock)
+            it.updatedLockFile.set(newLock)
+            it.outputDir.set(project.layout.buildDirectory.dir("dependency-lock"))
+            it.diffFile.set(it.outputDir.file("lockdiff.txt"))
         }
 
         when:
@@ -185,7 +195,7 @@ class DiffLockTaskSpec extends ProjectSpec {
         realizedTask.diffLocks()
 
         then:
-        realizedTask.diffFile.text == '''\
+        realizedTask.diffFile.asFile.get().text == '''\
             updated:
               test.nebula:a: 1.0.0 -> 1.1.0
               test.nebula:testlib: 2.0.0 -> 2.0.2
@@ -219,8 +229,10 @@ class DiffLockTaskSpec extends ProjectSpec {
                 '''.stripIndent(), ['testCompileClasspath', 'testRuntimeClasspath'])
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
-            it.existingLockFile = existingLock
-            it.updatedLockFile = newLock
+            it.existingLockFile.set(existingLock)
+            it.updatedLockFile.set(newLock)
+            it.outputDir.set(project.layout.buildDirectory.dir("dependency-lock"))
+            it.diffFile.set(it.outputDir.file("lockdiff.txt"))
         }
 
         when:
@@ -234,7 +246,7 @@ class DiffLockTaskSpec extends ProjectSpec {
                 1.0.0 -> 1.1.0 [compileClasspath,runtimeClasspath]
                 1.0.0 -> 1.1.1 [testCompileClasspath,testRuntimeClasspath]
             '''.stripIndent()
-        realizedTask.diffFile.text == expected
+        realizedTask.diffFile.asFile.get().text == expected
     }
 
     def 'should handle being run when no new locks exist'() {
@@ -249,8 +261,10 @@ class DiffLockTaskSpec extends ProjectSpec {
 
         def task = project.tasks.register("diffLock", DiffLockTask)
         task.configure {
-            it.existingLockFile = existingLock
-            it.updatedLockFile = newLock
+            it.existingLockFile.set(existingLock)
+            it.updatedLockFile.set(newLock)
+            it.outputDir.set(project.layout.buildDirectory.dir("dependency-lock"))
+            it.diffFile.set(it.outputDir.file("lockdiff.txt"))
         }
 
         when:
@@ -258,7 +272,7 @@ class DiffLockTaskSpec extends ProjectSpec {
         realizedTask.diffLocks()
 
         then:
-        realizedTask.diffFile.text == '''\
+        realizedTask.diffFile.asFile.get().text == '''\
             --no updated locks to diff--
             '''.stripIndent()
     }

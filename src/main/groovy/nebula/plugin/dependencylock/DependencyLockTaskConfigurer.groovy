@@ -386,11 +386,18 @@ class DependencyLockTaskConfigurer {
         diffLockTask.configure { diffTask ->
             diffTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             diffTask.mustRunAfter(project.tasks.named(GENERATE_LOCK_TASK_NAME), project.tasks.named(UPDATE_LOCK_TASK_NAME))
+            
+            // Set file properties
+            def lockFileProvider = extension.lockFile.map { lockFileName ?: it }
             def existing = new File(project.projectDir, lockFileName ?: extension.lockFile.get())
             if (existing.exists()) {
-                diffTask.existingLockFile = existing
+                diffTask.existingLockFile.set(project.layout.projectDirectory.file(lockFileProvider))
             }
-            diffTask.updatedLockFile = new File(project.layout.buildDirectory.getAsFile().get(), lockFileName ?: extension.lockFile.get())
+            diffTask.updatedLockFile.set(project.layout.buildDirectory.file(lockFileProvider))
+            
+            // Set output properties
+            diffTask.outputDir.set(project.layout.buildDirectory.dir("dependency-lock"))
+            diffTask.diffFile.set(diffTask.outputDir.file("lockdiff.${diffTask.diffFileExtension()}"))
         }
 
         project.tasks.named(SAVE_LOCK_TASK_NAME).configure { save ->
