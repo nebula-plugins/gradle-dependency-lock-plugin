@@ -61,8 +61,10 @@ class DependencyResolutionVerifier {
         this.project = project
         this.extension = project.rootProject.extensions.findByType(DependencyResolutionVerifierExtension::class.java)!!
         this.configurationsToExcludeOverride = mutableSetOf()
-        if (project.hasProperty(CONFIGURATIONS_TO_EXCLUDE)) {
-            configurationsToExcludeOverride.addAll((project.property(CONFIGURATIONS_TO_EXCLUDE) as String).split(","))
+        // Use findProperty to check both gradle properties (-P) and project extras (ext)
+        val configurationsToExclude = project.findProperty(CONFIGURATIONS_TO_EXCLUDE)
+        if (configurationsToExclude != null) {
+            configurationsToExcludeOverride.addAll(configurationsToExclude.toString().split(","))
         }
         val uniqueProjectKey = uniqueProjectKey(project)
         failedDependenciesPerProjectForConfigurations[uniqueProjectKey] = mutableMapOf()
@@ -344,8 +346,10 @@ class DependencyResolutionVerifier {
     }
 
     private fun unresolvedDependenciesShouldFailTheBuild(): Boolean {
-        return if (project.hasProperty(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD)) {
-            (project.property(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD) as String).toBoolean()
+        // Use findProperty to check both gradle properties (-P) and project extras (ext)
+        val shouldFailProp = project.findProperty(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD)
+        return if (shouldFailProp != null) {
+            shouldFailProp.toString().toBoolean()
         } else {
             extension.shouldFailTheBuild.get()
         }
