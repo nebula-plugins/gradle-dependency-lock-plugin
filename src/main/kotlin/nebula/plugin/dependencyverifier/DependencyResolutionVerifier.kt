@@ -165,9 +165,10 @@ class DependencyResolutionVerifier {
         val lockedDepsOutOfDate = lockedDepsOutOfDatePerProject[uniqueProjectKey(project)]
         val configurationsToExclude = if (configurationsToExcludeOverride.isNotEmpty()) configurationsToExcludeOverride else extension.configurationsToExclude.get()
 
+        // Use configureEach for lazy configuration (avoids configuring unused configurations)
         task.project.configurations.matching { // returns a live collection
             configurationIsResolvedAndMatches(it, configurationsToExclude)
-        }.all { conf ->
+        }.configureEach { conf ->
             logger.debug("$conf in ${project.name} has state ${conf.state}. Starting dependency resolution verification after task '${task.name}'.")
             try {
                 conf.resolvedConfiguration.rethrowFailure()
@@ -187,10 +188,10 @@ class DependencyResolutionVerifier {
                         }
                     }
                 }
-                return@all
+                return@configureEach
             } catch (e : Exception) {
                 logger.warn("Received an unhandled exception: {}", e.message)
-                return@all
+                return@configureEach
             }
 
             validateThatResolvedVersionIsLockedVersion(conf)

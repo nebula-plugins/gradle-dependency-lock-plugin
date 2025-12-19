@@ -95,11 +95,12 @@ class CoreLockingHelper {
 
     private void findAndLockAdditionalConfigurations(Set<String> configurationNames, Closure closure) {
         def additionalConfigNames = gatherAdditionalConfigurationsToLock()
+        // Use configureEach for lazy configuration (avoids configuring unused configurations)
         project.configurations.matching { // returns a live collection
             additionalConfigNames.findAll { additionalConfigName ->
                 it.name == additionalConfigName
             }
-        }.all { it ->
+        }.configureEach { it ->
             runClosureOnConfigurations(configurationNames, closure, additionalConfigNames)
         }
     }
