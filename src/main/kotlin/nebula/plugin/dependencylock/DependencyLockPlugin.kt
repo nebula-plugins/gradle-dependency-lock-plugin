@@ -212,10 +212,27 @@ class DependencyLockPlugin @Inject constructor(val buildFeatures: BuildFeatures)
                 .map { parseUpdates(it) }
                 .orElse(extension.updateDependencies)
                 .get()
+            
+            // Resolve validation flags using Provider API
+            val validateCoordinates = project.providers.gradleProperty(VALIDATE_DEPENDENCY_COORDINATES)
+                .map { it.toBoolean() }
+                .orElse(extension.updateDependenciesFailOnInvalidCoordinates)
+                .get()
+            val validateSimultaneousTasks = project.providers.gradleProperty(VALIDATE_SIMULTANEOUS_TASKS)
+                .map { it.toBoolean() }
+                .orElse(extension.updateDependenciesFailOnSimultaneousTaskUsage)
+                .get()
+            val validateSpecifiedDependenciesToUpdate = project.providers.gradleProperty(VALIDATE_SPECIFIED_DEPENDENCIES_TO_UPDATE)
+                .map { it.toBoolean() }
+                .orElse(extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate)
+                .get()
+            
             UpdateDependenciesValidator.validate(
                 updates, overrides, hasUpdateTask,
                 hasTask(taskNames, GENERATION_TASK_NAMES - UPDATE_TASK_NAMES),
-                project, extension
+                validateCoordinates,
+                validateSimultaneousTasks,
+                validateSpecifiedDependenciesToUpdate
             )
             val projectCoord = "${project.group}:${project.name}"
             if (hasUpdateTask && updates.any { it == projectCoord }) {
