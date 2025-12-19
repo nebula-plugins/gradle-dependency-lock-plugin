@@ -55,7 +55,8 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
 
         //build paths for all dependencies
         val pathStack: Deque<DependencyPathElement> = LinkedList()
-        val root = DependencyPathElement(project.configurations.getByName(configurationName).incoming.resolutionResult.root, null, null)
+        // Use named() for lazy lookup (though we resolve with .get() since we need the actual Configuration)
+        val root = DependencyPathElement(project.configurations.named(configurationName).get().incoming.resolutionResult.root, null, null)
         pathStack.add(root)
         val visited = mutableSetOf<ResolvedDependencyResult>()
         while (!pathStack.isEmpty()) {
