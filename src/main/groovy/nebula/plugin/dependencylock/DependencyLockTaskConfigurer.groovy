@@ -66,8 +66,9 @@ class DependencyLockTaskConfigurer {
     }
 
     private boolean isGlobalLockDisabled() {
-        return project.hasProperty(DISABLE_GLOBAL_LOCK) &&
-               Boolean.parseBoolean(project.property(DISABLE_GLOBAL_LOCK) as String)
+        return project.providers.gradleProperty(DISABLE_GLOBAL_LOCK)
+            .map { it.toBoolean() }
+            .getOrElse(false)
     }
 
     String configureTasks(String globalLockFilename, String lockFilename, DependencyLockExtension extension, DependencyLockCommitExtension commitExtension, Map overrides) {
@@ -137,14 +138,24 @@ class DependencyLockTaskConfigurer {
                 if (globalSaveTask) {
                     it.mustRunAfter(globalSaveTask)
                 }
-                String commitMessageValue = project.hasProperty('commitDependencyLock.message') ?
-                        project['commitDependencyLock.message'] : commitExtension.message.get()
-                commitMessage.set(commitMessageValue)
+                // Use provider to allow gradle property to override extension
+                commitMessage.set(
+                    project.providers.gradleProperty('commitDependencyLock.message')
+                        .orElse(commitExtension.message)
+                )
                 patternsToCommit.set(getPatternsToCommit(clLockFileName, globalLockFileName, lockExtension))
                 remoteRetries.set(commitExtension.remoteRetries.get())
-                shouldCreateTag.set(project.hasProperty('commitDependencyLock.tag') ?: commitExtension.shouldCreateTag.get())
-                String tagValue = project.hasProperty('commitDependencyLock.tag') ? project['commitDependencyLock.tag'] : commitExtension.tag.get()
-                tag.set(tagValue)
+                
+                // If gradle property is present, shouldCreateTag is true
+                shouldCreateTag.set(
+                    project.providers.gradleProperty('commitDependencyLock.tag')
+                        .map { true }
+                        .orElse(commitExtension.shouldCreateTag)
+                )
+                tag.set(
+                    project.providers.gradleProperty('commitDependencyLock.tag')
+                        .orElse(commitExtension.tag)
+                )
                 rootDirPath.set(project.rootProject.projectDir.absolutePath)
             }
         }
@@ -372,12 +383,16 @@ class DependencyLockTaskConfigurer {
     }
 
     public static boolean shouldIgnoreDependencyLock(Project project) {
-        if (project.hasProperty('dependencyLock.ignore')) {
-            def prop = project.property('dependencyLock.ignore')
-            (prop instanceof String) ? prop.toBoolean() : prop.asBoolean()
-        } else {
-            false
-        }
+        // Use provider that checks both gradle properties (-P) and project extras (ext)
+        // This maintains backward compatibility with existing usage
+        return project.providers.provider {
+            def prop = project.findProperty('dependencyLock.ignore')
+            if (prop != null) {
+                // Handle both String and other types (Boolean, Integer, etc.)
+                return (prop instanceof String) ? prop.toBoolean() : prop.asBoolean()
+            }
+            return false
+        }.get()
     }
 
     private TaskProvider<DiffLockTask> configureDiffLockTask(String lockFileName, DependencyLockExtension extension) {
