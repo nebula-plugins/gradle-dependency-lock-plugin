@@ -67,8 +67,10 @@ class DependencyLockReader {
         Map overrides = [:]
 
         // Load overrides from a file if the user has specified one via a property.
-        if (project.hasProperty(OVERRIDE_FILE)) {
-            File dependenciesLock = new File(project.rootDir, project[OVERRIDE_FILE] as String)
+        // Use findProperty() to check both gradle properties (-P) and project extras (ext)
+        def overrideFile = project.findProperty(OVERRIDE_FILE)
+        if (overrideFile) {
+            File dependenciesLock = new File(project.rootDir, overrideFile as String)
             def lockOverride = parseLockFile(dependenciesLock)
             def isDeprecatedFormat = lockOverride.any { it.value.getClass() != String && it.value.locked }
             // the old lock override files specified the version to override under the "locked" property
@@ -76,12 +78,14 @@ class DependencyLockReader {
                 logger.warn("The override file ${dependenciesLock.name} is using a deprecated format. Support for this format may be removed in future versions.")
             }
             lockOverride.each { overrides[it.key] = isDeprecatedFormat ? it.value.locked : it.value }
-            logger.debug "Override file loaded: ${project[OVERRIDE_FILE]}"
+            logger.debug "Override file loaded: ${overrideFile}"
         }
 
         // Allow the user to specify overrides via a property as well.
-        if (project.hasProperty('dependencyLock.override')) {
-            project['dependencyLock.override'].tokenize(',').each {
+        // Use findProperty() to check both gradle properties (-P) and project extras (ext)
+        def override = project.findProperty('dependencyLock.override')
+        if (override) {
+            override.toString().tokenize(',').each {
                 def (group, artifact, version) = it.tokenize(':')
                 overrides["${group}:${artifact}".toString()] = version
                 logger.debug "Override added for: ${it}"
