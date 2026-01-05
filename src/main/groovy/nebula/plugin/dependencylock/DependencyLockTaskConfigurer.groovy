@@ -391,7 +391,9 @@ class DependencyLockTaskConfigurer {
         TaskProvider<DiffLockTask> diffLockTask = project.tasks.register(DIFF_LOCK_TASK_NAME, DiffLockTask)
 
         diffLockTask.configure { diffTask ->
-            diffTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
+            // Note: PathAwareDiffReportGenerator (opt-in via nebula.features.pathAwareDependencyDiff)
+            // accesses project at execution time and is not configuration cache compatible.
+            // Regular diff (default) is configuration cache compatible.
             diffTask.mustRunAfter(project.tasks.named(GENERATE_LOCK_TASK_NAME), project.tasks.named(UPDATE_LOCK_TASK_NAME))
             
             // Set file properties
