@@ -173,22 +173,16 @@ class DependencyLockTaskConfigurer {
         TaskProvider<SaveLockTask> saveLockTask = project.tasks.register(SAVE_LOCK_TASK_NAME, SaveLockTask)
 
         saveLockTask.configure { saveTask ->
-            saveTask.doFirst {
-                // Skip global lock check if global locks are disabled
-                if (isGlobalLockDisabled()) {
-                    return
-                }
-                //TODO: address Invocation of Task.project at execution time has been deprecated.
-                DeprecationLogger.whileDisabled {
-                    SaveLockTask globalSave = project.rootProject.tasks.findByName(SAVE_GLOBAL_LOCK_TASK_NAME) as SaveLockTask
-                    if (globalSave && globalSave.outputLock.isPresent() && globalSave.outputLock.get().asFile.exists()) {
-                        throw new GradleException('Cannot save individual locks when global lock is in place, run deleteGlobalLock task')
-                    }
-                }
-            }
             // Set input and output files using Property API
             saveTask.generatedLock.set(project.layout.buildDirectory.file(lockFilename ?: extension.lockFile.get()))
             saveTask.outputLock.set(project.layout.projectDirectory.file(lockFilename ?: extension.lockFile.get()))
+            
+            // Configuration cache compatible: Capture global lock file path to check at execution time
+            if (!isGlobalLockDisabled()) {
+                saveTask.globalLockFile.set(
+                    project.rootProject.layout.projectDirectory.file(extension.globalLockFile)
+                )
+            }
         }
         configureCommonSaveTask(saveLockTask, lockTask, updateTask)
 
@@ -198,7 +192,7 @@ class DependencyLockTaskConfigurer {
     private static void configureCommonSaveTask(TaskProvider<SaveLockTask> saveLockTask, TaskProvider<GenerateLockTask> lockTask,
                                                 TaskProvider<UpdateLockTask> updateTask) {
         saveLockTask.configure { saveTask ->
-            saveTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
+            // Configuration cache compatible: SaveLockTask uses only Property API
             saveTask.mustRunAfter lockTask, updateTask
             saveTask.outputs.upToDateWhen {
                 def generated = saveTask.generatedLock.get().asFile
@@ -367,7 +361,6 @@ class DependencyLockTaskConfigurer {
         TaskProvider<Delete> deleteLockTask = project.tasks.register('deleteLock', Delete)
 
         deleteLockTask.configure { it ->
-            it.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             it.delete saveLock.map { it.outputLock }
         }
 
@@ -377,7 +370,6 @@ class DependencyLockTaskConfigurer {
         TaskProvider<Delete> deleteGlobalLockTask = project.tasks.register('deleteGlobalLock', Delete)
 
         deleteGlobalLockTask.configure { it ->
-            it.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             it.delete saveGlobalLock.map { it.outputLock }
         }
     }
