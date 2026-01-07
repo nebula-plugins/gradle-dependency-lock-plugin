@@ -17,9 +17,8 @@ package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.plugin.dependencylock.util.LockGenerator
-import nebula.test.ProjectSpec
 
-class UpdateLockTaskSpec extends ProjectSpec {
+class UpdateLockTaskSpec extends LockTaskSpec {
     final String taskName = 'updateLock'
 
     def setupSpec() {
@@ -35,6 +34,7 @@ class UpdateLockTaskSpec extends ProjectSpec {
         def task = project.tasks.create(taskName, UpdateLockTask)
         task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(LockGenerator.DEFAULT_CONFIG_NAMES)
+        wireTaskProperties(task)
         task
     }
 

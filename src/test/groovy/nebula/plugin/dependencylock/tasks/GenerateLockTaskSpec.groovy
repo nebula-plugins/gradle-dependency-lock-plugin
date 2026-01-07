@@ -17,11 +17,10 @@ package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.plugin.dependencylock.util.LockGenerator
-import nebula.test.ProjectSpec
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Unroll
 
-class GenerateLockTaskSpec extends ProjectSpec {
+class GenerateLockTaskSpec extends LockTaskSpec {
     final String taskName = 'generateLock'
 
     def setupSpec() {
@@ -40,6 +39,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
+
+        wireTaskProperties(task)
 
         when:
         task.lock()
@@ -75,6 +76,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
                 .collect { it.name }
                 .toSet())
 
+        wireTaskProperties(task)
+
         when:
         task.lock()
 
@@ -109,6 +112,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
                 .collect { it.name }
                 .toSet())
         task.skippedConfigurationNames.set(['zinc', 'incrementalAnalysis'] as Set)
+
+        wireTaskProperties(task)
 
         when:
         task.lock()
@@ -152,6 +157,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
                 }
             }'''.stripIndent()
 
+        wireTaskProperties(task)
+
         when:
         task.lock()
 
@@ -179,6 +186,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock.set(app.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
+
+        wireTaskProperties(task)
 
         when:
         task.lock()
@@ -224,6 +233,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set(app.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
         task.includeTransitives.set(true)
+
+        wireTaskProperties(task)
 
         when:
         task.lock()
@@ -277,6 +288,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         GenerateLockTask task = app.tasks.create(taskName, GenerateLockTask)
         task.dependenciesLock.set(app.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
+
+        wireTaskProperties(task)
 
         when:
         task.lock()
@@ -352,6 +365,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set(app.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
 
+        wireTaskProperties(task)
+
         when:
         task.lock()
 
@@ -399,6 +414,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
         task.includeTransitives.set(true)
 
+        wireTaskProperties(task)
+
         when:
         task.lock()
 
@@ -432,6 +449,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
         task.includeTransitives.set(true)
+
+        wireTaskProperties(task)
 
         when:
         task.lock()
@@ -469,6 +488,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
         task.includeTransitives.set(true)
+
+        wireTaskProperties(task)
 
         when:
         task.lock()
@@ -511,6 +532,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
         task.includeTransitives.set(true)
+
+        wireTaskProperties(task)
 
         when:
         task.lock()
@@ -555,6 +578,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
         task.includeTransitives.set(true)
+
+        wireTaskProperties(task)
 
         when:
         task.lock()
@@ -610,6 +635,8 @@ class GenerateLockTaskSpec extends ProjectSpec {
         task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
         task.filter = filter as Closure
+
+        wireTaskProperties(task)
 
         when:
         task.lock()

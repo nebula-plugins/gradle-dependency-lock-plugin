@@ -249,8 +249,6 @@ class DependencyLockTaskConfigurer {
 
     private void setupLockProperties(TaskProvider<GenerateLockTask> task, DependencyLockExtension extension, Map overrideMap) {
         task.configure { generateTask ->
-            generateTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
-            
             // Set skipped dependencies
             generateTask.skippedDependencies.set(extension.skippedDependencies)
             
@@ -266,6 +264,31 @@ class DependencyLockTaskConfigurer {
             
             // Set overrides
             generateTask.overrides.set(overrideMap)
+
+            // Wire properties for configuration cache compatibility
+            generateTask.projectDirectory.set(project.layout.projectDirectory)
+            generateTask.globalLockFileName.set(extension.globalLockFile)
+            generateTask.dependencyLockIgnored.set(project.provider { shouldIgnoreDependencyLock(project) })
+
+            // Wire Resolution API properties (Approach 1 - Official Gradle APIs)
+            // Use zip() to ensure both properties are evaluated together at execution time
+            generateTask.resolutionResults.set(
+                generateTask.configurationNames.zip(generateTask.skippedConfigurationNames) { configNames, skippedNames ->
+                    def lockableConfs = GenerateLockTask.lockableConfigurations(project, project, configNames, skippedNames)
+                    
+                    lockableConfs.collectEntries { conf ->
+                        [(conf.name): conf.incoming.resolutionResult.rootComponent]
+                    }
+                }
+            )
+
+            generateTask.peerProjectCoordinates.set(project.provider {
+                project.rootProject.allprojects.collect { p ->
+                    String group = p.group?.toString() ?: ''
+                    String name = p.name
+                    "${group}:${name}".toString()
+                }
+            })
         }
     }
 
