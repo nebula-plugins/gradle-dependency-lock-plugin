@@ -435,9 +435,6 @@ class DependencyLockTaskConfigurer {
         TaskProvider<DiffLockTask> diffLockTask = project.tasks.register(DIFF_LOCK_TASK_NAME, DiffLockTask)
 
         diffLockTask.configure { diffTask ->
-            // Note: PathAwareDiffReportGenerator (opt-in via nebula.features.pathAwareDependencyDiff)
-            // accesses project at execution time and is not configuration cache compatible.
-            // Regular diff (default) is configuration cache compatible.
             diffTask.mustRunAfter(project.tasks.named(GENERATE_LOCK_TASK_NAME), project.tasks.named(UPDATE_LOCK_TASK_NAME))
             
             // Set file properties
@@ -451,6 +448,17 @@ class DependencyLockTaskConfigurer {
             // Set output properties
             diffTask.outputDir.set(project.layout.buildDirectory.dir("dependency-lock"))
             diffTask.diffFile.set(diffTask.outputDir.file("lockdiff.${diffTask.diffFileExtension()}"))
+            
+            // Wire resolution results for path-aware diff (configuration cache compatible!)
+            diffTask.resolutionResults.set(
+                extension.configurationNames.zip(extension.skippedConfigurationNamesPrefixes) { configNames, skippedNames ->
+                    def lockableConfs = GenerateLockTask.lockableConfigurations(project, project, configNames, skippedNames)
+                    
+                    lockableConfs.collectEntries { conf ->
+                        [(conf.name): conf.incoming.resolutionResult.rootComponent]
+                    }
+                }
+            )
         }
 
         project.tasks.named(SAVE_LOCK_TASK_NAME).configure { save ->
