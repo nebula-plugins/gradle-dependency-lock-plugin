@@ -30,12 +30,17 @@ class GlobalLockWithForceLauncherSpec extends BaseIntegrationTestKitSpec impleme
 
     def setup() {
         definePluginOutsideOfPluginBlock = true
-        keepFiles = true
+        keepFiles = false  // Changed to false to avoid test pollution
         disableConfigurationCache()
+    }
+    
+    def cleanup() {
+        // Clean up lock files to prevent test pollution
+        new File(projectDir, 'build/global.lock')?.delete()
+        new File(projectDir, 'global.lock')?.delete()
     }
 
     def 'create global locks in multiproject when force is present'() {
-        disableConfigurationCache()
         addSubproject('sub1', """\
             dependencies {
                 implementation 'test.example:bar:1.1.0'
