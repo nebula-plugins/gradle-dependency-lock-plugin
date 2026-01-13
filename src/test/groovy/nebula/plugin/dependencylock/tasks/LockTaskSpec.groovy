@@ -29,8 +29,8 @@ abstract class LockTaskSpec extends ProjectSpec {
      * 
      * This helper ensures:
      * - Basic properties (projectDirectory, globalLockFileName, dependencyLockIgnored) are set
-     * - Resolution API properties (resolutionResults, peerProjectCoordinates) are wired with lazy providers
-     * - Properties are evaluated at execution time to avoid test pollution
+     * - Resolution API properties (resolutionResults, peerProjectCoordinates) are wired immediately
+     * - Properties are evaluated at wire time to avoid test pollution in ProjectSpec (which reuses project instances)
      */
     void wireTaskProperties(GenerateLockTask task) {
         // Wire basic properties
@@ -38,32 +38,33 @@ abstract class LockTaskSpec extends ProjectSpec {
         task.globalLockFileName.set('global.lock')
         task.dependencyLockIgnored.set(false)
 
-        // Wire resolutionResults and peerProjectCoordinates using lazy provider
-        // This ensures they're evaluated at execution time, not configuration time
-        task.resolutionResults.set(task.project.provider {
-            def configNames = task.configurationNames.getOrElse([] as Set)
-            def skippedNames = task.skippedConfigurationNames.getOrElse([] as Set)
-            
-            // Get lockable configurations fresh each time (avoids test pollution)
-            def lockableConfs = task.project.configurations.matching { conf ->
-                configNames.contains(conf.name) && 
-                !skippedNames.any { prefix -> conf.name.startsWith(prefix) } &&
-                conf.isCanBeResolved()
-            }
-            
-            // Build resolution map
-            lockableConfs.collectEntries { conf ->
-                [(conf.name): conf.incoming.resolutionResult.rootComponent]
-            }
-        })
+        // Eagerly capture the current state at wire time to avoid test pollution
+        // (ProjectSpec reuses the same project instance across tests, so lazy evaluation would see accumulated dependencies)
+        def configNames = task.configurationNames.getOrElse([] as Set)
+        def skippedNames = task.skippedConfigurationNames.getOrElse([] as Set)
         
-        task.peerProjectCoordinates.set(task.project.provider {
-            task.project.rootProject.allprojects.collect { p ->
-                String group = p.group?.toString() ?: ''
-                String name = p.name
-                "${group}:${name}".toString()
-            }
-        })
+        // Use the actual lockableConfigurations static method to get proper filtering
+        // (includes resolution alternative checks, CompileOnly exclusions, etc.)
+        def lockableConfs = GenerateLockTask.lockableConfigurations(
+            task.project, 
+            task.project, 
+            configNames, 
+            skippedNames
+        )
+        
+        // Build resolution map and set immediately (not via provider)
+        def resolutionMap = lockableConfs.collectEntries { conf ->
+            [(conf.name): conf.incoming.resolutionResult.rootComponent]
+        }
+        task.resolutionResults.set(resolutionMap)
+        
+        // Capture peer coordinates immediately
+        def peers = task.project.rootProject.allprojects.collect { p ->
+            String group = p.group?.toString() ?: ''
+            String name = p.name
+            "${group}:${name}".toString()
+        }
+        task.peerProjectCoordinates.set(peers)
     }
 }
 

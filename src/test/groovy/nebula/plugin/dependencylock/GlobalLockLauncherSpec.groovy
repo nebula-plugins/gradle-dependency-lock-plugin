@@ -14,11 +14,17 @@
 package nebula.plugin.dependencylock
 
 import nebula.plugin.BaseIntegrationTestKitSpec
+import nebula.plugin.GlobalLockDeprecations
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
+import org.junit.Rule
+import org.junit.contrib.java.lang.system.ProvideSystemProperty
 
-class GlobalLockLauncherSpec extends BaseIntegrationTestKitSpec {
+class GlobalLockLauncherSpec extends BaseIntegrationTestKitSpec implements GlobalLockDeprecations {
+
+    @Rule
+    public final ProvideSystemProperty ignoreGlobalLockDeprecations = globalLockDeprecationRule()
 
     def setup() {
         definePluginOutsideOfPluginBlock = true

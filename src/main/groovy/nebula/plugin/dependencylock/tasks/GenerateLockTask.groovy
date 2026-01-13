@@ -122,19 +122,21 @@ abstract class GenerateLockTask extends AbstractLockTask {
         }
 
         // Use NEW API (Resolution APIs) or OLD API (Configuration objects)
+        // Check configurations FIRST to allow conventionMapping to work for global lock
+        // Note: Access via getConfigurations() to trigger conventionMapping evaluation
         Map dependencyMap
-        if (resolutionResults.isPresent() && !resolutionResults.get().isEmpty()) {
+        def confs = getConfigurations()  // Access via getter to trigger conventionMapping
+        if (confs != null && !confs.isEmpty()) {
+            // OLD API: For global lock (NOT configuration cache compatible)
+            // Global lock uses conventionMapping.configurations which is evaluated lazily when accessed via getter
+            // Use peerProjectCoordinates property to avoid accessing project at execution time
+            def peerCoordinates = peerProjectCoordinates.get()
+            dependencyMap = new GenerateLockFromConfigurations().lock(confs, peerCoordinates)
+        } else if (resolutionResults.isPresent() && !resolutionResults.get().isEmpty()) {
             // NEW API: Configuration cache compatible!
             def resolutionMap = resolutionResults.get()
             def peerCoordinates = peerProjectCoordinates.get()
             dependencyMap = new GenerateLockFromConfigurations().lock(resolutionMap, peerCoordinates)
-        } else if (configurations != null && !configurations.isEmpty()) {
-            // OLD API: For global lock (NOT configuration cache compatible)
-            // This path will be fixed in a following phase
-            //TODO: address Invocation of Task.project at execution time has been deprecated.
-            DeprecationLogger.whileDisabled {
-                dependencyMap = new GenerateLockFromConfigurations().lock(configurations)
-            }
         } else {
             // No configurations to lock - valid for projects without dependencies (e.g., root project in multiproject builds)
             dependencyMap = [:]
@@ -377,13 +379,17 @@ abstract class GenerateLockTask extends AbstractLockTask {
         /**
          * OLD API: Generate lock file using Configuration objects (for global lock - NOT config cache compatible).
          * @param confs Collection of Configuration objects
+         * @param peerCoordinates List of peer project coordinates ("group:name" strings)
          * @return Map of LockKey to LockValue
          */
-        Map<LockKey, LockValue> lock(Collection<Configuration> confs) {
+        Map<LockKey, LockValue> lock(Collection<Configuration> confs, List<String> peerCoordinates) {
             Map<LockKey, LockValue> deps = [:].withDefault { new LockValue() }
 
-            // Peers are all the projects in the build to which this plugin has been applied.
-            def peers = project.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) }
+            // Convert peer coordinates to LockKey objects for comparison
+            def peers = peerCoordinates.collect { coord ->
+                def parts = coord.split(':')
+                new LockKey(group: parts.size() > 1 ? parts[0] : '', artifact: parts.size() > 1 ? parts[1] : parts[0])
+            }
 
             confs.each { Configuration configuration ->
                 // Lock the version of each dependency specified in the build script as resolved by Gradle.

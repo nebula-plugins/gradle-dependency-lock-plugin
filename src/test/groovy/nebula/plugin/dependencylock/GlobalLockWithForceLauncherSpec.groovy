@@ -14,8 +14,15 @@
 package nebula.plugin.dependencylock
 
 import nebula.plugin.BaseIntegrationTestKitSpec
+import nebula.plugin.GlobalLockDeprecations
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
-class GlobalLockWithForceLauncherSpec extends BaseIntegrationTestKitSpec {
+import org.junit.Rule
+import org.junit.contrib.java.lang.system.ProvideSystemProperty
+
+class GlobalLockWithForceLauncherSpec extends BaseIntegrationTestKitSpec implements GlobalLockDeprecations {
+
+    @Rule
+    public final ProvideSystemProperty ignoreGlobalLockDeprecations = globalLockDeprecationRule()
 
     def setupSpec() {
         Fixture.createFixtureIfNotCreated()
