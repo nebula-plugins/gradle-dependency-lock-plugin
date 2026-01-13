@@ -270,7 +270,7 @@ class DependencyLockTaskConfigurer {
             generateTask.globalLockFileName.set(extension.globalLockFile)
             generateTask.dependencyLockIgnored.set(project.provider { shouldIgnoreDependencyLock(project) })
 
-            // Wire Resolution API properties (Approach 1 - Official Gradle APIs)
+            // Wire Resolution API properties (Approach 1 - Official Gradle APIs) for regular locks
             // Use zip() to ensure both properties are evaluated together at execution time
             generateTask.resolutionResults.set(
                 generateTask.configurationNames.zip(generateTask.skippedConfigurationNames) { configNames, skippedNames ->
@@ -294,7 +294,9 @@ class DependencyLockTaskConfigurer {
 
     private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateLockTask> globalLockTask, String lockFilename,
                                                                    DependencyLockExtension extension, Map overrides) {
-        setupLockProperties(globalLockTask, extension, overrides)
+        // Global lock uses the OLD API (not configuration cache compatible)
+        // It relies on conventionMapping to set configurations dynamically at execution time
+        // Do NOT call setupLockProperties for global lock - it interferes with conventionMapping
         globalLockTask.configure { globalGenerateTask ->
             globalGenerateTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             globalGenerateTask.doFirst {
@@ -307,17 +309,36 @@ class DependencyLockTaskConfigurer {
             // Set output file
             globalGenerateTask.dependenciesLock.set(project.layout.buildDirectory.file(lockFilename ?: extension.globalLockFile.get()))
             
+            // Wire minimal properties needed for basic checks in lock() method
+            globalGenerateTask.projectDirectory.set(project.layout.projectDirectory)
+            globalGenerateTask.globalLockFileName.set(lockFilename ?: extension.globalLockFile.get())
+            globalGenerateTask.dependencyLockIgnored.set(project.provider { shouldIgnoreDependencyLock(project) })
+            globalGenerateTask.skippedDependencies.set(extension.skippedDependencies)
+            globalGenerateTask.overrides.set(overrides)
+            globalGenerateTask.filter = extension.dependencyFilter
+            
+            // Capture peer coordinates to avoid accessing project at execution time
+            globalGenerateTask.peerProjectCoordinates.set(project.provider {
+                project.rootProject.allprojects.collect { p ->
+                    String group = p.group?.toString() ?: ''
+                    String name = p.name
+                    "${group}:${name}".toString()
+                }
+            })
+            
             // TODO: Refactor this to not use conventionMapping. The global lock's configuration logic is complex
             // because it creates aggregate configurations at execution time. This needs a proper Property-based solution.
             // For now, keeping conventionMapping for this specific case to maintain functionality.
             globalGenerateTask.conventionMapping.with {
+                includeTransitives = { extension.includeTransitives.get() }
                 configurations = {
                     def subprojects = project.subprojects.collect { subproject ->
                         def ext = subproject.getExtensions().findByType(DependencyLockExtension)
                         if (ext != null) {
                             Collection<Configuration> lockableConfigurations = lockableConfigurations(project, subproject, ext.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
                             Collection<Configuration> configurations = filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(subproject, ext.configurationNames.get(), lockableConfigurations)
-                            Configuration aggregate = subproject.configurations.create("aggregateConfiguration")
+                            // Use unique name to avoid conflicts if evaluated multiple times
+                            Configuration aggregate = subproject.configurations.create("aggregateConfiguration_${System.currentTimeMillis()}_${subproject.path.replace(':', '_')}")
                             aggregate.setCanBeConsumed(true)
                             aggregate.setCanBeResolved(true)
                             configurations

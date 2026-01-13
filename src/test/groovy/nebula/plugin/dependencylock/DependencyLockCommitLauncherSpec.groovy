@@ -15,13 +15,19 @@
  */
 package nebula.plugin.dependencylock
 
+import nebula.plugin.GlobalLockDeprecations
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.test.IntegrationSpec
 import org.ajoberstar.grgit.Grgit
+import org.junit.Rule
+import org.junit.contrib.java.lang.system.ProvideSystemProperty
 
 import java.nio.file.Files
 
-class DependencyLockCommitLauncherSpec extends IntegrationSpec {
+class DependencyLockCommitLauncherSpec extends IntegrationSpec implements GlobalLockDeprecations {
+
+    @Rule
+    public final ProvideSystemProperty ignoreGlobalLockDeprecations = globalLockDeprecationRule()
 
     protected Grgit git
     protected Grgit originGit

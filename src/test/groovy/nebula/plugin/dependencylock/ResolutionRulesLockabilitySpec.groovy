@@ -19,15 +19,25 @@
 package nebula.plugin.dependencylock
 
 import nebula.plugin.BaseIntegrationTestKitSpec
+import nebula.plugin.GlobalLockDeprecations
 import nebula.plugin.dependencylock.util.LockGenerator
 import org.gradle.testkit.runner.TaskOutcome
+import org.junit.Rule
+import org.junit.contrib.java.lang.system.ProvideSystemProperty
 
 import java.util.jar.Attributes
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 
-class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec {
+/**
+ * Tests resolution rules locking for both global lock and regular project lock scenarios.
+ */
+class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec implements GlobalLockDeprecations {
+    
+    @Rule
+    public final ProvideSystemProperty ignoreGlobalLockDeprecations = globalLockDeprecationRule()
+    
     def mavenForRules
 
     def setup() {

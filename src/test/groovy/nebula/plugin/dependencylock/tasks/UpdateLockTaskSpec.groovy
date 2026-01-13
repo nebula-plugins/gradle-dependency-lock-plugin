@@ -64,7 +64,7 @@ class UpdateLockTaskSpec extends LockTaskSpec {
         lockFile.text = lockText
 
         def task = createTask()
-        task.includeTransitives = true
+        task.includeTransitives.set(true)
 
         def updatedLock = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
