@@ -131,7 +131,8 @@ abstract class GenerateLockTask extends AbstractLockTask {
                 lockableConfigurations.addAll project.configurations.asList()
             }
         } else {
-            lockableConfigurations.addAll configurationNames.collect { project.configurations.getByName(it) }
+            // Use named() for lazy lookup (though we resolve with .get() since we need the actual Configuration)
+            lockableConfigurations.addAll configurationNames.collect { project.configurations.named(it).get() }
         }
 
         lockableConfigurations.removeAll {

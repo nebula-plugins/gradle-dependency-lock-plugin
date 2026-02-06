@@ -161,7 +161,8 @@ class DependencyLockPlugin @Inject constructor(val buildFeatures: BuildFeatures)
                 disableCachingForGenerateLock()
             }
 
-            project.configurations.all({ conf ->
+            // Use configureEach for lazy configuration (avoids configuring unused configurations)
+            project.configurations.configureEach { conf ->
                 if (lockAfterEvaluating) {
                     conf.onResolve {
                         maybeApplyLock(conf, extension, overrides, globalLockFilename, lockFilename)
@@ -169,20 +170,21 @@ class DependencyLockPlugin @Inject constructor(val buildFeatures: BuildFeatures)
                 } else {
                     maybeApplyLock(conf, extension, overrides, globalLockFilename, lockFilename)
                 }
-            })
+            }
         }
     }
 
     private fun disableCachingForGenerateLock() {
         if (hasGenerationTask(project.gradle.startParameter.taskNames)) {
-            project.configurations.all({ configuration ->
+            // Use configureEach for lazy configuration (avoids configuring unused configurations)
+            project.configurations.configureEach { configuration ->
                 if (configuration.state == Configuration.State.UNRESOLVED) {
                     with(configuration.resolutionStrategy) {
                         cacheDynamicVersionsFor(0, "seconds")
                         cacheChangingModulesFor(0, "seconds")
                     }
                 }
-            })
+            }
         }
     }
 

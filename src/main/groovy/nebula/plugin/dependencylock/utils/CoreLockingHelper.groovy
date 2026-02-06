@@ -95,11 +95,12 @@ class CoreLockingHelper {
 
     private void findAndLockAdditionalConfigurations(Set<String> configurationNames, Closure closure) {
         def additionalConfigNames = gatherAdditionalConfigurationsToLock()
+        // Use configureEach for lazy configuration (avoids configuring unused configurations)
         project.configurations.matching { // returns a live collection
             additionalConfigNames.findAll { additionalConfigName ->
                 it.name == additionalConfigName
             }
-        }.all { it ->
+        }.configureEach { it ->
             runClosureOnConfigurations(configurationNames, closure, additionalConfigNames)
         }
     }
@@ -142,14 +143,15 @@ class CoreLockingHelper {
 
     void disableCachingWhenUpdatingDependencies() {
         if (isUpdatingDependencies) {
-            project.configurations.all({ Configuration configuration ->
+            // Use configureEach for lazy configuration (avoids configuring unused configurations)
+            project.configurations.configureEach { Configuration configuration ->
                 if (configuration.state == Configuration.State.UNRESOLVED) {
                     configuration.resolutionStrategy {
                         cacheDynamicVersionsFor(0, 'seconds')
                         cacheChangingModulesFor(0, 'seconds')
                     }
                 }
-            })
+            }
         }
     }
 
