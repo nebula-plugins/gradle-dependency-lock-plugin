@@ -22,6 +22,7 @@ import nebula.plugin.dependencylock.DependencyLockReader
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import org.gradle.api.BuildCancelledException
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Internal
@@ -30,7 +31,7 @@ import org.gradle.internal.deprecation.DeprecationLogger
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault
-class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
+abstract class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
 
     @Internal
     String description = "Migrates Nebula-locked dependencies to use core Gradle locks"
@@ -38,7 +39,7 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
     private static final Logger LOGGER = Logging.getLogger(MigrateLockedDepsToCoreLocksTask)
 
     @Internal
-    File inputLockFile
+    abstract RegularFileProperty getInputLockFile()
 
     @TaskAction
     void migrateLockedDependencies() {
@@ -46,11 +47,11 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
         DeprecationLogger.whileDisabled {
             if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
                 def coreLockingHelper = new CoreLockingHelper(project)
-                coreLockingHelper.lockSelectedConfigurations(getConfigurationNames())
+                coreLockingHelper.lockSelectedConfigurations(getConfigurationNames().get())
 
-                if (getInputLockFile().exists()) {
+                if (getInputLockFile().asFile.get().exists()) {
                     LOGGER.warn("Migrating legacy locks to core Gradle locking. This will remove legacy locks.\n" +
-                            " - Legacy lock: ${getInputLockFile().absolutePath}\n" +
+                            " - Legacy lock: ${getInputLockFile().asFile.get().absolutePath}\n" +
                             " - Core Gradle locks: ${project.projectDir.absoluteFile}/gradle.lockfile")
 
                     def lockReader = new DependencyLockReader(project)
@@ -59,7 +60,7 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
                     List<String> emptyLockedConfigs = new ArrayList<>()
 
                     def migrateConfigurationClosure = {
-                        def locks = lockReader.readLocks(it, getInputLockFile(), new HashMap<>())
+                        def locks = lockReader.readLocks(it, getInputLockFile().asFile.get(), new HashMap<>())
 
                         if (locks != null) {
                             for (Map.Entry<String, ArrayList<String>> entry : locks.entrySet()) {
@@ -84,9 +85,9 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
                                 emptyLockedConfigs.add(it.name)
                         }
                     }
-                    coreLockingHelper.migrateLockedConfigurations(getConfigurationNames(), migrateConfigurationClosure)
+                    coreLockingHelper.migrateLockedConfigurations(getConfigurationNames().get(), migrateConfigurationClosure)
 
-                    def configLockFile = outputLock
+                    def configLockFile = getOutputLock().asFile.get()
                     if (!configLockFile.exists()) {
                         configLockFile.createNewFile()
                         configLockFile.write("# This is a file for dependency locking, migrated from Nebula locks.\n" +
@@ -101,9 +102,9 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
 
                     def failureToDeleteInputLockFileMessage = "Failed to delete legacy locks.\n" +
                             "Please remove the legacy lockfile manually.\n" +
-                            " - Legacy lock: ${getInputLockFile().absolutePath}"
+                            " - Legacy lock: ${getInputLockFile().asFile.get().absolutePath}"
                     try {
-                        if (!getInputLockFile().delete()) {
+                        if (!getInputLockFile().asFile.get().delete()) {
                             throw new BuildCancelledException(failureToDeleteInputLockFileMessage)
                         }
                     } catch (Exception e) {
@@ -111,7 +112,7 @@ class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
                     }
                 } else {
                     throw new BuildCancelledException("Stopping migration. There is no lockfile at expected location:\n" +
-                            "${getInputLockFile().path}")
+                            "${getInputLockFile().asFile.get().path}")
                 }
             }
         }

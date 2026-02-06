@@ -15,6 +15,7 @@
  */
 package nebula.plugin.dependencylock.tasks
 
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
@@ -24,19 +25,19 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault
-class SaveLockTask extends AbstractLockTask {
+abstract class SaveLockTask extends AbstractLockTask {
     @Internal
     String description = 'Move the generated lock file into the project directory'
 
     @InputFile
     @PathSensitive(PathSensitivity.NONE)
-    File generatedLock
+    abstract RegularFileProperty getGeneratedLock()
 
     @OutputFile
-    File outputLock
+    abstract RegularFileProperty getOutputLock()
 
     @TaskAction
     void saveLock() {
-        getOutputLock().text = getGeneratedLock().text
+        getOutputLock().asFile.get().text = getGeneratedLock().asFile.get().text
     }
 }

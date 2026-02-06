@@ -170,15 +170,14 @@ class DependencyLockTaskConfigurer {
                 //TODO: address Invocation of Task.project at execution time has been deprecated.
                 DeprecationLogger.whileDisabled {
                     SaveLockTask globalSave = project.rootProject.tasks.findByName(SAVE_GLOBAL_LOCK_TASK_NAME) as SaveLockTask
-                    if (globalSave && globalSave.outputLock && globalSave.outputLock.exists()) {
+                    if (globalSave && globalSave.outputLock.isPresent() && globalSave.outputLock.get().asFile.exists()) {
                         throw new GradleException('Cannot save individual locks when global lock is in place, run deleteGlobalLock task')
                     }
                 }
             }
-            saveTask.conventionMapping.with {
-                generatedLock = { getBuildDirLockFile(lockFilename, extension) }
-                outputLock = { getProjectDirLockFile(lockFilename, extension) }
-            }
+            // Set input and output files using Property API
+            saveTask.generatedLock.set(project.layout.buildDirectory.file(lockFilename ?: extension.lockFile.get()))
+            saveTask.outputLock.set(project.layout.projectDirectory.file(lockFilename ?: extension.lockFile.get()))
         }
         configureCommonSaveTask(saveLockTask, lockTask, updateTask)
 
@@ -191,8 +190,10 @@ class DependencyLockTaskConfigurer {
             saveTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             saveTask.mustRunAfter lockTask, updateTask
             saveTask.outputs.upToDateWhen {
-                if (saveTask.generatedLock.exists() && saveTask.outputLock.exists()) {
-                    saveTask.generatedLock.text == saveTask.outputLock.text
+                def generated = saveTask.generatedLock.get().asFile
+                def output = saveTask.outputLock.get().asFile
+                if (generated.exists() && output.exists()) {
+                    generated.text == output.text
                 } else {
                     false
                 }
@@ -210,16 +211,15 @@ class DependencyLockTaskConfigurer {
                 DeprecationLogger.whileDisabled {
                     project.subprojects.each { Project sub ->
                         SaveLockTask save = sub.tasks.findByName(SAVE_LOCK_TASK_NAME) as SaveLockTask
-                        if (save && save.outputLock?.exists()) {
+                        if (save && save.outputLock.isPresent() && save.outputLock.get().asFile.exists()) {
                             throw new GradleException('Cannot save global lock, one or more individual locks are in place, run deleteLock task')
                         }
                     }
                 }
             }
-            globalSaveTask.conventionMapping.with {
-                generatedLock = { getBuildDirGlobalLockFile(lockFilename, extension) }
-                outputLock = { getProjectDirGlobalLockFile(lockFilename, extension) }
-            }
+            // Set input and output files using Property API
+            globalSaveTask.generatedLock.set(project.layout.buildDirectory.file(lockFilename ?: extension.globalLockFile.get()))
+            globalSaveTask.outputLock.set(project.layout.projectDirectory.file(lockFilename ?: extension.globalLockFile.get()))
         }
         configureCommonSaveTask(globalSaveLockTask, globalLockTask, globalUpdateLockTask)
 
@@ -227,35 +227,46 @@ class DependencyLockTaskConfigurer {
     }
 
     private TaskProvider<GenerateLockTask> configureGenerateLockTask(TaskProvider<GenerateLockTask> lockTask, String lockFilename, DependencyLockExtension extension, Map overrides) {
-        setupLockConventionMapping(lockTask, extension, overrides)
+        setupLockProperties(lockTask, extension, overrides)
         lockTask.configure {
-            it.conventionMapping.with {
-                dependenciesLock = { getBuildDirLockFile(lockFilename, extension) }
-                configurationNames = { extension.configurationNames.get() }
-                skippedConfigurationNames = { extension.skippedConfigurationNamesPrefixes.get() }
-            }
+            // Set output file
+            it.dependenciesLock.set(project.layout.buildDirectory.file(lockFilename ?: extension.lockFile.get()))
+            // Set configuration names
+            it.configurationNames.set(extension.configurationNames)
+            it.skippedConfigurationNames.set(extension.skippedConfigurationNamesPrefixes)
+            
+            // Always regenerate lock files - dependency changes in build.gradle aren't tracked as task inputs
+            it.outputs.upToDateWhen { false }
         }
 
         lockTask
     }
 
-    private void setupLockConventionMapping(TaskProvider<GenerateLockTask> task, DependencyLockExtension extension, Map overrideMap) {
+    private void setupLockProperties(TaskProvider<GenerateLockTask> task, DependencyLockExtension extension, Map overrideMap) {
         task.configure { generateTask ->
             generateTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
-            generateTask.conventionMapping.with {
-                skippedDependencies = { extension.skippedDependencies.get() }
-                includeTransitives = {
-                    project.hasProperty('dependencyLock.includeTransitives') ? Boolean.parseBoolean(project['dependencyLock.includeTransitives'] as String) : extension.includeTransitives.get()
-                }
-                filter = { extension.dependencyFilter }
-                overrides = { overrideMap }
-            }
+            
+            // Set skipped dependencies
+            generateTask.skippedDependencies.set(extension.skippedDependencies)
+            
+            // Set includeTransitives with provider that checks project property first, then extension
+            generateTask.includeTransitives.set(
+                project.providers.gradleProperty('dependencyLock.includeTransitives')
+                    .map { it.toBoolean() }
+                    .orElse(extension.includeTransitives)
+            )
+            
+            // Set filter (kept as Closure for backward compatibility)
+            generateTask.filter = extension.dependencyFilter
+            
+            // Set overrides
+            generateTask.overrides.set(overrideMap)
         }
     }
 
     private TaskProvider<GenerateLockTask> configureGlobalLockTask(TaskProvider<GenerateLockTask> globalLockTask, String lockFilename,
                                                                    DependencyLockExtension extension, Map overrides) {
-        setupLockConventionMapping(globalLockTask, extension, overrides)
+        setupLockProperties(globalLockTask, extension, overrides)
         globalLockTask.configure { globalGenerateTask ->
             globalGenerateTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             globalGenerateTask.doFirst {
@@ -264,8 +275,14 @@ class DependencyLockTaskConfigurer {
                     project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
                 }
             }
+            
+            // Set output file
+            globalGenerateTask.dependenciesLock.set(project.layout.buildDirectory.file(lockFilename ?: extension.globalLockFile.get()))
+            
+            // TODO: Refactor this to not use conventionMapping. The global lock's configuration logic is complex
+            // because it creates aggregate configurations at execution time. This needs a proper Property-based solution.
+            // For now, keeping conventionMapping for this specific case to maintain functionality.
             globalGenerateTask.conventionMapping.with {
-                dependenciesLock = { getBuildDirGlobalLockFile(lockFilename, extension) }
                 configurations = {
                     def subprojects = project.subprojects.collect { subproject ->
                         def ext = subproject.getExtensions().findByType(DependencyLockExtension)
@@ -316,24 +333,18 @@ class DependencyLockTaskConfigurer {
     private TaskProvider<MigrateToCoreLocksTask> configureMigrateToCoreLocksTask(DependencyLockExtension extension) {
         def migrateLockedDepsToCoreLocksTask = project.tasks.register(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME, MigrateLockedDepsToCoreLocksTask)
         def migrateToCoreLocksTask = project.tasks.register(MIGRATE_TO_CORE_LOCKS_TASK_NAME, MigrateToCoreLocksTask)
-        def lockFile = new File(project.projectDir, extension.lockFile.get())
-        def dependencyLock = new File(project.projectDir, "gradle.lockfile")
 
         migrateLockedDepsToCoreLocksTask.configure {
-            it.conventionMapping.with {
-                configurationNames = { extension.configurationNames.get() }
-                inputLockFile = { lockFile }
-                outputLock = { dependencyLock }
-            }
+            it.configurationNames.set(extension.configurationNames)
+            it.inputLockFile.set(project.layout.projectDirectory.file(extension.lockFile))
+            it.outputLock.set(project.layout.projectDirectory.file("gradle.lockfile"))
             it.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
 
         }
 
         migrateToCoreLocksTask.configure {
-            it.conventionMapping.with {
-                configurationNames = { extension.configurationNames.get() }
-                outputLock = { dependencyLock }
-            }
+            it.configurationNames.set(extension.configurationNames)
+            it.outputLock.set(project.layout.projectDirectory.file("gradle.lockfile"))
             it.dependsOn project.tasks.named(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME)
             it.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
         }
@@ -375,11 +386,18 @@ class DependencyLockTaskConfigurer {
         diffLockTask.configure { diffTask ->
             diffTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             diffTask.mustRunAfter(project.tasks.named(GENERATE_LOCK_TASK_NAME), project.tasks.named(UPDATE_LOCK_TASK_NAME))
+            
+            // Set file properties
+            def lockFileProvider = extension.lockFile.map { lockFileName ?: it }
             def existing = new File(project.projectDir, lockFileName ?: extension.lockFile.get())
             if (existing.exists()) {
-                diffTask.existingLockFile = existing
+                diffTask.existingLockFile.set(project.layout.projectDirectory.file(lockFileProvider))
             }
-            diffTask.updatedLockFile = new File(project.layout.buildDirectory.getAsFile().get(), lockFileName ?: extension.lockFile.get())
+            diffTask.updatedLockFile.set(project.layout.buildDirectory.file(lockFileProvider))
+            
+            // Set output properties
+            diffTask.outputDir.set(project.layout.buildDirectory.dir("dependency-lock"))
+            diffTask.diffFile.set(diffTask.outputDir.file("lockdiff.${diffTask.diffFileExtension()}"))
         }
 
         project.tasks.named(SAVE_LOCK_TASK_NAME).configure { save ->

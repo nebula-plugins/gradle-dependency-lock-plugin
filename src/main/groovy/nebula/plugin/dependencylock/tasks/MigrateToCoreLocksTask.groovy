@@ -30,7 +30,7 @@ import org.gradle.internal.deprecation.DeprecationLogger
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault
-class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
+abstract class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
     @Internal
     String description = 'Migrates all dependencies to use core Gradle locks'
 
@@ -40,7 +40,7 @@ class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
         DeprecationLogger.whileDisabled {
             if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
                 def coreLockingHelper = new CoreLockingHelper(project)
-                coreLockingHelper.lockSelectedConfigurations(getConfigurationNames())
+                coreLockingHelper.lockSelectedConfigurations(getConfigurationNames().get())
 
                 Map<String, List<String>> dependenciesInConfigs = new HashMap<>()
 
@@ -59,9 +59,9 @@ class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
                         }
                     }
                 }
-                coreLockingHelper.migrateUnlockedDependenciesClosure(getConfigurationNames(), migratingUnlockedDependenciesClosure)
+                coreLockingHelper.migrateUnlockedDependenciesClosure(getConfigurationNames().get(), migratingUnlockedDependenciesClosure)
 
-                writeDependenciesIntoLockFile(dependenciesInConfigs, outputLock)
+                writeDependenciesIntoLockFile(dependenciesInConfigs, getOutputLock().asFile.get())
             }
         }
     }
