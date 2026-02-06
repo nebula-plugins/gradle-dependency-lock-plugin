@@ -15,9 +15,57 @@
  */
 package nebula.plugin.dependencylock
 
-class DependencyLockCommitExtension {
-    String message = 'Committing dependency lock files'
-    boolean shouldCreateTag = false
-    Closure<String> tag = { "LockCommit-${new Date().format('yyyyMMddHHmmss')}".toString() }
-    int remoteRetries = 3
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Internal
+
+/**
+ * Extension for configuring commit behavior for dependency lock files.
+ * Uses Gradle's Property API for lazy configuration and configuration cache compatibility.
+ */
+abstract class DependencyLockCommitExtension {
+    /**
+     * Commit message to use when committing lock files.
+     * Default: 'Committing dependency lock files'
+     */
+    abstract Property<String> getMessage()
+    
+    /**
+     * Whether to create a git tag when committing.
+     * Default: false
+     */
+    abstract Property<Boolean> getShouldCreateTag()
+    
+    /**
+     * Tag name to use when creating a tag.
+     * Default: 'LockCommit-{timestamp}'
+     * Note: The default is evaluated at construction time for configuration cache compatibility.
+     */
+    abstract Property<String> getTag()
+    
+    /**
+     * Number of times to retry remote operations.
+     * Default: 3
+     */
+    abstract Property<Integer> getRemoteRetries()
+    
+    /**
+     * Legacy Closure-based tag generator.
+     * Kept for backward compatibility but marked as @Internal since Closures are not configuration cache compatible.
+     * Users should migrate to using the tag Property directly.
+     * @deprecated Use {@link #getTag()} instead
+     */
+    @Internal
+    @Deprecated
+    Closure<String> tagClosure = { "LockCommit-${new Date().format('yyyyMMddHHmmss')}".toString() }
+    
+    /**
+     * Constructor sets default conventions for all properties.
+     */
+    DependencyLockCommitExtension() {
+        message.convention('Committing dependency lock files')
+        shouldCreateTag.convention(false)
+        // Set default tag with timestamp evaluated at construction time
+        tag.convention("LockCommit-${new Date().format('yyyyMMddHHmmss')}")
+        remoteRetries.convention(3)
+    }
 }

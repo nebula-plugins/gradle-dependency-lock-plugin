@@ -77,7 +77,7 @@ class GenerateLockTask extends AbstractLockTask {
             final String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
             if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
                 def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
-                def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile)
+                def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile.get())
                 if (globalLockFile.exists()) {
                     throw new BuildCancelledException("Legacy global locks are not supported with core locking.\n" +
                             "Please remove global locks.\n" +
