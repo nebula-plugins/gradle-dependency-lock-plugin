@@ -20,6 +20,8 @@ package nebula.plugin.dependencylock.caching
 
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent
+import org.junit.Rule
+import org.junit.contrib.java.lang.system.ProvideSystemProperty
 
 /**
  * Tests resolution of changing modules when used with Gradle core locking
@@ -27,7 +29,13 @@ import com.github.tomakehurst.wiremock.stubbing.ServeEvent
  * These tests resolve dependencies via HTTP to verify caching behavior, such as cacheChangingModulesFor
  */
 class ChangingModulesCacheSpec extends AbstractCachingAndDependencyLockingFeatureFlagsSpec {
+    @Rule
+    public final ProvideSystemProperty provideSystemProperty = new ProvideSystemProperty("ignoreDeprecations", "false")
+
     def setup() {
+        provideSystemProperty.setProperty("ignoreDeprecations", "true")
+        // Deprecation: Declaring dependencies using multi-string notation has been deprecated. This will fail with an error in Gradle 10. Please use single-string notation instead: "test.changing:z-762ab:1.0.0". Consult the upgrading guide for further information: https://docs.gradle.org/9.2.1/userguide/upgrading_version_9.html#dependency_multi_string_notation
+
         buildFile << """
             dependencies {
                 implementation group: 'test.changing', name:'z-$uniqueId', version: '1.0.0', changing: true
