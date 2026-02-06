@@ -44,7 +44,10 @@ class CoreLockingHelper {
 
     CoreLockingHelper(Project project) {
         this.project = project
-        shouldLockAllConfigurations = project.hasProperty("lockAllConfigurations") && (project.property("lockAllConfigurations") as String).toBoolean()
+        // Use provider API for lazy evaluation
+        shouldLockAllConfigurations = project.providers.gradleProperty("lockAllConfigurations")
+            .map { it.toBoolean() }
+            .getOrElse(false)
         configsWithActivatedDependencyLocking = new HashSet<Configuration>()
         configsNotGettingLocked = new HashSet<Configuration>()
     }
@@ -128,9 +131,10 @@ class CoreLockingHelper {
 
     private Collection<String> gatherAdditionalConfigurationsToLock() {
         def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
-        def additionalConfigurationsToLockViaProperty = project.hasProperty(ADDITIONAL_CONFIGS_TO_LOCK)
-                ? (project[ADDITIONAL_CONFIGS_TO_LOCK] as String).split(",") as Set<String>
-                : []
+        // Use provider API for lazy evaluation
+        def additionalConfigurationsToLockViaProperty = project.providers.gradleProperty(ADDITIONAL_CONFIGS_TO_LOCK)
+                .map { it.split(",") as Set<String> }
+                .getOrElse([] as Set)
         def additionalConfigurationsToLockViaExtension = dependencyLockExtension.additionalConfigurationsToLock.get() as Set<String>
         def additionalConfigNames = additionalConfigurationsToLockViaProperty + additionalConfigurationsToLockViaExtension
         additionalConfigNames

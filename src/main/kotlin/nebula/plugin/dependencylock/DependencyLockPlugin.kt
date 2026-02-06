@@ -144,7 +144,11 @@ class DependencyLockPlugin @Inject constructor(val buildFeatures: BuildFeatures)
                         " - Legacy global lock: ${globalLockFile.absolutePath}")
             }
         } else {
-            val lockAfterEvaluating = if (project.hasProperty(LOCK_AFTER_EVALUATING)) project.property(LOCK_AFTER_EVALUATING).toString().toBoolean() else extension.lockAfterEvaluating.get()
+            // Use provider chain to allow gradle property to override extension property
+            val lockAfterEvaluating = project.providers.gradleProperty(LOCK_AFTER_EVALUATING)
+                .map { it.toBoolean() }
+                .orElse(extension.lockAfterEvaluating)
+                .get()
             if (lockAfterEvaluating) {
                 LOGGER.info("Delaying dependency lock apply until beforeResolve ($LOCK_AFTER_EVALUATING set to true)")
             } else {
@@ -203,11 +207,32 @@ class DependencyLockPlugin @Inject constructor(val buildFeatures: BuildFeatures)
             val taskNames = project.gradle.startParameter.taskNames
             val hasUpdateTask = hasUpdateTask(taskNames)
 
-            val updates = if (project.hasProperty(UPDATE_DEPENDENCIES)) parseUpdates(project.property(UPDATE_DEPENDENCIES) as String) else extension.updateDependencies.get()
+            // Use provider to allow gradle property to override extension property
+            val updates = project.providers.gradleProperty(UPDATE_DEPENDENCIES)
+                .map { parseUpdates(it) }
+                .orElse(extension.updateDependencies)
+                .get()
+            
+            // Resolve validation flags using Provider API
+            val validateCoordinates = project.providers.gradleProperty(VALIDATE_DEPENDENCY_COORDINATES)
+                .map { it.toBoolean() }
+                .orElse(extension.updateDependenciesFailOnInvalidCoordinates)
+                .get()
+            val validateSimultaneousTasks = project.providers.gradleProperty(VALIDATE_SIMULTANEOUS_TASKS)
+                .map { it.toBoolean() }
+                .orElse(extension.updateDependenciesFailOnSimultaneousTaskUsage)
+                .get()
+            val validateSpecifiedDependenciesToUpdate = project.providers.gradleProperty(VALIDATE_SPECIFIED_DEPENDENCIES_TO_UPDATE)
+                .map { it.toBoolean() }
+                .orElse(extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate)
+                .get()
+            
             UpdateDependenciesValidator.validate(
                 updates, overrides, hasUpdateTask,
                 hasTask(taskNames, GENERATION_TASK_NAMES - UPDATE_TASK_NAMES),
-                project, extension
+                validateCoordinates,
+                validateSimultaneousTasks,
+                validateSpecifiedDependenciesToUpdate
             )
             val projectCoord = "${project.group}:${project.name}"
             if (hasUpdateTask && updates.any { it == projectCoord }) {
@@ -292,13 +317,19 @@ class DependencyLockPlugin @Inject constructor(val buildFeatures: BuildFeatures)
     }
 
     private fun applyOverrides(conf: Configuration, overrides: Map<*, *>) {
-        if (project.hasProperty(OVERRIDE_FILE)) {
-            LOGGER.info("Using override file ${project.property(OVERRIDE_FILE)} to lock dependencies")
-            reasons.add("com.netflix.nebula.dependency-lock using override file: ${project.property(OVERRIDE_FILE)}")
+        // Use providers to check for gradle properties
+        val overrideFileProvider = project.providers.gradleProperty(OVERRIDE_FILE)
+        if (overrideFileProvider.isPresent) {
+            val overrideFile = overrideFileProvider.get()
+            LOGGER.info("Using override file $overrideFile to lock dependencies")
+            reasons.add("com.netflix.nebula.dependency-lock using override file: $overrideFile")
         }
-        if (project.hasProperty(OVERRIDE)) {
-            LOGGER.info("Using command line overrides ${project.property(OVERRIDE)}")
-            reasons.add("com.netflix.nebula.dependency-lock using override: ${project.property(OVERRIDE)}")
+        
+        val overrideProvider = project.providers.gradleProperty(OVERRIDE)
+        if (overrideProvider.isPresent) {
+            val override = overrideProvider.get()
+            LOGGER.info("Using command line overrides $override")
+            reasons.add("com.netflix.nebula.dependency-lock using override: $override")
         }
 
         val overrideDeps = overrides.map {

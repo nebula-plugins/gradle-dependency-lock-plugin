@@ -1,12 +1,8 @@
 package nebula.plugin.dependencylock.validation
 
-import nebula.plugin.dependencylock.DependencyLockExtension
 import nebula.plugin.dependencylock.DependencyLockPlugin.Companion.UPDATE_DEPENDENCIES
-import nebula.plugin.dependencylock.DependencyLockPlugin.Companion.VALIDATE_DEPENDENCY_COORDINATES
-import nebula.plugin.dependencylock.DependencyLockPlugin.Companion.VALIDATE_SIMULTANEOUS_TASKS
 import nebula.plugin.dependencylock.DependencyLockPlugin.Companion.VALIDATE_SPECIFIED_DEPENDENCIES_TO_UPDATE
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
-import org.gradle.api.Project
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 
@@ -18,22 +14,10 @@ class UpdateDependenciesValidator {
         fun validate(
             updateDependencies: Set<String>, overrides: Map<*, *>,
             hasUpdateTask: Boolean, hasGenerateTask: Boolean,
-            project: Project,
-            extension: DependencyLockExtension
+            validateCoordinates: Boolean,
+            validateSimultaneousTasks: Boolean,
+            validateSpecifiedDependenciesToUpdate: Boolean
         ) {
-            val validateCoordinates =
-                if (project.hasProperty(VALIDATE_DEPENDENCY_COORDINATES)) project.property(
-                    VALIDATE_DEPENDENCY_COORDINATES
-                ).toString().toBoolean() else extension.updateDependenciesFailOnInvalidCoordinates.get()
-            val validateSimultaneousTasks =
-                if (project.hasProperty(VALIDATE_SIMULTANEOUS_TASKS)) project.property(
-                    VALIDATE_SIMULTANEOUS_TASKS
-                ).toString().toBoolean() else extension.updateDependenciesFailOnSimultaneousTaskUsage.get()
-            val validateSpecifiedDependenciesToUpdate =
-                if (project.hasProperty(VALIDATE_SPECIFIED_DEPENDENCIES_TO_UPDATE)) project.property(
-                    VALIDATE_SPECIFIED_DEPENDENCIES_TO_UPDATE
-                ).toString().toBoolean() else extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.get()
-
             validateCoordinates(updateDependencies, validateCoordinates)
             validateSimultaneousTasks(hasUpdateTask, hasGenerateTask, validateSimultaneousTasks)
             validateSpecifiedDependenciesToUpdate(
