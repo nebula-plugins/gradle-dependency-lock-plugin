@@ -88,6 +88,8 @@ tasks.named('compileKotlin') {
 test.dependsOn jar
 
 tasks.withType(Test).configureEach {
+    // Ensure test failures fail the build (overrides any plugin that sets ignoreFailures)
+    ignoreFailures = false
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
     testLogging {
         events "PASSED", "FAILED", "SKIPPED"

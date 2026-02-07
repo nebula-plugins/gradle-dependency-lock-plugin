@@ -21,11 +21,20 @@ import nebula.test.ProjectSpec
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Unroll
 
+import java.util.UUID
+
 class GenerateLockTaskSpec extends ProjectSpec {
     final String taskName = 'generateLock'
 
     def setupSpec() {
         Fixture.createFixtureIfNotCreated()
+    }
+
+    /** Creates a fresh project with a unique dir to avoid test pollution (shared project accumulates deps across tests). */
+    private org.gradle.api.Project createFreshProjectForLockTest() {
+        def dir = new File(projectDir, "fresh-${UUID.randomUUID()}")
+        dir.mkdirs()
+        ProjectBuilder.builder().withName('lockTest').withProjectDir(dir).build()
     }
 
     def 'simple lock'() {
@@ -125,14 +134,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
     }
 
     def 'skip dependencies via transitives when configured'() {
-        project.apply plugin: 'java'
-        project.repositories { maven { url Fixture.repo } }
-        project.dependencies {
+        def proj = createFreshProjectForLockTest()
+        proj.apply plugin: 'java'
+        proj.repositories { maven { url Fixture.repo } }
+        proj.dependencies {
             implementation 'test.example:foobaz:1.+'
         }
 
-        GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
+        GenerateLockTask task = proj.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock.set(proj.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
         task.skippedDependencies.set(['test.example:foo'] as Set)
         task.includeTransitives.set(true)
@@ -387,15 +397,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
     }
 
     def 'simple transitive lock'() {
-        project.apply plugin: 'java'
-
-        project.repositories { maven { url Fixture.repo } }
-        project.dependencies {
+        def proj = createFreshProjectForLockTest()
+        proj.apply plugin: 'java'
+        proj.repositories { maven { url Fixture.repo } }
+        proj.dependencies {
             implementation 'test.example:bar:1.+'
         }
 
-        GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
+        GenerateLockTask task = proj.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock.set(proj.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
         task.includeTransitives.set(true)
 
@@ -499,16 +509,16 @@ class GenerateLockTaskSpec extends ProjectSpec {
     }
 
     def 'one level transitive test'() {
-        project.apply plugin: 'java'
-
-        project.repositories { maven { url Fixture.repo } }
-        project.dependencies {
+        def proj = createFreshProjectForLockTest()
+        proj.apply plugin: 'java'
+        proj.repositories { maven { url Fixture.repo } }
+        proj.dependencies {
             implementation 'test.example:bar:1.+'
             implementation 'test.example:foobaz:1.+'
         }
 
-        GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
+        GenerateLockTask task = proj.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock.set(proj.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
         task.includeTransitives.set(true)
 
@@ -544,15 +554,15 @@ class GenerateLockTaskSpec extends ProjectSpec {
     }
 
     def 'multi-level transitive test'() {
-        project.apply plugin: 'java'
-
-        project.repositories { maven { url Fixture.repo } }
-        project.dependencies {
+        def proj = createFreshProjectForLockTest()
+        proj.apply plugin: 'java'
+        proj.repositories { maven { url Fixture.repo } }
+        proj.dependencies {
             implementation 'test.example:transitive:1.0.0'
         }
 
-        GenerateLockTask task = project.tasks.create(taskName, GenerateLockTask)
-        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
+        GenerateLockTask task = proj.tasks.create(taskName, GenerateLockTask)
+        task.dependenciesLock.set(proj.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(['testRuntimeClasspath'] as Set)
         task.includeTransitives.set(true)
 
