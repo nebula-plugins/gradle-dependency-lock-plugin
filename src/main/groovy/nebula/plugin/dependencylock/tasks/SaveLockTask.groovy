@@ -15,9 +15,11 @@
  */
 package nebula.plugin.dependencylock.tasks
 
+import org.gradle.api.GradleException
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
@@ -36,8 +38,21 @@ abstract class SaveLockTask extends AbstractLockTask {
     @OutputFile
     abstract RegularFileProperty getOutputLock()
 
+    // Global lock file to check for conflicts (configuration cache compatible)
+    @Internal
+    abstract RegularFileProperty getGlobalLockFile()
+
     @TaskAction
     void saveLock() {
+        // Check for global lock conflict (without accessing project at execution time)
+        // Only check if globalLockFile property was configured
+        if (getGlobalLockFile().isPresent()) {
+            def globalLock = getGlobalLockFile().get().asFile
+            if (globalLock.exists()) {
+                throw new GradleException('Cannot save individual locks when global lock is in place, run deleteGlobalLock task')
+            }
+        }
+        
         getOutputLock().asFile.get().text = getGeneratedLock().asFile.get().text
     }
 }

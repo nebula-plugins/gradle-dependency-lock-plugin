@@ -676,6 +676,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     }
 
     def 'create global lock in singleproject'() {
+        provideSystemProperty.setProperty("ignoreDeprecations", "true")
         buildFile << BUILD_GRADLE
 
         when:
@@ -687,6 +688,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
 
 
     def 'warn the user when configurations for creating global lock in multiproject are no longer resolvable, thus no longer lockable'() {
+        provideSystemProperty.setProperty("ignoreDeprecations", "true")
         disableConfigurationCache()
         addSubproject('sub1', """\
             configurations {
@@ -729,6 +731,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     }
 
     def 'save global lock in multiproject'() {
+        provideSystemProperty.setProperty("ignoreDeprecations", "true")
         disableConfigurationCache()
         setupCommonMultiproject()
 
@@ -834,6 +837,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     }
 
     def 'generateGlobalLock ignores existing global lock file'() {
+        provideSystemProperty.setProperty("ignoreDeprecations", "true")
         disableConfigurationCache()
         setupCommonMultiproject()
         new File(projectDir, 'global.lock').text = '''\
@@ -1499,6 +1503,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     }
 
     def 'global lock with skippedConfigurationNamesPrefixes'() {
+        provideSystemProperty.setProperty("ignoreDeprecations", "true")
         disableConfigurationCache()
         addSubproject('one')
         addSubproject('two')
@@ -1824,6 +1829,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     }
 
     def 'save global lock in multiproject - do not lock excluded configurations'() {
+        provideSystemProperty.setProperty("ignoreDeprecations", "true")
         disableConfigurationCache()
         setupCommonMultiprojectWithPlugins()
 
