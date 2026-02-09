@@ -1,10 +1,10 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.util.LockGenerator
-import nebula.test.ProjectSpec
+import nebula.plugin.dependencylock.FreshProjectSpec
 import spock.lang.Unroll
 
-class DiffLockTaskSpec extends ProjectSpec {
+class DiffLockTaskSpec extends FreshProjectSpec {
     def 'should diff single project no skew between configurations'() {
         given:
         def existingLock = new File(projectDir, 'dependencies.lock')

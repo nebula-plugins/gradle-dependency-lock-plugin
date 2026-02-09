@@ -19,10 +19,10 @@
 package nebula.plugin.dependencylock.utils
 
 import nebula.plugin.responsible.NebulaIntegTestPlugin
-import nebula.test.ProjectSpec
+import nebula.plugin.dependencylock.FreshProjectSpec
 import org.gradle.api.artifacts.Configuration
 
-class ConfigurationFiltersProjectSpec extends ProjectSpec {
+class ConfigurationFiltersProjectSpec extends FreshProjectSpec {
     def setup() {
         project.apply plugin: 'java-library'
     }

@@ -15,13 +15,13 @@
  */
 package nebula.plugin.dependencylock.tasks
 
-import nebula.test.ProjectSpec
+import nebula.plugin.dependencylock.FreshProjectSpec
 
 /**
  * Base class for lock task tests that provides common helper methods.
  * Specifically helps with wiring task properties for configuration cache compatibility.
  */
-abstract class LockTaskSpec extends ProjectSpec {
+abstract class LockTaskSpec extends FreshProjectSpec {
     
     /**
      * Helper to wire GenerateLockTask properties for configuration cache compatibility.

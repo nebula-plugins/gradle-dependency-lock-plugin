@@ -2,9 +2,9 @@ package nebula.plugin.dependencylock.validation
 
 import nebula.plugin.dependencylock.DependencyLockExtension
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
-import nebula.test.ProjectSpec
+import nebula.plugin.dependencylock.FreshProjectSpec
 
-class UpdateDependenciesValidatorSpec extends ProjectSpec {
+class UpdateDependenciesValidatorSpec extends FreshProjectSpec {
     private static final HashMap<Object, Object> emptyMap = new HashMap<Object, Object>()
     private static final String pluginName = 'com.netflix.nebula.dependency-lock'
     DependencyLockExtension extension
