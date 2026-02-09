@@ -18,7 +18,6 @@ package nebula.plugin.dependencylock.tasks
 import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.plugin.dependencylock.util.LockGenerator
-import org.gradle.testfixtures.ProjectBuilder
 
 class UpdateLockTaskSpec extends LockTaskSpec {
     final String taskName = 'updateLock'
@@ -40,25 +39,13 @@ class UpdateLockTaskSpec extends LockTaskSpec {
         task
     }
 
-    /** Fresh project to avoid test pollution (shared project accumulates deps). */
-    private org.gradle.api.Project createFreshProjectForUpdateLockTest() {
-        def dir = new File(projectDir, "fresh-update-${UUID.randomUUID()}")
-        dir.mkdirs()
-        def proj = ProjectBuilder.builder().withName('updateLockTest').withProjectDir(dir).build()
-        proj.apply plugin: 'java'
-        proj.repositories { maven { url Fixture.repo } }
-        proj
-    }
-
     def 'transitives are automatically updated'() {
-        def proj = createFreshProjectForUpdateLockTest()
-        proj.dependencies {
+        project.dependencies {
             implementation 'test.example:bar:1.+'
             implementation 'test.example:qux:1.0.0'
         }
 
-        def lockFile = new File(proj.projectDir, 'dependencies.lock')
-        lockFile.parentFile.mkdirs()
+        def lockFile = new File(project.projectDir, 'dependencies.lock')
         def lockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                     "test.example:bar": {
@@ -77,8 +64,8 @@ class UpdateLockTaskSpec extends LockTaskSpec {
         )
         lockFile.text = lockText
 
-        def task = proj.tasks.create(taskName, UpdateLockTask)
-        task.dependenciesLock.set(proj.layout.buildDirectory.file('dependencies.lock'))
+        def task = project.tasks.create(taskName, UpdateLockTask)
+        task.dependenciesLock.set(project.layout.buildDirectory.file('dependencies.lock'))
         task.configurationNames.set(LockGenerator.DEFAULT_CONFIG_NAMES)
         task.includeTransitives.set(true)
         wireTaskProperties(task)
