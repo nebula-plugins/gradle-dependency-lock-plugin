@@ -15,9 +15,13 @@
  */
 package nebula.plugin.dependencylock.tasks
 
+import groovy.json.JsonSlurper
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.test.ProjectSpec
+import org.gradle.testfixtures.ProjectBuilder
+
+import java.util.UUID
 
 class UpdateLockTaskSpec extends ProjectSpec {
     final String taskName = 'updateLock'
@@ -38,13 +42,25 @@ class UpdateLockTaskSpec extends ProjectSpec {
         task
     }
 
+    /** Fresh project to avoid test pollution (shared project accumulates deps). */
+    private org.gradle.api.Project createFreshProjectForUpdateLockTest() {
+        def dir = new File(projectDir, "fresh-update-${UUID.randomUUID()}")
+        dir.mkdirs()
+        def proj = ProjectBuilder.builder().withName('updateLockTest').withProjectDir(dir).build()
+        proj.apply plugin: 'java'
+        proj.repositories { maven { url Fixture.repo } }
+        proj
+    }
+
     def 'transitives are automatically updated'() {
-        project.dependencies {
+        def proj = createFreshProjectForUpdateLockTest()
+        proj.dependencies {
             implementation 'test.example:bar:1.+'
             implementation 'test.example:qux:1.0.0'
         }
 
-        def lockFile = new File(project.projectDir, 'dependencies.lock')
+        def lockFile = new File(proj.projectDir, 'dependencies.lock')
+        lockFile.parentFile.mkdirs()
         def lockText = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
                     "test.example:bar": {
@@ -63,8 +79,10 @@ class UpdateLockTaskSpec extends ProjectSpec {
         )
         lockFile.text = lockText
 
-        def task = createTask()
-        task.includeTransitives = true
+        def task = proj.tasks.create(taskName, UpdateLockTask)
+        task.dependenciesLock.set(proj.layout.buildDirectory.file('dependencies.lock'))
+        task.configurationNames.set(LockGenerator.DEFAULT_CONFIG_NAMES)
+        task.includeTransitives.set(true)
 
         def updatedLock = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly(
                 '''\
@@ -87,6 +105,8 @@ class UpdateLockTaskSpec extends ProjectSpec {
         task.lock()
 
         then:
-        task.dependenciesLock.asFile.get().text == updatedLock
+        def actual = new JsonSlurper().parseText(task.dependenciesLock.asFile.get().text)
+        def expected = new JsonSlurper().parseText(updatedLock)
+        actual == expected
     }
 }
