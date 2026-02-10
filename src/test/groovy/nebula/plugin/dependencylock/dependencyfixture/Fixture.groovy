@@ -15,13 +15,38 @@
  */
 package nebula.plugin.dependencylock.dependencyfixture
 
-import java.util.concurrent.atomic.AtomicBoolean
 import nebula.test.dependencies.DependencyGraph
 import nebula.test.dependencies.GradleDependencyGenerator
 
+import java.io.RandomAccessFile
+import java.nio.channels.FileLock
+import java.util.concurrent.atomic.AtomicBoolean
+
 class Fixture {
-    static AtomicBoolean created = new AtomicBoolean(false)
-    static String repo = new File('build/testrepogen/mavenrepo').absolutePath
+    /** Project root (directory containing build/), derived from this class's location. */
+    private static File getProjectRoot() {
+        def source = Fixture.class.protectionDomain.codeSource.location
+        def current = new File(source.toURI())
+        if (current.file) {
+            current = current.parentFile
+        }
+        while (current != null) {
+            def buildDir = new File(current, 'build')
+            if (buildDir.exists() && buildDir.directory) {
+                return current
+            }
+            current = current.parentFile
+        }
+        throw new IllegalStateException("Could not find project root (directory containing build/) from ${source}")
+    }
+
+    private static final String TESTREPOGEN_DIR = new File(getProjectRoot(), 'build/testrepogen').absolutePath
+    static final String repo = new File(TESTREPOGEN_DIR, 'mavenrepo').absolutePath
+
+    private static final AtomicBoolean created = new AtomicBoolean(false)
+    private static final File LOCK_FILE = new File(TESTREPOGEN_DIR, '.fixture.lock')
+    /** Marker so we can detect if another spec overwrote the shared repo (e.g. old PathAwareDependencyDiffSpec). */
+    private static final String FIXTURE_MARKER = 'nebula-dependency-lock-fixture-v1'
 
     static createFixture() {
         def myGraph = [
@@ -43,13 +68,41 @@ class Fixture {
           'circular:oneleveldeep:1.0.0 -> circular:a:1.0.0'
         ]
 
-        def generator = new GradleDependencyGenerator(new DependencyGraph(myGraph))
+        def generator = new GradleDependencyGenerator(new DependencyGraph(myGraph), TESTREPOGEN_DIR)
         generator.generateTestMavenRepo()
+        new File(TESTREPOGEN_DIR, '.fixture-marker').text = FIXTURE_MARKER
     }
 
+    /**
+     * Creates the shared Maven repo once. Uses an absolute path and a file lock so that
+     * when multiple test workers run in parallel, only one creates the repo and others wait.
+     */
     static createFixtureIfNotCreated() {
-        if (!created.getAndSet(true)) {
-            createFixture()
+        if (created.getAndSet(true)) {
+            return
+        }
+        LOCK_FILE.parentFile.mkdirs()
+        def raf = new RandomAccessFile(LOCK_FILE, 'rw')
+        FileLock lock = null
+        try {
+            lock = raf.channel.lock()
+            def markerFile = new File(TESTREPOGEN_DIR, '.fixture-marker')
+            if (!markerFile.exists() || markerFile.text != FIXTURE_MARKER) {
+                def mavenrepoDir = new File(TESTREPOGEN_DIR, 'mavenrepo')
+                if (mavenrepoDir.exists()) {
+                    mavenrepoDir.deleteDir()
+                }
+                createFixture()
+            }
+        } finally {
+            if (lock != null) {
+                try {
+                    lock.release()
+                } catch (IOException ignored) {}
+            }
+            try {
+                raf.close()
+            } catch (IOException ignored) {}
         }
     }
 }

@@ -17,12 +17,11 @@ package nebula.plugin.dependencylock
 
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
 import nebula.plugin.dependencylock.model.GradleDependency
-import nebula.test.ProjectSpec
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.testfixtures.ProjectBuilder
 
-class DependencyLockPluginSpec extends ProjectSpec {
+class DependencyLockPluginSpec extends FreshProjectSpec {
     String pluginName = 'com.netflix.nebula.dependency-lock'
 
     def setupSpec() {

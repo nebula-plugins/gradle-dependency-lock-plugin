@@ -1,8 +1,6 @@
 package nebula.plugin.dependencylock
 
-import nebula.test.ProjectSpec
-
-class DependencyLockReaderSpec extends ProjectSpec {
+class DependencyLockReaderSpec extends FreshProjectSpec {
     def 'read global lock with an extraneous transitive that is not in the lock due to manual editing'() {
         project.plugins.apply('java')
         DependencyLockReader reader = new DependencyLockReader(project)

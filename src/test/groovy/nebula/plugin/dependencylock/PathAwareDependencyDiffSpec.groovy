@@ -74,7 +74,7 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
                 'test.example:cycle2:2.0.0 -> test.example:cycle1:2.0.0',
         ]
 
-        def generator = new GradleDependencyGenerator(new DependencyGraph(myGraph))
+        def generator = new GradleDependencyGenerator(new DependencyGraph(myGraph), "${projectDir}/pathaware-maven-repo")
         generator.generateTestMavenRepo()
         repoDir = generator.getMavenRepoDir()
     }
@@ -1076,7 +1076,7 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
                         .build())
                 .build()
 
-        def generator = new GradleDependencyGenerator(myGraph)
+        def generator = new GradleDependencyGenerator(myGraph, "${projectDir}/pathaware-ivy-repo")
         generator.generateTestIvyRepo()
 
         new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.pathAwareDependencyDiff=true"

@@ -27,11 +27,17 @@ import org.gradle.api.BuildCancelledException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.artifacts.result.DependencyResult
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.artifacts.result.ResolvedDependencyResult
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
@@ -74,36 +80,69 @@ abstract class GenerateLockTask extends AbstractLockTask {
     @Optional
     abstract Property<Boolean> getIncludeTransitives()
 
+    // Configuration cache compatibility - Capture project state at configuration time
+    @Internal
+    abstract DirectoryProperty getProjectDirectory()
+
+    @Internal
+    abstract Property<String> getGlobalLockFileName()
+
+    @Internal
+    abstract Property<Boolean> getDependencyLockIgnored()
+
+    // Official Gradle Resolution APIs (Approach 1)
+    // Captures dependency graphs using Gradle's official APIs instead of Configuration objects
+    @Input
+    abstract MapProperty<String, Provider<ResolvedComponentResult>> getResolutionResults()
+
+    @Input
+    abstract ListProperty<String> getPeerProjectCoordinates()
+
     @TaskAction
     void lock() {
-        //TODO: address Invocation of Task.project at execution time has been deprecated.
-        DeprecationLogger.whileDisabled {
-            final String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
-            final String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
-            if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
-                def dependencyLockExtension = project.extensions.findByType(DependencyLockExtension)
-                def globalLockFile = new File(project.projectDir, dependencyLockExtension.globalLockFile.get())
-                if (globalLockFile.exists()) {
-                    throw new BuildCancelledException("Legacy global locks are not supported with core locking.\n" +
-                            "Please remove global locks.\n" +
-                            " - Global locks: ${globalLockFile.absolutePath}")
-                }
+        final String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
+        final String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
+        
+        // Use captured properties instead of project access for configuration cache compatibility
+        if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
+            def globalLockFile = new File(getProjectDirectory().get().asFile, getGlobalLockFileName().get())
+            if (globalLockFile.exists()) {
+                throw new BuildCancelledException("Legacy global locks are not supported with core locking.\n" +
+                        "Please remove global locks.\n" +
+                        " - Global locks: ${globalLockFile.absolutePath}")
+            }
 
-                throw new BuildCancelledException("generateLock is not supported with core locking.\n" +
-                        "Please use $WRITE_CORE_LOCK_TASK_TO_RUN\n" +
-                        "or do a one-time migration with `./gradlew $MIGRATE_TO_CORE_LOCK_TASK_NAME` to preserve the current lock state")
-            }
-            if (DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
-                throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
-            }
-            // Use explicit configurations if set, otherwise auto-detect lockable configurations
-            def explicitConfs = getConfigurations()
-            Collection<Configuration> confs = (explicitConfs != null) ? explicitConfs : 
-                lockableConfigurations(project, project, getConfigurationNames().getOrElse([] as Set), getSkippedConfigurationNames().getOrElse([] as Set))
-            Map dependencyMap = new GenerateLockFromConfigurations().lock(confs)
-            new DependencyLockWriter(getDependenciesLock().get().asFile, getSkippedDependencies().getOrElse([] as Set)).writeLock(dependencyMap)
+            throw new BuildCancelledException("generateLock is not supported with core locking.\n" +
+                    "Please use $WRITE_CORE_LOCK_TASK_TO_RUN\n" +
+                    "or do a one-time migration with `./gradlew $MIGRATE_TO_CORE_LOCK_TASK_NAME` to preserve the current lock state")
+        }
+        
+        if (getDependencyLockIgnored().get()) {
+            throw new DependencyLockException("Dependency locks cannot be generated. The plugin is disabled for this project (dependencyLock.ignore is set to true)")
         }
 
+        // Use NEW API (Resolution APIs) or OLD API (Configuration objects)
+        // Check configurations FIRST to allow conventionMapping to work for global lock
+        // Note: Access via getConfigurations() to trigger conventionMapping evaluation
+        Map dependencyMap
+        def confs = getConfigurations()  // Access via getter to trigger conventionMapping
+        if (confs != null && !confs.isEmpty()) {
+            // OLD API: For global lock (NOT configuration cache compatible)
+            // Global lock uses conventionMapping.configurations which is evaluated lazily when accessed via getter
+            // Use peerProjectCoordinates property to avoid accessing project at execution time
+            def peerCoordinates = peerProjectCoordinates.get()
+            dependencyMap = new GenerateLockFromConfigurations().lock(confs, peerCoordinates)
+        } else if (resolutionResults.isPresent() && !resolutionResults.get().isEmpty()) {
+            // NEW API: Configuration cache compatible!
+            def resolutionMap = resolutionResults.get()
+            def peerCoordinates = peerProjectCoordinates.get()
+            dependencyMap = new GenerateLockFromConfigurations().lock(resolutionMap, peerCoordinates)
+        } else {
+            // No configurations to lock - valid for projects without dependencies (e.g., root project in multiproject builds)
+            dependencyMap = [:]
+        }
+        
+        new DependencyLockWriter(getDependenciesLock().get().asFile, getSkippedDependencies().getOrElse([] as Set)).writeLock(dependencyMap)
     }
 
     static Collection<Configuration> lockableConfigurations(Project taskProject, Project project, Set<String> configurationNames, Set<String> skippedConfigurationNamesPrefixes = []) {
@@ -195,11 +234,162 @@ abstract class GenerateLockTask extends AbstractLockTask {
     }
 
     class GenerateLockFromConfigurations {
-        Map<LockKey, LockValue> lock(Collection<Configuration> confs) {
+        /**
+         * Generate lock file using Gradle's official Resolution API (NEW API - Configuration Cache Compatible).
+         * @param resolutionMap Map of configuration name to Provider<ResolvedComponentResult>
+         * @param peerCoordinates List of peer project coordinates in "group:name" format
+         * @return Map of LockKey to LockValue
+         */
+        Map<LockKey, LockValue> lock(Map<String, Provider<ResolvedComponentResult>> resolutionMap, List<String> peerCoordinates) {
             Map<LockKey, LockValue> deps = [:].withDefault { new LockValue() }
 
-            // Peers are all the projects in the build to which this plugin has been applied.
-            def peers = project.rootProject.allprojects.collect { new LockKey(group: it.group, artifact: it.name) }
+            // Convert peer coordinates to a Set for fast lookup
+            Set<String> peerSet = new HashSet<>(peerCoordinates.collect { it.toString() })
+
+            resolutionMap.each { String configName, Provider<ResolvedComponentResult> rootProvider ->
+                ResolvedComponentResult root = rootProvider.get()
+
+                // Process first-level dependencies
+                root.dependencies.each { DependencyResult depResult ->
+                    if (depResult instanceof ResolvedDependencyResult) {
+                        ResolvedDependencyResult resolvedDep = (ResolvedDependencyResult) depResult
+                        def component = resolvedDep.selected
+
+                        def moduleVersion = component.moduleVersion
+                        if (moduleVersion == null) {
+                            return // Skip if no module version
+                        }
+
+                        // Apply filter
+                        if (!filter(moduleVersion.group, moduleVersion.name, moduleVersion.version)) {
+                            return
+                        }
+
+                        def key = new LockKey(group: moduleVersion.group, artifact: moduleVersion.name, configuration: configName)
+                        String coordinate = "${moduleVersion.group}:${moduleVersion.name}".toString()
+
+                        // Check if this is a peer project
+                        if (!peerSet.contains(coordinate)) {
+                            // Standard external dependency
+                            deps[key].locked = moduleVersion.version
+                        } else {
+                            // Project dependency
+                            deps[key].project = true
+
+                            // If we don't include transitives, handle project's first-level deps
+                            if (!getIncludeTransitives().getOrElse(false)) {
+                                handleSiblingTransitivesNew(component, configName, deps, peerSet)
+                            }
+                        }
+
+                        // If requested, lock all transitive dependencies
+                        if (getIncludeTransitives().getOrElse(false)) {
+                            deps[key].childrenVisited = true
+                            handleTransitiveNew(component, configName, deps, peerSet, key)
+                        }
+                    }
+                }
+            }
+
+            // Add overrides
+            getOverrides().getOrElse([:]).each { String k, String overrideVersion ->
+                def (overrideGroup, overrideArtifact) = k.tokenize(':')
+                deps.each { depLockKey, depValue ->
+                    if (depLockKey.group == overrideGroup && depLockKey.artifact == overrideArtifact) {
+                        depValue.viaOverride = overrideVersion
+                    }
+                }
+            }
+
+            return deps
+        }
+
+        /**
+         * Handle transitive dependencies of project dependencies (when includeTransitives is false).
+         * Uses NEW Resolution API.
+         */
+        private void handleSiblingTransitivesNew(ResolvedComponentResult sibling, String configName, Map<LockKey, LockValue> deps, Set<String> peerSet) {
+            def moduleVersion = sibling.moduleVersion
+            if (moduleVersion == null) return
+
+            def parent = new LockKey(group: moduleVersion.group, artifact: moduleVersion.name, configuration: configName)
+
+            sibling.dependencies.each { DependencyResult depResult ->
+                if (depResult instanceof ResolvedDependencyResult) {
+                    def component = ((ResolvedDependencyResult) depResult).selected
+                    def childModuleVersion = component.moduleVersion
+                    if (childModuleVersion == null) return
+
+                    def key = new LockKey(group: childModuleVersion.group, artifact: childModuleVersion.name, configuration: configName)
+                    String coordinate = "${childModuleVersion.group}:${childModuleVersion.name}".toString()
+
+                    // Record where this dependency came from
+                    deps[key].firstLevelTransitive << parent
+
+                    if (peerSet.contains(coordinate)) {
+                        // Another project dependency
+                        deps[key].project = true
+
+                        if (!deps[key].childrenVisited && component.dependencies.size() > 0) {
+                            deps[key].childrenVisited = true
+                            handleSiblingTransitivesNew(component, configName, deps, peerSet)
+                        }
+                    } else {
+                        // External dependency
+                        deps[key].locked = childModuleVersion.version
+                    }
+                }
+            }
+        }
+
+        /**
+         * Handle transitive dependencies recursively (when includeTransitives is true).
+         * Uses NEW Resolution API.
+         */
+        private void handleTransitiveNew(ResolvedComponentResult component, String configName, Map<LockKey, LockValue> deps, Set<String> peerSet, LockKey parent) {
+            component.dependencies.each { DependencyResult depResult ->
+                if (depResult instanceof ResolvedDependencyResult) {
+                    def childComponent = ((ResolvedDependencyResult) depResult).selected
+                    def moduleVersion = childComponent.moduleVersion
+                    if (moduleVersion == null) return
+
+                    def key = new LockKey(group: moduleVersion.group, artifact: moduleVersion.name, configuration: configName)
+                    String coordinate = "${moduleVersion.group}:${moduleVersion.name}".toString()
+
+                    // Visit each dependency only once
+                    if (!deps[key].childrenVisited) {
+                        if (peerSet.contains(coordinate)) {
+                            deps[key].project = true
+                        } else {
+                            deps[key].locked = moduleVersion.version
+                        }
+
+                        if (childComponent.dependencies.size() > 0) {
+                            deps[key].childrenVisited = true
+                            handleTransitiveNew(childComponent, configName, deps, peerSet, key)
+                        }
+                    }
+
+                    // Record the transitive relationship
+                    deps[key].transitive << parent
+                }
+            }
+        }
+
+        /**
+         * OLD API: Generate lock file using Configuration objects (for global lock - NOT config cache compatible).
+         * @param confs Collection of Configuration objects
+         * @param peerCoordinates List of peer project coordinates ("group:name" strings)
+         * @return Map of LockKey to LockValue
+         */
+        Map<LockKey, LockValue> lock(Collection<Configuration> confs, List<String> peerCoordinates) {
+            Map<LockKey, LockValue> deps = [:].withDefault { new LockValue() }
+
+            // Convert peer coordinates to LockKey objects for comparison
+            def peers = peerCoordinates.collect { coord ->
+                def parts = coord.split(':')
+                new LockKey(group: parts.size() > 1 ? parts[0] : '', artifact: parts.size() > 1 ? parts[1] : parts[0])
+            }
 
             confs.each { Configuration configuration ->
                 // Lock the version of each dependency specified in the build script as resolved by Gradle.
@@ -304,4 +494,3 @@ abstract class GenerateLockTask extends AbstractLockTask {
         }
     }
 }
-
