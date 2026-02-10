@@ -28,7 +28,6 @@ class GlobalLockLauncherSpec extends BaseIntegrationTestKitSpec implements Globa
 
     def setup() {
         definePluginOutsideOfPluginBlock = true
-        keepFiles = true
         disableConfigurationCache()
     }
 

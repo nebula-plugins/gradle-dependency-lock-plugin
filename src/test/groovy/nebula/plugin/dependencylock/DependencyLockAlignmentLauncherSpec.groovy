@@ -30,7 +30,6 @@ import java.util.jar.Manifest
 class DependencyLockAlignmentLauncherSpec extends BaseIntegrationTestKitSpec {
     def setup() {
         definePluginOutsideOfPluginBlock = true
-        keepFiles = true
         disableConfigurationCache()
     }
 

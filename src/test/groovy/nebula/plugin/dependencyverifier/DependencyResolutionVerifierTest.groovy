@@ -32,7 +32,6 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
     def mavenrepo
 
     def setup() {
-        keepFiles = true
         def graph = new DependencyGraphBuilder()
                 .addModule('test.nebula:a:1.0.0')
                 .addModule('test.nebula:b:1.0.0')

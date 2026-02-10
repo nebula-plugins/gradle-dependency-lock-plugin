@@ -61,7 +61,6 @@ class AbstractCachingAndDependencyLockingFeatureFlagsSpec extends BaseIntegratio
     }
 
     def setup() {
-        keepFiles = true
         new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.coreLockingSupport=true"
 
         projectName = getProjectDir().getName().replaceAll(/_\d+/, '')
