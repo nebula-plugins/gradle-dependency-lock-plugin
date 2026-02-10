@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,49 +18,32 @@ package nebula.plugin.dependencyverifier
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 
-/**
- * Extension for configuring dependency resolution verification.
- * Uses Gradle's Property API for lazy configuration and configuration cache compatibility.
- */
+/** Extension for dependency resolution verification (Property API, config-cache friendly). */
 abstract class DependencyResolutionVerifierExtension {
-    /**
-     * Whether to fail the build when verification issues are found.
-     * Default: true
-     */
+    /** Fail the build when verification finds issues. Default: true */
     abstract Property<Boolean> getShouldFailTheBuild()
-    
-    /**
-     * Configuration names to exclude from verification.
-     * Default: empty set
-     */
+
+    /** Configuration names to exclude from verification. Default: empty set */
     abstract SetProperty<String> getConfigurationsToExclude()
-    
-    /**
-     * Additional message to append when missing versions are detected.
-     * Default: empty string
-     */
+
+    /** Message to append when missing versions are detected. Default: empty */
     abstract Property<String> getMissingVersionsMessageAddition()
-    
-    /**
-     * Additional message to append when resolved version doesn't match locked version.
-     * Default: empty string
-     */
+
+    /** Message to append when resolved version does not match locked. Default: empty */
     abstract Property<String> getResolvedVersionDoesNotEqualLockedVersionMessageAddition()
-    
-    /**
-     * Task names to exclude from verification.
-     * Default: empty set
-     */
+
+    /** Task names to exclude from verification. Default: empty set */
     abstract SetProperty<String> getTasksToExclude()
-    
-    /**
-     * Constructor sets default conventions for all properties.
-     */
+
+    /** When true (default): full lock validation. When false: only resolution errors, config cache compatible. */
+    abstract Property<Boolean> getEnableLockFileValidation()
+
     DependencyResolutionVerifierExtension() {
         shouldFailTheBuild.convention(true)
         configurationsToExclude.convention([] as Set)
         missingVersionsMessageAddition.convention('')
         resolvedVersionDoesNotEqualLockedVersionMessageAddition.convention('')
         tasksToExclude.convention([] as Set)
+        enableLockFileValidation.convention(true)
     }
 }

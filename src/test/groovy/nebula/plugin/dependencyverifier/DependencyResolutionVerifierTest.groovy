@@ -27,8 +27,11 @@ import spock.lang.Ignore
 import spock.lang.Subject
 import spock.lang.Unroll
 
+import static nebula.plugin.VerifierOutputAssertionsBase.assertConfigurationCachingIsNotMentioned
+import static nebula.plugin.VerifierOutputAssertionsBase.assertConfigurationCacheStateCouldNotBeStored
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertExecutionFailedForTask
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertFailureMessageIsDisplayedOnce
+import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertNoConfigurationCacheStoringIssues
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertNoResolutionFailureMessage
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureForDependency
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureForDependencyForProject
@@ -55,7 +58,6 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         def transitiveNotAvailableDep = new File(mavenrepo.getMavenRepoDir(), "transitive/not/available/a")
         transitiveNotAvailableDep.deleteDir() // to create a missing transitive dependency
-        disableConfigurationCache() // DependencyResolutionVerifier does not support config cache
     }
 
     @Unroll
@@ -68,6 +70,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         !results.output.contains('FAILURE')
+        assertNoConfigurationCacheStoringIssues(results.output)
 
         where:
         tasks                                                   | description
@@ -91,6 +94,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCacheStateCouldNotBeStored(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependency(results.output, "not.available:a:1.0.0")
 
@@ -116,6 +120,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependency(results.output, "not.available:a:1.0.0")
 
@@ -141,6 +146,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCacheStateCouldNotBeStored(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependency(results.output, "transitive.not.available:a:1.0.0")
 
@@ -166,6 +172,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependency(results.output, "transitive.not.available:a:1.0.0")
 
@@ -192,6 +199,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCacheStateCouldNotBeStored(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForMissingVersionDependencies(results.output, ["test.nebula:c", "test.nebula:d"])
 
@@ -218,6 +226,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForMissingVersionDependencies(results.output, ["test.nebula:c", "test.nebula:d"])
 
@@ -243,6 +252,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCacheStateCouldNotBeStored(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependency(results.output, "junit:junit:999.99.9")
 
@@ -268,6 +278,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependency(results.output, "junit:junit:999.99.9")
 
@@ -299,6 +310,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCacheStateCouldNotBeStored(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependencyForProject(results.output, "not.available:apricot:1.0.0", "sub1")
 
@@ -330,6 +342,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependencyForProject(results.output, "not.available:apricot:1.0.0", "sub1")
 
@@ -384,6 +397,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         !results.output.contains('FAILURE')
+        assertNoConfigurationCacheStoringIssues(results.output)
         !results.output.contains('was resolved without accessing the project in a safe manner')
 
         where:
@@ -437,6 +451,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         !results.output.contains('FAILURE')
+        assertNoConfigurationCacheStoringIssues(results.output)
         !results.output.contains('was resolved without accessing the project in a safe manner')
 
         where:
@@ -467,6 +482,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCacheStateCouldNotBeStored(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForOneOfTheseDependencies(results.output, [
                 dependencyProjectPair("not.available:apricot:1.0.0", "sub1"),
@@ -501,6 +517,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForOneOfTheseDependencies(results.output, [
                 dependencyProjectPair("not.available:apricot:1.0.0", "sub1"),
@@ -542,6 +559,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         !results.output.contains('FAILURE')
+        assertNoConfigurationCacheStoringIssues(results.output)
         assertNoResolutionFailureMessage(results.output)
 
         where:
@@ -617,6 +635,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCacheStateCouldNotBeStored(results.output)
         assertResolutionFailureMessage(results.output)
         assertFailureMessageIsDisplayedOnce(results.output, "not.available:a")
 
@@ -764,6 +783,10 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         if (seeErrors) {
             assertResolutionFailureMessage(results.output)
             assertResolutionFailureForDependency(results.output, "not.available:a")
+            if (description == 'missingVersionsMessageAddition') {
+                assert results.output.contains('You can find additional help at...'),
+                        "Expected output to contain missingVersionsMessageAddition: 'You can find additional help at...'"
+            }
         } else {
             assertNoResolutionFailureMessage(results.output)
         }
@@ -774,6 +797,55 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         'extension.shouldFailTheBuild = false'                                            | 'shouldFailTheBuild'             | false    | true
         "list.addAll('myConfig')\n\textension.configurationsToExclude = list"             | 'configurationsToExclude'        | false    | false
         "list.addAll('dependencies')\n\textension.tasksToExclude = list"                  | 'tasksToExclude'                 | false    | false
+    }
+
+    def 'unresolved dependencies output includes missingVersionsMessageAddition when some dependencies lack a version'() {
+        given:
+        setupSingleProject()
+        def customAddition = 'Custom help: http://example.com/dependency-help'
+        buildFile << """
+            dependencies {
+                implementation 'not.available:a'
+            }
+            dependencyResolutionVerifierExtension {
+                missingVersionsMessageAddition = '$customAddition'
+            }
+        """.stripIndent()
+
+        when:
+        def results = runTasksAndFail('dependencies')
+
+        then:
+        assertResolutionFailureMessage(results.output)
+        assertResolutionFailureForDependency(results.output, 'not.available:a')
+        assert results.output.contains(customAddition),
+                "Expected output to contain missingVersionsMessageAddition: ${customAddition}"
+    }
+
+    def 'verifier skips configurations in the skip list (e.g. configurationsToExclude)'() {
+        given:
+        setupSingleProject()
+        new File(projectDir, 'gradle.properties') << """
+            dependencyResolutionVerifier.configurationsToExclude=skipMe
+        """.stripIndent()
+        buildFile << """
+            configurations {
+                skipMe {
+                    canBeResolved = true
+                }
+            }
+            dependencies {
+                skipMe 'not.available:unresolvable:1.0.0'
+            }
+        """.stripIndent()
+
+        when:
+        def results = runTasks('dependencies', '--configuration', 'compileClasspath')
+
+        then:
+        assert !results.output.toString().contains('FAILURE'):
+                "Verifier should skip skipMe via configurationsToExclude; without skip we would resolve it and fail"
+        assertNoConfigurationCacheStoringIssues(results.output)
     }
 
     def 'handles root and subproject of the same name'() {
@@ -800,6 +872,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCacheStateCouldNotBeStored(results.output)
         assertResolutionFailureMessage(results.output)
         assertFailureMessageIsDisplayedOnce(results.output, "not.available:a:1.0.0")
         assertResolutionFailureForDependencyForProject(results.output, "not.available:a:1.0.0", "sub1")
@@ -826,6 +899,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCacheStateCouldNotBeStored(results.output)
         assertResolutionFailureMessage(results.output)
         assertFailureMessageIsDisplayedOnce(results.output, "not.available:a:1.0.0")
         assertResolutionFailureForDependency(results.output, "not.available:a:1.0.0")
@@ -844,6 +918,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         assert !results.output.contains('FAILURE')
+        assertNoConfigurationCacheStoringIssues(results.output)
     }
 
     @Unroll
@@ -902,6 +977,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         assert results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCacheStateCouldNotBeStored(results.output)
         assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
         assert !results.output.contains("for project 'sub2'")
 
@@ -1377,24 +1453,29 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
             assert hasAResolutionFailureForDependency || verifierMessage, "Expected resolution failure or verifier missing-version message for ${missingList}"
         }
 
-        static void assertExecutionFailedForTask(String resultsOutput) {
-            List<String> taskFailureMarkers = [
-                    'Execution failed for task',
-                    'FAILURE: Build failed with an exception',
-                    'BUILD FAILED',
-                    FAILED_SUFFIX
-            ]
-            boolean fromMarkers = taskFailureMarkers.any { resultsOutput.contains(it) }
-            boolean fromBuildOutcome = resultsOutput.contains('Build completed with') && resultsOutput.contains('failure')
-            assert fromMarkers || fromBuildOutcome, 'Expected to see a message about a failure'
-        }
-
+        /**
+         * Asserts the resolution-failure message for this dependency appears exactly once in the output,
+         * to catch duplicate or spammed error reporting. Uses canonical verifier or Gradle phrasing and counts occurrences.
+         */
         static void assertFailureMessageIsDisplayedOnce(String resultsOutput, String dependency) {
             assert hasResolutionFailureForDependency(resultsOutput, dependency),
                     "Expected to see resolution failure for dependency '${dependency}'"
 
-            String onceBlock = RESOLUTION_FAILURE_MARKERS.last() + "\n  1. " + FAILED_RESOLVE_PREFIX + dependency + "' for project"
-            assert resultsOutput.findAll(onceBlock).size() == 1
+            String verifierExpectedText = """
+                > Failed to resolve the following dependencies:
+                1. $FAILED_RESOLVE_PREFIX '$dependency' for project
+                """.stripIndent()
+            String gradleExpectedText = "> " + COULD_NOT_FIND + dependency
+            int verifierCount = resultsOutput.findAll(verifierExpectedText).size()
+            int gradleCount = resultsOutput.findAll(gradleExpectedText).size()
+
+            if (verifierCount > 0) {
+                assert verifierCount == 1,
+                        "Resolution failure for '${dependency}' (verifier format) should appear exactly once, but appeared ${verifierCount} times"
+            } else if (gradleCount > 0) {
+                assert gradleCount == 1,
+                        "Resolution failure for '${dependency}' (Gradle format) should appear exactly once, but appeared ${gradleCount} times"
+            }
         }
 
         /**

@@ -25,6 +25,7 @@ import nebula.plugin.dependencylock.utils.NameMatcher
 import nebula.plugin.dependencylock.validation.UpdateDependenciesValidator
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifier
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
+import nebula.plugin.dependencyverifier.DependencyVerificationBuildService
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -32,6 +33,8 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.configuration.BuildFeatures
+import org.gradle.api.flow.FlowProviders
+import org.gradle.api.flow.FlowScope
 import org.gradle.api.internal.StartParameterInternal
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -39,12 +42,16 @@ import java.io.File
 import java.util.Objects
 import javax.inject.Inject
 
-class DependencyLockPlugin @Inject constructor(val buildFeatures: BuildFeatures) : Plugin<Project> {
+class DependencyLockPlugin @Inject constructor(
+    val buildFeatures: BuildFeatures,
+    val flowScope: FlowScope,
+    val flowProviders: FlowProviders
+) : Plugin<Project> {
 
     companion object {
         const val EXTENSION_NAME = "dependencyLock"
         const val COMMIT_EXTENSION_NAME = "commitDependencyLock"
-        const val DEPENDENCY_RESOLTION_VERIFIER_EXTENSION = "dependencyResolutionVerifierExtension"
+        const val DEPENDENCY_RESOLUTION_VERIFIER_EXTENSION = "dependencyResolutionVerifierExtension"
         const val LOCK_FILE = "dependencyLock.lockFile"
         const val GLOBAL_LOCK_FILE = "dependencyLock.globalLockFile"
         const val LOCK_AFTER_EVALUATING = "dependencyLock.lockAfterEvaluating"
@@ -81,21 +88,37 @@ class DependencyLockPlugin @Inject constructor(val buildFeatures: BuildFeatures)
         this.project = project
         this.lockReader = DependencyLockReader(project)
 
+        // Register BuildService ONCE for the entire build (shared across all projects)
+        // Use registerIfAbsent so multiple projects don't create multiple services
+        val verificationService = project.gradle.sharedServices.registerIfAbsent(
+            "dependencyVerificationService",
+            DependencyVerificationBuildService::class.java
+        ) {}
+
         var dependencyResolutionVerifierExtension = project.rootProject.extensions.findByType(DependencyResolutionVerifierExtension::class.java)
         if (dependencyResolutionVerifierExtension == null) {
-            dependencyResolutionVerifierExtension = project.rootProject.extensions.create(DEPENDENCY_RESOLTION_VERIFIER_EXTENSION, DependencyResolutionVerifierExtension::class.java)
+            dependencyResolutionVerifierExtension = project.rootProject.extensions.create(DEPENDENCY_RESOLUTION_VERIFIER_EXTENSION, DependencyResolutionVerifierExtension::class.java)
         }
         lockedDepsPerProjectForConfigurations[uniqueProjectKey(project)] = mutableMapOf()
         overrideDepsPerProjectForConfigurations[uniqueProjectKey(project)] = mutableMapOf()
 
         val startParameter = project.gradle.startParameter as StartParameterInternal
         val isMigratingToCoreLocks = startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)
-        var isConfigurationCache = buildFeatures.configurationCache.active.isPresent && buildFeatures.configurationCache.active.get()
-        if (!isMigratingToCoreLocks && !isConfigurationCache) {
+        if (!isMigratingToCoreLocks) {
             /* MigrateToCoreLocks can be involved with migrating dependencies that were previously unlocked.
                Verifying resolution based on the base lockfiles causes a `LockOutOfDateException` from the initial DependencyLockingArtifactVisitor state
             */
-            DependencyResolutionVerifier().verifySuccessfulResolution(project)
+            // Defer verification setup until after project evaluation
+            // This ensures other plugins (like java) have created their configurations first
+            project.afterEvaluate {
+                // Pass BuildService provider, extension, and Flow API services to verifier
+                DependencyResolutionVerifier(
+                    verificationService, 
+                    dependencyResolutionVerifierExtension,
+                    flowScope,
+                    flowProviders
+                ).verifySuccessfulResolution(project)
+            }
         }
 
         val extension = project.extensions.create(EXTENSION_NAME, DependencyLockExtension::class.java)

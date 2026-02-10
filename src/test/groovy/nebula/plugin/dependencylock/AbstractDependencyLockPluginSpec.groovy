@@ -17,7 +17,11 @@ class AbstractDependencyLockPluginSpec extends BaseIntegrationTestKitSpec {
     def projectName
 
     def setup() {
-        new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.coreLockingSupport=true"
+        new File(projectDir, 'gradle.properties').text = '''
+            org.gradle.configuration-cache=true
+            systemProp.nebula.features.coreLockingSupport=true
+            org.gradle.warning.mode=fail
+            '''.stripIndent()
 
         projectName = getProjectDir().getName().replaceAll(/_\d+/, '')
         settingsFile << """\

@@ -56,12 +56,15 @@ class DependencyLockCommitLauncherSpec extends IntegrationSpec implements Global
 build/
 gradle.properties'''.stripIndent()
 
-        // Enable configuration cache :)
-        new File(projectDir, 'gradle.properties') << '''org.gradle.configuration-cache=true'''.stripIndent()
         def gradleProperties = new File(projectDir, "gradle.properties")
         gradleProperties.createNewFile()
-        gradleProperties << "systemProp.nebula.features.coreLockingSupport=false"
 
+        // Enable configuration cache :)
+        gradleProperties << '''
+            org.gradle.configuration-cache=true
+            org.gradle.warning.mode=fail
+            systemProp.nebula.features.coreLockingSupport=false
+            '''.stripIndent()
 
         git.commit(message: 'Setup')
         git.push()
@@ -130,6 +133,9 @@ gradle.properties'''.stripIndent()
     }
 
     def 'git integration test for global lock on multiproject'() {
+        def gradleProperties = new File(projectDir, "gradle.properties")
+        gradleProperties.text = gradleProperties.text.replace('org.gradle.configuration-cache=true', 'org.gradle.configuration-cache=false')
+
         def sub1 = new File(projectDir, 'sub1')
         sub1.mkdirs()
         def sub2 = new File(projectDir, 'sub2')

@@ -10,6 +10,7 @@ import spock.lang.IgnoreIf
 import spock.lang.Subject
 import spock.lang.Unroll
 
+import static nebula.plugin.VerifierOutputAssertionsBase.assertConfigurationCachingIsNotMentioned
 import static nebula.plugin.VerifierOutputAssertionsBase.assertResolutionFailureForDependencyForProject
 import static nebula.plugin.dependencylock.DependencyLockPluginWithCoreVerifierSpec.OutputAssertions.assertExecutionFailedForTask
 import static nebula.plugin.dependencylock.DependencyLockPluginWithCoreVerifierSpec.OutputAssertions.assertLockStateFailure
@@ -63,6 +64,7 @@ empty=annotationProcessor,testAnnotationProcessor
 
         then:
         results.output.contains('FAILURE')
+        assertConfigurationCachingIsNotMentioned(results.output)
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -102,6 +104,7 @@ empty=annotationProcessor,testAnnotationProcessor
 
         then:
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertLockStateFailure(results.output, 'test.nebula:d:1.0.0')
     }
 
@@ -118,6 +121,7 @@ empty=annotationProcessor,testAnnotationProcessor
 
         then:
         results.output.contains('FAILURE')
+        assertConfigurationCachingIsNotMentioned(results.output)
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -149,6 +153,7 @@ empty=annotationProcessor,testAnnotationProcessor
 
         then:
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertLockStateFailure(results.output, 'test.nebula:d:1.0.0', 'sub1')
     }
 
@@ -164,6 +169,7 @@ empty=annotationProcessor,testAnnotationProcessor
 
         then:
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertResolutionFailureMessage(results.output)
         assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES)
 
@@ -184,6 +190,7 @@ empty=annotationProcessor,testAnnotationProcessor
 
         then:
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertResolutionFailureMessage(results.output)
         assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES, 'sub1')
 
@@ -201,7 +208,7 @@ empty=annotationProcessor,testAnnotationProcessor
         when:
         buildFile << MIX_OF_RESOLVABLE_AND_UNRESOLVABLE_DEPENDENCIES
 
-        runTasksAndFail(*tasks(lockArg))
+        def results = runTasksAndFail(*tasks(lockArg))
 
         then:
         def secondRunLockfile = new File(projectDir, 'gradle.lockfile')
@@ -209,6 +216,8 @@ empty=annotationProcessor,testAnnotationProcessor
                 "empty=annotationProcessor,testAnnotationProcessor",
                 "test.nebula:d:1.0.0=compileClasspath,runtimeClasspath\nempty=annotationProcessor,testAnnotationProcessor"
         )
+        results.output.contains('FAILURE')
+        assertConfigurationCachingIsNotMentioned(results.output)
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -225,7 +234,7 @@ empty=annotationProcessor,testAnnotationProcessor
         new File(projectDir, 'sub1/build.gradle') << MIX_OF_RESOLVABLE_AND_UNRESOLVABLE_DEPENDENCIES
         new File(projectDir, 'sub2/build.gradle') << MIX_OF_RESOLVABLE_AND_UNRESOLVABLE_DEPENDENCIES
 
-        runTasksAndFail(*tasks(lockArg, true))
+        def results = runTasksAndFail(*tasks(lockArg, true))
 
         then:
         def secondRunLockfile = new File(projectDir, 'sub1/gradle.lockfile')
@@ -233,6 +242,9 @@ empty=annotationProcessor,testAnnotationProcessor
                 "empty=annotationProcessor,testAnnotationProcessor",
                 "test.nebula:d:1.0.0=compileClasspath,runtimeClasspath\nempty=annotationProcessor,testAnnotationProcessor"
         )
+
+        results.output.contains('FAILURE')
+        assertConfigurationCachingIsNotMentioned(results.output)
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -251,6 +263,7 @@ empty=annotationProcessor,testAnnotationProcessor
 
         then:
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertResolutionFailureForDependencyForProject(results.output, 'not.available:a:1.0.0', "sub1")
         assertResolutionFailureForDependencyForProject(results.output, 'not.available:a:1.0.0', "sub2")
         assertOutputMentionsProjects(results.output, ['sub1', 'sub2'])
@@ -275,6 +288,7 @@ empty=annotationProcessor,testAnnotationProcessor
 
         then:
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertResolutionFailureForDependencyForProject(results.output, 'not.available:a:1.0.0', 'sub1')
         assertResolutionFailureForDependencyForProject(results.output, 'not.available:a:1.0.0', 'sub2')
         assertOutputMentionsProjects(results.output, ['sub1', 'sub2'])
@@ -297,6 +311,7 @@ empty=annotationProcessor,testAnnotationProcessor
 
         then:
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertResolutionFailureMessage(results.output)
         assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES)
 
@@ -318,6 +333,7 @@ empty=annotationProcessor,testAnnotationProcessor
 
         then:
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES)
 
         where:
@@ -336,6 +352,7 @@ empty=annotationProcessor,testAnnotationProcessor
 
         then:
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES)
 
         where:
@@ -354,6 +371,7 @@ empty=annotationProcessor,testAnnotationProcessor
 
         then:
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES)
 
         where:
@@ -374,6 +392,7 @@ empty=annotationProcessor,testAnnotationProcessor
 
         then:
         assertExecutionFailedForTask(results.output)
+        assertConfigurationCachingIsNotMentioned(results.output)
         assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES)
 
         where:
