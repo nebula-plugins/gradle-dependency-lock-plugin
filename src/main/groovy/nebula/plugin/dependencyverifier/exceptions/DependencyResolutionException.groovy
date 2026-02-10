@@ -19,4 +19,8 @@ class DependencyResolutionException extends RuntimeException {
     DependencyResolutionException(String message) {
         super(message)
     }
+
+    DependencyResolutionException(String message, Throwable cause) {
+        super(message, cause)
+    }
 }
