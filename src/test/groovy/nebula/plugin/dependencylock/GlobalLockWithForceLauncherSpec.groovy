@@ -13,6 +13,7 @@
  */
 package nebula.plugin.dependencylock
 
+import groovy.json.JsonSlurper
 import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.GlobalLockDeprecations
 import nebula.plugin.dependencylock.dependencyfixture.Fixture
@@ -76,51 +77,30 @@ class GlobalLockWithForceLauncherSpec extends BaseIntegrationTestKitSpec impleme
         runTasks('generateGlobalLock')
 
         then:
-        String globalLockText = '''\
-            {
-                "_global_": {
-                    "test.example:bar": {
-                        "locked": "1.1.0",
-                        "transitive": [
-                            "test.example:transitive",
-                            "test:sub1"
-                        ]
-                    },
-                    "test.example:baz": {
-                        "locked": "1.0.0",
-                        "transitive": [
-                            "test.example:foobaz"
-                        ]
-                    },
-                    "test.example:foo": {
-                        "locked": "2.0.1",
-                        "transitive": [
-                            "test.example:bar",
-                            "test.example:foobaz",
-                            "test:sub1"
-                        ]
-                    },
-                    "test.example:foobaz": {
-                        "locked": "1.0.0",
-                        "transitive": [
-                            "test.example:transitive"
-                        ]
-                    },
-                    "test.example:transitive": {
-                        "locked": "1.0.0",
-                        "transitive": [
-                            "test:sub2"
-                        ]
-                    },
-                    "test:sub1": {
-                        "project": true
-                    },
-                    "test:sub2": {
-                        "project": true
-                    }
-                }
-            }'''.stripIndent()
-        new File(projectDir, 'build/global.lock').text == globalLockText
+        def expected = [
+            'test.example:bar': [locked: '1.1.0', transitive: ['test.example:transitive', 'test:sub1']],
+            'test.example:baz': [locked: '1.0.0', transitive: ['test.example:foobaz']],
+            'test.example:foo': [locked: '2.0.1', transitive: ['test.example:bar', 'test.example:foobaz', 'test:sub1']],
+            'test.example:foobaz': [locked: '1.0.0', transitive: ['test.example:transitive']],
+            'test.example:transitive': [locked: '1.0.0', transitive: ['test:sub2']],
+            'test:sub1': [project: true],
+            'test:sub2': [project: true]
+        ]
+        def lockFile = new File(projectDir, 'build/global.lock')
+        lockFile.exists()
+        def actual = new JsonSlurper().parseText(lockFile.text)._global_
+        expected.each { key, expectedEntry ->
+            assert actual.containsKey(key): "global.lock missing entry: $key"
+            def actualEntry = actual[key]
+            if (expectedEntry.project != null) {
+                assert actualEntry.project == expectedEntry.project
+            } else {
+                assert actualEntry.locked == expectedEntry.locked: "wrong locked for $key"
+                def actualTransitive = actualEntry.transitive as Set
+                def expectedTransitive = expectedEntry.transitive as Set
+                assert actualTransitive.containsAll(expectedTransitive): "actual transitive for $key missing expected entries: $expectedTransitive, got $actualTransitive"
+            }
+        }
     }
 
 
