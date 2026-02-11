@@ -80,7 +80,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILURE')
         results.output.contains('Execution failed for task')
         assertResolutionFailureMessage(results.output)
-        results.output.contains("1. Failed to resolve 'not.available:a:1.0.0' for project")
+        assertResolutionFailureForDependency(results.output, "not.available:a:1.0.0")
 
         where:
         tasks                                                                                | description
@@ -107,7 +107,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILURE')
         results.output.contains('Execution failed for task')
         assertResolutionFailureMessage(results.output)
-        results.output.contains("1. Failed to resolve 'transitive.not.available:a:1.0.0' for project")
+        assertResolutionFailureForDependency(results.output, "transitive.not.available:a:1.0.0")
 
         where:
         tasks                                                                                | description
@@ -135,8 +135,8 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILURE')
         results.output.contains('Execution failed for task')
         assertResolutionFailureMessage(results.output)
-        results.output.contains("1. Failed to resolve 'test.nebula:c' for project")
-        results.output.contains("2. Failed to resolve 'test.nebula:d' for project")
+        assertResolutionFailureForDependency(results.output, "test.nebula:c")
+        assertResolutionFailureForDependency(results.output, "test.nebula:d", 2)
         results.output.contains("The following dependencies are missing a version: test.nebula:c, test.nebula:d")
         results.output.contains("If you have been using a BOM")
 
@@ -165,7 +165,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILURE')
         results.output.contains('Execution failed for task')
         assertResolutionFailureMessage(results.output)
-        results.output.contains("1. Failed to resolve 'junit:junit:999.99.9' for project")
+        assertResolutionFailureForDependency(results.output, "junit:junit:999.99.9")
 
         where:
         tasks                                                                                | description
@@ -198,7 +198,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILURE')
         results.output.contains('Execution failed for task')
         assertResolutionFailureMessage(results.output)
-        results.output.contains("1. Failed to resolve 'not.available:apricot:1.0.0' for project 'sub1'")
+        assertResolutionFailureForDependencyForProject(results.output, "not.available:apricot:1.0.0", "sub1")
 
         where:
         tasks                                                                                      | description
@@ -286,8 +286,8 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILURE')
         results.output.contains('Execution failed for task')
         assertResolutionFailureMessage(results.output)
-        results.output.contains("1. Failed to resolve 'not.available:apricot:1.0.0' for project 'sub1'")
-        results.output.contains("1. Failed to resolve 'not.available:banana-leaf:2.0.0' for project 'sub2'")
+        assertResolutionFailureForDependencyForProject(results.output, "not.available:apricot:1.0.0", "sub1")
+        assertResolutionFailureForDependencyForProject(results.output, "not.available:banana-leaf:2.0.0", "sub2")
 
         where:
         tasks                                                                                      | description
@@ -383,8 +383,8 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         results.output.contains('Execution failed for task')
-        results.output.findAll("> Failed to resolve the following dependencies:\n" +
-                "    1. Failed to resolve 'not.available:a' for project").size() == 1
+        results.output.findAll("Failed to resolve the following dependencies:\n" +
+                "  1. Failed to resolve 'not.available:a' for project").size() == 1
 
         where:
         tasks << [['build'], ['build', '--parallel']]
@@ -409,7 +409,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         assert results.output.contains('FAILURE')
         assertResolutionFailureMessage(results.output)
-        assert results.output.contains("1. Failed to resolve '${actualMissingDep ?: dependency}' for project")
+        assertResolutionFailureForDependency(results.output, actualMissingDep ?: dependency)
 
         where:
         failureType                | dependency                       | actualMissingDep
@@ -448,7 +448,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         assert results.output.contains('FAILURE')
         assertResolutionFailureMessage(results.output)
-        assert results.output.contains("1. Failed to resolve '${actualMissingDep ?: dependency}' for project 'sub1'")
+        assert assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
         assert !results.output.contains("for project 'sub2'")
 
         where:
@@ -488,7 +488,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         assert results.output.contains('FAILURE')
         assertResolutionFailureMessage(results.output)
-        assert results.output.contains("1. Failed to resolve '${actualMissingDep ?: dependency}' for project 'sub1'")
+        assert assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
         assert !results.output.contains("for project 'sub2'")
 
         where:
@@ -529,10 +529,10 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         if (seeErrors) {
-            assert results.output.contains('Failed to resolve the following dependencies:')
-            assert results.output.contains("1. Failed to resolve 'not.available:a' for project")
+            assert assertResolutionFailureMessage(results.output)
+            assert assertResolutionFailureForDependency(results.output, "not.available:a")
         } else {
-            assert !results.output.contains('Failed to resolve the following dependencies:')
+            assert assertNoResolutionFailureMessage(results.output)
         }
 
         where:
@@ -568,8 +568,9 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILURE')
         results.output.contains('Execution failed for task')
         assertResolutionFailureMessage(results.output)
-        results.output.findAll('> Failed to resolve the following dependencies:').size() == 1
-        results.output.contains("1. Failed to resolve 'not.available:a:1.0.0' for project 'sub1'")
+        results.output.findAll("Failed to resolve the following dependencies:\n" +
+                "  1. Failed to resolve 'not.available:a:1.0.0' for project").size() == 1
+        assertResolutionFailureForDependencyForProject(results.output, "not.available:a:1.0.0", "sub1")
     }
 
     def 'handles build failure from task configuration issue'() {
@@ -594,8 +595,9 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILURE')
         results.output.contains('Execution failed for task')
         assertResolutionFailureMessage(results.output)
-        results.output.findAll('> Failed to resolve the following dependencies:').size() == 1
-        results.output.contains("1. Failed to resolve 'not.available:a:1.0.0' for project")
+        results.output.findAll("Failed to resolve the following dependencies:\n" +
+                "  1. Failed to resolve 'not.available:a:1.0.0' for project").size() == 1
+        assertResolutionFailureForDependency(results.output, "not.available:a:1.0.0")
     }
 
     def 'handles task that requires resolved configuration with no issues'() {
@@ -630,8 +632,8 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         assert results.output.contains('FAILURE')
-        assert results.output.contains('Failed to resolve the following dependencies:')
-        assert results.output.contains("1. Failed to resolve '${actualMissingDep ?: dependency}' for project")
+        assert assertResolutionFailureMessage(results.output)
+        assert assertResolutionFailureForDependency(results.output, actualMissingDep ?: dependency)
 
         where:
         failureType                | dependency                       | actualMissingDep
@@ -669,7 +671,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         assert results.output.contains('FAILURE')
         assert results.output.contains('Failed to resolve the following dependencies:')
-        assert results.output.contains("1. Failed to resolve '${actualMissingDep ?: dependency}' for project 'sub1'")
+        assert assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
         assert !results.output.contains("for project 'sub2'")
 
         where:
@@ -708,7 +710,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         assert results.output.contains('FAILURE')
         assertResolutionFailureMessage(results.output)
-        assert results.output.contains("1. Failed to resolve '${actualMissingDep ?: dependency}' for project 'sub1'")
+        assert assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
         assert !results.output.contains("for project 'sub2'")
 
         where:
@@ -1127,12 +1129,24 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         assert results.output.contains('> Task :included-project:sub1:dependencies')
-        assert results.output.contains("1. Failed to resolve 'not.available:b:1.0.0' for project 'sub1'")
+        assert assertResolutionFailureForDependencyForProject(results.output, "not.available:b:1.0.0", "sub1")
         assert results.output.contains('FAIL')
     }
 
     private static boolean assertResolutionFailureMessage(String resultsOutput) {
-        return resultsOutput.contains('> Failed to resolve the following dependencies:')
+        return resultsOutput.contains('Failed to resolve the following dependencies:')
+    }
+
+    private static boolean assertResolutionFailureForDependency(String resultsOutput, String dependency) {
+        return assertResolutionFailureForDependency(resultsOutput, dependency, 1)
+    }
+
+    private static boolean assertResolutionFailureForDependency(String resultsOutput, String dependency, int index) {
+        return resultsOutput.contains("${index}. Failed to resolve '" + dependency + "' for project")
+    }
+
+    private static boolean assertResolutionFailureForDependencyForProject(String resultsOutput, String dependency, String projectName) {
+        return resultsOutput.contains("1. Failed to resolve '" + dependency + "' for project '" + projectName + "'")
     }
 
     private static boolean assertNoResolutionFailureMessage(String resultsOutput) {
