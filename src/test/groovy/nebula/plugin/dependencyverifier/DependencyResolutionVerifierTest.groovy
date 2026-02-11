@@ -607,13 +607,11 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
-        results.output.findAll("Failed to resolve the following dependencies:\n" +
-                "  1. Failed to resolve 'not.available:a' for project").size() == 1
+        assertFailureMessageIsDisplayedOnce(results.output, "not.available:a")
 
         where:
         tasks << [['build'], ['build', '--parallel']]
     }
-
 
     @Unroll
     def 'handles task configuration issue due to #failureType'() {
@@ -792,8 +790,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
-        results.output.findAll("Failed to resolve the following dependencies:\n" +
-                "  1. Failed to resolve 'not.available:a:1.0.0' for project").size() == 1
+        assertFailureMessageIsDisplayedOnce(results.output, "not.available:a:1.0.0")
         assertResolutionFailureForDependencyForProject(results.output, "not.available:a:1.0.0", "sub1")
     }
 
@@ -819,8 +816,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
-        results.output.findAll("Failed to resolve the following dependencies:\n" +
-                "  1. Failed to resolve 'not.available:a:1.0.0' for project").size() == 1
+        assertFailureMessageIsDisplayedOnce(results.output, "not.available:a:1.0.0")
         assertResolutionFailureForDependency(results.output, "not.available:a:1.0.0")
     }
 
@@ -1379,6 +1375,11 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
     private static void assertExecutionFailedForTask(String resultsOutput) {
         assert resultsOutput.contains('Execution failed for task'), "Expected to see a message about a task execution failure"
+    }
+
+    private static void assertFailureMessageIsDisplayedOnce(String resultsOutput, String dependency) {
+        assert resultsOutput.findAll("Failed to resolve the following dependencies:\n" +
+                "  1. Failed to resolve '" + dependency + "' for project").size() == 1
     }
 
     private static String taskThatRequiresConfigurationDependencies() {
