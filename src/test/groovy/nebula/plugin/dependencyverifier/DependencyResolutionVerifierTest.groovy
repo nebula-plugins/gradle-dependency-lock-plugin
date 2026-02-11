@@ -1135,8 +1135,9 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
     private static String taskThatRequiresConfigurationDependencies() {
         return """
             task taskWithConfigurationDependencies {
-                inputs.files configurations.compileClasspath
-                doLast { configurations.compileClasspath.each { } }
+                def compileClasspath = configurations.compileClasspath
+                inputs.files compileClasspath
+                doLast { compileClasspath.each { } }
             }
             if(project.tasks.findByName('dependenciesForAll') != null) {
                 project.tasks.getByName('dependenciesForAll').dependsOn project.tasks.named('taskWithConfigurationDependencies')
