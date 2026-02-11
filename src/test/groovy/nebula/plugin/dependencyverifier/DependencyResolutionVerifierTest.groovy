@@ -1357,28 +1357,28 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         assert results.output.contains('FAIL')
     }
 
-    private static boolean assertResolutionFailureMessage(String resultsOutput) {
-        return resultsOutput.contains('Failed to resolve the following dependencies:')
+    private static void assertResolutionFailureMessage(String resultsOutput) {
+        assert resultsOutput.contains('Failed to resolve the following dependencies:'), "Expected to see a message about failure to resolve dependencies"
     }
 
-    private static boolean assertResolutionFailureForDependency(String resultsOutput, String dependency) {
-        return assertResolutionFailureForDependency(resultsOutput, dependency, 1)
+    private static void assertResolutionFailureForDependency(String resultsOutput, String dependency) {
+        assert assertResolutionFailureForDependency(resultsOutput, dependency, 1), "Expected to see a message about failure to resolve a specific dependency"
     }
 
-    private static boolean assertResolutionFailureForDependency(String resultsOutput, String dependency, int index) {
-        return resultsOutput.contains("${index}. Failed to resolve '" + dependency + "' for project")
+    private static void assertResolutionFailureForDependency(String resultsOutput, String dependency, int index) {
+        assert resultsOutput.contains("${index}. Failed to resolve '" + dependency + "' for project"), "Expected to see a message about failure to resolve a specific dependency at a specific index"
     }
 
-    private static boolean assertResolutionFailureForDependencyForProject(String resultsOutput, String dependency, String projectName) {
-        return resultsOutput.contains("1. Failed to resolve '" + dependency + "' for project '" + projectName + "'")
+    private static void assertResolutionFailureForDependencyForProject(String resultsOutput, String dependency, String projectName) {
+        assert resultsOutput.contains("1. Failed to resolve '" + dependency + "' for project '" + projectName + "'"), "Expected to see a message about failure to resolve a specific dependency for a specific project"
     }
 
-    private static boolean assertNoResolutionFailureMessage(String resultsOutput) {
-        return !resultsOutput.contains('Failed to resolve the following dependencies:')
+    private static void assertNoResolutionFailureMessage(String resultsOutput) {
+        assert !resultsOutput.contains('Failed to resolve the following dependencies:'), "Expected to _not_ see a message about failure to resolve dependencies"
     }
 
-    private static boolean assertExecutionFailedForTask(String resultsOutput) {
-        return resultsOutput.contains('Execution failed for task')
+    private static void assertExecutionFailedForTask(String resultsOutput) {
+        assert resultsOutput.contains('Execution failed for task'), "Expected to see a message about a task execution failure"
     }
 
     private static String taskThatRequiresConfigurationDependencies() {
