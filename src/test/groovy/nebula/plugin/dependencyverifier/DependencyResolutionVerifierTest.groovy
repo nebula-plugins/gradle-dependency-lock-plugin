@@ -532,7 +532,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         !results.output.contains('FAILURE')
-        assert assertNoResolutionFailureMessage(results.output)
+        assertNoResolutionFailureMessage(results.output)
 
         where:
         tasks                                                   | description
@@ -672,7 +672,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         assert results.output.contains('FAILURE')
         assertResolutionFailureMessage(results.output)
-        assert assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
+        assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
         assert !results.output.contains("for project 'sub2'")
 
         where:
@@ -712,7 +712,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         assert results.output.contains('FAILURE')
         assertResolutionFailureMessage(results.output)
-        assert assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
+        assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
         assert !results.output.contains("for project 'sub2'")
 
         where:
@@ -753,10 +753,10 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         if (seeErrors) {
-            assert assertResolutionFailureMessage(results.output)
-            assert assertResolutionFailureForDependency(results.output, "not.available:a")
+            assertResolutionFailureMessage(results.output)
+            assertResolutionFailureForDependency(results.output, "not.available:a")
         } else {
-            assert assertNoResolutionFailureMessage(results.output)
+            assertNoResolutionFailureMessage(results.output)
         }
 
         where:
@@ -856,8 +856,8 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         assert results.output.contains('FAILURE')
-        assert assertResolutionFailureMessage(results.output)
-        assert assertResolutionFailureForDependency(results.output, actualMissingDep ?: dependency)
+        assertResolutionFailureMessage(results.output)
+        assertResolutionFailureForDependency(results.output, actualMissingDep ?: dependency)
 
         where:
         failureType                | dependency                       | actualMissingDep
@@ -895,7 +895,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         assert results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
-        assert assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
+        assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
         assert !results.output.contains("for project 'sub2'")
 
         where:
@@ -934,7 +934,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         assert results.output.contains('FAILURE')
         assertResolutionFailureMessage(results.output)
-        assert assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
+        assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
         assert !results.output.contains("for project 'sub2'")
 
         where:
@@ -1353,7 +1353,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         assert results.output.contains('> Task :included-project:sub1:dependencies')
-        assert assertResolutionFailureForDependencyForProject(results.output, "not.available:b:1.0.0", "sub1")
+        assertResolutionFailureForDependencyForProject(results.output, "not.available:b:1.0.0", "sub1")
         assert results.output.contains('FAIL')
     }
 
@@ -1362,7 +1362,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
     }
 
     private static void assertResolutionFailureForDependency(String resultsOutput, String dependency) {
-        assert assertResolutionFailureForDependency(resultsOutput, dependency, 1), "Expected to see a message about failure to resolve a specific dependency"
+        assertResolutionFailureForDependency(resultsOutput, dependency, 1)
     }
 
     private static void assertResolutionFailureForDependency(String resultsOutput, String dependency, int index) {
