@@ -78,7 +78,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependency(results.output, "not.available:a:1.0.0")
 
@@ -103,7 +103,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependency(results.output, "not.available:a:1.0.0")
 
@@ -128,7 +128,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependency(results.output, "transitive.not.available:a:1.0.0")
 
@@ -153,7 +153,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependency(results.output, "transitive.not.available:a:1.0.0")
 
@@ -179,7 +179,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependency(results.output, "test.nebula:c")
         assertResolutionFailureForDependency(results.output, "test.nebula:d", 2)
@@ -208,7 +208,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependency(results.output, "test.nebula:c")
         assertResolutionFailureForDependency(results.output, "test.nebula:d", 2)
@@ -236,7 +236,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependency(results.output, "junit:junit:999.99.9")
 
@@ -261,7 +261,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependency(results.output, "junit:junit:999.99.9")
 
@@ -292,7 +292,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependencyForProject(results.output, "not.available:apricot:1.0.0", "sub1")
 
@@ -323,7 +323,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependencyForProject(results.output, "not.available:apricot:1.0.0", "sub1")
 
@@ -460,7 +460,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependencyForProject(results.output, "not.available:apricot:1.0.0", "sub1")
         assertResolutionFailureForDependencyForProject(results.output, "not.available:banana-leaf:2.0.0", "sub2")
@@ -492,7 +492,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependencyForProject(results.output, "not.available:apricot:1.0.0", "sub1")
         assertResolutionFailureForDependencyForProject(results.output, "not.available:banana-leaf:2.0.0", "sub2")
@@ -606,7 +606,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         results.output.findAll("Failed to resolve the following dependencies:\n" +
                 "  1. Failed to resolve 'not.available:a' for project").size() == 1
 
@@ -790,7 +790,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
         results.output.findAll("Failed to resolve the following dependencies:\n" +
                 "  1. Failed to resolve 'not.available:a:1.0.0' for project").size() == 1
@@ -817,7 +817,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         results.output.contains('FAILURE')
-        results.output.contains('Execution failed for task')
+        assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
         results.output.findAll("Failed to resolve the following dependencies:\n" +
                 "  1. Failed to resolve 'not.available:a:1.0.0' for project").size() == 1
@@ -894,7 +894,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         assert results.output.contains('FAILURE')
-        assert results.output.contains('Failed to resolve the following dependencies:')
+        assertExecutionFailedForTask(results.output)
         assert assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
         assert !results.output.contains("for project 'sub2'")
 
@@ -1375,6 +1375,10 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
     private static boolean assertNoResolutionFailureMessage(String resultsOutput) {
         return !resultsOutput.contains('Failed to resolve the following dependencies:')
+    }
+
+    private static boolean assertExecutionFailedForTask(String resultsOutput) {
+        return resultsOutput.contains('Execution failed for task')
     }
 
     private static String taskThatRequiresConfigurationDependencies() {
