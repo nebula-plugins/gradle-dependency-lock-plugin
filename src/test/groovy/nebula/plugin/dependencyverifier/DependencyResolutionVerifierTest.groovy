@@ -26,8 +26,16 @@ import spock.lang.Ignore
 import spock.lang.Subject
 import spock.lang.Unroll
 
+import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertExecutionFailedForTask
+import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertFailureMessageIsDisplayedOnce
+import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertNoResolutionFailureMessage
+import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureForDependency
+import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureForDependencyForProject
+import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureMessage
+
 @Subject(DependencyResolutionVerifierKt)
 class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
+
     def mavenrepo
 
     def setup() {
@@ -1353,33 +1361,65 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         assert results.output.contains('FAIL')
     }
 
-    private static void assertResolutionFailureMessage(String resultsOutput) {
-        assert resultsOutput.contains('Failed to resolve the following dependencies:'), "Expected to see a message about failure to resolve dependencies"
-    }
+    private static class OutputAssertions {
+        // Output markers from Gradle vs verifier (config cache can change which path runs)
+        private static final List<String> RESOLUTION_FAILURE_MARKERS = [
+            'Could not resolve all files for configuration',
+            'Could not find',
+            'verifyDependencyResolution FAILED',
+            'Failed to resolve the following dependencies:'
+        ]
+        private static final List<String> RESOLUTION_ABSENCE_MARKERS = [
+            'Could not resolve all files for configuration',
+            'Failed to resolve the following dependencies:'
+        ]
+        private static final List<String> TASK_FAILURE_MARKERS = [
+            'Execution failed for task',
+            'FAILURE: Build failed with an exception',
+            'BUILD FAILED',
+            ' FAILED'
+        ]
+        private static final String COULD_NOT_FIND = 'Could not find '
+        private static final String FAILED_RESOLVE_PREFIX = "Failed to resolve '"
+        private static final String FAILED_SUFFIX = ' FAILED'
+        private static final String MISSING_A_VERSION = 'missing a version'
+        private static final String REQUIRED_BY = 'Required by:'
+        private static final String FOR_PROJECT = "for project '"
+        private static final String PROJECT_NAMED = "Project ':"
 
-    private static void assertResolutionFailureForDependency(String resultsOutput, String dependency) {
-        assertResolutionFailureForDependency(resultsOutput, dependency, 1)
-    }
+        static void assertResolutionFailureMessage(String resultsOutput) {
+            assert resultsOutput.contains(RESOLUTION_FAILURE_MARKERS.last()),
+                    'Expected to see a message about failure to resolve dependencies'
+        }
 
-    private static void assertResolutionFailureForDependency(String resultsOutput, String dependency, int index) {
-        assert resultsOutput.contains("${index}. Failed to resolve '" + dependency + "' for project"), "Expected to see a message about failure to resolve a specific dependency at a specific index"
-    }
+        static void assertResolutionFailureForDependency(String resultsOutput, String dependency) {
+            assertResolutionFailureForDependency(resultsOutput, dependency, 1)
+        }
 
-    private static void assertResolutionFailureForDependencyForProject(String resultsOutput, String dependency, String projectName) {
-        assert resultsOutput.contains("1. Failed to resolve '" + dependency + "' for project '" + projectName + "'"), "Expected to see a message about failure to resolve a specific dependency for a specific project"
-    }
+        static void assertResolutionFailureForDependency(String resultsOutput, String dependency, int index) {
+            assert resultsOutput.contains("${index}. " + FAILED_RESOLVE_PREFIX + dependency + "' for project"),
+                    'Expected to see a message about failure to resolve a specific dependency at a specific index'
+        }
 
-    private static void assertNoResolutionFailureMessage(String resultsOutput) {
-        assert !resultsOutput.contains('Failed to resolve the following dependencies:'), "Expected to _not_ see a message about failure to resolve dependencies"
-    }
+        static void assertResolutionFailureForDependencyForProject(String resultsOutput, String dependency, String projectName) {
+            assert resultsOutput.contains("1. " + FAILED_RESOLVE_PREFIX + dependency + "' " + FOR_PROJECT + projectName + "'"),
+                    'Expected to see a message about failure to resolve a specific dependency for a specific project'
+        }
 
-    private static void assertExecutionFailedForTask(String resultsOutput) {
-        assert resultsOutput.contains('Execution failed for task'), "Expected to see a message about a task execution failure"
-    }
+        static void assertNoResolutionFailureMessage(String resultsOutput) {
+            assert RESOLUTION_ABSENCE_MARKERS.every { !resultsOutput.contains(it) },
+                    'Expected to _not_ see a message about failure to resolve dependencies'
+        }
 
-    private static void assertFailureMessageIsDisplayedOnce(String resultsOutput, String dependency) {
-        assert resultsOutput.findAll("Failed to resolve the following dependencies:\n" +
-                "  1. Failed to resolve '" + dependency + "' for project").size() == 1
+        static void assertExecutionFailedForTask(String resultsOutput) {
+            assert resultsOutput.contains(TASK_FAILURE_MARKERS[0]),
+                    'Expected to see a message about a task execution failure'
+        }
+
+        static void assertFailureMessageIsDisplayedOnce(String resultsOutput, String dependency) {
+            String onceBlock = RESOLUTION_FAILURE_MARKERS.last() + "\n  1. " + FAILED_RESOLVE_PREFIX + dependency + "' for project"
+            assert resultsOutput.findAll(onceBlock).size() == 1
+        }
     }
 
     private static String taskThatRequiresConfigurationDependencies() {
