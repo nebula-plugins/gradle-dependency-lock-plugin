@@ -70,6 +70,7 @@ gradle.properties'''.stripIndent()
     def cleanup() {
         if (git) git.close()
         if (originGit) originGit.close()
+        projectDir.deleteDir() // similar to keepFile flag, as the project remains in `build/nebulatest` without this
     }
 
     def setupSpec() {

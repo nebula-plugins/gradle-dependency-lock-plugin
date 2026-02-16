@@ -23,13 +23,10 @@ import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.junit.Stubbing
 import nebula.plugin.BaseIntegrationTestKitSpec
-import nebula.test.IntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraph
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
-import org.junit.Rule
-import org.junit.contrib.java.lang.system.ProvideSystemProperty
 
 class AbstractCachingAndDependencyLockingFeatureFlagsSpec extends BaseIntegrationTestKitSpec {
     static WireMockServer wireMockServer
@@ -61,7 +58,6 @@ class AbstractCachingAndDependencyLockingFeatureFlagsSpec extends BaseIntegratio
     }
 
     def setup() {
-        keepFiles = true
         new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.coreLockingSupport=true"
 
         projectName = getProjectDir().getName().replaceAll(/_\d+/, '')

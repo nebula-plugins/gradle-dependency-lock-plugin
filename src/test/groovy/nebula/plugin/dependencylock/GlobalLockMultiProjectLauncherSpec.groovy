@@ -30,7 +30,6 @@ class GlobalLockMultiProjectLauncherSpec extends BaseIntegrationTestKitSpec impl
 
     def setup() {
         definePluginOutsideOfPluginBlock = true
-        keepFiles = true
         disableConfigurationCache()
     }
 

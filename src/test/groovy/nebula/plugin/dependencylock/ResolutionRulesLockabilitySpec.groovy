@@ -34,15 +34,13 @@ import java.util.jar.Manifest
  * Tests resolution rules locking for both global lock and regular project lock scenarios.
  */
 class ResolutionRulesLockabilitySpec extends BaseIntegrationTestKitSpec implements GlobalLockDeprecations {
-    
+
     @Rule
     public final ProvideSystemProperty ignoreGlobalLockDeprecations = globalLockDeprecationRule()
-    
+
     def mavenForRules
 
     def setup() {
-        keepFiles = true
-
         setupRules()
 
         buildFile << """\

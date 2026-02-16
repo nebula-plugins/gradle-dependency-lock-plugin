@@ -1880,6 +1880,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         '''.stripIndent()
 
         def repo = new File(projectDir,'repo')
+        
+        // Create version 1.0
         def sample = new File(repo, 'sample/recommender/1.0')
         sample.mkdirs()
         def sampleFile = new File(sample, 'recommender-1.0.pom')
@@ -1890,6 +1892,30 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
               <groupId>sample</groupId>
               <artifactId>recommender</artifactId>
               <version>1.0</version>
+
+              <dependencyManagement>
+                <dependencies>
+                  <dependency>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                    <version>1.1.1</version>
+                  </dependency>
+                </dependencies>
+              </dependencyManagement>
+            </project>
+        '''
+        
+        // Create version 1.1 (requested in build but will be locked to 1.0)
+        def sample11 = new File(repo, 'sample/recommender/1.1')
+        sample11.mkdirs()
+        def sampleFile11 = new File(sample11, 'recommender-1.1.pom')
+        sampleFile11 << '''
+            <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+              <modelVersion>4.0.0</modelVersion>
+              <groupId>sample</groupId>
+              <artifactId>recommender</artifactId>
+              <version>1.1</version>
 
               <dependencyManagement>
                 <dependencies>
