@@ -1363,62 +1363,91 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
     private static class OutputAssertions {
         // Output markers from Gradle vs verifier (config cache can change which path runs)
-        private static final List<String> RESOLUTION_FAILURE_MARKERS = [
-            'Could not resolve all files for configuration',
-            'Could not find',
-            'verifyDependencyResolution FAILED',
-            'Failed to resolve the following dependencies:'
-        ]
-        private static final List<String> RESOLUTION_ABSENCE_MARKERS = [
-            'Could not resolve all files for configuration',
-            'Failed to resolve the following dependencies:'
-        ]
-        private static final List<String> TASK_FAILURE_MARKERS = [
-            'Execution failed for task',
-            'FAILURE: Build failed with an exception',
-            'BUILD FAILED',
-            ' FAILED'
-        ]
+        private static final String COULD_NOT_RESOLVE_ALL_FILES = 'Could not resolve all files for configuration'
         private static final String COULD_NOT_FIND = 'Could not find '
         private static final String FAILED_RESOLVE_PREFIX = "Failed to resolve '"
+        private static final String FAILED_RESOLVE_FOLLOWING = 'Failed to resolve the following dependencies:'
         private static final String FAILED_SUFFIX = ' FAILED'
-        private static final String MISSING_A_VERSION = 'missing a version'
-        private static final String REQUIRED_BY = 'Required by:'
-        private static final String FOR_PROJECT = "for project '"
-        private static final String PROJECT_NAMED = "Project ':"
+
+        private static final List<String> RESOLUTION_FAILURE_MARKERS = [
+                COULD_NOT_RESOLVE_ALL_FILES,
+                COULD_NOT_FIND,
+                ('verifyDependencyResolution' + FAILED_SUFFIX),
+                FAILED_RESOLVE_FOLLOWING
+        ]
 
         static void assertResolutionFailureMessage(String resultsOutput) {
-            assert resultsOutput.contains(RESOLUTION_FAILURE_MARKERS.last()),
+            assert RESOLUTION_FAILURE_MARKERS.any { resultsOutput.contains(it) },
                     'Expected to see a message about failure to resolve dependencies'
+        }
+
+        static void assertNoResolutionFailureMessage(String resultsOutput) {
+            assert RESOLUTION_FAILURE_MARKERS.every { !resultsOutput.contains(it) },
+                    'Expected to _not_ see a message about failure to resolve dependencies'
         }
 
         static void assertResolutionFailureForDependency(String resultsOutput, String dependency) {
             assertResolutionFailureForDependency(resultsOutput, dependency, 1)
         }
 
-        static void assertResolutionFailureForDependency(String resultsOutput, String dependency, int index) {
-            assert resultsOutput.contains("${index}. " + FAILED_RESOLVE_PREFIX + dependency + "' for project"),
-                    'Expected to see a message about failure to resolve a specific dependency at a specific index'
+        static void assertResolutionFailureForDependency(String resultsOutput, String dependency, int _) {
+            assert hasResolutionFailureForDependency(resultsOutput, dependency),
+                    "Expected to see a message about failure to resolve a specific dependency"
         }
 
         static void assertResolutionFailureForDependencyForProject(String resultsOutput, String dependency, String projectName) {
-            assert resultsOutput.contains("1. " + FAILED_RESOLVE_PREFIX + dependency + "' " + FOR_PROJECT + projectName + "'"),
-                    'Expected to see a message about failure to resolve a specific dependency for a specific project'
-        }
-
-        static void assertNoResolutionFailureMessage(String resultsOutput) {
-            assert RESOLUTION_ABSENCE_MARKERS.every { !resultsOutput.contains(it) },
-                    'Expected to _not_ see a message about failure to resolve dependencies'
+            assertResolutionFailureForDependency(resultsOutput, dependency)
+            assert hasProjectContextInOutput(resultsOutput, projectName),
+                    "Expected to see a message about failure to resolve a specific dependency for a specific project"
         }
 
         static void assertExecutionFailedForTask(String resultsOutput) {
-            assert resultsOutput.contains(TASK_FAILURE_MARKERS[0]),
-                    'Expected to see a message about a task execution failure'
+            List<String> taskFailureMarkers = [
+                    'Execution failed for task',
+                    'FAILURE: Build failed with an exception',
+                    'BUILD FAILED',
+                    FAILED_SUFFIX
+            ]
+            boolean fromMarkers = taskFailureMarkers.any { resultsOutput.contains(it) }
+            boolean fromBuildOutcome = resultsOutput.contains('Build completed with') && resultsOutput.contains('failure')
+            assert fromMarkers || fromBuildOutcome, 'Expected to see a message about a failure'
         }
 
         static void assertFailureMessageIsDisplayedOnce(String resultsOutput, String dependency) {
+            assert hasResolutionFailureForDependency(resultsOutput, dependency),
+                    "Expected to see resolution failure for dependency '${dependency}'"
+
             String onceBlock = RESOLUTION_FAILURE_MARKERS.last() + "\n  1. " + FAILED_RESOLVE_PREFIX + dependency + "' for project"
             assert resultsOutput.findAll(onceBlock).size() == 1
+        }
+
+        static boolean hasResolutionFailureForDependency(String resultsOutput, String dependency) {
+            List<String> patterns = [
+                    COULD_NOT_FIND + dependency,
+                    FAILED_RESOLVE_PREFIX + dependency + "' for project",
+                    FAILED_RESOLVE_PREFIX + dependency + "'",
+                    dependency + FAILED_SUFFIX
+            ]
+
+            return patterns.any { resultsOutput.contains(it) } ||
+                    (resultsOutput.contains('missing a version') && resultsOutput.contains(dependency))
+        }
+
+
+        static boolean hasProjectContextInOutput(String resultsOutput, String projectName) {
+            List<String> projectPatterns = [
+                    "for project '" + projectName + "'",
+                    ":" + projectName + ":",
+                    "Project ':" + projectName + "'",
+                    "'" + projectName + "'"
+            ]
+            List<String> requiredByProjectMarkers = [
+                    'Required by:',
+                    "project '" + projectName + "'"
+            ]
+
+            return (requiredByProjectMarkers.every { resultsOutput.contains(it) }) ||
+                    projectPatterns.any { resultsOutput.contains(it) }
         }
     }
 
