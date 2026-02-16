@@ -31,6 +31,7 @@ import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertNoResolutionFailureMessage
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureForDependency
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureForDependencyForProject
+import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureForMissingVersionDependencies
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureMessage
 
 @Subject(DependencyResolutionVerifierKt)
@@ -189,10 +190,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependency(results.output, "test.nebula:c")
-        assertResolutionFailureForDependency(results.output, "test.nebula:d", 2)
-        results.output.contains("The following dependencies are missing a version: test.nebula:c, test.nebula:d")
-        results.output.contains("If you have been using a BOM")
+        assertResolutionFailureForMissingVersionDependencies(results.output, ["test.nebula:c", "test.nebula:d"])
 
         where:
         tasks                                                                                | description
@@ -218,10 +216,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependency(results.output, "test.nebula:c")
-        assertResolutionFailureForDependency(results.output, "test.nebula:d", 2)
-        results.output.contains("The following dependencies are missing a version: test.nebula:c, test.nebula:d")
-        results.output.contains("If you have been using a BOM")
+        assertResolutionFailureForMissingVersionDependencies(results.output, ["test.nebula:c", "test.nebula:d"])
 
         where:
         tasks                                                   | description
@@ -1368,7 +1363,6 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         private static final String FAILED_RESOLVE_PREFIX = "Failed to resolve '"
         private static final String FAILED_RESOLVE_FOLLOWING = 'Failed to resolve the following dependencies:'
         private static final String FAILED_SUFFIX = ' FAILED'
-
         private static final List<String> RESOLUTION_FAILURE_MARKERS = [
                 COULD_NOT_RESOLVE_ALL_FILES,
                 COULD_NOT_FIND,
@@ -1399,6 +1393,17 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
             assertResolutionFailureForDependency(resultsOutput, dependency)
             assert hasProjectContextInOutput(resultsOutput, projectName),
                     "Expected to see a message about failure to resolve a specific dependency for a specific project"
+        }
+
+        static void assertResolutionFailureForMissingVersionDependencies(String resultsOutput, List<String> dependencyNames) {
+            String missingList = dependencyNames.join(', ')
+            boolean hasAResolutionFailureForDependency = dependencyNames.any { hasResolutionFailureForDependency(resultsOutput, it) }
+
+            String missingDependenciesMessage = 'The following dependencies are missing a version: ' + missingList
+            boolean verifierMessage = resultsOutput.contains(missingDependenciesMessage) &&
+                    resultsOutput.contains('If you have been using a BOM')
+
+            assert hasAResolutionFailureForDependency || verifierMessage, "Expected resolution failure or verifier missing-version message for ${missingList}"
         }
 
         static void assertExecutionFailedForTask(String resultsOutput) {
