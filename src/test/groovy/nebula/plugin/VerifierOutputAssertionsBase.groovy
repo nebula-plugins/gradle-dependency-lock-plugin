@@ -55,6 +55,13 @@ abstract class VerifierOutputAssertionsBase {
         assert fromMarkers || fromBuildOutcome, 'Expected to see a message about a failure'
     }
 
+    static void assertOutputMentionsProjects(String resultsOutput, List<String> projectNames) {
+        projectNames.each { name ->
+            assert hasProjectContextInOutput(resultsOutput, name),
+                "Expected output to mention project '$name'"
+        }
+    }
+
     protected static boolean hasResolutionFailureForDependency(String resultsOutput, String dependency) {
         List<String> patterns = [
                 COULD_NOT_FIND + dependency,

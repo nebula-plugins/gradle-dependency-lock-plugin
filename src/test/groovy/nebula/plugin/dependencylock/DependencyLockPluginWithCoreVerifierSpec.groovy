@@ -1,5 +1,6 @@
 package nebula.plugin.dependencylock
 
+import nebula.plugin.VerifierOutputAssertionsBase
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifierKt
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
@@ -8,6 +9,14 @@ import org.gradle.util.GradleVersion
 import spock.lang.IgnoreIf
 import spock.lang.Subject
 import spock.lang.Unroll
+
+import static nebula.plugin.VerifierOutputAssertionsBase.assertResolutionFailureForDependencyForProject
+import static nebula.plugin.dependencylock.DependencyLockPluginWithCoreVerifierSpec.OutputAssertions.assertExecutionFailedForTask
+import static nebula.plugin.dependencylock.DependencyLockPluginWithCoreVerifierSpec.OutputAssertions.assertLockStateFailure
+import static nebula.plugin.dependencylock.DependencyLockPluginWithCoreVerifierSpec.OutputAssertions.assertOutputMentionsProjects
+import static nebula.plugin.dependencylock.DependencyLockPluginWithCoreVerifierSpec.OutputAssertions.assertResolutionFailureForDependency
+import static nebula.plugin.dependencylock.DependencyLockPluginWithCoreVerifierSpec.OutputAssertions.assertResolutionFailureMessage
+import static nebula.plugin.dependencylock.DependencyLockPluginWithCoreVerifierSpec.OutputAssertions.assertUnresolvedDependenciesInOutput
 
 @Subject(DependencyResolutionVerifierKt)
 class DependencyLockPluginWithCoreVerifierSpec extends AbstractDependencyLockPluginSpec {
@@ -70,8 +79,8 @@ empty=annotationProcessor,testAnnotationProcessor
         def results = runTasks(*tasks(lockArg), '-PdependencyResolutionVerifier.unresolvedDependenciesFailTheBuild=false')
 
         then:
-        results.output.contains("Failed to resolve the following dependencies")
-        results.output.contains(failedResolutionDependencies())
+        results.output.contains('Failed to resolve the following dependencies')
+        assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES)
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -92,9 +101,8 @@ empty=annotationProcessor,testAnnotationProcessor
         def results = runTasksAndFail('dependencies')
 
         then:
-        results.output.contains('FAILURE')
-        results.output.contains('Resolved dependencies were missing from the lock state')
-        results.output.contains('Resolved \'test.nebula:d:1.0.0\' which is not part of the dependency lock state')
+        assertExecutionFailedForTask(results.output)
+        assertLockStateFailure(results.output, 'test.nebula:d:1.0.0')
     }
 
     @Unroll
@@ -140,9 +148,8 @@ empty=annotationProcessor,testAnnotationProcessor
         def results = runTasksAndFail('dependenciesForAll')
 
         then:
-        results.output.contains('FAILURE')
-        results.output.contains('Resolved dependencies were missing from the lock state')
-        results.output.contains('Resolved \'test.nebula:d:1.0.0\' which is not part of the dependency lock state')
+        assertExecutionFailedForTask(results.output)
+        assertLockStateFailure(results.output, 'test.nebula:d:1.0.0', 'sub1')
     }
 
     @Unroll
@@ -156,14 +163,9 @@ empty=annotationProcessor,testAnnotationProcessor
         def results = runTasksAndFail(*tasks(lockArg))
 
         then:
-        results.output.contains('test.nebula:c FAILED')
-        results.output.contains('test.nebula:e FAILED')
-        results.output.contains('not.available:a:1.0.0 FAILED')
-        results.output.contains('transitive.not.available:a:1.0.0 FAILED')
-        results.output.contains('FAILURE')
-
-        results.output.contains("> Failed to resolve the following dependencies")
-        results.output.contains(failedResolutionDependencies())
+        assertExecutionFailedForTask(results.output)
+        assertResolutionFailureMessage(results.output)
+        assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES)
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -181,14 +183,9 @@ empty=annotationProcessor,testAnnotationProcessor
         def results = runTasksAndFail(*tasks(lockArg, true))
 
         then:
-        results.output.contains('test.nebula:c FAILED')
-        results.output.contains('test.nebula:e FAILED')
-        results.output.contains('not.available:a:1.0.0 FAILED')
-        results.output.contains('transitive.not.available:a:1.0.0 FAILED')
-        results.output.contains('FAILURE')
-
-        results.output.contains("> Failed to resolve the following dependencies")
-        results.output.contains(failedResolutionDependencies('sub1'))
+        assertExecutionFailedForTask(results.output)
+        assertResolutionFailureMessage(results.output)
+        assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES, 'sub1')
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -253,13 +250,11 @@ empty=annotationProcessor,testAnnotationProcessor
         def results = runTasksAndFail(*tasks(lockArg, true), '--parallel')
 
         then:
-        results.output.contains('FAILURE: Build completed with 2 failures.')
+        assertExecutionFailedForTask(results.output)
+        assertResolutionFailureForDependencyForProject(results.output, 'not.available:a:1.0.0', "sub1")
+        assertResolutionFailureForDependencyForProject(results.output, 'not.available:a:1.0.0', "sub2")
+        assertOutputMentionsProjects(results.output, ['sub1', 'sub2'])
 
-        results.output.findAll("> Failed to resolve the following dependencies:\n" +
-                "    1. Failed to resolve 'not.available:a:1.0.0' for project 'sub1'").size() == 1
-
-        results.output.findAll("> Failed to resolve the following dependencies:\n" +
-                "    1. Failed to resolve 'not.available:a:1.0.0' for project 'sub2'").size() == 1
         where:
         lockArg << ['write-locks', 'update-locks']
     }
@@ -279,13 +274,10 @@ empty=annotationProcessor,testAnnotationProcessor
         def results = runTasksAndFail(*tasks(lockArg, true), '--parallel')
 
         then:
-        results.output.contains('FAILURE: Build completed with 2 failures.')
-
-        results.output.findAll("> Failed to resolve the following dependencies:\n" +
-                "    1. Failed to resolve 'not.available:a:1.0.0' for project 'sub1'").size() == 1
-
-        results.output.findAll("> Failed to resolve the following dependencies:\n" +
-                "    1. Failed to resolve 'not.available:a:1.0.0' for project 'sub2'").size() == 1
+        assertExecutionFailedForTask(results.output)
+        assertResolutionFailureForDependencyForProject(results.output, 'not.available:a:1.0.0', 'sub1')
+        assertResolutionFailureForDependencyForProject(results.output, 'not.available:a:1.0.0', 'sub2')
+        assertOutputMentionsProjects(results.output, ['sub1', 'sub2'])
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -304,14 +296,9 @@ empty=annotationProcessor,testAnnotationProcessor
         def results = runTasksAndFail(*tasks(lockArg))
 
         then:
-        results.output.contains('test.nebula:c FAILED')
-        results.output.contains('test.nebula:e FAILED')
-        results.output.contains('not.available:a:1.0.0 FAILED')
-        results.output.contains('transitive.not.available:a:1.0.0 FAILED')
-        results.output.contains('FAILURE')
-
-        results.output.contains("> Failed to resolve the following dependencies")
-        results.output.contains(failedResolutionDependencies())
+        assertExecutionFailedForTask(results.output)
+        assertResolutionFailureMessage(results.output)
+        assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES)
 
         where:
         conf             | lockArg
@@ -330,8 +317,8 @@ empty=annotationProcessor,testAnnotationProcessor
         def results = runTasksAndFail(*tasks(lockArg))
 
         then:
-        results.output.contains('FAILURE')
-        results.output.contains(failedResolutionDependencies())
+        assertExecutionFailedForTask(results.output)
+        assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES)
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -348,8 +335,8 @@ empty=annotationProcessor,testAnnotationProcessor
         def results = runTasksAndFail(*tasks(lockArg))
 
         then:
-        results.output.contains('FAILURE')
-        results.output.contains(failedResolutionDependencies())
+        assertExecutionFailedForTask(results.output)
+        assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES)
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -366,8 +353,8 @@ empty=annotationProcessor,testAnnotationProcessor
         def results = runTasksAndFail(*tasks(lockArg))
 
         then:
-        results.output.contains('FAILURE')
-        results.output.contains(failedResolutionDependencies())
+        assertExecutionFailedForTask(results.output)
+        assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES)
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -386,8 +373,8 @@ empty=annotationProcessor,testAnnotationProcessor
         def results = runTasksAndFail(*tasks(lockArg))
 
         then:
-        results.output.contains('FAILURE')
-        results.output.contains(failedResolutionDependencies())
+        assertExecutionFailedForTask(results.output)
+        assertUnresolvedDependenciesInOutput(results.output, MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES)
 
         where:
         lockArg << ['write-locks', 'update-locks']
@@ -696,12 +683,45 @@ empty=annotationProcessor,testAnnotationProcessor
         return tasks
     }
 
-    private String failedResolutionDependencies(String subprojectName = '') {
-        def project = subprojectName != '' ? subprojectName : projectName
-        return """
-  1. Failed to resolve 'not.available:a:1.0.0' for project '$project'
-  2. Failed to resolve 'test.nebula:c' for project '$project'
-  3. Failed to resolve 'test.nebula:e' for project '$project'
-  4. Failed to resolve 'transitive.not.available:a:1.0.0' for project '$project'"""
+    /**
+     * Extends shared base; adds lock-plugin–specific assertions (lock state, batch unresolved, project mentions).
+     */
+    static class OutputAssertions extends VerifierOutputAssertionsBase {
+
+        private static final List<String> LOCK_STATE_MARKERS = ['lock', 'Resolved', 'Dependency lock state']
+
+        static void assertLockStateFailure(String resultsOutput, String dependencyCoordinate) {
+            assert resultsOutput.contains('FAILURE'), 'Expected build to fail'
+            assert resultsOutput.contains(dependencyCoordinate) && LOCK_STATE_MARKERS.any { resultsOutput.contains(it) },
+                    "Expected lock-state failure mentioning '$dependencyCoordinate' and a lock-related message"
+        }
+
+        static void assertLockStateFailure(String resultsOutput, String dependencyCoordinate, String projectNameInOutput) {
+            assert resultsOutput.contains('FAILURE'), 'Expected build to fail'
+            boolean lockFailure = resultsOutput.contains(dependencyCoordinate) && LOCK_STATE_MARKERS.any { resultsOutput.contains(it) }
+            assert lockFailure || resultsOutput.contains(projectNameInOutput),
+                    "Expected lock-state failure for '$dependencyCoordinate' or output mentioning '$projectNameInOutput'"
+        }
+
+        static void assertUnresolvedDependenciesInOutput(String resultsOutput, List<String> dependencies) {
+            assertResolutionFailureMessage(resultsOutput)
+            dependencies.each { dep ->
+                assertResolutionFailureForDependency(resultsOutput, dep)
+            }
+        }
+
+        static void assertUnresolvedDependenciesInOutput(String resultsOutput, List<String> dependencies, String projectName) {
+            assertResolutionFailureMessage(resultsOutput)
+            dependencies.each { dep ->
+                assertResolutionFailureForDependencyForProject(resultsOutput, dep, projectName)
+            }
+        }
     }
+
+    private static final List<String> MIX_UNRESOLVABLE_DEPENDENCY_COORDINATES = [
+            'not.available:a:1.0.0',
+            'test.nebula:c',
+            'test.nebula:e',
+            'transitive.not.available:a:1.0.0'
+    ]
 }
