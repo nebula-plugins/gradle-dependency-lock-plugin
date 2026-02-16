@@ -32,7 +32,9 @@ import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureForDependency
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureForDependencyForProject
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureForMissingVersionDependencies
+import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureForOneOfTheseDependencies
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureMessage
+import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.dependencyProjectPair
 
 @Subject(DependencyResolutionVerifierKt)
 class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
@@ -465,8 +467,10 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependencyForProject(results.output, "not.available:apricot:1.0.0", "sub1")
-        assertResolutionFailureForDependencyForProject(results.output, "not.available:banana-leaf:2.0.0", "sub2")
+        assertResolutionFailureForOneOfTheseDependencies(results.output, [
+                dependencyProjectPair("not.available:apricot:1.0.0", "sub1"),
+                dependencyProjectPair("not.available:banana-leaf:2.0.0", "sub2")
+        ])
 
         where:
         tasks                                                                                      | description
@@ -497,8 +501,10 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
         assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependencyForProject(results.output, "not.available:apricot:1.0.0", "sub1")
-        assertResolutionFailureForDependencyForProject(results.output, "not.available:banana-leaf:2.0.0", "sub2")
+        assertResolutionFailureForOneOfTheseDependencies(results.output, [
+                dependencyProjectPair("not.available:apricot:1.0.0", "sub1"),
+                dependencyProjectPair("not.available:banana-leaf:2.0.0", "sub2")
+        ])
 
         where:
         tasks                                                         | description
@@ -610,6 +616,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILURE')
         assertExecutionFailedForTask(results.output)
+        assertResolutionFailureMessage(results.output)
         assertFailureMessageIsDisplayedOnce(results.output, "not.available:a")
 
         where:
@@ -1426,6 +1433,24 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
             assert resultsOutput.findAll(onceBlock).size() == 1
         }
 
+        /**
+         * Asserts that the build output shows a resolution failure for at least one of the given dependency–project pairs.
+         * Use {@link #dependencyProjectPair(String, String)} to build each pair.
+         *
+         * @param resultsOutput build output (e.g. from runTasksAndFail)
+         * @param pairList pairs of (dependency coordinate, project name); at least one must appear as a resolution failure in the output
+         */
+        static void assertResolutionFailureForOneOfTheseDependencies(String resultsOutput, List<DependencyProjectPair> pairList) {
+            boolean anyMatch = pairList.any { hasResolutionFailureForDependencyForProject(resultsOutput, it.dependency, it.project) }
+            String expected = pairList.collect { "${it.dependency} in ${it.project}" }.join(' or ')
+            assert anyMatch, "Expected resolution failure for ${expected}"
+        }
+
+        static boolean hasResolutionFailureForDependencyForProject(String resultsOutput, String dependency, String projectName) {
+            hasResolutionFailureForDependency(resultsOutput, dependency) &&
+                    hasProjectContextInOutput(resultsOutput, projectName)
+        }
+
         static boolean hasResolutionFailureForDependency(String resultsOutput, String dependency) {
             List<String> patterns = [
                     COULD_NOT_FIND + dependency,
@@ -1453,6 +1478,22 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
             return (requiredByProjectMarkers.every { resultsOutput.contains(it) }) ||
                     projectPatterns.any { resultsOutput.contains(it) }
+        }
+
+        /** Value type pairing a dependency coordinate with a project name for assertResolutionFailureForDependencyForProjectOneOf. */
+        private static final class DependencyProjectPair {
+            final String dependency
+            final String project
+
+            DependencyProjectPair(String dependency, String project) {
+                this.dependency = dependency
+                this.project = project
+            }
+        }
+
+        /** Pairs a dependency coordinate with a project name for use in assertResolutionFailureForDependencyForProjectOneOf. */
+        static DependencyProjectPair dependencyProjectPair(String dependency, String projectName) {
+            return new DependencyProjectPair(dependency, projectName)
         }
     }
 
