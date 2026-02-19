@@ -414,6 +414,9 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         'implementation' | 'compileClasspath'
     }
 
+    // Kotlin plugin in a subproject only causes configuration-cache serialization failure (FUS/build service
+    // classloader mismatch). Declare with apply false at root so the plugin is in the same classloader scope.
+    // See: https://github.com/gradle/gradle/issues/31278
     @Unroll
     def 'generate core lock file with kotlin plugin with multiproject setup - for configuration #configuration'() {
         given:
@@ -423,6 +426,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         buildFile << """\
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
+                id "org.jetbrains.kotlin.jvm" version "2.2.0" apply false
             }
             allprojects {
                 task dependenciesForAll(type: DependencyReportTask) {}
@@ -436,7 +440,7 @@ class DependencyLockPluginWithCoreSpec extends AbstractDependencyLockPluginSpec 
         addSubproject("sub1", """
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id "org.jetbrains.kotlin.jvm" version "2.2.0"
+                id "org.jetbrains.kotlin.jvm"
             }
             dependencies {
                 $configuration 'test.nebula:a:1.+'

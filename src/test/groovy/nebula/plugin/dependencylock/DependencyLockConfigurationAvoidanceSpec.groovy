@@ -1,6 +1,5 @@
 package nebula.plugin.dependencylock
 
-import spock.lang.Ignore
 import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.GlobalLockDeprecations
 import nebula.plugin.dependencylock.tasks.CommitLockTask
@@ -244,6 +243,7 @@ class DependencyLockConfigurationAvoidanceSpec extends BaseIntegrationTestKitSpe
         gradleProperties.text = '''
             systemProp.nebula.features.coreLockingSupport=true
             org.gradle.configuration-cache=true
+            org.gradle.warning.mode=fail
         '''.stripIndent()
         
         buildFile << """
@@ -284,6 +284,7 @@ class DependencyLockConfigurationAvoidanceSpec extends BaseIntegrationTestKitSpe
         gradleProperties.text = '''
             systemProp.nebula.features.coreLockingSupport=true
             org.gradle.configuration-cache=true
+            org.gradle.warning.mode=fail
         '''.stripIndent()
         
         buildFile << """

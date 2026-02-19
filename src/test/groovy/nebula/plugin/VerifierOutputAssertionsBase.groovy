@@ -17,6 +17,10 @@ abstract class VerifierOutputAssertionsBase {
             ('verifyDependencyResolution' + FAILED_SUFFIX),
             FAILED_RESOLVE_FOLLOWING
     ]
+    protected static final List<String> CONFIG_CACHE_STORING_ERROR_MESSAGES = [
+            "Configuration cache state could not be cached",
+            "problem was found storing the configuration cache"
+    ]
 
     static void assertResolutionFailureMessage(String resultsOutput) {
         assert RESOLUTION_FAILURE_MARKERS.any { resultsOutput.contains(it) },
@@ -60,6 +64,25 @@ abstract class VerifierOutputAssertionsBase {
             assert hasProjectContextInOutput(resultsOutput, name),
                 "Expected output to mention project '$name'"
         }
+    }
+
+    static void assertConfigurationCacheStateCouldNotBeStored(String resultsOutput) {
+        assert CONFIG_CACHE_STORING_ERROR_MESSAGES.any { resultsOutput.contains(it) },
+                "Expected configuration cache state could not be stored. Looked for but did not find: '${CONFIG_CACHE_STORING_ERROR_MESSAGES.join("', '")}'"
+    }
+
+    static void assertNoConfigurationCacheStoringIssues(String resultsOutput) {
+        assert CONFIG_CACHE_STORING_ERROR_MESSAGES.every { !resultsOutput.contains(it) },
+                "Expected _not_ to see configuration cache storing issues, but found: '${CONFIG_CACHE_STORING_ERROR_MESSAGES.join("', '")}'"
+
+        def entryStoredMessage = "Configuration cache entry stored."
+        assert resultsOutput.contains(entryStoredMessage),
+                "Expected to see configuration cache entry stored, but found: '${entryStoredMessage}'"
+    }
+
+    static void assertConfigurationCachingIsNotMentioned(String resultsOutput) {
+        assert CONFIG_CACHE_STORING_ERROR_MESSAGES.every { !resultsOutput.contains(it) },
+                "Expected configuration caching to _not_ be mentioned, but found: '${CONFIG_CACHE_STORING_ERROR_MESSAGES.join("', '")}'"
     }
 
     protected static boolean hasResolutionFailureForDependency(String resultsOutput, String dependency) {

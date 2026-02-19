@@ -43,7 +43,6 @@ abstract class MigrateLockedDepsToCoreLocksTask extends AbstractMigrateToCoreLoc
 
     @TaskAction
     void migrateLockedDependencies() {
-        //TODO: address Invocation of Task.project at execution time has been deprecated.
         DeprecationLogger.whileDisabled {
             if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
                 def coreLockingHelper = new CoreLockingHelper(project)

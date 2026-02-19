@@ -15,8 +15,7 @@
  */
 package nebula.plugin.dependencylock.tasks
 
-import nebula.plugin.dependencylock.DependencyLockExtension
-import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
+
 import nebula.plugin.dependencylock.DependencyLockWriter
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.model.LockKey
@@ -44,7 +43,6 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.internal.deprecation.DeprecationLogger
 import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault
@@ -90,8 +88,6 @@ abstract class GenerateLockTask extends AbstractLockTask {
     @Internal
     abstract Property<Boolean> getDependencyLockIgnored()
 
-    // Official Gradle Resolution APIs (Approach 1)
-    // Captures dependency graphs using Gradle's official APIs instead of Configuration objects
     @Input
     abstract MapProperty<String, Provider<ResolvedComponentResult>> getResolutionResults()
 
@@ -235,7 +231,7 @@ abstract class GenerateLockTask extends AbstractLockTask {
 
     class GenerateLockFromConfigurations {
         /**
-         * Generate lock file using Gradle's official Resolution API (NEW API - Configuration Cache Compatible).
+         * Generate lock file using Gradle's official Resolution API
          * @param resolutionMap Map of configuration name to Provider<ResolvedComponentResult>
          * @param peerCoordinates List of peer project coordinates in "group:name" format
          * @return Map of LockKey to LockValue

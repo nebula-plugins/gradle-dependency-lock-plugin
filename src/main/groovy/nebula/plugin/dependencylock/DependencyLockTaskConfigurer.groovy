@@ -33,11 +33,16 @@ import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.deprecation.DeprecationLogger
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import static nebula.plugin.dependencylock.tasks.GenerateLockTask.filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject
 import static nebula.plugin.dependencylock.tasks.GenerateLockTask.lockableConfigurations
 
 class DependencyLockTaskConfigurer {
     private static final Logger LOGGER = Logging.getLogger(DependencyLockTaskConfigurer)
+
+    /** Counter for unique config names (globalLockConfig, aggregateConfiguration_) so names are deterministic within a build. */
+    private static final AtomicInteger nextUniqueConfigSuffix = new AtomicInteger(0)
 
     public static final String OVERRIDE_FILE = 'dependencyLock.overrideFile'
     public static final String GLOBAL_LOCK_CONFIG = '_global_'
@@ -138,24 +143,25 @@ class DependencyLockTaskConfigurer {
                 if (globalSaveTask) {
                     it.mustRunAfter(globalSaveTask)
                 }
-                // Use provider to allow gradle property to override extension
-                commitMessage.set(
-                    project.providers.gradleProperty('commitDependencyLock.message')
-                        .orElse(commitExtension.message)
-                )
+                // Resolve at config time so the task holds plain values (no provider chains for config cache)
+                String msg = project.findProperty('commitDependencyLock.message')?.toString()
+                if (msg == null) {
+                    msg = commitExtension.message.getOrElse('Committing dependency lock files')
+                }
+                commitMessage.set(msg)
                 patternsToCommit.set(getPatternsToCommit(clLockFileName, globalLockFileName, lockExtension))
                 remoteRetries.set(commitExtension.remoteRetries.get())
-                
-                // If gradle property is present, shouldCreateTag is true
-                shouldCreateTag.set(
-                    project.providers.gradleProperty('commitDependencyLock.tag')
-                        .map { true }
-                        .orElse(commitExtension.shouldCreateTag)
-                )
-                tag.set(
-                    project.providers.gradleProperty('commitDependencyLock.tag')
-                        .orElse(commitExtension.tag)
-                )
+
+                boolean createTag = project.findProperty('commitDependencyLock.tag') != null
+                if (!createTag) {
+                    createTag = commitExtension.shouldCreateTag.getOrElse(false)
+                }
+                shouldCreateTag.set(createTag)
+                String tagVal = project.findProperty('commitDependencyLock.tag')?.toString()
+                if (tagVal == null) {
+                    tagVal = commitExtension.tag.getOrElse("LockCommit-${new Date().format('yyyyMMddHHmmss')}")
+                }
+                tag.set(tagVal)
                 rootDirPath.set(project.rootProject.projectDir.absolutePath)
             }
         }
@@ -212,7 +218,6 @@ class DependencyLockTaskConfigurer {
 
         globalSaveLockTask.configure { globalSaveTask ->
             globalSaveTask.doFirst {
-                //TODO: address Invocation of Task.project at execution time has been deprecated.
                 DeprecationLogger.whileDisabled {
                     project.subprojects.each { Project sub ->
                         SaveLockTask save = sub.tasks.findByName(SAVE_LOCK_TASK_NAME) as SaveLockTask
@@ -252,43 +257,41 @@ class DependencyLockTaskConfigurer {
             // Set skipped dependencies
             generateTask.skippedDependencies.set(extension.skippedDependencies)
             
-            // Set includeTransitives with provider that checks project property first, then extension
-            generateTask.includeTransitives.set(
-                project.providers.gradleProperty('dependencyLock.includeTransitives')
-                    .map { it.toBoolean() }
-                    .orElse(extension.includeTransitives)
-            )
-            
+            // Set includeTransitives: gradle property overrides extension. Resolve at config time so the
+            // task holds a plain value (no provider chain with non-serializable lambdas for config cache).
+            Boolean includeTransitives = project.findProperty('dependencyLock.includeTransitives')?.toString()?.toBoolean()
+            if (includeTransitives == null) {
+                includeTransitives = extension.includeTransitives.getOrElse(false)
+            }
+            generateTask.includeTransitives.set(includeTransitives)
+
             // Set filter (kept as Closure for backward compatibility)
             generateTask.filter = extension.dependencyFilter
-            
+
             // Set overrides
             generateTask.overrides.set(overrideMap)
 
-            // Wire properties for configuration cache compatibility
+            // Wire properties for configuration cache compatibility (resolve at config time, no project-capturing providers)
             generateTask.projectDirectory.set(project.layout.projectDirectory)
             generateTask.globalLockFileName.set(extension.globalLockFile)
-            generateTask.dependencyLockIgnored.set(project.provider { shouldIgnoreDependencyLock(project) })
+            generateTask.dependencyLockIgnored.set(shouldIgnoreDependencyLock(project))
 
-            // Wire Resolution API properties (Approach 1 - Official Gradle APIs) for regular locks
-            // Use zip() to ensure both properties are evaluated together at execution time
-            generateTask.resolutionResults.set(
-                generateTask.configurationNames.zip(generateTask.skippedConfigurationNames) { configNames, skippedNames ->
-                    def lockableConfs = GenerateLockTask.lockableConfigurations(project, project, configNames, skippedNames)
-                    
-                    lockableConfs.collectEntries { conf ->
-                        [(conf.name): conf.incoming.resolutionResult.rootComponent]
-                    }
-                }
-            )
+            // Build resolution map at config time so the task does not hold provider chains that capture project.
+            // Intentionally resolve configurationNames and skippedConfigurationNamesPrefixes here (not lazy) for config-cache compatibility.
+            def configNames = extension.configurationNames.get()
+            def skippedNames = extension.skippedConfigurationNamesPrefixes.get()
+            def lockableConfs = GenerateLockTask.lockableConfigurations(project, project, configNames, skippedNames)
+            def resolutionMap = lockableConfs.collectEntries { conf ->
+                [(conf.name): conf.incoming.resolutionResult.rootComponent]
+            }
+            generateTask.resolutionResults.set(resolutionMap)
 
-            generateTask.peerProjectCoordinates.set(project.provider {
-                project.rootProject.allprojects.collect { p ->
-                    String group = p.group?.toString() ?: ''
-                    String name = p.name
-                    "${group}:${name}".toString()
-                }
-            })
+            def peerCoords = project.rootProject.allprojects.collect { p ->
+                String group = p.group?.toString() ?: ''
+                String name = p.name
+                "${group}:${name}".toString()
+            }
+            generateTask.peerProjectCoordinates.set(peerCoords)
         }
     }
 
@@ -300,7 +303,6 @@ class DependencyLockTaskConfigurer {
         globalLockTask.configure { globalGenerateTask ->
             globalGenerateTask.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
             globalGenerateTask.doFirst {
-                //TODO: address Invocation of Task.project at execution time has been deprecated.
                 DeprecationLogger.whileDisabled {
                     project.subprojects.each { sub -> sub.repositories.each { repo -> project.repositories.add(repo) } }
                 }
@@ -338,7 +340,7 @@ class DependencyLockTaskConfigurer {
                             Collection<Configuration> lockableConfigurations = lockableConfigurations(project, subproject, ext.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
                             Collection<Configuration> configurations = filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(subproject, ext.configurationNames.get(), lockableConfigurations)
                             // Use unique name to avoid conflicts if evaluated multiple times
-                            Configuration aggregate = subproject.configurations.create("aggregateConfiguration_${System.currentTimeMillis()}_${subproject.path.replace(':', '_')}")
+                            Configuration aggregate = subproject.configurations.create("aggregateConfiguration_${nextUniqueConfigSuffix.getAndIncrement()}_${subproject.path.replace(':', '_')}")
                             aggregate.setCanBeConsumed(true)
                             aggregate.setCanBeResolved(true)
                             configurations
@@ -361,8 +363,9 @@ class DependencyLockTaskConfigurer {
                     def subprojectsArray = subprojects.toArray(new Dependency[subprojects.size()])
 
                     List<Configuration> configurations = []
-                    project.allprojects.each { p->
-                        def conf = p.configurations.create("globalLockConfig${System.currentTimeMillis()}") {
+                    // Sort by project path so global lock merge order is deterministic by path
+                    project.allprojects.sort({ a, b -> a.path.compareTo(b.path) }).each { p ->
+                        def conf = p.configurations.create("globalLockConfig${nextUniqueConfigSuffix.getAndIncrement()}") {
                             canBeConsumed = true
                             canBeResolved = true
                             transitive = true

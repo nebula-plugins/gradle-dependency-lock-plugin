@@ -22,341 +22,205 @@ import nebula.plugin.dependencylock.DependencyLockPlugin
 import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
 import nebula.plugin.dependencylock.utils.ConfigurationFilters
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
-import nebula.plugin.dependencyverifier.exceptions.DependencyResolutionException
-import org.gradle.BuildResult
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ResolveException
-import org.gradle.api.execution.TaskExecutionListener
+import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.flow.FlowProviders
+import org.gradle.api.flow.FlowScope
 import org.gradle.api.logging.Logging
-import org.gradle.api.tasks.TaskState
+import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.TaskCollection
 import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.api.tasks.diagnostics.DependencyInsightReportTask
 import org.gradle.api.tasks.diagnostics.DependencyReportTask
-import org.gradle.internal.exceptions.DefaultMultiCauseException
-import org.gradle.internal.locking.LockOutOfDateException
-import org.gradle.internal.resolve.ModuleVersionNotFoundException
-import java.lang.Boolean.getBoolean
+import java.io.File
 
 const val UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD: String = "dependencyResolutionVerifier.unresolvedDependenciesFailTheBuild"
 const val CONFIGURATIONS_TO_EXCLUDE: String = "dependencyResolutionVerifier.configurationsToExclude"
 
-class DependencyResolutionVerifier {
+/** Verifies dependency resolution and lock file consistency; task + FlowAction for reporting-only builds; config-cache compatible. */
+class DependencyResolutionVerifier(
+    private val verificationService: Provider<DependencyVerificationBuildService>,
+    private val extensionFromRoot: DependencyResolutionVerifierExtension,
+    private val flowScope: FlowScope,
+    private val flowProviders: FlowProviders
+) {
 
-    companion object {
-        var failedDependenciesPerProjectForConfigurations: MutableMap<String, MutableMap<String, MutableSet<Configuration>>> = mutableMapOf()
-        var lockedDepsOutOfDatePerProject: MutableMap<String, MutableSet<String>> = mutableMapOf()
-        var depsWhereResolvedVersionIsNotTheLockedVersionPerProjectForConfigurations: MutableMap<String, MutableMap<String, MutableSet<Configuration>>> = mutableMapOf()
-    }
-
-    private val logger by lazy { Logging.getLogger(DependencyResolutionVerifier::class.java) }
-    private var providedErrorMessageForThisProject = false
-
-    lateinit var project: Project
-    lateinit var extension: DependencyResolutionVerifierExtension
-    lateinit var configurationsToExcludeOverride: MutableSet<String>
+    private val logger = Logging.getLogger(DependencyResolutionVerifier::class.java)
 
     fun verifySuccessfulResolution(project: Project) {
-        this.project = project
-        this.extension = project.rootProject.extensions.findByType(DependencyResolutionVerifierExtension::class.java)!!
-        this.configurationsToExcludeOverride = mutableSetOf()
-        // Use findProperty to check both gradle properties (-P) and project extras (ext)
-        val configurationsToExclude = project.findProperty(CONFIGURATIONS_TO_EXCLUDE)
-        if (configurationsToExclude != null) {
-            configurationsToExcludeOverride.addAll(configurationsToExclude.toString().split(","))
-        }
-        val uniqueProjectKey = uniqueProjectKey(project)
-        failedDependenciesPerProjectForConfigurations[uniqueProjectKey] = mutableMapOf()
-        lockedDepsOutOfDatePerProject[uniqueProjectKey] = mutableSetOf()
-        depsWhereResolvedVersionIsNotTheLockedVersionPerProjectForConfigurations[uniqueProjectKey] = mutableMapOf()
-
-        verifyResolution(project)
-    }
-
-    private fun verifyResolution(project: Project) {
-        project.gradle.buildFinished { buildResult ->
-            val buildFailed: Boolean = buildResult.failure != null
-            if (buildFailed && !providedErrorMessageForThisProject) {
-                collectDependencyResolutionErrorsAfterBuildFailure(buildResult)
-            }
-            if (!providedErrorMessageForThisProject) {
-                logOrThrowOnFailedDependencies()
-            }
+        val projectKey = uniqueProjectKey(project)
+        val projectName = project.name
+        verificationService.get().initializeProject(projectKey)
+        val configurationsToExclude = getConfigurationsToExclude(project)
+        val shouldFailTheBuild = getShouldFailTheBuild(project)
+        val tasksToExclude = extensionFromRoot.tasksToExclude.get()
+        val requestedTasks = project.gradle.startParameter.taskNames
+        val allTasksExcluded = requestedTasks.isNotEmpty() && requestedTasks.all { taskName ->
+            val simpleTaskName = taskName.substringAfterLast(':')
+            tasksToExclude.contains(simpleTaskName) || tasksToExclude.contains(taskName)
         }
 
-        project.gradle.taskGraph.whenReady { taskGraph ->
-            val tasks: List<Task> = taskGraph.allTasks.filter { it.project == project }
-            if (tasks.isEmpty()) {
-                return@whenReady
-            }
-
-            taskGraph.addTaskExecutionListener(object : TaskExecutionListener {
-                override fun beforeExecute(task: Task) {
-                    //DO NOTHING
+        if (allTasksExcluded) return
+        val resolvableConfigurations = mutableListOf<Configuration>()
+        val resolutionResultsMap = mutableMapOf<String, Provider<ResolvedComponentResult>>()
+        project.configurations.configureEach { conf ->
+            if (try {
+                    conf.isCanBeResolved && !shouldSkipConfiguration(conf, configurationsToExclude)
+                } catch (e: Exception) {
+                    logger.debug("Skipping configuration '${conf.name}': ${e.message}", e)
+                    false
                 }
-
-                override fun afterExecute(task: Task, taskState: TaskState) {
-                    if (task.project != project) {
-                        return
-                    }
-                    if (extension.tasksToExclude.get().contains(task.name)) {
-                        return
-                    }
-                    if (providedErrorMessageForThisProject) {
-                        return
-                    }
-                    if (task !is DependencyReportTask && task !is DependencyInsightReportTask && task !is AbstractCompile) {
-                        return
-                    }
-                    collectDependencyResolutionErrorsAfterExecute(task)
-                    logOrThrowOnFailedDependencies()
-                }
-            })
-        }
-    }
-
-    private fun collectDependencyResolutionErrorsAfterBuildFailure(buildResult: BuildResult) {
-        val failureCause = buildResult.failure?.cause?.cause
-        if (failureCause == null || failureCause !is DefaultMultiCauseException) {
-            return
-        }
-        val moduleVersionNotFoundCauses: List<Throwable> = failureCause.causes.filterIsInstance<ModuleVersionNotFoundException>()
-        if (moduleVersionNotFoundCauses.isEmpty()) {
-            return
-        }
-        val buildResultFailureMessage = failureCause.message
-        val split = buildResultFailureMessage!!.split(":")
-        val projectNameFromFailure: String
-        projectNameFromFailure = if (split.size == 3) {
-            split[1]
-        } else {
-            project.rootProject.name
-        }
-        if (project.name == projectNameFromFailure) {
-            logger.debug("Starting dependency resolution verification after the build has completed: $buildResultFailureMessage")
-
-            val conf: Configuration
-            try {
-                val confName: String = buildResultFailureMessage.replace(".", "").split("for ")[1]
-                conf = project.configurations.first { it.toString() == confName }
-                logger.debug("Found $conf from $confName")
-            } catch (e: Exception) {
-                logger.warn("Error finding configuration associated with build failure from '${buildResultFailureMessage}'", e)
-                return
-            }
-
-            val failedDepsByConf = failedDependenciesPerProjectForConfigurations[uniqueProjectKey(project)]
-            moduleVersionNotFoundCauses.forEach {
-                require(it is ModuleVersionNotFoundException)
-
-                val dep: String = it.selector.toString()
-                if (failedDepsByConf!!.containsKey(dep)) {
-                    failedDepsByConf[dep]!!.add(conf)
-                } else {
-                    failedDepsByConf[dep] = mutableSetOf(conf)
+            ) {
+                resolvableConfigurations.add(conf)
+                try {
+                    resolutionResultsMap[conf.name] = conf.incoming.resolutionResult.rootComponent
+                } catch (e: Exception) {
+                    logger.warn("Could not get resolution result for '${conf.name}': ${e.message}")
                 }
             }
         }
-    }
 
-    private fun collectDependencyResolutionErrorsAfterExecute(task: Task) {
-        val failedDepsByConf = failedDependenciesPerProjectForConfigurations[uniqueProjectKey(project)]
-        val lockedDepsOutOfDate = lockedDepsOutOfDatePerProject[uniqueProjectKey(project)]
-        val configurationsToExclude = if (configurationsToExcludeOverride.isNotEmpty()) configurationsToExcludeOverride else extension.configurationsToExclude.get()
-
-        // Use configureEach for lazy configuration (avoids configuring unused configurations)
-        task.project.configurations.matching { // returns a live collection
-            configurationIsResolvedAndMatches(it, configurationsToExclude)
-        }.configureEach { conf ->
-            logger.debug("$conf in ${project.name} has state ${conf.state}. Starting dependency resolution verification after task '${task.name}'.")
-            try {
-                conf.resolvedConfiguration.rethrowFailure()
-            } catch (e: ResolveException) {
-                e.causes.forEach { cause ->
-                    when (cause) {
-                        is ModuleVersionNotFoundException -> {
-                            val dep: String = cause.selector.toString()
-                            if (failedDepsByConf!!.containsKey(dep)) {
-                                failedDepsByConf[dep]!!.add(conf)
-                            } else {
-                                failedDepsByConf[dep] = mutableSetOf(conf)
-                            }
-                        }
-                        is LockOutOfDateException -> {
-                            lockedDepsOutOfDate!!.add(cause.message.toString())
-                        }
-                    }
-                }
-                return@configureEach
-            } catch (e : Exception) {
-                logger.warn("Received an unhandled exception: {}", e.message)
-                return@configureEach
+        val verificationTask = project.tasks.register(
+            "verifyDependencyResolution",
+            DependencyVerificationTask::class.java
+        ) { task ->
+            task.usesService(verificationService)
+            task.parameters.projectKey.set(projectKey)
+            task.parameters.projectName.set(projectName)
+            task.parameters.shouldFailTheBuild.set(shouldFailTheBuild)
+            task.parameters.missingVersionsMessageAddition.set(extensionFromRoot.missingVersionsMessageAddition)
+            task.parameters.resolvedVersionDoesNotEqualLockedVersionMessageAddition.set(
+                extensionFromRoot.resolvedVersionDoesNotEqualLockedVersionMessageAddition
+            )
+            task.parameters.configurationsToExclude.set(configurationsToExclude)
+            val ignoreLocks = try {
+                DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)
+            } catch (_: Exception) {
+                false
             }
+            val effectiveLockValidation = extensionFromRoot.enableLockFileValidation.get() && !ignoreLocks
+            task.parameters.enableLockFileValidation.set(effectiveLockValidation)
+            task.parameters.configurationNamesToValidate.set(resolvableConfigurations.map { it.name })
+            task.parameters.taskNames.set(project.gradle.startParameter.taskNames.toList())
+            task.parameters.coreAlignmentEnabled.set(System.getProperty("nebula.features.coreAlignmentSupport", "false").toBoolean())
+            task.parameters.coreLockingEnabled.set(DependencyLockingFeatureFlags.isCoreLockingEnabled())
+            task.parameters.reportingOnlyBuild.set(isReportingTasksOnly(project))
 
-            validateThatResolvedVersionIsLockedVersion(conf)
-        }
-    }
-
-    private fun validateThatResolvedVersionIsLockedVersion(conf: Configuration) {
-        val usesNebulaAlignment = !getBoolean("nebula.features.coreAlignmentSupport")
-        val usesDependencyLockingFeatureFlags = DependencyLockingFeatureFlags.isCoreLockingEnabled()
-        if (usesDependencyLockingFeatureFlags || usesNebulaAlignment) {
-            // short-circuit unless using Nebula locking & core alignment
-            return
-        }
-        if (project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.UPDATE_LOCK_TASK_NAME) ||
-            project.gradle.startParameter.taskNames.contains(DependencyLockTaskConfigurer.UPDATE_GLOBAL_LOCK_TASK_NAME)
-        ) {
-            // short-circuit when selectively updating locks. The lock-reading for dependencies that are updated
-            // transitively or from a recommendation BOM or from aligned dependencies getting updated can provide false-positives
-            return
-        }
-        val depsWhereResolvedVersionIsNotTheLockedVersionByConf =
-            depsWhereResolvedVersionIsNotTheLockedVersionPerProjectForConfigurations[uniqueProjectKey(project)]
-        val lockedDepsByConf = DependencyLockPlugin.lockedDepsPerProjectForConfigurations[uniqueProjectKey(project)]
-        val overrideDepsByConf = DependencyLockPlugin.overrideDepsPerProjectForConfigurations[uniqueProjectKey(project)]
-        val lockedDependencies: Map<String, String> = lockedDepsByConf!![conf.name]
-            ?.associateBy({ "${it.group}:${it.name}" }, { "${it.version}" })
-            ?: emptyMap()
-        val overrideDependencies: Map<String, String> = overrideDepsByConf!![conf.name]
-            ?.associateBy({ "${it.group}:${it.name}" }, { "${it.version}" })
-            ?: emptyMap()
-        if (lockedDependencies.isEmpty() && overrideDependencies.isEmpty()) {
-            // short-circuit when locks are empty
-            return
+            val lockedDepsMap = readLockFileForConfigurations(project, resolvableConfigurations)
+            val overrideDepsMap = readOverrideLockFileForConfigurations(project, resolvableConfigurations)
+            task.parameters.lockedDependenciesPerConfiguration.set(lockedDepsMap)
+            task.parameters.overrideDependenciesPerConfiguration.set(overrideDepsMap)
+            task.parameters.resolutionResults.set(resolutionResultsMap)
         }
 
-        conf.resolvedConfiguration.resolvedArtifacts.map { it.moduleVersion.id }.forEach { dep ->
-            val lockedVersion: String = lockedDependencies["${dep.group}:${dep.name}"] ?: ""
-            val overrideVersion: String = overrideDependencies["${dep.group}:${dep.name}"] ?: ""
-
-            val expectedVersion = when {
-                overrideVersion.isNotEmpty() -> overrideVersion
-                lockedVersion.isNotEmpty() -> lockedVersion
-                else -> ""
-            }
-
-            if (expectedVersion.isNotEmpty() && expectedVersion != dep.version) {
-                val depAsString = "${dep.group}:${dep.name}:${dep.version}"
-                val key = "'$depAsString' instead of locked version '$expectedVersion'"
-                if (depsWhereResolvedVersionIsNotTheLockedVersionByConf!!.containsKey(dep.toString())) {
-                    depsWhereResolvedVersionIsNotTheLockedVersionByConf[key]!!.add(conf)
-                } else {
-                    depsWhereResolvedVersionIsNotTheLockedVersionByConf[key] = mutableSetOf(conf)
-                }
+        @Suppress("UNCHECKED_CAST")
+        listOf(AbstractCompile::class.java, DependencyReportTask::class.java, DependencyInsightReportTask::class.java).forEach { taskType ->
+            (project.tasks.withType(taskType) as TaskCollection<Task>).configureEach { t ->
+                if (!tasksToExclude.contains(t.name)) t.finalizedBy(verificationTask)
             }
         }
+
+        val lifecycleNames = setOf("build", "check", "test", "assemble", "dependencies")
+        @Suppress("UNCHECKED_CAST")
+        (project.tasks as TaskCollection<Task>).configureEach { t ->
+            if (t.name in lifecycleNames) t.finalizedBy(verificationTask)
+        }
+
+        registerFlowActionStrategy(project, projectKey)
     }
 
-    private fun logOrThrowOnFailedDependencies() {
-        val messages: MutableList<String> = mutableListOf()
+    private fun <T> propertyOrExtension(project: Project, propName: String, default: T, parse: (String) -> T): T =
+        project.findProperty(propName)?.let { parse(it.toString()) } ?: default
 
-        val failedDepsByConf = failedDependenciesPerProjectForConfigurations[uniqueProjectKey(project)]!!
-        val lockedDepsOutOfDate = lockedDepsOutOfDatePerProject[uniqueProjectKey(project)]!!
-        val depsWhereResolvedVersionIsNotTheLockedVersionByConf = depsWhereResolvedVersionIsNotTheLockedVersionPerProjectForConfigurations[uniqueProjectKey(project)]!!
-
-        if (failedDepsByConf.isNotEmpty() || lockedDepsOutOfDate.isNotEmpty() || depsWhereResolvedVersionIsNotTheLockedVersionByConf.isNotEmpty()) {
-            try {
-                messages.addAll(createMessagesForFailedDeps(failedDepsByConf))
-                messages.addAll(createMessagesForLockedDepsOutOfDate(lockedDepsOutOfDate))
-                messages.addAll(createMessagesForDepsWhereResolvedVersionIsNotTheLockedVersion(depsWhereResolvedVersionIsNotTheLockedVersionByConf))
-            } catch (e: Exception) {
-                logger.warn("Error creating message regarding failed dependencies", e)
-                return
-            }
-
-            providedErrorMessageForThisProject = true
-            if (unresolvedDependenciesShouldFailTheBuild()) {
-                throw DependencyResolutionException(messages.joinToString("\n"))
-            } else {
-                logger.warn(messages.joinToString("\n"))
-            }
-        }
-    }
-
-    private fun createMessagesForFailedDeps(failedDepsForConfs: MutableMap<String, MutableSet<Configuration>>): MutableList<String> {
-        val messages: MutableList<String> = mutableListOf()
-        val depsMissingVersions: MutableList<String> = mutableListOf()
-
-        if (failedDepsForConfs.isNotEmpty()) {
-            messages.add("Failed to resolve the following dependencies:")
-        }
-        var failureMessageCounter = 0
-        failedDepsForConfs.toSortedMap().forEach { (dep, _) ->
-            messages.add("  ${failureMessageCounter + 1}. Failed to resolve '$dep' for project '${project.name}'")
-
-            if (dep.split(':').size < 3) {
-                depsMissingVersions.add(dep)
-            }
-
-            failureMessageCounter += 1
+    private fun getConfigurationsToExclude(project: Project): Set<String> =
+        propertyOrExtension(project, CONFIGURATIONS_TO_EXCLUDE, extensionFromRoot.configurationsToExclude.get()) { str ->
+            str.split(",").map { it.trim() }.toSet()
         }
 
-        if (depsMissingVersions.size > 0) {
-            messages.add("The following dependencies are missing a version: ${depsMissingVersions.joinToString()}\n" +
-                    "Please add a version to fix this. If you have been using a BOM, perhaps these dependencies are no longer managed. \n"
-                    + extension.missingVersionsMessageAddition.get())
-        }
-        return messages
-    }
-
-    private fun createMessagesForLockedDepsOutOfDate(lockedDepsOutOfDate: MutableSet<String>): MutableList<String> {
-        val messages: MutableList<String> = mutableListOf()
-        if (lockedDepsOutOfDate.isNotEmpty()) {
-            messages.add("Resolved dependencies were missing from the lock state:")
-        }
-
-        var locksOutOfDateCounter = 0
-        lockedDepsOutOfDate
-                .sorted()
-                .forEach { outOfDateMessage ->
-                    messages.add("  ${locksOutOfDateCounter + 1}. $outOfDateMessage for project '${project.name}'")
-                    locksOutOfDateCounter += 1
-                }
-        return messages
-    }
-
-    private fun createMessagesForDepsWhereResolvedVersionIsNotTheLockedVersion(depsWhereResolvedVersionIsNotTheLockedVersionByConf: MutableMap<String, MutableSet<Configuration>>): MutableList<String> {
-        val messages: MutableList<String> = mutableListOf()
-        if (depsWhereResolvedVersionIsNotTheLockedVersionByConf.isNotEmpty()) {
-            messages.add("Dependency lock state is out of date:")
-        }
-        var failureMessageCounter = 0
-        depsWhereResolvedVersionIsNotTheLockedVersionByConf.toSortedMap().forEach { (dep, configs) ->
-            messages.add("  ${failureMessageCounter + 1}. Resolved $dep for project '${project.name}' for configuration(s): ${configs.joinToString(",") { it.name }}")
-
-            failureMessageCounter += 1
-        }
-
-        if (depsWhereResolvedVersionIsNotTheLockedVersionByConf.isNotEmpty()) {
-            messages.add("Please update your dependency locks or your build file constraints.\n" + extension.resolvedVersionDoesNotEqualLockedVersionMessageAddition.get())
-        }
-        return messages
-    }
-
-    private fun configurationIsResolvedAndMatches(conf: Configuration, configurationsToExclude: Set<String>): Boolean {
-        return conf.state != Configuration.State.UNRESOLVED &&
-                // the configurations `incrementalScalaAnalysisFor_x_` are resolvable only from a scala context
-                !conf.name.startsWith("incrementalScala") &&
-                !configurationsToExclude.contains(conf.name) &&
-                !ConfigurationFilters.safelyHasAResolutionAlternative(conf) &&
-                // Always exclude compileOnly to avoid issues with kotlin plugin
-                !conf.name.endsWith("CompileOnly") &&
-                !conf.name.equals("compileOnly")
-    }
-
-    private fun unresolvedDependenciesShouldFailTheBuild(): Boolean {
-        // Use findProperty to check both gradle properties (-P) and project extras (ext)
-        val shouldFailProp = project.findProperty(UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD)
-        return if (shouldFailProp != null) {
-            shouldFailProp.toString().toBoolean()
-        } else {
-            extension.shouldFailTheBuild.get()
-        }
-    }
+    private fun getShouldFailTheBuild(project: Project): Boolean =
+        propertyOrExtension(project, UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD, extensionFromRoot.shouldFailTheBuild.get()) { it.toBoolean() }
 
     private fun uniqueProjectKey(project: Project): String {
         return "${project.name}-${if (project == project.rootProject) "rootproject" else "subproject"}"
+    }
+
+    /**
+     * Skip configurations that should not be resolved by the verifier (config-cache safe: called only during configuration).
+     * Uses [ConfigurationFilters.safelyHasAResolutionAlternative] for parity with GenerateLockTask and MigrateToCoreLocksTask.
+     */
+    private fun shouldSkipConfiguration(
+        conf: Configuration,
+        exclusions: Set<String>
+    ): Boolean {
+        return conf.name.startsWith("incrementalScala") ||
+                conf.name.startsWith("kotlinCompilerPluginClasspath") ||
+                conf.name.endsWith("DependenciesMetadata") ||
+                exclusions.contains(conf.name) ||
+                conf.name.endsWith("CompileOnly") ||
+                conf.name == "compileOnly" ||
+                ConfigurationFilters.safelyHasAResolutionAlternative(conf)
+    }
+
+    private fun readJsonMap(file: File): Map<*, *>? {
+        if (!file.exists()) return null
+        return try {
+            groovy.json.JsonSlurper().parseText(file.readText()) as? Map<*, *>
+        } catch (e: Exception) {
+            logger.warn("Failed to read ${file.absolutePath}: ${e.message}")
+            null
+        }
+    }
+
+    private fun readLockFileForConfigurations(
+        project: Project,
+        configurations: List<Configuration>
+    ): Map<String, Map<String, String>> {
+        val lockFilename = project.findProperty(DependencyLockPlugin.LOCK_FILE)?.toString() ?: "dependencies.lock"
+        val globalLockFilename =
+            project.findProperty(DependencyLockPlugin.GLOBAL_LOCK_FILE)?.toString() ?: "global.lock"
+        val lockFile = if (File(project.rootProject.projectDir, globalLockFilename).exists()) File(project.rootProject.projectDir, globalLockFilename) else File(project.projectDir, lockFilename)
+        val lockData = readJsonMap(lockFile) ?: return emptyMap()
+        return configurations.associate { conf ->
+            val confLocks = lockData[conf.name] as? Map<*, *>
+            val lockedDeps = confLocks?.filter { (it.value as? Map<*, *>)?.containsKey("locked") == true }?.mapValues { ((it.value as Map<*, *>)["locked"] as String) } ?: emptyMap()
+            conf.name to lockedDeps.mapKeys { it.key.toString() }
+        }
+    }
+
+    private fun readOverrideLockFileForConfigurations(
+        project: Project,
+        configurations: List<Configuration>
+    ): Map<String, Map<String, String>> {
+        val overridePath = project.findProperty(DependencyLockPlugin.OVERRIDE_FILE)?.toString() ?: return emptyMap()
+        val overrideMap = readJsonMap(File(project.projectDir, overridePath))?.mapKeys { it.key.toString() }?.mapValues { it.value.toString() } ?: return emptyMap()
+        return configurations.associate { conf -> conf.name to overrideMap }
+    }
+
+    private fun isReportingTasksOnly(project: Project): Boolean {
+        return ReportingTasks.isReportingTasksOnly(project)
+    }
+
+    /**
+     * Registers a FlowAction that runs after the build.
+     * Used only for reporting-only builds (e.g. dependencies, dependencyInsight): the task defers
+     * reporting (throwOnFailures = false), and this FlowAction reads BuildService and fails or logs at the end.
+     */
+    private fun registerFlowActionStrategy(project: Project, projectKey: String) {
+        val projectName = project.name
+        val shouldFailTheBuild = getShouldFailTheBuild(project)
+        val lockMismatchMessage = extensionFromRoot.resolvedVersionDoesNotEqualLockedVersionMessageAddition.get()
+
+        flowScope.always(DependencyResolutionFlowAction::class.java) { spec ->
+            spec.parameters.projectName.set(projectName)
+            spec.parameters.projectKey.set(projectKey)
+            spec.parameters.shouldFailTheBuild.set(shouldFailTheBuild)
+            spec.parameters.lockMismatchMessage.set(lockMismatchMessage)
+            spec.parameters.missingVersionsMessageAddition.set(extensionFromRoot.missingVersionsMessageAddition.get())
+            spec.parameters.requestedTaskNames.set(project.gradle.startParameter.taskNames.toList())
+            spec.parameters.buildResult.set(flowProviders.buildWorkResult)
+            spec.parameters.verificationService.set(verificationService)
+        }
     }
 }
