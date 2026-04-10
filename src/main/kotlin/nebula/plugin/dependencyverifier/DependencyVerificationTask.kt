@@ -40,8 +40,6 @@ abstract class DependencyVerificationTask : DefaultTask() {
     abstract val parameters: VerifierParameters
 
     init {
-        outputs.doNotCacheIf("Verification task with no file outputs") { true }
-        outputs.upToDateWhen { false }
         description = "Verifies that all dependencies can be resolved and match lock files"
         group = "verification"
     }

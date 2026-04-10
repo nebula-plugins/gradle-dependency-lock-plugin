@@ -27,8 +27,8 @@ import spock.lang.Ignore
 import spock.lang.Subject
 import spock.lang.Unroll
 
-import static nebula.plugin.VerifierOutputAssertionsBase.assertConfigurationCachingIsNotMentioned
 import static nebula.plugin.VerifierOutputAssertionsBase.assertConfigurationCacheStateCouldNotBeStored
+import static nebula.plugin.VerifierOutputAssertionsBase.assertConfigurationCachingIsNotMentioned
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertExecutionFailedForTask
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertFailureMessageIsDisplayedOnce
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertNoConfigurationCacheStoringIssues
@@ -846,6 +846,45 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         assert !results.output.toString().contains('FAILURE'):
                 "Verifier should skip skipMe via configurationsToExclude; without skip we would resolve it and fail"
         assertNoConfigurationCacheStoringIssues(results.output)
+    }
+
+    def 'strict platform constraint aligns versions and verifier does not fail on non-selected versions'() {
+        given:
+        setupSingleProject()
+        buildFile << """
+            repositories {
+                mavenCentral()
+            }
+            dependencies {
+                implementation 'org.springframework:spring-core:5.2.9.RELEASE'
+                implementation 'org.springframework:spring-core:5.2.12.RELEASE'
+                implementation platform('org.springframework:spring-framework-bom:5.2.14.RELEASE')
+                implementation 'org.springframework:spring-context'
+            }
+        """.stripIndent()
+
+        when:
+        def results = runTasks('dependencies', '--configuration', 'runtimeClasspath')
+
+        then: 'we do not see failures'
+        !results.output.contains('FAILURE')
+        !results.output.contains('verifyDependencyResolution FAILED')
+        !results.output.contains('Failed to resolve the following dependencies:')
+
+        and: 'we see conflict-resolved versions resolve to a single version'
+        results.output.contains('org.springframework:spring-core:5.2.9.RELEASE -> 5.2.14.RELEASE')
+        results.output.contains('org.springframework:spring-core:5.2.12.RELEASE -> 5.2.14.RELEASE')
+        results.output.contains('org.springframework:spring-core:5.2.14.RELEASE')
+
+        and: 'we do not see resolved final path at lower non-selected versions'
+        !results.output.contains('org.springframework:spring-core:5.2.9.RELEASE\n')
+        !results.output.contains('org.springframework:spring-core:5.2.12.RELEASE\n')
+
+        and: 'we see version provided by BOM successfully'
+        results.output.contains('org.springframework:spring-context -> 5.2.14.RELEASE\n')
+
+        and: 'we do not see issues about dependencies missing a version, which would be provided by the BOM'
+        !results.output.contains('The following dependencies are missing a version:')
     }
 
     def 'handles root and subproject of the same name'() {
