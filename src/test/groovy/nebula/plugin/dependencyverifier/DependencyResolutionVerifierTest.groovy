@@ -27,8 +27,8 @@ import spock.lang.Ignore
 import spock.lang.Subject
 import spock.lang.Unroll
 
-import static nebula.plugin.VerifierOutputAssertionsBase.assertConfigurationCachingIsNotMentioned
 import static nebula.plugin.VerifierOutputAssertionsBase.assertConfigurationCacheStateCouldNotBeStored
+import static nebula.plugin.VerifierOutputAssertionsBase.assertConfigurationCachingIsNotMentioned
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertExecutionFailedForTask
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertFailureMessageIsDisplayedOnce
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertNoConfigurationCacheStoringIssues
@@ -848,6 +848,45 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         assertNoConfigurationCacheStoringIssues(results.output)
     }
 
+    def 'strict platform constraint aligns versions and verifier does not fail on non-selected versions'() {
+        given:
+        setupSingleProject()
+        buildFile << """
+            repositories {
+                mavenCentral()
+            }
+            dependencies {
+                implementation 'org.springframework:spring-core:5.2.9.RELEASE'
+                implementation 'org.springframework:spring-core:5.2.12.RELEASE'
+                implementation platform('org.springframework:spring-framework-bom:5.2.14.RELEASE')
+                implementation 'org.springframework:spring-context'
+            }
+        """.stripIndent()
+
+        when:
+        def results = runTasks('dependencies', '--configuration', 'runtimeClasspath')
+
+        then: 'we do not see failures'
+        !results.output.contains('FAILURE')
+        !results.output.contains('verifyDependencyResolution FAILED')
+        !results.output.contains('Failed to resolve the following dependencies:')
+
+        and: 'we see conflict-resolved versions resolve to a single version'
+        results.output.contains('org.springframework:spring-core:5.2.9.RELEASE -> 5.2.14.RELEASE')
+        results.output.contains('org.springframework:spring-core:5.2.12.RELEASE -> 5.2.14.RELEASE')
+        results.output.contains('org.springframework:spring-core:5.2.14.RELEASE')
+
+        and: 'we do not see resolved final path at lower non-selected versions'
+        !results.output.contains('org.springframework:spring-core:5.2.9.RELEASE\n')
+        !results.output.contains('org.springframework:spring-core:5.2.12.RELEASE\n')
+
+        and: 'we see version provided by BOM successfully'
+        results.output.contains('org.springframework:spring-context -> 5.2.14.RELEASE\n')
+
+        and: 'we do not see issues about dependencies missing a version, which would be provided by the BOM'
+        !results.output.contains('The following dependencies are missing a version:')
+    }
+
     def 'handles root and subproject of the same name'() {
         given:
         setupMultiProject()
@@ -1440,6 +1479,47 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         assert results.output.contains('FAIL')
     }
 
+    @Unroll
+    def 'verifier is scoped to the queried configuration: #description task succeeds'() {
+        given:
+        singleProjectWithConsistentResolutionSetup()
+
+        when: 'configuration with no conflicting constraints resolves foo:2.0.0 successfully'
+        def noIssuesResult = runTasks(*tasks, '--configuration', 'runtimeClasspath')
+
+        and: 'configuration with conflicting constraints cannot resolve successfully'
+        def conflictsResult = runTasksAndFail(*tasks, '--configuration', 'compileClasspath')
+
+        then: 'configuration with no conflicting constraints shows the correct resolved version'
+        noIssuesResult.output.contains('test.nebula:foo:2.0.0\n')
+
+        and: 'verifier does not fail when selected config has an issue, even if other configs do have an issue'
+        verifyAll {
+            !noIssuesResult.output.contains('FAILURE')
+            !noIssuesResult.output.contains('verifyDependencyResolution FAILED')
+
+            !noIssuesResult.output.contains("Failed to resolve")
+        }
+
+        and: 'in particular, the synthetic {strictly 2.0.0} constraint is not falsely reported as unresolved when looking at a different configuration altogether'
+        !noIssuesResult.output.contains("Failed to resolve 'test.nebula:foo:{strictly 2.0.0}'")
+
+        and: 'verifier fails when selected configs have an issue, even in reporting tasks'
+        verifyAll {
+            conflictsResult.output.contains('FAILURE')
+            conflictsResult.output.contains('verifyDependencyResolution FAILED')
+
+            // different output depending on report task type; same effect
+            conflictsResult.output.contains("test.nebula:foo:{strictly 1.0.0} -> 1.0.0 FAILED") || conflictsResult.output.contains("test.nebula:foo:{strictly 1.0.0} FAILED")
+            conflictsResult.output.contains("test.nebula:foo:{strictly 2.0.0} -> 2.0.0 FAILED") || conflictsResult.output.contains("test.nebula:foo:{strictly 2.0.0} FAILED")
+        }
+
+        where:
+        tasks                                                    | description
+        ['dependencyInsight', '--dependency', 'test.nebula:foo'] | 'dependency insight'
+        ['dependencies']                                         | 'dependencies'
+    }
+
     private static class OutputAssertions extends VerifierOutputAssertionsBase {
 
         static void assertResolutionFailureForMissingVersionDependencies(String resultsOutput, List<String> dependencyNames) {
@@ -1740,6 +1820,40 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         }
         '''.stripIndent()
         dependencyLockSubproject2 << dependencyLockFileContentsSubproject2
+    }
+
+    private void singleProjectWithConsistentResolutionSetup() {
+        def graph = new DependencyGraphBuilder()
+                .addModule('test.nebula:foo:1.0.0')
+                .addModule('test.nebula:foo:2.0.0')
+                .addModule(new ModuleBuilder('test.nebula:bar:1.0.0').addDependency('test.nebula:foo:2.0.0').build())
+                .build()
+        def localRepo = new GradleDependencyGenerator(graph, "${projectDir}/localrepo")
+        localRepo.generateTestMavenRepo()
+
+        buildFile << """\
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+                id 'java-library'
+            }
+            repositories {
+                ${localRepo.mavenRepositoryBlock}
+            }
+            dependencies {
+                // strictly 1.0.0 on compile-only scope
+                compileOnlyApi('test.nebula:foo') {
+                    version { strictly '1.0.0' }
+                }
+                // transitively brings test.nebula:foo:2.0.0 at runtime
+                runtimeOnly 'test.nebula:bar:1.0.0'
+            }
+            // consistent resolution: compileClasspath follows runtimeClasspath versions,
+            // which synthesizes a {strictly 2.0.0} constraint on compileClasspath —
+            // conflicting with the user's {strictly 1.0.0}, so compileClasspath fails
+            configurations.compileClasspath.shouldResolveConsistentlyWith(configurations.runtimeClasspath)
+        """.stripIndent()
+
+        writeHelloWorld()
     }
 
     private List commonSetupForProjectWithLockedVersionsThatAreNotAligned() {

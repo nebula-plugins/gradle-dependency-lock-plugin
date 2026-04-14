@@ -82,6 +82,28 @@ class DependencyResolutionVerifier(
             }
         }
 
+        // Computed once; used by getScopedEffectiveInfo() for filtering and by the task parameter for
+        // reportingOnlyBuild — avoids calling extractDependencyReportTaskConfigurationNames() twice.
+        val scopedConfNames = extractDependencyReportTaskConfigurationNames(project)
+
+        fun getScopedEffectiveInfo(): Pair<Map<String, Provider<ResolvedComponentResult>>, List<String>> {
+            // When running `dependencyInsight --configuration X` or `dependencies --configuration X`,
+            // scope the verifier to only the queried configuration.
+            // This prevents false failures from configurations that were never resolved by the task
+            // (e.g. compileClasspath failing due to consistent resolution constraints when other config was queried).
+            val effectiveResolutionResultsMap = if (scopedConfNames.isNotEmpty()) {
+                resolutionResultsMap.filterKeys { it in scopedConfNames }
+            } else {
+                resolutionResultsMap
+            }
+            val effectiveConfigNames = if (scopedConfNames.isNotEmpty()) {
+                scopedConfNames.toList()
+            } else {
+                resolvableConfigurations.map { it.name }
+            }
+            return Pair(effectiveResolutionResultsMap, effectiveConfigNames)
+        }
+
         val verificationTask = project.tasks.register(
             "verifyDependencyResolution",
             DependencyVerificationTask::class.java
@@ -102,17 +124,21 @@ class DependencyResolutionVerifier(
             }
             val effectiveLockValidation = extensionFromRoot.enableLockFileValidation.get() && !ignoreLocks
             task.parameters.enableLockFileValidation.set(effectiveLockValidation)
-            task.parameters.configurationNamesToValidate.set(resolvableConfigurations.map { it.name })
             task.parameters.taskNames.set(project.gradle.startParameter.taskNames.toList())
             task.parameters.coreAlignmentEnabled.set(System.getProperty("nebula.features.coreAlignmentSupport", "false").toBoolean())
             task.parameters.coreLockingEnabled.set(DependencyLockingFeatureFlags.isCoreLockingEnabled())
-            task.parameters.reportingOnlyBuild.set(isReportingTasksOnly(project))
+            task.parameters.reportingOnlyBuild.set(
+                ReportingTasks.isReportingTasksOnly(project.gradle.startParameter.taskNames.toList())
+            )
 
             val lockedDepsMap = readLockFileForConfigurations(project, resolvableConfigurations)
             val overrideDepsMap = readOverrideLockFileForConfigurations(project, resolvableConfigurations)
             task.parameters.lockedDependenciesPerConfiguration.set(lockedDepsMap)
             task.parameters.overrideDependenciesPerConfiguration.set(overrideDepsMap)
-            task.parameters.resolutionResults.set(resolutionResultsMap)
+
+            val (effectiveResolutionResultsMap, effectiveConfigNames) = getScopedEffectiveInfo()
+            task.parameters.configurationNamesToValidate.set(effectiveConfigNames)
+            task.parameters.resolutionResults.set(effectiveResolutionResultsMap)
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -198,8 +224,56 @@ class DependencyResolutionVerifier(
         return configurations.associate { conf -> conf.name to overrideMap }
     }
 
-    private fun isReportingTasksOnly(project: Project): Boolean {
-        return ReportingTasks.isReportingTasksOnly(project)
+    /**
+     * When the build is a pure `dependencyInsight --configuration X` or `dependencies --configuration X` invocation,
+     * returns the set of queried configuration names so the verifier can scope itself to only those configurations.
+     *
+     * Returns an empty set for all other build types (compile, lifecycle, mixed, lock-generation,
+     * or `dependencyInsight`/`dependencies` without an explicit `--configuration` flag outside of
+     * `dependencyInsight`), which preserves the existing "validate all" behavior.
+     *
+     * **Configuration-cache compatible:** only reads [org.gradle.StartParameter] data (the raw
+     * command-line task-request args), which is stable, serializable, and available at configuration
+     * time. No task objects, configuration objects, or execution-time state are captured.
+     */
+    private fun extractDependencyReportTaskConfigurationNames(project: Project): Set<String> {
+        val startParam = project.gradle.startParameter
+        // Lock-generation builds must validate ALL configurations — never scope them.
+        if (startParam.isWriteDependencyLocks || startParam.lockedDependenciesToUpdate.isNotEmpty()) {
+            return emptySet()
+        }
+
+        val taskNames = startParam.taskNames
+        // Resolve reporting task names lazily by type so any custom task names are covered.
+        val reportingTaskNames: Set<String> =
+            project.tasks.withType(DependencyInsightReportTask::class.java).names +
+                    project.tasks.withType(DependencyReportTask::class.java).names
+        val hasDependencyReportingTask = taskNames.isNotEmpty() && taskNames.any { name ->
+            name.substringAfterLast(':') in reportingTaskNames
+        }
+        if (!hasDependencyReportingTask) return emptySet()
+
+        // Parse --configuration from the raw task-request args. Each TaskExecutionRequest.args
+        // contains the task name followed by any task-specific options, e.g.:
+        //   ["dependencyInsight", "--dependency", "foo:bar", "--configuration", "runtimeClasspath"]
+        //   ["dependencies", "--configuration", "runtimeClasspath"]
+        val confNames = mutableSetOf<String>()
+        val args = startParam.taskRequests.flatMap { it.args }
+        val iter = args.iterator()
+        while (iter.hasNext()) {
+            val arg = iter.next()
+            if (arg == "--configuration" && iter.hasNext()) {
+                confNames.add(iter.next())
+            }
+        }
+        // dependencyInsight defaults to compileClasspath when no --configuration is given;
+        // dependencies (without --configuration) shows all configs, so we do not scope it.
+        if (confNames.isEmpty()) {
+            val insightTaskNames = project.tasks.withType(DependencyInsightReportTask::class.java).names
+            val hasInsightTask = taskNames.any { name -> name.substringAfterLast(':') in insightTaskNames }
+            if (hasInsightTask) confNames.add("compileClasspath")
+        }
+        return confNames
     }
 
     /**

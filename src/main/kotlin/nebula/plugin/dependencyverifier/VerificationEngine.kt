@@ -21,8 +21,10 @@ package nebula.plugin.dependencyverifier
 import org.gradle.api.artifacts.ResolveException
 import org.gradle.api.artifacts.component.ComponentIdentifier
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
+import org.gradle.api.artifacts.result.UnresolvedDependencyResult
 import org.gradle.api.logging.Logging
 import org.gradle.api.provider.Provider
 
@@ -115,8 +117,31 @@ object VerificationEngine {
         }
         component.dependencies.forEach { dep ->
             when (dep) {
-                is org.gradle.api.artifacts.result.UnresolvedDependencyResult ->
-                    unresolved.add(dep.requested.displayName)
+                is UnresolvedDependencyResult -> {
+                    // Gradle produces UnresolvedDependencyResult for two distinct reasons:
+                    // 1. Genuine failure: the artifact could not be found or downloaded, or a
+                    //    lock state violation (dependency not in the lock file).
+                    // 2. Non-selected version: a platform or BOM forced a different version via
+                    //    conflict resolution; the requested version was not selected, but another
+                    //    version of the same module was resolved successfully.
+                    // Distinguish them by checking whether the same module was resolved to a
+                    // DIFFERENT version. If so, this is case 2 — conflict resolution picked
+                    // another version, not a real failure. If the versions match (or no resolved
+                    // version exists), it is case 1 and must be reported.
+                    val requested = dep.requested
+                    if (requested is ModuleComponentSelector) {
+                        val resolvedToDifferentVersion = resolved.any {
+                            it.group == requested.group &&
+                                it.module == requested.module &&
+                                it.version != requested.version
+                        }
+                        if (!resolvedToDifferentVersion) {
+                            unresolved.add(dep.requested.displayName)
+                        }
+                    } else {
+                        unresolved.add(dep.requested.displayName)
+                    }
+                }
                 is ResolvedDependencyResult ->
                     traverse(dep.selected, visited, unresolved, resolved)
             }
