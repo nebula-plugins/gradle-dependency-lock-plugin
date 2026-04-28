@@ -1,10 +1,12 @@
 package nebula.plugin.dependencylock
 
 import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.JsonReader
 import com.squareup.moshi.Moshi
 import groovy.transform.TupleConstructor
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
+import okio.Okio
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -97,10 +99,19 @@ class DependencyLockReader {
 
     private static Map parseLockFile(File lock) {
         try {
-            return jsonAdapter.fromJson(lock.text)
+            return lock.withInputStream { inputStream ->
+                JsonReader reader = JsonReader.of(Okio.buffer(Okio.source(inputStream)))
+                try {
+                    return jsonAdapter.fromJson(reader)
+                } finally {
+                    reader.close()
+                }
+            }
         } catch (ex) {
-            logger.debug('Unreadable json file: ' + lock.text)
-            logger.error('JSON unreadable')
+            if (logger.isDebugEnabled()) {
+                logger.debug('Unreadable json file: ' + lock.text)
+            }
+            logger.error("JSON unreadable: ${lock.absolutePath}")
             throw new GradleException("${lock.name} is unreadable or invalid json, terminating run", ex)
         }
     }
