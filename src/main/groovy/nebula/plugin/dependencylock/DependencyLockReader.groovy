@@ -98,9 +98,6 @@ class DependencyLockReader {
     }
 
     private static Map parseLockFile(File lock) {
-        // Stream via Okio rather than slurping the whole file into a String —
-        // for multi-MB lock files this avoids a duplicate UTF-16 copy on the
-        // heap and reduces peak memory under parallel module resolution.
         try {
             return lock.withInputStream { inputStream ->
                 JsonReader reader = JsonReader.of(Okio.buffer(Okio.source(inputStream)))
@@ -111,6 +108,9 @@ class DependencyLockReader {
                 }
             }
         } catch (ex) {
+            if (logger.isDebugEnabled()) {
+                logger.debug('Unreadable json file: ' + lock.text)
+            }
             logger.error("JSON unreadable: ${lock.absolutePath}")
             throw new GradleException("${lock.name} is unreadable or invalid json, terminating run", ex)
         }
