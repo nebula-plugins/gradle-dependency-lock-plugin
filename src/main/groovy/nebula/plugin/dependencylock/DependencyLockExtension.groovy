@@ -48,7 +48,7 @@ abstract class DependencyLockExtension {
      * Default: empty set
      */
     abstract SetProperty<String> getSkippedConfigurationNamesPrefixes()
-    
+
     /**
      * Filter closure for dependencies.
      * Note: Closures are not configuration cache compatible, but this is kept for backward compatibility.
