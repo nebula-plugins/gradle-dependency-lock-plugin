@@ -15,7 +15,6 @@
  */
 package nebula.plugin.dependencylock
 
-import com.netflix.nebula.interop.onResolve
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
@@ -187,8 +186,10 @@ class DependencyLockPlugin @Inject constructor(
             // Use configureEach for lazy configuration (avoids configuring unused configurations)
             project.configurations.configureEach { conf ->
                 if (lockAfterEvaluating) {
-                    conf.onResolve {
-                        maybeApplyLock(conf, extension, overrides, globalLockFilename, lockFilename)
+                    conf.incoming.beforeResolve {
+                        if(conf.incoming == it) {
+                            maybeApplyLock(conf, extension, overrides, globalLockFilename, lockFilename)
+                        }
                     }
                 } else {
                     maybeApplyLock(conf, extension, overrides, globalLockFilename, lockFilename)
