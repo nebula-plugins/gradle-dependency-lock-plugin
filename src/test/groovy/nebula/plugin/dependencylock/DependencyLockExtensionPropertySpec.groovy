@@ -106,14 +106,14 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
             dependencyLock {
                 configurationNames.add('runtimeClasspath')
                 configurationNames.add('compileClasspath')
-                skippedDependencies.add('com.example:skip-me')
+                skippedDependenciesProperty.add('com.example:skip-me')
             }
 
             task checkConfig {
                 def ext = dependencyLock  // Capture during configuration
                 doLast {
                     println "configs: " + ext.configurationNames.get()
-                    println "skipped: " + ext.skippedDependencies.get()
+                    println "skipped: " + ext.skippedDependencies
                 }
             }
         """
@@ -125,6 +125,86 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
         result.output.contains('runtimeClasspath')
         result.output.contains('compileClasspath')
         result.output.contains('skip-me')
+    }
+
+    def 'skippedDependencies supports Groovy = assignment (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            dependencyLock {
+                skippedDependencies = ['com.example:foo', 'com.example:bar'] as Set
+            }
+
+            task checkSkipped {
+                def ext = dependencyLock
+                doLast {
+                    println "skipped: " + ext.skippedDependencies
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkSkipped')
+
+        then:
+        result.output.contains('com.example:foo')
+        result.output.contains('com.example:bar')
+    }
+
+    def 'skippedDependencies getter returns Set not SetProperty'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            task checkType {
+                def ext = dependencyLock
+                doLast {
+                    def value = ext.skippedDependencies
+                    println "isSet: " + (value instanceof Set)
+                    println "isSetProperty: " + value.getClass().name.contains('SetProperty')
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkType')
+
+        then:
+        result.output.contains('isSet: true')
+        result.output.contains('isSetProperty: false')
+    }
+
+    def 'skippedDependencies supports += operator (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            dependencyLock {
+                skippedDependencies = ['com.example:existing'] as Set
+            }
+            dependencyLock.skippedDependencies += 'com.example:added'
+
+            task checkSkipped {
+                def ext = dependencyLock
+                doLast {
+                    println "skipped: " + ext.skippedDependencies
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkSkipped')
+
+        then:
+        result.output.contains('com.example:existing')
+        result.output.contains('com.example:added')
     }
 
     def 'commit extension properties use default conventions'() {
