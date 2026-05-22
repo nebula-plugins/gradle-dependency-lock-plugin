@@ -24,25 +24,26 @@ import org.gradle.api.tasks.Internal
  * Uses Gradle's Property API for lazy configuration and configuration cache compatibility.
  */
 abstract class DependencyLockExtension {
+
     /**
      * Name of the lock file to generate.
      * Default: 'dependencies.lock'
      */
     abstract Property<String> getLockFile()
-    
+
     /**
      * Name of the global lock file.
      * Default: 'global.lock'
      */
     abstract Property<String> getGlobalLockFile()
-    
+
     /**
      * Specific configuration names to lock.
      * If empty, all resolvable configurations will be locked.
      * Default: empty set
      */
     abstract SetProperty<String> getConfigurationNames()
-    
+
     /**
      * Configuration name prefixes to skip when locking.
      * Default: empty set
@@ -56,56 +57,56 @@ abstract class DependencyLockExtension {
      */
     @Internal
     Closure dependencyFilter = { String group, String name, String version -> true }
-    
+
     /**
      * Dependencies to update when running updateLock task.
      * Format: 'group:artifact'
      * Default: empty set
      */
     abstract SetProperty<String> getUpdateDependencies()
-    
+
     /**
      * Dependencies to skip when generating locks.
      * Default: empty set
      */
     abstract SetProperty<String> getSkippedDependencies()
-    
+
     /**
      * Whether to include transitive dependencies in the lock file.
      * Default: false
      */
     abstract Property<Boolean> getIncludeTransitives()
-    
+
     /**
      * Whether to delay lock application until configuration resolution.
      * Default: true
      */
     abstract Property<Boolean> getLockAfterEvaluating()
-    
+
     /**
      * Whether to fail when invalid dependency coordinates are provided for updates.
      * Default: true
      */
     abstract Property<Boolean> getUpdateDependenciesFailOnInvalidCoordinates()
-    
+
     /**
      * Whether to fail when update tasks are used simultaneously with generate tasks.
      * Default: true
      */
     abstract Property<Boolean> getUpdateDependenciesFailOnSimultaneousTaskUsage()
-    
+
     /**
      * Whether to fail when non-specified dependencies need updates.
      * Default: true
      */
     abstract Property<Boolean> getUpdateDependenciesFailOnNonSpecifiedDependenciesToUpdate()
-    
+
     /**
      * Additional configurations to lock beyond the standard set.
      * Default: empty set
      */
     abstract SetProperty<String> getAdditionalConfigurationsToLock()
-    
+
     /**
      * Constructor sets default conventions for all properties.
      */
@@ -123,4 +124,5 @@ abstract class DependencyLockExtension {
         updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.convention(true)
         additionalConfigurationsToLock.convention([] as Set)
     }
+
 }
