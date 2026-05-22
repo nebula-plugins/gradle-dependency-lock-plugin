@@ -243,7 +243,7 @@ class DependencyLockTaskConfigurer {
             it.dependenciesLock.set(project.layout.buildDirectory.file(lockFilename ?: extension.lockFile.get()))
             // Set configuration names
             it.configurationNames.set(extension.configurationNames)
-            it.skippedConfigurationNames.set(extension.skippedConfigurationNamesPrefixes)
+            it.skippedConfigurationNames.set(extension.skippedConfigurationNamesPrefixesProperty)
 
             // Always regenerate lock files - dependency changes in build.gradle aren't tracked as task inputs
             it.outputs.upToDateWhen { false }
@@ -279,7 +279,7 @@ class DependencyLockTaskConfigurer {
             // Build resolution map at config time so the task does not hold provider chains that capture project.
             // Intentionally resolve configurationNames and skippedConfigurationNamesPrefixes here (not lazy) for config-cache compatibility.
             def configNames = extension.configurationNames.get()
-            def skippedNames = extension.skippedConfigurationNamesPrefixes.get()
+            def skippedNames = extension.skippedConfigurationNamesPrefixesProperty.get()
             def lockableConfs = GenerateLockTask.lockableConfigurations(project, project, configNames, skippedNames)
             def resolutionMap = lockableConfs.collectEntries { conf ->
                 [(conf.name): conf.incoming.resolutionResult.rootComponent]
@@ -337,7 +337,7 @@ class DependencyLockTaskConfigurer {
                     def subprojects = project.subprojects.collect { subproject ->
                         def ext = subproject.getExtensions().findByType(DependencyLockExtension)
                         if (ext != null) {
-                            Collection<Configuration> lockableConfigurations = lockableConfigurations(project, subproject, ext.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
+                            Collection<Configuration> lockableConfigurations = lockableConfigurations(project, subproject, ext.configurationNames.get(), extension.skippedConfigurationNamesPrefixesProperty.get())
                             Collection<Configuration> configurations = filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(subproject, ext.configurationNames.get(), lockableConfigurations)
                             // Use unique name to avoid conflicts if evaluated multiple times
                             Configuration aggregate = subproject.configurations.create("aggregateConfiguration_${nextUniqueConfigSuffix.getAndIncrement()}_${subproject.path.replace(':', '_')}")
@@ -346,7 +346,7 @@ class DependencyLockTaskConfigurer {
                             configurations
                                     .findAll { configuration ->
                                         !configurationsToSkipForGlobalLockPrefixes.any { String prefix -> configuration.name.startsWith(prefix) }
-                                                && !extension.skippedConfigurationNamesPrefixes.get().any { String prefix -> configuration.name.startsWith(prefix) }
+                                                && !extension.skippedConfigurationNamesPrefixesProperty.get().any { String prefix -> configuration.name.startsWith(prefix) }
                                     }
                                     .each { configuration ->
                                         aggregate.extendsFrom(configuration)
@@ -373,7 +373,7 @@ class DependencyLockTaskConfigurer {
                         configurations.add(conf)
                     }
 
-                    configurations + lockableConfigurations(project, project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixes.get())
+                    configurations + lockableConfigurations(project, project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixesProperty.get())
                 }
             }
         }
@@ -451,7 +451,7 @@ class DependencyLockTaskConfigurer {
 
             // Wire resolution results for path-aware diff (configuration cache compatible!)
             diffTask.resolutionResults.set(
-                extension.configurationNames.zip(extension.skippedConfigurationNamesPrefixes) { configNames, skippedNames ->
+                extension.configurationNames.zip(extension.skippedConfigurationNamesPrefixesProperty) { configNames, skippedNames ->
                     def lockableConfs = GenerateLockTask.lockableConfigurations(project, project, configNames, skippedNames)
 
                     lockableConfs.collectEntries { conf ->

@@ -213,7 +213,7 @@ class DependencyLockPlugin @Inject constructor(
     }
 
     private fun maybeApplyLock(conf: Configuration, extension: DependencyLockExtension, overrides: Map<*, *>, globalLockFileName: String?, lockFilename: String?) {
-        val shouldIgnoreLock = (extension.skippedConfigurationNamesPrefixes.get() + DependencyLockTaskConfigurer.configurationsToSkipForGlobalLockPrefixes).any {
+        val shouldIgnoreLock = (extension.skippedConfigurationNamesPrefixesProperty.get() + DependencyLockTaskConfigurer.configurationsToSkipForGlobalLockPrefixes).any {
             prefix -> conf.name.startsWith(prefix) && !conf.name.contains("resolutionRules")
         }
         if(shouldIgnoreLock) {
