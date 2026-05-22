@@ -68,8 +68,21 @@ abstract class DependencyLockExtension {
     /**
      * Dependencies to skip when generating locks.
      * Default: empty set
+     *
+     * The backing SetProperty is exposed via {@link #getSkippedDependenciesProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old Set&lt;String&gt;
+     * API so existing build scripts and plugins compiled against the previous version continue
+     * to work without modification.
      */
-    abstract SetProperty<String> getSkippedDependencies()
+    abstract SetProperty<String> getSkippedDependenciesProperty()
+
+    Set<String> getSkippedDependencies() {
+        return skippedDependenciesProperty.get()
+    }
+
+    void setSkippedDependencies(Iterable<String> values) {
+        skippedDependenciesProperty.set(values)
+    }
 
     /**
      * Whether to include transitive dependencies in the lock file.
@@ -116,7 +129,7 @@ abstract class DependencyLockExtension {
         configurationNames.convention([] as Set)
         skippedConfigurationNamesPrefixes.convention([] as Set)
         updateDependencies.convention([] as Set)
-        skippedDependencies.convention([] as Set)
+        skippedDependenciesProperty.convention([] as Set)
         includeTransitives.convention(false)
         lockAfterEvaluating.convention(true)
         updateDependenciesFailOnInvalidCoordinates.convention(true)

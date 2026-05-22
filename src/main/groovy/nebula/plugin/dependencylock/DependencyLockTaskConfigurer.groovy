@@ -255,7 +255,7 @@ class DependencyLockTaskConfigurer {
     private void setupLockProperties(TaskProvider<GenerateLockTask> task, DependencyLockExtension extension, Map overrideMap) {
         task.configure { generateTask ->
             // Set skipped dependencies
-            generateTask.skippedDependencies.set(extension.skippedDependencies)
+            generateTask.skippedDependencies.set(extension.skippedDependenciesProperty)
 
             // Set includeTransitives: gradle property overrides extension. Resolve at config time so the
             // task holds a plain value (no provider chain with non-serializable lambdas for config cache).
