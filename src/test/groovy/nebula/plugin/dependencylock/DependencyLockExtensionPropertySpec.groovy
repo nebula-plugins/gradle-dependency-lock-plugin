@@ -207,6 +207,86 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
         result.output.contains('com.example:added')
     }
 
+    def 'skippedConfigurationNamesPrefixes supports Groovy = assignment (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            dependencyLock {
+                skippedConfigurationNamesPrefixes = ['test', 'compile'] as Set
+            }
+
+            task checkSkipped {
+                def ext = dependencyLock
+                doLast {
+                    println "skipped: " + ext.skippedConfigurationNamesPrefixes
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkSkipped')
+
+        then:
+        result.output.contains('test')
+        result.output.contains('compile')
+    }
+
+    def 'skippedConfigurationNamesPrefixes getter returns Set not SetProperty'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            task checkType {
+                def ext = dependencyLock
+                doLast {
+                    def value = ext.skippedConfigurationNamesPrefixes
+                    println "isSet: " + (value instanceof Set)
+                    println "isSetProperty: " + value.getClass().name.contains('SetProperty')
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkType')
+
+        then:
+        result.output.contains('isSet: true')
+        result.output.contains('isSetProperty: false')
+    }
+
+    def 'skippedConfigurationNamesPrefixes supports += operator (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            dependencyLock {
+                skippedConfigurationNamesPrefixes = ['test'] as Set
+            }
+            dependencyLock.skippedConfigurationNamesPrefixes += 'runtime'
+
+            task checkSkipped {
+                def ext = dependencyLock
+                doLast {
+                    println "skipped: " + ext.skippedConfigurationNamesPrefixes
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkSkipped')
+
+        then:
+        result.output.contains('test')
+        result.output.contains('runtime')
+    }
+
     def 'commit extension properties use default conventions'() {
         given:
         buildFile << """

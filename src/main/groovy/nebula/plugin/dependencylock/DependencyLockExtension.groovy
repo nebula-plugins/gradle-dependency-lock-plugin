@@ -47,8 +47,21 @@ abstract class DependencyLockExtension {
     /**
      * Configuration name prefixes to skip when locking.
      * Default: empty set
+     *
+     * The backing SetProperty is exposed via {@link #getSkippedConfigurationNamesPrefixesProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old Set&lt;String&gt;
+     * API so existing build scripts and plugins compiled against the previous version continue
+     * to work without modification.
      */
-    abstract SetProperty<String> getSkippedConfigurationNamesPrefixes()
+    abstract SetProperty<String> getSkippedConfigurationNamesPrefixesProperty()
+
+    Set<String> getSkippedConfigurationNamesPrefixes() {
+        return skippedConfigurationNamesPrefixesProperty.get()
+    }
+
+    void setSkippedConfigurationNamesPrefixes(Iterable<String> values) {
+        skippedConfigurationNamesPrefixesProperty.set(values)
+    }
 
     /**
      * Filter closure for dependencies.
@@ -127,7 +140,7 @@ abstract class DependencyLockExtension {
         lockFile.convention('dependencies.lock')
         globalLockFile.convention('global.lock')
         configurationNames.convention([] as Set)
-        skippedConfigurationNamesPrefixes.convention([] as Set)
+        skippedConfigurationNamesPrefixesProperty.convention([] as Set)
         updateDependencies.convention([] as Set)
         skippedDependenciesProperty.convention([] as Set)
         includeTransitives.convention(false)
