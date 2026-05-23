@@ -1,6 +1,20 @@
 package nebula.plugin.dependencylock
 
+
 class DependencyLockReaderSpec extends FreshProjectSpec {
+
+    def 'parseLockFile with null JSON content returns empty map rather than null'() {
+        project.plugins.apply('java')
+        DependencyLockReader reader = new DependencyLockReader(project)
+        File lock = new File(projectDir, 'dependencies.lock')
+        lock.text = 'null'
+
+        when:
+        reader.readLocks(project.configurations.compileClasspath, lock, [:])
+
+        then:
+        noExceptionThrown()
+    }
 
     def 'read global lock with an extraneous transitive that is not in the lock due to manual editing'() {
         project.plugins.apply('java')
