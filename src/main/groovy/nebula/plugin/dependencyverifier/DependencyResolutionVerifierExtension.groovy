@@ -136,10 +136,10 @@ abstract class DependencyResolutionVerifierExtension {
 
     DependencyResolutionVerifierExtension() {
         shouldFailTheBuildProperty.convention(true)
-        configurationsToExcludeProperty.convention([] as Set)
+        configurationsToExcludeProperty.convention([] as Set<String>)
         missingVersionsMessageAdditionProperty.convention('')
         resolvedVersionDoesNotEqualLockedVersionMessageAdditionProperty.convention('')
-        tasksToExcludeProperty.convention([] as Set)
+        tasksToExcludeProperty.convention([] as Set<String>)
         enableLockFileValidationProperty.convention(true)
     }
 
