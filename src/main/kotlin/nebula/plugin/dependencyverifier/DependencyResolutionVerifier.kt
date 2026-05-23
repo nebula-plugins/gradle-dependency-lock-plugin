@@ -31,6 +31,7 @@ import org.gradle.api.flow.FlowScope
 import org.gradle.api.logging.Logging
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskCollection
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.api.tasks.diagnostics.DependencyInsightReportTask
 import org.gradle.api.tasks.diagnostics.DependencyReportTask
@@ -49,7 +50,10 @@ class DependencyResolutionVerifier(
 
     private val logger = Logging.getLogger(DependencyResolutionVerifier::class.java)
 
-    fun verifySuccessfulResolution(project: Project) {
+    fun registerVerificationTask(project: Project): TaskProvider<DependencyVerificationTask> =
+        project.tasks.register("verifyDependencyResolution", DependencyVerificationTask::class.java)
+
+    fun verifySuccessfulResolution(project: Project, verificationTask: TaskProvider<DependencyVerificationTask>) {
         val projectKey = uniqueProjectKey(project)
         val projectName = project.name
         verificationService.get().initializeProject(projectKey)
@@ -104,10 +108,7 @@ class DependencyResolutionVerifier(
             return Pair(effectiveResolutionResultsMap, effectiveConfigNames)
         }
 
-        val verificationTask = project.tasks.register(
-            "verifyDependencyResolution",
-            DependencyVerificationTask::class.java
-        ) { task ->
+        verificationTask.configure { task ->
             task.usesService(verificationService)
             task.parameters.projectKey.set(projectKey)
             task.parameters.projectName.set(projectName)

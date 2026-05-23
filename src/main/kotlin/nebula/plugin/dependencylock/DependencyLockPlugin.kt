@@ -107,16 +107,19 @@ class DependencyLockPlugin @Inject constructor(
             /* MigrateToCoreLocks can be involved with migrating dependencies that were previously unlocked.
                Verifying resolution based on the base lockfiles causes a `LockOutOfDateException` from the initial DependencyLockingArtifactVisitor state
             */
-            // Defer verification setup until after project evaluation
-            // This ensures other plugins (like java) have created their configurations first
+            val verifier = DependencyResolutionVerifier(
+                verificationService,
+                dependencyResolutionVerifierExtension,
+                flowScope,
+                flowProviders
+            )
+            // Register the task stub eagerly so downstream plugins that walk the task container
+            // (even inside afterEvaluate) don't hit an "immutable container" error.
+            val verificationTask = verifier.registerVerificationTask(project)
+            // Defer wiring of task parameters until after evaluation so configurations from other
+            // plugins (like 'java') are present when we build the resolution map.
             project.afterEvaluate {
-                // Pass BuildService provider, extension, and Flow API services to verifier
-                DependencyResolutionVerifier(
-                    verificationService, 
-                    dependencyResolutionVerifierExtension,
-                    flowScope,
-                    flowProviders
-                ).verifySuccessfulResolution(project)
+                verifier.verifySuccessfulResolution(project, verificationTask)
             }
         }
 

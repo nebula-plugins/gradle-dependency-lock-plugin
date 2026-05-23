@@ -1903,4 +1903,35 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         '''.stripIndent()
         [mavenrepo, rulesJsonFile, dependencyLockFileContents]
     }
+
+    def 'verifyDependencyResolution task is registered before afterEvaluate runs'() {
+        given:
+        // Use init-script classpath injection so `apply plugin:` works outside the plugins {} block.
+        // This lets us register an afterEvaluate callback before the plugin is applied, exercising
+        // the constraint that registerVerificationTask() must be called eagerly (not deferred).
+        definePluginOutsideOfPluginBlock = true
+
+        // Register an afterEvaluate callback BEFORE applying the lock plugin.
+        // Gradle fires afterEvaluate callbacks in registration order, so this fires before
+        // the lock plugin's own afterEvaluate. If registerVerificationTask() is called
+        // eagerly (synchronously in apply()), the task exists here; if it was deferred
+        // inside afterEvaluate, it would not.
+        buildFile << """\
+            afterEvaluate {
+                def t = tasks.findByName('verifyDependencyResolution')
+                if (t == null) {
+                    throw new IllegalStateException(
+                        'verifyDependencyResolution was not registered before afterEvaluate ran')
+                }
+            }
+            apply plugin: 'com.netflix.nebula.dependency-lock'
+        """.stripIndent()
+
+        when:
+        def result = runTasks('help')
+
+        then:
+        !result.output.contains('verifyDependencyResolution was not registered')
+        !result.output.contains('FAILURE')
+    }
 }
