@@ -172,7 +172,7 @@ class DependencyLockPlugin @Inject constructor(
             // Use provider chain to allow gradle property to override extension property
             val lockAfterEvaluating = project.providers.gradleProperty(LOCK_AFTER_EVALUATING)
                 .map { it.toBoolean() }
-                .orElse(extension.lockAfterEvaluating)
+                .orElse(extension.lockAfterEvaluatingProperty)
                 .get()
             if (lockAfterEvaluating) {
                 LOGGER.info("Delaying dependency lock apply until beforeResolve ($LOCK_AFTER_EVALUATING set to true)")
