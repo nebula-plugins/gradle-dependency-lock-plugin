@@ -212,20 +212,56 @@ abstract class DependencyLockExtension {
     /**
      * Whether to fail when invalid dependency coordinates are provided for updates.
      * Default: true
+     *
+     * The backing Property is exposed via {@link #getUpdateDependenciesFailOnInvalidCoordinatesProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old {@code boolean}
+     * API so existing build scripts continue to work without modification.
      */
-    abstract Property<Boolean> getUpdateDependenciesFailOnInvalidCoordinates()
+    abstract Property<Boolean> getUpdateDependenciesFailOnInvalidCoordinatesProperty()
+
+    Boolean getUpdateDependenciesFailOnInvalidCoordinates() {
+        return updateDependenciesFailOnInvalidCoordinatesProperty.get()
+    }
+
+    void setUpdateDependenciesFailOnInvalidCoordinates(Boolean value) {
+        updateDependenciesFailOnInvalidCoordinatesProperty.set(value)
+    }
 
     /**
      * Whether to fail when update tasks are used simultaneously with generate tasks.
      * Default: true
+     *
+     * The backing Property is exposed via {@link #getUpdateDependenciesFailOnSimultaneousTaskUsageProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old {@code boolean}
+     * API so existing build scripts continue to work without modification.
      */
-    abstract Property<Boolean> getUpdateDependenciesFailOnSimultaneousTaskUsage()
+    abstract Property<Boolean> getUpdateDependenciesFailOnSimultaneousTaskUsageProperty()
+
+    Boolean getUpdateDependenciesFailOnSimultaneousTaskUsage() {
+        return updateDependenciesFailOnSimultaneousTaskUsageProperty.get()
+    }
+
+    void setUpdateDependenciesFailOnSimultaneousTaskUsage(Boolean value) {
+        updateDependenciesFailOnSimultaneousTaskUsageProperty.set(value)
+    }
 
     /**
      * Whether to fail when non-specified dependencies need updates.
      * Default: true
+     *
+     * The backing Property is exposed via {@link #getUpdateDependenciesFailOnNonSpecifiedDependenciesToUpdateProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old {@code boolean}
+     * API so existing build scripts continue to work without modification.
      */
-    abstract Property<Boolean> getUpdateDependenciesFailOnNonSpecifiedDependenciesToUpdate()
+    abstract Property<Boolean> getUpdateDependenciesFailOnNonSpecifiedDependenciesToUpdateProperty()
+
+    Boolean getUpdateDependenciesFailOnNonSpecifiedDependenciesToUpdate() {
+        return updateDependenciesFailOnNonSpecifiedDependenciesToUpdateProperty.get()
+    }
+
+    void setUpdateDependenciesFailOnNonSpecifiedDependenciesToUpdate(Boolean value) {
+        updateDependenciesFailOnNonSpecifiedDependenciesToUpdateProperty.set(value)
+    }
 
     /**
      * Additional configurations to lock beyond the standard set.
@@ -257,9 +293,9 @@ abstract class DependencyLockExtension {
         skippedDependenciesProperty.convention([] as Set)
         includeTransitivesProperty.convention(false)
         lockAfterEvaluatingProperty.convention(true)
-        updateDependenciesFailOnInvalidCoordinates.convention(true)
-        updateDependenciesFailOnSimultaneousTaskUsage.convention(true)
-        updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.convention(true)
+        updateDependenciesFailOnInvalidCoordinatesProperty.convention(true)
+        updateDependenciesFailOnSimultaneousTaskUsageProperty.convention(true)
+        updateDependenciesFailOnNonSpecifiedDependenciesToUpdateProperty.convention(true)
         additionalConfigurationsToLockProperty.convention([] as Set)
     }
 

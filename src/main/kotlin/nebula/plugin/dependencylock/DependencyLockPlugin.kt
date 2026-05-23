@@ -245,15 +245,15 @@ class DependencyLockPlugin @Inject constructor(
             // Resolve validation flags using Provider API
             val validateCoordinates = project.providers.gradleProperty(VALIDATE_DEPENDENCY_COORDINATES)
                 .map { it.toBoolean() }
-                .orElse(extension.updateDependenciesFailOnInvalidCoordinates)
+                .orElse(extension.updateDependenciesFailOnInvalidCoordinatesProperty)
                 .get()
             val validateSimultaneousTasks = project.providers.gradleProperty(VALIDATE_SIMULTANEOUS_TASKS)
                 .map { it.toBoolean() }
-                .orElse(extension.updateDependenciesFailOnSimultaneousTaskUsage)
+                .orElse(extension.updateDependenciesFailOnSimultaneousTaskUsageProperty)
                 .get()
             val validateSpecifiedDependenciesToUpdate = project.providers.gradleProperty(VALIDATE_SPECIFIED_DEPENDENCIES_TO_UPDATE)
                 .map { it.toBoolean() }
-                .orElse(extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate)
+                .orElse(extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdateProperty)
                 .get()
             
             UpdateDependenciesValidator.validate(
