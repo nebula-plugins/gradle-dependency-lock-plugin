@@ -34,7 +34,7 @@ import java.nio.file.Paths
 class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
 
     @Rule
-    public final ProvideSystemProperty provideSystemProperty = new ProvideSystemProperty("ignoreDeprecations", "false")
+    public final ProvideSystemProperty provideSystemProperty = new ProvideSystemProperty('ignoreDeprecations', 'false')
 
     def setup() {
         definePluginOutsideOfPluginBlock = true
@@ -320,11 +320,11 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
 
     def 'lock file name can be customized'() {
         buildFile << BUILD_GRADLE
-        buildFile << """
+        buildFile << '''
         dependencyLock {
             lockFile = "custom.lock"
         }
-        """
+        '''
 
         when:
         def result = runTasks('generateLock', 'saveLock')
@@ -407,7 +407,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         runTasks('generateLock')
 
         then:
-        new File(projectDir, 'build/dependencies.lock').text.replaceAll("\\s", "") == lockWithSkips.replaceAll("\\s", "")
+        new File(projectDir, 'build/dependencies.lock').text.replaceAll('\\s', '') == lockWithSkips.replaceAll('\\s', '')
     }
 
     def 'update lock'() {
@@ -528,7 +528,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         def result = runTasksAndFail('updateLock', 'saveLock')
 
         then:
-        result.output.contains("Usage of `updateLock` task requires specific modules to update. Please specify dependencies to update")
+        result.output.contains('Usage of `updateLock` task requires specific modules to update. Please specify dependencies to update')
     }
 
     def 'update lock uses property when intending to run with no dependencies to update passed in'() {
@@ -649,14 +649,14 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
                     "viaOverride": "2.0.0"
                 }
             '''.stripIndent())
-        new File(sub1, 'dependencies.lock').text.replaceAll("\\s", "") == lockText1.replaceAll("\\s", "")
+        new File(sub1, 'dependencies.lock').text.replaceAll('\\s', '') == lockText1.replaceAll('\\s', '')
         String lockText2 = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:baz": {
                     "locked": "1.0.0",
                     "viaOverride": "1.0.0"
                 }
             '''.stripIndent())
-        new File(sub2, 'dependencies.lock').text.replaceAll("\\s", "") == lockText2.replaceAll("\\s", "")
+        new File(sub2, 'dependencies.lock').text.replaceAll('\\s', '') == lockText2.replaceAll('\\s', '')
     }
 
     def 'in multiproject allow applying to root project'() {
@@ -676,7 +676,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     }
 
     def 'create global lock in singleproject'() {
-        provideSystemProperty.setProperty("ignoreDeprecations", "true")
+        provideSystemProperty.setProperty('ignoreDeprecations', 'true')
         buildFile << BUILD_GRADLE
 
         when:
@@ -686,9 +686,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         new File(projectDir, 'build/global.lock').text == FOO_LOCK
     }
 
-
     def 'warn the user when configurations for creating global lock in multiproject are no longer resolvable, thus no longer lockable'() {
-        provideSystemProperty.setProperty("ignoreDeprecations", "true")
+        provideSystemProperty.setProperty('ignoreDeprecations', 'true')
         disableConfigurationCache()
         addSubproject('sub1', """\
             configurations {
@@ -716,7 +715,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         """.stripIndent()
 
         when:
-        def result =runTasks('generateGlobalLock', '--warning-mode', 'all')
+        def result = runTasks('generateGlobalLock', '--warning-mode', 'all')
 
         then:
         assert result.output.contains('Global lock warning: project \'sub1\' requested locking a configuration which cannot be consumed: \'compileClasspath\'')
@@ -731,7 +730,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     }
 
     def 'save global lock in multiproject'() {
-        provideSystemProperty.setProperty("ignoreDeprecations", "true")
+        provideSystemProperty.setProperty('ignoreDeprecations', 'true')
         disableConfigurationCache()
         setupCommonMultiproject()
 
@@ -779,13 +778,13 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
                     "locked": "2.0.0"
                 }
             '''.stripIndent())
-        new File(projectDir, 'sub1/dependencies.lock').text.replaceAll("\\s", "") == lockText1.replaceAll("\\s", "")
+        new File(projectDir, 'sub1/dependencies.lock').text.replaceAll('\\s', '') == lockText1.replaceAll('\\s', '')
         String lockText2 = LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
                 "test.example:foo": {
                     "locked": "1.0.1"
                 }
             '''.stripIndent())
-        new File(projectDir, 'sub2/dependencies.lock').text.replaceAll("\\s", "") == lockText2.replaceAll("\\s", "")
+        new File(projectDir, 'sub2/dependencies.lock').text.replaceAll('\\s', '') == lockText2.replaceAll('\\s', '')
     }
 
     def 'diffLock in multiproject'() {
@@ -837,7 +836,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     }
 
     def 'generateGlobalLock ignores existing global lock file'() {
-        provideSystemProperty.setProperty("ignoreDeprecations", "true")
+        provideSystemProperty.setProperty('ignoreDeprecations', 'true')
         disableConfigurationCache()
         setupCommonMultiproject()
         new File(projectDir, 'global.lock').text = '''\
@@ -1202,10 +1201,9 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         when:
         def result = runTasksAndFail('-PdependencyLock.updateDependencies=test.example:foo:2.0.1', '-PdependencyLock.override=test.example:foo:2.0.1', 'updateLock', 'saveLock')
 
-
         then:
-        result.output.contains("updateDependencies list is invalid")
-        result.output.contains("test.example:foo:2.0.1 contains more elements than groupId:module")
+        result.output.contains('updateDependencies list is invalid')
+        result.output.contains('test.example:foo:2.0.1 contains more elements than groupId:module')
     }
 
     def 'command line override respected while updating lock with malformed coordinates with extension'() {
@@ -1320,10 +1318,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     }
 
     //Spring boot plugin 1.x is using removed runtime configuration. Unless backported for Gradle 7.0 it cannot be used
-    @IgnoreIf({ GradleVersion.current().baseVersion >= GradleVersion.version("7.0")})
+    @IgnoreIf({ GradleVersion.current().baseVersion >= GradleVersion.version('7.0') })
     @Issue('#86')
     def 'locks win over Spring dependency management'() {
-        provideSystemProperty.setProperty("ignoreDeprecations", "true")
+        provideSystemProperty.setProperty('ignoreDeprecations', 'true')
         // Deprecation: The classifier property has been deprecated. This is scheduled to be removed in Gradle 7.0. Please use the archiveClassifier property instead.
 
         buildFile << """\
@@ -1426,8 +1424,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
 
         then: 'all configurations are in the lock file'
         def configList = generateResult.output.readLines().find {
-            it.startsWith("configurations=")
-        }.split("configurations=")[1]
+            it.startsWith('configurations=')
+        }.split('configurations=')[1]
         def configurations = Eval.me(configList)
         def lockFile = new File(projectDir, 'dependencies.lock')
         def json = new JsonSlurper().parseText(lockFile.text)
@@ -1452,7 +1450,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
 
     def 'deprecated lock format message is not output for an empty file'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
-        dependenciesLock << """{}"""
+        dependenciesLock << '''{}'''
 
         buildFile << BUILD_GRADLE
 
@@ -1460,7 +1458,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         def result = runTasks('dependencies')
 
         then:
-        !result.output.contains("is using a deprecated lock format")
+        !result.output.contains('is using a deprecated lock format')
     }
 
     @Unroll
@@ -1486,7 +1484,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             allprojects {
                 apply plugin: 'com.netflix.nebula.dependency-lock'
             }
-            
+
             subprojects {
                 repositories { mavenCentral() }
             }
@@ -1503,7 +1501,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     }
 
     def 'global lock with skippedConfigurationNamesPrefixes'() {
-        provideSystemProperty.setProperty("ignoreDeprecations", "true")
+        provideSystemProperty.setProperty('ignoreDeprecations', 'true')
         disableConfigurationCache()
         addSubproject('one')
         addSubproject('two')
@@ -1514,9 +1512,9 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
                 dependencyLock {
                     skippedConfigurationNamesPrefixes = ['spotless']
                 }
-                
+
             }
-            
+
             subprojects {
                 apply plugin: 'java'
                 repositories { mavenCentral() }
@@ -1533,7 +1531,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         when:
         def result = runTasks('generateGlobalLock', 'saveGlobalLock')
 
-        then: "Guava is locked to 19.0"
+        then: 'Guava is locked to 19.0'
         new File(projectDir, 'global.lock').text == """{
     "_global_": {
         "com.google.guava:guava": {
@@ -1556,8 +1554,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         def resultDependencies = runTasks(':one:dependencies')
 
         then:
-        resultDependencies.output.contains("com.google.guava:guava:31.1-jre")
-        !resultDependencies.output.contains("com.google.guava:guava:31.1-jre -> 19.0")
+        resultDependencies.output.contains('com.google.guava:guava:31.1-jre')
+        !resultDependencies.output.contains('com.google.guava:guava:31.1-jre -> 19.0')
     }
 
     def 'handle generating a lock with circular dependencies depending on a jar that depends on us'() {
@@ -1573,7 +1571,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             group = 'example.nebula'
             version = '1.1.0'
             apply plugin: 'com.netflix.nebula.dependency-lock'
-            
+
             repositories {
                 ${generator.mavenRepositoryBlock}
             }
@@ -1619,7 +1617,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             group = 'example.nebula'
             version = '1.1.0'
             apply plugin: 'com.netflix.nebula.dependency-lock'
-            
+
             repositories {
                 ${generator.mavenRepositoryBlock}
             }
@@ -1718,8 +1716,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             subprojects {
                 apply plugin: 'scala'
                 apply plugin: "com.github.spotbugs"
-                repositories { 
-                    maven { url = '${Fixture.repo}' } 
+                repositories {
+                    maven { url = '${Fixture.repo}' }
                     mavenCentral()
                 }
             }
@@ -1764,7 +1762,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
                 id 'java'
             }
             apply plugin: 'com.netflix.nebula.dependency-lock'
-            
+
             repositories {
                 ${generator.mavenRepositoryBlock}
             }
@@ -1799,7 +1797,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
                 id 'java'
             }
             apply plugin: 'com.netflix.nebula.dependency-lock'
-            
+
             repositories {
                 ${generator.mavenRepositoryBlock}
             }
@@ -1829,7 +1827,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
     }
 
     def 'save global lock in multiproject - do not lock excluded configurations'() {
-        provideSystemProperty.setProperty("ignoreDeprecations", "true")
+        provideSystemProperty.setProperty('ignoreDeprecations', 'true')
         disableConfigurationCache()
         setupCommonMultiprojectWithPlugins()
 
@@ -1879,8 +1877,8 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         }
         '''.stripIndent()
 
-        def repo = new File(projectDir,'repo')
-        
+        def repo = new File(projectDir, 'repo')
+
         // Create version 1.0
         def sample = new File(repo, 'sample/recommender/1.0')
         sample.mkdirs()
@@ -1904,7 +1902,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
               </dependencyManagement>
             </project>
         '''
-        
+
         // Create version 1.1 (requested in build but will be locked to 1.0)
         def sample11 = new File(repo, 'sample/recommender/1.1')
         sample11.mkdirs()
@@ -1994,7 +1992,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             }
             """.stripIndent()
 
-        when: "show configurations and ensure that the *DependenciesMetadata configurations exist"
+        when: 'show configurations and ensure that the *DependenciesMetadata configurations exist'
         def result = runTasks('dependencies')
 
         then:
@@ -2005,10 +2003,10 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         result.output.contains('testCompileOnlyDependenciesMetadata')
         result.output.contains('testImplementationDependenciesMetadata')
 
-        when: "update locks"
+        when: 'update locks'
         runTasks('generateLock', 'saveLock')
 
-        then: "lockfile should not contain *DependenciesMetadata configurations"
+        then: 'lockfile should not contain *DependenciesMetadata configurations'
         def lockFile = new File(projectDir, 'dependencies.lock')
         !lockFile.text.contains('implementationDependenciesMetadata')
         lockFile.text.contains('org.jetbrains.kotlin:kotlin-stdlib')
@@ -2056,10 +2054,11 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
                     "locked": "2.0.0"
                 }
             '''.stripIndent())
-        new File(projectDir, 'sub1/dependencies.lock').text.replaceAll("\\s", "") == lockText1.replaceAll("\\s", "")
+        new File(projectDir, 'sub1/dependencies.lock').text.replaceAll('\\s', '') == lockText1.replaceAll('\\s', '')
 
         and: 'global lock tasks are not created'
         !result.output.contains('generateGlobalLock')
         !result.output.contains('saveGlobalLock')
     }
+
 }
