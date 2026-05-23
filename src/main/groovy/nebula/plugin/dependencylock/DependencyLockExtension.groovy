@@ -55,14 +55,39 @@ abstract class DependencyLockExtension {
     /**
      * Name of the lock file to generate.
      * Default: 'dependencies.lock'
+     *
+     * The backing Property is exposed via {@link #getLockFileProperty()} for config-cache-compatible
+     * task wiring. The getter/setter here preserve the old {@code String} API so existing build
+     * scripts using {@code dependencyLock.lockFile = 'custom.lock'} or reading
+     * {@code dependencyLock.lockFile} as a plain String continue to work.
      */
-    abstract Property<String> getLockFile()
+    abstract Property<String> getLockFileProperty()
+
+    String getLockFile() {
+        return lockFileProperty.get()
+    }
+
+    void setLockFile(String value) {
+        lockFileProperty.set(value)
+    }
 
     /**
      * Name of the global lock file.
      * Default: 'global.lock'
+     *
+     * The backing Property is exposed via {@link #getGlobalLockFileProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old {@code String}
+     * API so existing build scripts continue to work without modification.
      */
-    abstract Property<String> getGlobalLockFile()
+    abstract Property<String> getGlobalLockFileProperty()
+
+    String getGlobalLockFile() {
+        return globalLockFileProperty.get()
+    }
+
+    void setGlobalLockFile(String value) {
+        globalLockFileProperty.set(value)
+    }
 
     /**
      * Specific configuration names to lock.
@@ -200,8 +225,8 @@ abstract class DependencyLockExtension {
      * Constructor sets default conventions for all properties.
      */
     DependencyLockExtension() {
-        lockFile.convention('dependencies.lock')
-        globalLockFile.convention('global.lock')
+        lockFileProperty.convention('dependencies.lock')
+        globalLockFileProperty.convention('global.lock')
         configurationNamesProperty.convention([] as Set)
         skippedConfigurationNamesPrefixesProperty.convention([] as Set)
         updateDependenciesProperty.convention([] as Set)
