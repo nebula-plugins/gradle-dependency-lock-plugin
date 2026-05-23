@@ -32,8 +32,22 @@ import org.gradle.api.provider.SetProperty
  */
 abstract class DependencyResolutionVerifierExtension {
 
-    /** Fail the build when verification finds issues. Default: true */
-    abstract Property<Boolean> getShouldFailTheBuild()
+    /**
+     * Fail the build when verification finds issues. Default: true
+     *
+     * The backing Property is exposed via {@link #getShouldFailTheBuildProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old {@code boolean}
+     * API so existing build scripts continue to work without modification.
+     */
+    abstract Property<Boolean> getShouldFailTheBuildProperty()
+
+    Boolean getShouldFailTheBuild() {
+        return shouldFailTheBuildProperty.get()
+    }
+
+    void setShouldFailTheBuild(Boolean value) {
+        shouldFailTheBuildProperty.set(value)
+    }
 
     /**
      * Configuration names to exclude from verification. Default: empty set
@@ -52,11 +66,39 @@ abstract class DependencyResolutionVerifierExtension {
         configurationsToExcludeProperty.set(values)
     }
 
-    /** Message to append when missing versions are detected. Default: empty */
-    abstract Property<String> getMissingVersionsMessageAddition()
+    /**
+     * Message to append when missing versions are detected. Default: empty
+     *
+     * The backing Property is exposed via {@link #getMissingVersionsMessageAdditionProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old {@code String}
+     * API so existing build scripts continue to work without modification.
+     */
+    abstract Property<String> getMissingVersionsMessageAdditionProperty()
 
-    /** Message to append when resolved version does not match locked. Default: empty */
-    abstract Property<String> getResolvedVersionDoesNotEqualLockedVersionMessageAddition()
+    String getMissingVersionsMessageAddition() {
+        return missingVersionsMessageAdditionProperty.get()
+    }
+
+    void setMissingVersionsMessageAddition(String value) {
+        missingVersionsMessageAdditionProperty.set(value)
+    }
+
+    /**
+     * Message to append when resolved version does not match locked. Default: empty
+     *
+     * The backing Property is exposed via {@link #getResolvedVersionDoesNotEqualLockedVersionMessageAdditionProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old {@code String}
+     * API so existing build scripts continue to work without modification.
+     */
+    abstract Property<String> getResolvedVersionDoesNotEqualLockedVersionMessageAdditionProperty()
+
+    String getResolvedVersionDoesNotEqualLockedVersionMessageAddition() {
+        return resolvedVersionDoesNotEqualLockedVersionMessageAdditionProperty.get()
+    }
+
+    void setResolvedVersionDoesNotEqualLockedVersionMessageAddition(String value) {
+        resolvedVersionDoesNotEqualLockedVersionMessageAdditionProperty.set(value)
+    }
 
     /**
      * Task names to exclude from verification. Default: empty set
@@ -75,16 +117,30 @@ abstract class DependencyResolutionVerifierExtension {
         tasksToExcludeProperty.set(values)
     }
 
-    /** When true (default): full lock validation. When false: only resolution errors, config cache compatible. */
-    abstract Property<Boolean> getEnableLockFileValidation()
+    /**
+     * When true (default): full lock validation. When false: only resolution errors, config cache compatible.
+     *
+     * The backing Property is exposed via {@link #getEnableLockFileValidationProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old {@code boolean}
+     * API so existing build scripts continue to work without modification.
+     */
+    abstract Property<Boolean> getEnableLockFileValidationProperty()
+
+    Boolean getEnableLockFileValidation() {
+        return enableLockFileValidationProperty.get()
+    }
+
+    void setEnableLockFileValidation(Boolean value) {
+        enableLockFileValidationProperty.set(value)
+    }
 
     DependencyResolutionVerifierExtension() {
-        shouldFailTheBuild.convention(true)
+        shouldFailTheBuildProperty.convention(true)
         configurationsToExcludeProperty.convention([] as Set)
-        missingVersionsMessageAddition.convention('')
-        resolvedVersionDoesNotEqualLockedVersionMessageAddition.convention('')
+        missingVersionsMessageAdditionProperty.convention('')
+        resolvedVersionDoesNotEqualLockedVersionMessageAdditionProperty.convention('')
         tasksToExcludeProperty.convention([] as Set)
-        enableLockFileValidation.convention(true)
+        enableLockFileValidationProperty.convention(true)
     }
 
 }
