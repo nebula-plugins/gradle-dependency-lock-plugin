@@ -8,6 +8,33 @@ import nebula.plugin.BaseIntegrationTestKitSpec
  */
 class DependencyResolutionVerifierExtensionPropertySpec extends BaseIntegrationTestKitSpec {
 
+    def 'verifier extension properties use default conventions'() {
+        given:
+        buildFile << """
+            plugins { id 'com.netflix.nebula.dependency-lock' }
+            task checkDefaults {
+                def ext = dependencyResolutionVerifierExtension
+                doLast {
+                    println "shouldFailTheBuild: " + ext.shouldFailTheBuild
+                    println "configurationsToExclude: " + ext.configurationsToExclude
+                    println "missingVersionsMessageAddition: '" + ext.missingVersionsMessageAddition + "'"
+                    println "resolvedVersionMsg: '" + ext.resolvedVersionDoesNotEqualLockedVersionMessageAddition + "'"
+                    println "tasksToExclude: " + ext.tasksToExclude
+                    println "enableLockFileValidation: " + ext.enableLockFileValidation
+                }
+            }
+        """
+        when:
+        def result = runTasks('checkDefaults')
+        then:
+        result.output.contains('shouldFailTheBuild: true')
+        result.output.contains('configurationsToExclude: []')
+        result.output.contains("missingVersionsMessageAddition: ''")
+        result.output.contains("resolvedVersionMsg: ''")
+        result.output.contains('tasksToExclude: []')
+        result.output.contains('enableLockFileValidation: true')
+    }
+
     def 'configurationsToExclude supports Groovy = assignment (backward compat)'() {
         given:
         buildFile << """
