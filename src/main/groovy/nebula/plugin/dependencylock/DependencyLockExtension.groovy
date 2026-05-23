@@ -41,8 +41,20 @@ abstract class DependencyLockExtension {
      * Specific configuration names to lock.
      * If empty, all resolvable configurations will be locked.
      * Default: empty set
+     *
+     * The backing SetProperty is exposed via {@link #getConfigurationNamesProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old Set&lt;String&gt;
+     * API so existing build scripts continue to work without modification.
      */
-    abstract SetProperty<String> getConfigurationNames()
+    abstract SetProperty<String> getConfigurationNamesProperty()
+
+    Set<String> getConfigurationNames() {
+        return configurationNamesProperty.get()
+    }
+
+    void setConfigurationNames(Iterable<String> values) {
+        configurationNamesProperty.set(values)
+    }
 
     /**
      * Configuration name prefixes to skip when locking.
@@ -75,8 +87,20 @@ abstract class DependencyLockExtension {
      * Dependencies to update when running updateLock task.
      * Format: 'group:artifact'
      * Default: empty set
+     *
+     * The backing SetProperty is exposed via {@link #getUpdateDependenciesProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old Set&lt;String&gt;
+     * API so existing build scripts continue to work without modification.
      */
-    abstract SetProperty<String> getUpdateDependencies()
+    abstract SetProperty<String> getUpdateDependenciesProperty()
+
+    Set<String> getUpdateDependencies() {
+        return updateDependenciesProperty.get()
+    }
+
+    void setUpdateDependencies(Iterable<String> values) {
+        updateDependenciesProperty.set(values)
+    }
 
     /**
      * Dependencies to skip when generating locks.
@@ -130,8 +154,20 @@ abstract class DependencyLockExtension {
     /**
      * Additional configurations to lock beyond the standard set.
      * Default: empty set
+     *
+     * The backing SetProperty is exposed via {@link #getAdditionalConfigurationsToLockProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old Set&lt;String&gt;
+     * API so existing build scripts continue to work without modification.
      */
-    abstract SetProperty<String> getAdditionalConfigurationsToLock()
+    abstract SetProperty<String> getAdditionalConfigurationsToLockProperty()
+
+    Set<String> getAdditionalConfigurationsToLock() {
+        return additionalConfigurationsToLockProperty.get()
+    }
+
+    void setAdditionalConfigurationsToLock(Iterable<String> values) {
+        additionalConfigurationsToLockProperty.set(values)
+    }
 
     /**
      * Constructor sets default conventions for all properties.
@@ -139,16 +175,16 @@ abstract class DependencyLockExtension {
     DependencyLockExtension() {
         lockFile.convention('dependencies.lock')
         globalLockFile.convention('global.lock')
-        configurationNames.convention([] as Set)
+        configurationNamesProperty.convention([] as Set)
         skippedConfigurationNamesPrefixesProperty.convention([] as Set)
-        updateDependencies.convention([] as Set)
+        updateDependenciesProperty.convention([] as Set)
         skippedDependenciesProperty.convention([] as Set)
         includeTransitives.convention(false)
         lockAfterEvaluating.convention(true)
         updateDependenciesFailOnInvalidCoordinates.convention(true)
         updateDependenciesFailOnSimultaneousTaskUsage.convention(true)
         updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.convention(true)
-        additionalConfigurationsToLock.convention([] as Set)
+        additionalConfigurationsToLockProperty.convention([] as Set)
     }
 
 }

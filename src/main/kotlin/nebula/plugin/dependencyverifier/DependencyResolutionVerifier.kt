@@ -59,7 +59,7 @@ class DependencyResolutionVerifier(
         verificationService.get().initializeProject(projectKey)
         val configurationsToExclude = getConfigurationsToExclude(project)
         val shouldFailTheBuild = getShouldFailTheBuild(project)
-        val tasksToExclude = extensionFromRoot.tasksToExclude.get()
+        val tasksToExclude = extensionFromRoot.tasksToExcludeProperty.get()
         val requestedTasks = project.gradle.startParameter.taskNames
         val allTasksExcluded = requestedTasks.isNotEmpty() && requestedTasks.all { taskName ->
             val simpleTaskName = taskName.substringAfterLast(':')
@@ -162,7 +162,7 @@ class DependencyResolutionVerifier(
         project.findProperty(propName)?.let { parse(it.toString()) } ?: default
 
     private fun getConfigurationsToExclude(project: Project): Set<String> =
-        propertyOrExtension(project, CONFIGURATIONS_TO_EXCLUDE, extensionFromRoot.configurationsToExclude.get()) { str ->
+        propertyOrExtension(project, CONFIGURATIONS_TO_EXCLUDE, extensionFromRoot.configurationsToExcludeProperty.get()) { str ->
             str.split(",").map { it.trim() }.toSet()
         }
 
