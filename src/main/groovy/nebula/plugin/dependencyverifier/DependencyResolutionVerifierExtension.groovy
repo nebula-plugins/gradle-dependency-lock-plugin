@@ -31,6 +31,7 @@ import org.gradle.api.provider.SetProperty
  * {@code extension.foo = [...]} assignment syntax. Both sides must be kept.
  */
 abstract class DependencyResolutionVerifierExtension {
+
     /** Fail the build when verification finds issues. Default: true */
     abstract Property<Boolean> getShouldFailTheBuild()
 
@@ -85,4 +86,5 @@ abstract class DependencyResolutionVerifierExtension {
         tasksToExcludeProperty.convention([] as Set)
         enableLockFileValidation.convention(true)
     }
+
 }
