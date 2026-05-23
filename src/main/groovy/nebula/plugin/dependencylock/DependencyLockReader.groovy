@@ -1,5 +1,8 @@
 package nebula.plugin.dependencylock
 
+import static DependencyLockTaskConfigurer.GLOBAL_LOCK_CONFIG
+import static DependencyLockTaskConfigurer.OVERRIDE_FILE
+
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonReader
 import com.squareup.moshi.Moshi
@@ -12,11 +15,10 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import static DependencyLockTaskConfigurer.OVERRIDE_FILE
-import static DependencyLockTaskConfigurer.GLOBAL_LOCK_CONFIG
 
 @TupleConstructor
 class DependencyLockReader {
+
     private static final Logger logger = Logging.getLogger(DependencyLockReader)
     private static final Moshi moshi = new Moshi.Builder().build()
     private static final JsonAdapter<Map> jsonAdapter = moshi.adapter(Map)
@@ -29,8 +31,9 @@ class DependencyLockReader {
     Map readLocks(Configuration conf, File dependenciesLock, Map<LockKey, LockValue> requestedDependencies, Collection<String> updates = []) {
         logger.info("Using ${dependenciesLock.name} to lock dependencies in $conf")
 
-        if (!dependenciesLock.exists())
+        if (!dependenciesLock.exists()) {
             return null
+        }
 
         Map locks = parseLockFile(dependenciesLock)
 
@@ -42,7 +45,7 @@ class DependencyLockReader {
                 }
                 [(configurationName): deps.findAll { coord, info ->
                     def notUpdate = !updates.contains(coord)
-                    def coordinateSections = coord.split(":")
+                    def coordinateSections = coord.split(':')
                     def lockValue = requestedDependencies.get(new LockKey(group: coordinateSections[0], artifact: coordinateSections[1], configuration: configurationName)) ?: new LockValue()
                     def requestedAVersion = lockValue.requested != null
                     def isFirstLevel = info?.transitive == null
@@ -115,4 +118,5 @@ class DependencyLockReader {
             throw new GradleException("${lock.name} is unreadable or invalid json, terminating run", ex)
         }
     }
+
 }
