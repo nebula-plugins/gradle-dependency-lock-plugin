@@ -140,7 +140,7 @@ class DependencyLockPlugin @Inject constructor(
             coreLockingHelper.disableCachingWhenUpdatingDependencies()
             coreLockingHelper.notifyWhenUsingOfflineMode()
 
-            val lockFile = File(project.projectDir, extension.lockFile.get())
+            val lockFile = File(project.projectDir, extension.lockFileProperty.get())
 
             if (lockFile.exists()) {
                 if (startParameter.isWriteDependencyLocks) {
@@ -160,7 +160,7 @@ class DependencyLockPlugin @Inject constructor(
             val taskNames = startParameter.taskNames
             val hasUpdateTask = hasUpdateTask(taskNames)
             val hasGenerationTask = hasGenerationTask(taskNames)
-            val globalLockFile = File(project.projectDir, extension.globalLockFile.get())
+            val globalLockFile = File(project.projectDir, extension.globalLockFileProperty.get())
 
             if (globalLockFile.exists() && !hasGenerationTask && !hasUpdateTask) {
                 // do not fail for generation or update tasks here. It's more readable when the task itself fails.
@@ -222,11 +222,11 @@ class DependencyLockPlugin @Inject constructor(
         if(shouldIgnoreLock) {
             return
         }
-        val globalLock = File(project.rootProject.projectDir, globalLockFileName ?: extension.globalLockFile.get())
+        val globalLock = File(project.rootProject.projectDir, globalLockFileName ?: extension.globalLockFileProperty.get())
         val dependenciesLock = if (globalLock.exists()) {
             globalLock
         } else {
-            File(project.projectDir, lockFilename ?: extension.lockFile.get())
+            File(project.projectDir, lockFilename ?: extension.lockFileProperty.get())
         }
 
         lockUsed = dependenciesLock.name
