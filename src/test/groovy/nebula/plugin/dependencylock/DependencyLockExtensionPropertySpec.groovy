@@ -796,6 +796,21 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
         result.output.contains('remoteRetries: 5')
     }
 
+    def 'setting dependencyFilter emits deprecation warning about configuration cache incompatibility'() {
+        given:
+        buildFile << """
+            plugins { id 'com.netflix.nebula.dependency-lock' }
+            dependencyLock {
+                dependencyFilter = { group, name, version -> !name.startsWith('internal') }
+            }
+            task doNothing
+        """
+        when:
+        def result = runTasks('doNothing')
+        then:
+        result.output.contains('dependencyFilter') && result.output.contains('deprecated')
+    }
+
     def 'configurationNames bridge getter returns mutable Set (defensive copy)'() {
         given:
         buildFile << """

@@ -15,6 +15,7 @@
  */
 package nebula.plugin.dependencylock
 
+import org.gradle.api.logging.Logging
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Internal
@@ -129,11 +130,25 @@ abstract class DependencyLockExtension {
 
     /**
      * Filter closure for dependencies.
-     * Note: Closures are not configuration cache compatible, but this is kept for backward compatibility.
-     * Marked as @Internal so it doesn't affect task inputs.
+     *
+     * @deprecated Closures are not configuration-cache serializable. With CC enabled this field
+     * is silently dropped on a cache hit, reverting to the always-pass default and ignoring any
+     * custom filter you set. There is no CC-safe replacement yet; track
+     * https://github.com/nebula-plugins/gradle-dependency-lock-plugin/issues for updates.
+     * Marked @Internal so it does not affect task input fingerprints.
      */
+    @Deprecated
     @Internal
     Closure dependencyFilter = { String group, String name, String version -> true }
+
+    @SuppressWarnings('GrDeprecatedAPIUsage')
+    void setDependencyFilter(Closure filter) {
+        Logging.getLogger(DependencyLockExtension).warn(
+            'dependencyFilter is deprecated: Closures are not configuration-cache compatible ' +
+            'and will be silently ignored on a cache hit. See the plugin README for alternatives.'
+        )
+        this.dependencyFilter = filter
+    }
 
     /**
      * Dependencies to update when running updateLock task.
