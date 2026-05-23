@@ -220,6 +220,21 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         bazResult.output.contains('baz:1.0.0')
     }
 
+    def 'malformed dependencyLock.override coordinate without version logs warning and does not crash'() {
+        def dependenciesLock = new File(projectDir, 'dependencies.lock')
+        dependenciesLock << OLD_FOO_LOCK
+
+        buildFile << SPECIFIC_BUILD_GRADLE
+
+        when: 'override missing version component should warn and be skipped, not crash'
+        def result = runTasks('dependencyInsight', '--configuration', 'compileClasspath', '--dependency', 'foo',
+            '-PdependencyLock.override=test.example:foo')
+
+        then:
+        !result.output.contains('FAILURE')
+        result.output.contains('Invalid override')
+    }
+
     @Issue('#79')
     def 'lock file is not applied while generating lock with abbreviated task name'() {
         def dependenciesLock = new File(projectDir, 'dependencies.lock')
