@@ -111,4 +111,5 @@ class DependencyResolutionVerifierExtensionPropertySpec extends BaseIntegrationT
         result.output.contains('isSet: true')
         result.output.contains('isSetProperty: false')
     }
+
 }
