@@ -19,9 +19,9 @@ class UpdateDependenciesValidatorSpec extends FreshProjectSpec {
         when:
         Set<String> modules = ['netflix:my-module', 'netflix:my-module-2']
         UpdateDependenciesValidator.validate(modules, emptyMap, true, false,
-            extension.updateDependenciesFailOnInvalidCoordinates.get(),
-            extension.updateDependenciesFailOnSimultaneousTaskUsage.get(),
-            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.get())
+            extension.updateDependenciesFailOnInvalidCoordinates,
+            extension.updateDependenciesFailOnSimultaneousTaskUsage,
+            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate)
 
         then:
         notThrown(DependencyLockException)
@@ -31,9 +31,9 @@ class UpdateDependenciesValidatorSpec extends FreshProjectSpec {
         when:
         Set<String> modules = ['netflix', 'netflix:my-module:1.+', 'netflix:my-module-2:latest.release', 'netflix:my-module;2:latest.release']
         UpdateDependenciesValidator.validate(modules, emptyMap, true, false,
-            extension.updateDependenciesFailOnInvalidCoordinates.get(),
-            extension.updateDependenciesFailOnSimultaneousTaskUsage.get(),
-            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.get())
+            extension.updateDependenciesFailOnInvalidCoordinates,
+            extension.updateDependenciesFailOnSimultaneousTaskUsage,
+            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate)
 
         then:
         def exception = thrown(DependencyLockException)
@@ -48,13 +48,12 @@ class UpdateDependenciesValidatorSpec extends FreshProjectSpec {
         when:
         project.ext.set('dependencyLock.updateDependenciesFailOnInvalidCoordinates', false)
         Set<String> modules = ['netflix', 'netflix:my-module:1.+', 'netflix:my-module-2:latest.release', 'netflix:my-module;2:latest.release']
-        // Use findProperty to check both gradle properties and ext (check for null, not truthiness)
         def validateCoordinatesProp = project.findProperty('dependencyLock.updateDependenciesFailOnInvalidCoordinates')
-        def validateCoordinates = validateCoordinatesProp != null ? validateCoordinatesProp as boolean : extension.updateDependenciesFailOnInvalidCoordinates.get()
+        def validateCoordinates = validateCoordinatesProp != null ? validateCoordinatesProp as boolean : extension.updateDependenciesFailOnInvalidCoordinates
         UpdateDependenciesValidator.validate(modules, emptyMap, true, false,
             validateCoordinates,
-            extension.updateDependenciesFailOnSimultaneousTaskUsage.get(),
-            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.get())
+            extension.updateDependenciesFailOnSimultaneousTaskUsage,
+            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate)
 
         then:
         notThrown(DependencyLockException)
@@ -64,9 +63,9 @@ class UpdateDependenciesValidatorSpec extends FreshProjectSpec {
         when:
         Set<String> modules = []
         UpdateDependenciesValidator.validate(modules, emptyMap, false, true,
-            extension.updateDependenciesFailOnInvalidCoordinates.get(),
-            extension.updateDependenciesFailOnSimultaneousTaskUsage.get(),
-            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.get())
+            extension.updateDependenciesFailOnInvalidCoordinates,
+            extension.updateDependenciesFailOnSimultaneousTaskUsage,
+            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate)
 
         then:
         notThrown(DependencyLockException)
@@ -76,9 +75,9 @@ class UpdateDependenciesValidatorSpec extends FreshProjectSpec {
         when:
         Set<String> modules = ['netflix:my-module', 'netflix:my-module-2']
         UpdateDependenciesValidator.validate(modules, emptyMap, true, false,
-            extension.updateDependenciesFailOnInvalidCoordinates.get(),
-            extension.updateDependenciesFailOnSimultaneousTaskUsage.get(),
-            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.get())
+            extension.updateDependenciesFailOnInvalidCoordinates,
+            extension.updateDependenciesFailOnSimultaneousTaskUsage,
+            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate)
 
         then:
         notThrown(DependencyLockException)
@@ -88,9 +87,9 @@ class UpdateDependenciesValidatorSpec extends FreshProjectSpec {
         when:
         Set<String> modules = ['netflix:my-module', 'netflix:my-module-2']
         UpdateDependenciesValidator.validate(modules, emptyMap, true, true,
-            extension.updateDependenciesFailOnInvalidCoordinates.get(),
-            extension.updateDependenciesFailOnSimultaneousTaskUsage.get(),
-            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.get())
+            extension.updateDependenciesFailOnInvalidCoordinates,
+            extension.updateDependenciesFailOnSimultaneousTaskUsage,
+            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate)
 
         then:
         def exception = thrown(DependencyLockException)
@@ -102,13 +101,12 @@ class UpdateDependenciesValidatorSpec extends FreshProjectSpec {
         when:
         project.ext.set('dependencyLock.updateDependenciesFailOnSimultaneousTaskUsage', false)
         Set<String> modules = ['netflix:my-module', 'netflix:my-module-2']
-        // Use findProperty to check both gradle properties and ext (check for null, not truthiness)
         def validateSimultaneousProp = project.findProperty('dependencyLock.updateDependenciesFailOnSimultaneousTaskUsage')
-        def validateSimultaneous = validateSimultaneousProp != null ? validateSimultaneousProp as boolean : extension.updateDependenciesFailOnSimultaneousTaskUsage.get()
+        def validateSimultaneous = validateSimultaneousProp != null ? validateSimultaneousProp as boolean : extension.updateDependenciesFailOnSimultaneousTaskUsage
         UpdateDependenciesValidator.validate(modules, emptyMap, true, true,
-            extension.updateDependenciesFailOnInvalidCoordinates.get(),
+            extension.updateDependenciesFailOnInvalidCoordinates,
             validateSimultaneous,
-            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.get())
+            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate)
 
         then:
         notThrown(DependencyLockException)
@@ -121,9 +119,9 @@ class UpdateDependenciesValidatorSpec extends FreshProjectSpec {
         overrides.put('netflix:my-module', '1.0.0')
         overrides.put('netflix:my-module-2', '1.0.0')
         UpdateDependenciesValidator.validate(modules, overrides, true, false,
-            extension.updateDependenciesFailOnInvalidCoordinates.get(),
-            extension.updateDependenciesFailOnSimultaneousTaskUsage.get(),
-            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.get())
+            extension.updateDependenciesFailOnInvalidCoordinates,
+            extension.updateDependenciesFailOnSimultaneousTaskUsage,
+            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate)
 
         then:
         notThrown(DependencyLockException)
@@ -133,9 +131,9 @@ class UpdateDependenciesValidatorSpec extends FreshProjectSpec {
         when:
         Set<String> modules = []
         UpdateDependenciesValidator.validate(modules, emptyMap, true, false,
-            extension.updateDependenciesFailOnInvalidCoordinates.get(),
-            extension.updateDependenciesFailOnSimultaneousTaskUsage.get(),
-            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.get())
+            extension.updateDependenciesFailOnInvalidCoordinates,
+            extension.updateDependenciesFailOnSimultaneousTaskUsage,
+            extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate)
 
         then:
         def exception = thrown(DependencyLockException)
@@ -146,12 +144,11 @@ class UpdateDependenciesValidatorSpec extends FreshProjectSpec {
         when:
         project.ext.set('dependencyLock.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate', false)
         Set<String> modules = []
-        // Use findProperty to check both gradle properties and ext (check for null, not truthiness)
         def validateSpecifiedProp = project.findProperty('dependencyLock.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate')
-        def validateSpecified = validateSpecifiedProp != null ? validateSpecifiedProp as boolean : extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.get()
+        def validateSpecified = validateSpecifiedProp != null ? validateSpecifiedProp as boolean : extension.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate
         UpdateDependenciesValidator.validate(modules, emptyMap, true, false,
-            extension.updateDependenciesFailOnInvalidCoordinates.get(),
-            extension.updateDependenciesFailOnSimultaneousTaskUsage.get(),
+            extension.updateDependenciesFailOnInvalidCoordinates,
+            extension.updateDependenciesFailOnSimultaneousTaskUsage,
             validateSpecified)
 
         then:
