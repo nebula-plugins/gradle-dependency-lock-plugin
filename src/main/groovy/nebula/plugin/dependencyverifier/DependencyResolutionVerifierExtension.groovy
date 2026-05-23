@@ -59,7 +59,7 @@ abstract class DependencyResolutionVerifierExtension {
     abstract SetProperty<String> getConfigurationsToExcludeProperty()
 
     Set<String> getConfigurationsToExclude() {
-        return configurationsToExcludeProperty.get()
+        return new LinkedHashSet<>(configurationsToExcludeProperty.get())
     }
 
     void setConfigurationsToExclude(Iterable<String> values) {
@@ -110,7 +110,7 @@ abstract class DependencyResolutionVerifierExtension {
     abstract SetProperty<String> getTasksToExcludeProperty()
 
     Set<String> getTasksToExclude() {
-        return tasksToExcludeProperty.get()
+        return new LinkedHashSet<>(tasksToExcludeProperty.get())
     }
 
     void setTasksToExclude(Iterable<String> values) {
