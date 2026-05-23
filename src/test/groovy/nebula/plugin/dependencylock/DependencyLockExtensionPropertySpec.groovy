@@ -824,7 +824,7 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
         when:
         def result = runTasks('doNothing')
         then:
-        result.output.contains('dependencyFilter') && result.output.contains('deprecated')
+        result.output.contains('dependencyFilter is deprecated: Closures are not configuration-cache compatible')
     }
 
     def 'configurationNames bridge getter returns mutable Set (defensive copy)'() {
