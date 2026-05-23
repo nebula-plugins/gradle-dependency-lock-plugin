@@ -135,7 +135,7 @@ class DependencyLockPlugin @Inject constructor(
         if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
             LOGGER.info("${project.name}: coreLockingSupport feature enabled")
             val coreLockingHelper = CoreLockingHelper(project)
-            coreLockingHelper.lockSelectedConfigurations(extension.configurationNames.get())
+            coreLockingHelper.lockSelectedConfigurations(extension.configurationNamesProperty.get())
 
             coreLockingHelper.disableCachingWhenUpdatingDependencies()
             coreLockingHelper.notifyWhenUsingOfflineMode()
@@ -239,7 +239,7 @@ class DependencyLockPlugin @Inject constructor(
             // Use provider to allow gradle property to override extension property
             val updates = project.providers.gradleProperty(UPDATE_DEPENDENCIES)
                 .map { parseUpdates(it) }
-                .orElse(extension.updateDependencies)
+                .orElse(extension.updateDependenciesProperty)
                 .get()
             
             // Resolve validation flags using Provider API

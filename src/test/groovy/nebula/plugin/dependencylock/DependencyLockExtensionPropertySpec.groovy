@@ -104,15 +104,15 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
             }
 
             dependencyLock {
-                configurationNames.add('runtimeClasspath')
-                configurationNames.add('compileClasspath')
+                configurationNamesProperty.add('runtimeClasspath')
+                configurationNamesProperty.add('compileClasspath')
                 skippedDependenciesProperty.add('com.example:skip-me')
             }
 
             task checkConfig {
                 def ext = dependencyLock  // Capture during configuration
                 doLast {
-                    println "configs: " + ext.configurationNames.get()
+                    println "configs: " + ext.configurationNames
                     println "skipped: " + ext.skippedDependencies
                 }
             }
@@ -285,6 +285,161 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
         then:
         result.output.contains('test')
         result.output.contains('runtime')
+    }
+
+    def 'configurationNames supports Groovy = assignment (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            dependencyLock {
+                configurationNames = ['runtimeClasspath', 'compileClasspath'] as Set
+            }
+
+            task checkConfig {
+                def ext = dependencyLock
+                doLast {
+                    println "configs: " + ext.configurationNames
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkConfig')
+
+        then:
+        result.output.contains('runtimeClasspath')
+        result.output.contains('compileClasspath')
+    }
+
+    def 'configurationNames getter returns Set not SetProperty'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            task checkType {
+                def ext = dependencyLock
+                doLast {
+                    def value = ext.configurationNames
+                    println "isSet: " + (value instanceof Set)
+                    println "isSetProperty: " + value.getClass().name.contains('SetProperty')
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkType')
+
+        then:
+        result.output.contains('isSet: true')
+        result.output.contains('isSetProperty: false')
+    }
+
+    def 'updateDependencies supports Groovy = assignment (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            dependencyLock {
+                updateDependencies = ['com.example:foo', 'com.example:bar'] as Set
+            }
+
+            task checkUpdate {
+                def ext = dependencyLock
+                doLast {
+                    println "updates: " + ext.updateDependencies
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkUpdate')
+
+        then:
+        result.output.contains('com.example:foo')
+        result.output.contains('com.example:bar')
+    }
+
+    def 'updateDependencies getter returns Set not SetProperty'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            task checkType {
+                def ext = dependencyLock
+                doLast {
+                    def value = ext.updateDependencies
+                    println "isSet: " + (value instanceof Set)
+                    println "isSetProperty: " + value.getClass().name.contains('SetProperty')
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkType')
+
+        then:
+        result.output.contains('isSet: true')
+        result.output.contains('isSetProperty: false')
+    }
+
+    def 'additionalConfigurationsToLock supports Groovy = assignment (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            dependencyLock {
+                additionalConfigurationsToLock = ['annotationProcessor'] as Set
+            }
+
+            task checkAdditional {
+                def ext = dependencyLock
+                doLast {
+                    println "additional: " + ext.additionalConfigurationsToLock
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkAdditional')
+
+        then:
+        result.output.contains('annotationProcessor')
+    }
+
+    def 'additionalConfigurationsToLock getter returns Set not SetProperty'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            task checkType {
+                def ext = dependencyLock
+                doLast {
+                    def value = ext.additionalConfigurationsToLock
+                    println "isSet: " + (value instanceof Set)
+                    println "isSetProperty: " + value.getClass().name.contains('SetProperty')
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkType')
+
+        then:
+        result.output.contains('isSet: true')
+        result.output.contains('isSetProperty: false')
     }
 
     def 'commit extension properties use default conventions'() {

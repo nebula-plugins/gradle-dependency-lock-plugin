@@ -23,8 +23,22 @@ abstract class DependencyResolutionVerifierExtension {
     /** Fail the build when verification finds issues. Default: true */
     abstract Property<Boolean> getShouldFailTheBuild()
 
-    /** Configuration names to exclude from verification. Default: empty set */
-    abstract SetProperty<String> getConfigurationsToExclude()
+    /**
+     * Configuration names to exclude from verification. Default: empty set
+     *
+     * The backing SetProperty is exposed via {@link #getConfigurationsToExcludeProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old Set&lt;String&gt;
+     * API so existing build scripts continue to work without modification.
+     */
+    abstract SetProperty<String> getConfigurationsToExcludeProperty()
+
+    Set<String> getConfigurationsToExclude() {
+        return configurationsToExcludeProperty.get()
+    }
+
+    void setConfigurationsToExclude(Iterable<String> values) {
+        configurationsToExcludeProperty.set(values)
+    }
 
     /** Message to append when missing versions are detected. Default: empty */
     abstract Property<String> getMissingVersionsMessageAddition()
@@ -32,18 +46,32 @@ abstract class DependencyResolutionVerifierExtension {
     /** Message to append when resolved version does not match locked. Default: empty */
     abstract Property<String> getResolvedVersionDoesNotEqualLockedVersionMessageAddition()
 
-    /** Task names to exclude from verification. Default: empty set */
-    abstract SetProperty<String> getTasksToExclude()
+    /**
+     * Task names to exclude from verification. Default: empty set
+     *
+     * The backing SetProperty is exposed via {@link #getTasksToExcludeProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old Set&lt;String&gt;
+     * API so existing build scripts continue to work without modification.
+     */
+    abstract SetProperty<String> getTasksToExcludeProperty()
+
+    Set<String> getTasksToExclude() {
+        return tasksToExcludeProperty.get()
+    }
+
+    void setTasksToExclude(Iterable<String> values) {
+        tasksToExcludeProperty.set(values)
+    }
 
     /** When true (default): full lock validation. When false: only resolution errors, config cache compatible. */
     abstract Property<Boolean> getEnableLockFileValidation()
 
     DependencyResolutionVerifierExtension() {
         shouldFailTheBuild.convention(true)
-        configurationsToExclude.convention([] as Set)
+        configurationsToExcludeProperty.convention([] as Set)
         missingVersionsMessageAddition.convention('')
         resolvedVersionDoesNotEqualLockedVersionMessageAddition.convention('')
-        tasksToExclude.convention([] as Set)
+        tasksToExcludeProperty.convention([] as Set)
         enableLockFileValidation.convention(true)
     }
 }

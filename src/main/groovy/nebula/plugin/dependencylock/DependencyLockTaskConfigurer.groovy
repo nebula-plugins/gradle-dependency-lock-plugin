@@ -242,7 +242,7 @@ class DependencyLockTaskConfigurer {
             // Set output file
             it.dependenciesLock.set(project.layout.buildDirectory.file(lockFilename ?: extension.lockFile.get()))
             // Set configuration names
-            it.configurationNames.set(extension.configurationNames)
+            it.configurationNames.set(extension.configurationNamesProperty)
             it.skippedConfigurationNames.set(extension.skippedConfigurationNamesPrefixesProperty)
 
             // Always regenerate lock files - dependency changes in build.gradle aren't tracked as task inputs
@@ -278,7 +278,7 @@ class DependencyLockTaskConfigurer {
 
             // Build resolution map at config time so the task does not hold provider chains that capture project.
             // Intentionally resolve configurationNames and skippedConfigurationNamesPrefixes here (not lazy) for config-cache compatibility.
-            def configNames = extension.configurationNames.get()
+            def configNames = extension.configurationNamesProperty.get()
             def skippedNames = extension.skippedConfigurationNamesPrefixesProperty.get()
             def lockableConfs = GenerateLockTask.lockableConfigurations(project, project, configNames, skippedNames)
             def resolutionMap = lockableConfs.collectEntries { conf ->
@@ -337,8 +337,8 @@ class DependencyLockTaskConfigurer {
                     def subprojects = project.subprojects.collect { subproject ->
                         def ext = subproject.getExtensions().findByType(DependencyLockExtension)
                         if (ext != null) {
-                            Collection<Configuration> lockableConfigurations = lockableConfigurations(project, subproject, ext.configurationNames.get(), extension.skippedConfigurationNamesPrefixesProperty.get())
-                            Collection<Configuration> configurations = filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(subproject, ext.configurationNames.get(), lockableConfigurations)
+                            Collection<Configuration> lockableConfigurations = lockableConfigurations(project, subproject, ext.configurationNamesProperty.get(), extension.skippedConfigurationNamesPrefixesProperty.get())
+                            Collection<Configuration> configurations = filterNonLockableConfigurationsAndProvideWarningsForGlobalLockSubproject(subproject, ext.configurationNamesProperty.get(), lockableConfigurations)
                             // Use unique name to avoid conflicts if evaluated multiple times
                             Configuration aggregate = subproject.configurations.create("aggregateConfiguration_${nextUniqueConfigSuffix.getAndIncrement()}_${subproject.path.replace(':', '_')}")
                             aggregate.setCanBeConsumed(true)
@@ -373,7 +373,7 @@ class DependencyLockTaskConfigurer {
                         configurations.add(conf)
                     }
 
-                    configurations + lockableConfigurations(project, project, extension.configurationNames.get(), extension.skippedConfigurationNamesPrefixesProperty.get())
+                    configurations + lockableConfigurations(project, project, extension.configurationNamesProperty.get(), extension.skippedConfigurationNamesPrefixesProperty.get())
                 }
             }
         }
@@ -386,14 +386,14 @@ class DependencyLockTaskConfigurer {
         def migrateToCoreLocksTask = project.tasks.register(MIGRATE_TO_CORE_LOCKS_TASK_NAME, MigrateToCoreLocksTask)
 
         migrateLockedDepsToCoreLocksTask.configure {
-            it.configurationNames.set(extension.configurationNames)
+            it.configurationNames.set(extension.configurationNamesProperty)
             it.inputLockFile.set(project.layout.projectDirectory.file(extension.lockFile))
             it.outputLock.set(project.layout.projectDirectory.file('gradle.lockfile'))
             it.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
         }
 
         migrateToCoreLocksTask.configure {
-            it.configurationNames.set(extension.configurationNames)
+            it.configurationNames.set(extension.configurationNamesProperty)
             it.outputLock.set(project.layout.projectDirectory.file('gradle.lockfile'))
             it.dependsOn project.tasks.named(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME)
             it.notCompatibleWithConfigurationCache("Dependency locking plugin tasks require project access. Please consider using Gradle's dependency locking mechanism")
@@ -451,7 +451,7 @@ class DependencyLockTaskConfigurer {
 
             // Wire resolution results for path-aware diff (configuration cache compatible!)
             diffTask.resolutionResults.set(
-                extension.configurationNames.zip(extension.skippedConfigurationNamesPrefixesProperty) { configNames, skippedNames ->
+                extension.configurationNamesProperty.zip(extension.skippedConfigurationNamesPrefixesProperty) { configNames, skippedNames ->
                     def lockableConfs = GenerateLockTask.lockableConfigurations(project, project, configNames, skippedNames)
 
                     lockableConfs.collectEntries { conf ->

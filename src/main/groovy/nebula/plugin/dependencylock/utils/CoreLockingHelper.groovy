@@ -136,7 +136,7 @@ class CoreLockingHelper {
         def additionalConfigurationsToLockViaProperty = project.providers.gradleProperty(ADDITIONAL_CONFIGS_TO_LOCK)
                 .map { it.split(",") as Set<String> }
                 .getOrElse([] as Set)
-        def additionalConfigurationsToLockViaExtension = dependencyLockExtension.additionalConfigurationsToLock.get() as Set<String>
+        def additionalConfigurationsToLockViaExtension = dependencyLockExtension.additionalConfigurationsToLockProperty.get() as Set<String>
         def additionalConfigNames = additionalConfigurationsToLockViaProperty + additionalConfigurationsToLockViaExtension
         additionalConfigNames
     }
