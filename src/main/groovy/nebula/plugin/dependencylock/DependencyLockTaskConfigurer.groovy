@@ -315,7 +315,7 @@ class DependencyLockTaskConfigurer {
             globalGenerateTask.projectDirectory.set(project.layout.projectDirectory)
             globalGenerateTask.globalLockFileName.set(lockFilename ?: extension.globalLockFileProperty.get())
             globalGenerateTask.dependencyLockIgnored.set(project.provider { shouldIgnoreDependencyLock(project) })
-            globalGenerateTask.skippedDependencies.set(extension.skippedDependencies)
+            globalGenerateTask.skippedDependencies.set(extension.skippedDependenciesProperty)
             globalGenerateTask.overrides.set(overrides)
             globalGenerateTask.filter = extension.dependencyFilter
 

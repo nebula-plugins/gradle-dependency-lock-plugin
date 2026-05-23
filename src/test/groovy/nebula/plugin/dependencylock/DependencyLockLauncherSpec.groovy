@@ -2061,4 +2061,37 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
         !result.output.contains('saveGlobalLock')
     }
 
+    def 'global lock respects skippedDependencies configured via bridge setter'() {
+        provideSystemProperty.setProperty('ignoreDeprecations', 'true')
+        disableConfigurationCache()
+        addSubproject('sub1', """\
+            dependencies {
+                implementation 'test.example:foo:2.+'
+                implementation 'test.example:baz:1.+'
+            }
+        """.stripIndent())
+
+        buildFile << """\
+            allprojects {
+                apply plugin: 'com.netflix.nebula.dependency-lock'
+                group = 'test'
+                dependencyLock {
+                    skippedDependencies = ['test.example:foo']
+                }
+            }
+            subprojects {
+                apply plugin: 'java'
+                repositories { maven { url = '${Fixture.repo}' } }
+            }
+        """.stripIndent()
+
+        when:
+        runTasks('generateGlobalLock', 'saveGlobalLock')
+
+        then:
+        def lock = new File(projectDir, 'global.lock').text
+        !lock.contains('test.example:foo')
+        lock.contains('test.example:baz')
+    }
+
 }
