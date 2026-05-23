@@ -796,5 +796,45 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
         result.output.contains('remoteRetries: 5')
     }
 
+    def 'configurationNames bridge getter returns mutable Set (defensive copy)'() {
+        given:
+        buildFile << """
+            plugins { id 'com.netflix.nebula.dependency-lock' }
+            task checkMutable {
+                def ext = dependencyLock
+                doLast {
+                    def names = ext.configurationNames
+                    names.add('runtimeClasspath')
+                    println "added: " + names.contains('runtimeClasspath')
+                }
+            }
+        """
+        when:
+        def result = runTasks('checkMutable')
+        then:
+        result.output.contains('added: true')
+        !result.output.contains('UnsupportedOperationException')
+    }
+
+    def 'additionalConfigurationsToLock bridge getter returns mutable Set (defensive copy)'() {
+        given:
+        buildFile << """
+            plugins { id 'com.netflix.nebula.dependency-lock' }
+            task checkMutable {
+                def ext = dependencyLock
+                doLast {
+                    def configs = ext.additionalConfigurationsToLock
+                    configs.add('myConfig')
+                    println "added: " + configs.contains('myConfig')
+                }
+            }
+        """
+        when:
+        def result = runTasks('checkMutable')
+        then:
+        result.output.contains('added: true')
+        !result.output.contains('UnsupportedOperationException')
+    }
+
 }
 

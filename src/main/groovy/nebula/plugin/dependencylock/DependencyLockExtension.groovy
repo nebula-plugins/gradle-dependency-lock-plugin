@@ -101,7 +101,7 @@ abstract class DependencyLockExtension {
     abstract SetProperty<String> getConfigurationNamesProperty()
 
     Set<String> getConfigurationNames() {
-        return configurationNamesProperty.get()
+        return new LinkedHashSet<>(configurationNamesProperty.get())
     }
 
     void setConfigurationNames(Iterable<String> values) {
@@ -120,7 +120,7 @@ abstract class DependencyLockExtension {
     abstract SetProperty<String> getSkippedConfigurationNamesPrefixesProperty()
 
     Set<String> getSkippedConfigurationNamesPrefixes() {
-        return skippedConfigurationNamesPrefixesProperty.get()
+        return new LinkedHashSet<>(skippedConfigurationNamesPrefixesProperty.get())
     }
 
     void setSkippedConfigurationNamesPrefixes(Iterable<String> values) {
@@ -147,7 +147,7 @@ abstract class DependencyLockExtension {
     abstract SetProperty<String> getUpdateDependenciesProperty()
 
     Set<String> getUpdateDependencies() {
-        return updateDependenciesProperty.get()
+        return new LinkedHashSet<>(updateDependenciesProperty.get())
     }
 
     void setUpdateDependencies(Iterable<String> values) {
@@ -166,7 +166,7 @@ abstract class DependencyLockExtension {
     abstract SetProperty<String> getSkippedDependenciesProperty()
 
     Set<String> getSkippedDependencies() {
-        return skippedDependenciesProperty.get()
+        return new LinkedHashSet<>(skippedDependenciesProperty.get())
     }
 
     void setSkippedDependencies(Iterable<String> values) {
@@ -274,7 +274,7 @@ abstract class DependencyLockExtension {
     abstract SetProperty<String> getAdditionalConfigurationsToLockProperty()
 
     Set<String> getAdditionalConfigurationsToLock() {
-        return additionalConfigurationsToLockProperty.get()
+        return new LinkedHashSet<>(additionalConfigurationsToLockProperty.get())
     }
 
     void setAdditionalConfigurationsToLock(Iterable<String> values) {
