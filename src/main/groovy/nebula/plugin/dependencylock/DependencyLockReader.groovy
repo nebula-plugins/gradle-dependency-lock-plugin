@@ -91,7 +91,12 @@ class DependencyLockReader {
         def override = project.findProperty('dependencyLock.override')
         if (override) {
             override.toString().tokenize(',').each {
-                def (group, artifact, version) = it.tokenize(':')
+                def parts = it.tokenize(':')
+                if (parts.size() < 3) {
+                    logger.warn("Invalid override '${it}': expected format is group:artifact:version — skipping")
+                    return
+                }
+                def (group, artifact, version) = parts
                 overrides["${group}:${artifact}".toString()] = version
                 logger.debug "Override added for: ${it}"
             }
