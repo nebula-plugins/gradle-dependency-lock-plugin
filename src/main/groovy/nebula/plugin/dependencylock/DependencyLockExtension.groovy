@@ -176,14 +176,38 @@ abstract class DependencyLockExtension {
     /**
      * Whether to include transitive dependencies in the lock file.
      * Default: false
+     *
+     * The backing Property is exposed via {@link #getIncludeTransitivesProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old {@code boolean}
+     * API so existing build scripts continue to work without modification.
      */
-    abstract Property<Boolean> getIncludeTransitives()
+    abstract Property<Boolean> getIncludeTransitivesProperty()
+
+    Boolean getIncludeTransitives() {
+        return includeTransitivesProperty.get()
+    }
+
+    void setIncludeTransitives(Boolean value) {
+        includeTransitivesProperty.set(value)
+    }
 
     /**
      * Whether to delay lock application until configuration resolution.
      * Default: true
+     *
+     * The backing Property is exposed via {@link #getLockAfterEvaluatingProperty()} for
+     * config-cache-compatible task wiring. The getter/setter here preserve the old {@code boolean}
+     * API so existing build scripts continue to work without modification.
      */
-    abstract Property<Boolean> getLockAfterEvaluating()
+    abstract Property<Boolean> getLockAfterEvaluatingProperty()
+
+    Boolean getLockAfterEvaluating() {
+        return lockAfterEvaluatingProperty.get()
+    }
+
+    void setLockAfterEvaluating(Boolean value) {
+        lockAfterEvaluatingProperty.set(value)
+    }
 
     /**
      * Whether to fail when invalid dependency coordinates are provided for updates.
@@ -231,8 +255,8 @@ abstract class DependencyLockExtension {
         skippedConfigurationNamesPrefixesProperty.convention([] as Set)
         updateDependenciesProperty.convention([] as Set)
         skippedDependenciesProperty.convention([] as Set)
-        includeTransitives.convention(false)
-        lockAfterEvaluating.convention(true)
+        includeTransitivesProperty.convention(false)
+        lockAfterEvaluatingProperty.convention(true)
         updateDependenciesFailOnInvalidCoordinates.convention(true)
         updateDependenciesFailOnSimultaneousTaskUsage.convention(true)
         updateDependenciesFailOnNonSpecifiedDependenciesToUpdate.convention(true)

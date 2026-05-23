@@ -261,7 +261,7 @@ class DependencyLockTaskConfigurer {
             // task holds a plain value (no provider chain with non-serializable lambdas for config cache).
             Boolean includeTransitives = project.findProperty('dependencyLock.includeTransitives')?.toString()?.toBoolean()
             if (includeTransitives == null) {
-                includeTransitives = extension.includeTransitives.getOrElse(false)
+                includeTransitives = extension.includeTransitivesProperty.getOrElse(false)
             }
             generateTask.includeTransitives.set(includeTransitives)
 
@@ -332,7 +332,7 @@ class DependencyLockTaskConfigurer {
             // because it creates aggregate configurations at execution time. This needs a proper Property-based solution.
             // For now, keeping conventionMapping for this specific case to maintain functionality.
             globalGenerateTask.conventionMapping.with {
-                includeTransitives = { extension.includeTransitives.get() }
+                includeTransitives = { extension.includeTransitivesProperty.get() }
                 configurations = {
                     def subprojects = project.subprojects.collect { subproject ->
                         def ext = subproject.getExtensions().findByType(DependencyLockExtension)

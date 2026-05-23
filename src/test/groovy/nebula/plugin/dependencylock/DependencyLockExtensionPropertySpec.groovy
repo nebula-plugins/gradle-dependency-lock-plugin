@@ -19,8 +19,8 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
                 doLast {
                     println "lockFile: " + ext.lockFile
                     println "globalLockFile: " + ext.globalLockFile
-                    println "includeTransitives: " + ext.includeTransitives.get()
-                    println "lockAfterEvaluating: " + ext.lockAfterEvaluating.get()
+                    println "includeTransitives: " + ext.includeTransitives
+                    println "lockAfterEvaluating: " + ext.lockAfterEvaluating
                 }
             }
         """
@@ -44,16 +44,16 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
 
             dependencyLock {
                 lockFileProperty.set('custom.lock')
-                includeTransitives.set(true)
-                lockAfterEvaluating.set(false)
+                includeTransitivesProperty.set(true)
+                lockAfterEvaluatingProperty.set(false)
             }
 
             task checkConfig {
                 def ext = dependencyLock  // Capture during configuration
                 doLast {
                     println "lockFile: " + ext.lockFile
-                    println "includeTransitives: " + ext.includeTransitives.get()
-                    println "lockAfterEvaluating: " + ext.lockAfterEvaluating.get()
+                    println "includeTransitives: " + ext.includeTransitives
+                    println "lockAfterEvaluating: " + ext.lockAfterEvaluating
                 }
             }
         """
@@ -83,7 +83,7 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
                 def ext = dependencyLock  // Capture during configuration
                 doLast {
                     println "lockFile: " + ext.lockFile
-                    println "includeTransitives: " + ext.includeTransitives.get()
+                    println "includeTransitives: " + ext.includeTransitives
                 }
             }
         """
@@ -538,6 +538,104 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
 
         then:
         result.output.contains('globalLockFile: custom-global.lock')
+    }
+
+    def 'includeTransitives getter returns Boolean not Property (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            task checkType {
+                def ext = dependencyLock
+                doLast {
+                    def value = ext.includeTransitives
+                    println "isBoolean: " + (value instanceof Boolean)
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkType')
+
+        then:
+        result.output.contains('isBoolean: true')
+    }
+
+    def 'includeTransitives supports Groovy = assignment (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            dependencyLock {
+                includeTransitives = true
+            }
+
+            task checkConfig {
+                def ext = dependencyLock
+                doLast {
+                    println "includeTransitives: " + ext.includeTransitives
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkConfig')
+
+        then:
+        result.output.contains('includeTransitives: true')
+    }
+
+    def 'lockAfterEvaluating getter returns Boolean not Property (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            task checkType {
+                def ext = dependencyLock
+                doLast {
+                    def value = ext.lockAfterEvaluating
+                    println "isBoolean: " + (value instanceof Boolean)
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkType')
+
+        then:
+        result.output.contains('isBoolean: true')
+    }
+
+    def 'lockAfterEvaluating supports Groovy = assignment (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            dependencyLock {
+                lockAfterEvaluating = false
+            }
+
+            task checkConfig {
+                def ext = dependencyLock
+                doLast {
+                    println "lockAfterEvaluating: " + ext.lockAfterEvaluating
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkConfig')
+
+        then:
+        result.output.contains('lockAfterEvaluating: false')
     }
 
     def 'commit extension properties use default conventions'() {
