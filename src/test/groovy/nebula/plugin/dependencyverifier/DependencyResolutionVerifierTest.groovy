@@ -15,17 +15,7 @@
  *     limitations under the License.
  *
  */
-
 package nebula.plugin.dependencyverifier
-
-import nebula.plugin.BaseIntegrationTestKitSpec
-import nebula.plugin.VerifierOutputAssertionsBase
-import nebula.test.dependencies.DependencyGraphBuilder
-import nebula.test.dependencies.GradleDependencyGenerator
-import nebula.test.dependencies.ModuleBuilder
-import spock.lang.Ignore
-import spock.lang.Subject
-import spock.lang.Unroll
 
 import static nebula.plugin.VerifierOutputAssertionsBase.assertConfigurationCacheStateCouldNotBeStored
 import static nebula.plugin.VerifierOutputAssertionsBase.assertConfigurationCachingIsNotMentioned
@@ -40,1147 +30,16 @@ import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.assertResolutionFailureMessage
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.dependencyProjectPair
 
-@Subject(DependencyResolutionVerifierKt)
-class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
-
-    def mavenrepo
-
-    def setup() {
-        def graph = new DependencyGraphBuilder()
-                .addModule('test.nebula:a:1.0.0')
-                .addModule('test.nebula:b:1.0.0')
-                .addModule('test.nebula:c:1.1.0')
-                .addModule(new ModuleBuilder('has.missing.transitive:a:1.0.0').addDependency('transitive.not.available:a:1.0.0').build())
-                .build()
-
-        mavenrepo = new GradleDependencyGenerator(graph, "${projectDir}/testrepogen")
-        mavenrepo.generateTestMavenRepo()
-
-        def transitiveNotAvailableDep = new File(mavenrepo.getMavenRepoDir(), "transitive/not/available/a")
-        transitiveNotAvailableDep.deleteDir() // to create a missing transitive dependency
-    }
-
-    @Unroll
-    def 'no verification errors - #description'() {
-        given:
-        setupSingleProject()
-
-        when:
-        def results = runTasks(*tasks)
-
-        then:
-        !results.output.contains('FAILURE')
-        assertNoConfigurationCacheStoringIssues(results.output)
-
-        where:
-        tasks                                                   | description
-        ['dependencies', '--configuration', 'compileClasspath'] | 'explicitly resolve dependencies'
-    }
-
-    @Unroll
-    def 'error displayed when direct dependency is missing - #description'() {
-        given:
-        setupSingleProject()
-
-        buildFile << """
-            dependencies {
-                implementation 'not.available:a:1.0.0' // dependency is not found
-            }
-            """.stripIndent()
-
-        when:
-        def results = runTasksAndFail(*tasks)
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCacheStateCouldNotBeStored(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependency(results.output, "not.available:a:1.0.0")
-
-        where:
-        tasks                                                                                | description
-        ['build']                                                                            | 'resolve dependencies naturally'
-        ['dependencies', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
-    }
-
-    def 'error displayed when direct dependency is missing - reporting task only'() {
-        given:
-        setupSingleProject()
-
-        buildFile << """
-            dependencies {
-                implementation 'not.available:a:1.0.0' // dependency is not found
-            }
-            """.stripIndent()
-
-        when:
-        def results = runTasksAndFail(*tasks)
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCachingIsNotMentioned(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependency(results.output, "not.available:a:1.0.0")
-
-        where:
-        tasks                                                   | description
-        ['dependencies', '--configuration', 'compileClasspath'] | 'explicitly resolve dependencies'
-    }
-
-    @Unroll
-    def 'error displayed when transitive dependency is missing - #description'() {
-        given:
-        setupSingleProject()
-
-        buildFile << """
-            dependencies {
-                implementation 'has.missing.transitive:a:1.0.0' // transitive dependency is missing
-            }
-            """.stripIndent()
-
-        when:
-        def results = runTasksAndFail(*tasks)
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCacheStateCouldNotBeStored(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependency(results.output, "transitive.not.available:a:1.0.0")
-
-        where:
-        tasks                                                                                | description
-        ['build']                                                                            | 'resolve dependencies naturally'
-        ['dependencies', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
-    }
-
-    def 'error displayed when transitive dependency is missing - reporting task only'() {
-        given:
-        setupSingleProject()
-
-        buildFile << """
-            dependencies {
-                implementation 'has.missing.transitive:a:1.0.0' // transitive dependency is missing
-            }
-            """.stripIndent()
-
-        when:
-        def results = runTasksAndFail(*tasks)
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCachingIsNotMentioned(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependency(results.output, "transitive.not.available:a:1.0.0")
-
-        where:
-        tasks                                                   | description
-        ['dependencies', '--configuration', 'compileClasspath'] | 'explicitly resolve dependencies'
-    }
-
-    @Unroll
-    def 'error displayed when version is missing - #description'() {
-        given:
-        setupSingleProject()
-
-        buildFile << """
-            dependencies {
-                implementation 'test.nebula:c' // version is missing
-                implementation 'test.nebula:d' // version is missing
-            }
-            """.stripIndent()
-
-        when:
-        def results = runTasksAndFail(*tasks)
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCacheStateCouldNotBeStored(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForMissingVersionDependencies(results.output, ["test.nebula:c", "test.nebula:d"])
-
-        where:
-        tasks                                                                                | description
-        ['build']                                                                            | 'resolve dependencies naturally'
-        ['dependencies', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
-    }
-
-    def 'error displayed when version is missing - reporting task only'() {
-        given:
-        setupSingleProject()
-
-        buildFile << """
-            dependencies {
-                implementation 'test.nebula:c' // version is missing
-                implementation 'test.nebula:d' // version is missing
-            }
-            """.stripIndent()
-
-        when:
-        def results = runTasksAndFail(*tasks)
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCachingIsNotMentioned(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForMissingVersionDependencies(results.output, ["test.nebula:c", "test.nebula:d"])
-
-        where:
-        tasks                                                   | description
-        ['dependencies', '--configuration', 'compileClasspath'] | 'explicitly resolve dependencies'
-    }
-
-    @Unroll
-    def 'error displayed when a dependency is not found and needed at compilation - #description'() {
-        given:
-        setupSingleProject()
-        buildFile << """
-            dependencies {
-                implementation 'junit:junit:999.99.9' // version is invalid yet needed for compilation
-            }
-            """.stripIndent()
-        writeUnitTest() // valid version of the junit library is not in the dependency declaration
-
-        when:
-        def results = runTasksAndFail(*tasks)
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCacheStateCouldNotBeStored(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependency(results.output, "junit:junit:999.99.9")
-
-        where:
-        tasks                                                                                | description
-        ['build']                                                                            | 'resolve dependencies naturally'
-        ['dependencies', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
-    }
-
-    def 'error displayed when a dependency is not found and needed at compilation - reporting task only'() {
-        given:
-        setupSingleProject()
-        buildFile << """
-            dependencies {
-                implementation 'junit:junit:999.99.9' // version is invalid yet needed for compilation
-            }
-            """.stripIndent()
-        writeUnitTest() // valid version of the junit library is not in the dependency declaration
-
-        when:
-        def results = runTasksAndFail(*tasks)
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCachingIsNotMentioned(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependency(results.output, "junit:junit:999.99.9")
-
-        where:
-        tasks                                                   | description
-        ['dependencies', '--configuration', 'compileClasspath'] | 'explicitly resolve dependencies'
-    }
-
-    @Unroll
-    def 'multiproject: missing direct dependencies - #description'() {
-        given:
-        setupMultiProject()
-
-        new File(projectDir, 'sub1/build.gradle') << """ \
-        dependencies {
-            implementation 'not.available:apricot:1.0.0' // dependency is not found
-        }
-        """.stripIndent()
-
-        new File(projectDir, 'sub2/build.gradle') << """ \
-        dependencies {
-            implementation 'not.available:banana-leaf:2.0.0' // dependency is not found
-        }
-        """.stripIndent()
-
-        when:
-        def results = runTasksAndFail(*tasks)
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCacheStateCouldNotBeStored(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependencyForProject(results.output, "not.available:apricot:1.0.0", "sub1")
-
-        where:
-        tasks                                                                                      | description
-        ['build']                                                                                  | 'resolve dependencies naturally'
-        ['dependenciesForAll', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
-    }
-
-    def 'multiproject: missing direct dependencies - reporting task only'() {
-        given:
-        setupMultiProject()
-
-        new File(projectDir, 'sub1/build.gradle') << """ \
-        dependencies {
-            implementation 'not.available:apricot:1.0.0' // dependency is not found
-        }
-        """.stripIndent()
-
-        new File(projectDir, 'sub2/build.gradle') << """ \
-        dependencies {
-            implementation 'not.available:banana-leaf:2.0.0' // dependency is not found
-        }
-        """.stripIndent()
-
-        when:
-        def results = runTasksAndFail(*tasks)
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCachingIsNotMentioned(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependencyForProject(results.output, "not.available:apricot:1.0.0", "sub1")
-
-        where:
-        tasks                                                         | description
-        ['dependenciesForAll', '--configuration', 'compileClasspath'] | 'explicitly resolve dependencies'
-    }
-
-    @Unroll
-    def 'multiproject: handles worker threads from spotbugs - #description'() {
-        given:
-        buildFile << """
-            buildscript {
-                repositories { maven { url = "https://plugins.gradle.org/m2/" } }
-                dependencies {
-                     classpath "com.github.spotbugs:com.github.spotbugs.gradle.plugin:6.4.8"
-                }
-            }            
-            """.stripIndent()
-        setupMultiProject()
-        buildFile << """
-            subprojects {
-                apply plugin: "com.github.spotbugs"
-                repositories {
-                    mavenCentral()
-                }
-                configurations.named('spotbugs').configure {
-                  resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                       if (details.requested.group == 'org.ow2.asm') {
-                            details.useVersion '9.9'
-                            details.because "Asm 9.9 is required for JDK 25 support"
-                      }
-                  }
-                }
-            }
-            """.stripIndent()
-
-        new File(projectDir, 'sub1/build.gradle') << """ \
-            dependencies {
-                testImplementation 'junit:junit:4.12'
-            }
-            """.stripIndent()
-
-        new File(projectDir, 'sub2/build.gradle') << """ \
-            dependencies {
-                testImplementation 'junit:junit:4.12'
-            }
-            """.stripIndent()
-
-        when:
-        def results = runTasks(*tasks, '--warning-mode', 'all')
-
-        then:
-        !results.output.contains('FAILURE')
-        assertNoConfigurationCacheStoringIssues(results.output)
-        !results.output.contains('was resolved without accessing the project in a safe manner')
-
-        where:
-        tasks                                                         | description
-        ['spotbugsMain']                                              | 'calling spotbugsMain'
-        ['build']                                                     | 'resolve dependencies naturally'
-    }
-
-    def 'multiproject: handles worker threads from spotbugs - reporting task only'() {
-        given:
-        buildFile << """
-            buildscript {
-                repositories { maven { url = "https://plugins.gradle.org/m2/" } }
-                dependencies {
-                     classpath "com.github.spotbugs:com.github.spotbugs.gradle.plugin:6.4.8"
-                }
-            }            
-            """.stripIndent()
-        setupMultiProject()
-        buildFile << """
-            subprojects {
-                apply plugin: "com.github.spotbugs"
-                repositories {
-                    mavenCentral()
-                }
-                configurations.named('spotbugs').configure {
-                  resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-                       if (details.requested.group == 'org.ow2.asm') {
-                            details.useVersion '9.9'
-                            details.because "Asm 9.9 is required for JDK 25 support"
-                      }
-                  }
-                }
-            }
-            """.stripIndent()
-
-        new File(projectDir, 'sub1/build.gradle') << """ \
-            dependencies {
-                testImplementation 'junit:junit:4.12'
-            }
-            """.stripIndent()
-
-        new File(projectDir, 'sub2/build.gradle') << """ \
-            dependencies {
-                testImplementation 'junit:junit:4.12'
-            }
-            """.stripIndent()
-
-        when:
-        def results = runTasks(*tasks, '--warning-mode', 'all')
-
-        then:
-        !results.output.contains('FAILURE')
-        assertNoConfigurationCacheStoringIssues(results.output)
-        !results.output.contains('was resolved without accessing the project in a safe manner')
-
-        where:
-        tasks | description
-        ['dependenciesForAll', '--configuration', 'compileClasspath'] | 'explicitly resolve dependencies'
-    }
-
-    @Unroll
-    def 'multiproject: works for parallel builds - #description'() {
-        given:
-        setupMultiProject()
-
-        new File(projectDir, 'sub1/build.gradle') << """ \
-        dependencies {
-            implementation 'not.available:apricot:1.0.0' // dependency is not found
-        }
-        """.stripIndent()
-
-        new File(projectDir, 'sub2/build.gradle') << """ \
-        dependencies {
-            implementation 'not.available:banana-leaf:2.0.0' // dependency is not found
-        }
-        """.stripIndent()
-
-        when:
-        def results = runTasksAndFail(*tasks, '--parallel')
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCacheStateCouldNotBeStored(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForOneOfTheseDependencies(results.output, [
-                dependencyProjectPair("not.available:apricot:1.0.0", "sub1"),
-                dependencyProjectPair("not.available:banana-leaf:2.0.0", "sub2")
-        ])
-
-        where:
-        tasks                                                                                      | description
-        ['build']                                                                                  | 'resolve dependencies naturally'
-        ['dependenciesForAll', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
-    }
-
-    def 'multiproject: works for parallel builds - reporting task only'() {
-        given:
-        setupMultiProject()
-
-        new File(projectDir, 'sub1/build.gradle') << """ \
-        dependencies {
-            implementation 'not.available:apricot:1.0.0' // dependency is not found
-        }
-        """.stripIndent()
-
-        new File(projectDir, 'sub2/build.gradle') << """ \
-        dependencies {
-            implementation 'not.available:banana-leaf:2.0.0' // dependency is not found
-        }
-        """.stripIndent()
-
-        when:
-        def results = runTasksAndFail(*tasks, '--parallel')
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCachingIsNotMentioned(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForOneOfTheseDependencies(results.output, [
-                dependencyProjectPair("not.available:apricot:1.0.0", "sub1"),
-                dependencyProjectPair("not.available:banana-leaf:2.0.0", "sub2")
-        ])
-
-        where:
-        tasks                                                         | description
-        ['dependenciesForAll', '--configuration', 'compileClasspath'] | 'explicitly resolve dependencies'
-    }
-
-    @Unroll
-    def 'missing a dependency declaration is not caught - #description'() {
-        given:
-        setupSingleProject()
-        writeUnitTest() // junit library is not in the dependency declaration
-
-        when:
-        def results = runTasksAndFail(*tasks)
-
-        then:
-        results.output.contains('FAILURE')
-        assertNoResolutionFailureMessage(results.output)
-
-        where:
-        tasks                                                                                | description
-        ['build']                                                                            | 'resolve dependencies naturally'
-        ['dependencies', '--configuration', 'compileClasspath', 'build', 'buildEnvironment'] | 'explicitly resolve as part of task chain'
-    }
-
-    @Unroll
-    def 'missing a dependency declaration is not caught - reporting task only'() {
-        given:
-        setupSingleProject()
-        writeUnitTest() // junit library is not in the dependency declaration
-
-        when:
-        def results = runTasks(*tasks)
-
-        then:
-        !results.output.contains('FAILURE')
-        assertNoConfigurationCacheStoringIssues(results.output)
-        assertNoResolutionFailureMessage(results.output)
-
-        where:
-        tasks                                                   | description
-        ['dependencies', '--configuration', 'compileClasspath'] | 'explicitly resolve dependencies'
-    }
-
-    @Unroll
-    def 'specify configurations to ignore via property via #setupStyle'() {
-        given:
-        setupSingleProject()
-
-        if (setupStyle == 'properties file') {
-            def file = new File("${projectDir}/gradle.properties")
-            file << """
-                dependencyResolutionVerifier.configurationsToExclude=specialConfig,otherSpecialConfig
-                """.stripIndent()
-        }
-
-        buildFile << """
-            configurations {
-                specialConfig
-                otherSpecialConfig
-            }
-            dependencies {
-                specialConfig 'not.available:apricot:1.0.0' // not available
-                otherSpecialConfig 'not.available:banana-leaf:2.0.0' // not available
-            }
-            """.stripIndent()
-
-        when:
-        def tasks = ['dependencies', '--configuration', 'compileClasspath']
-        if (setupStyle == 'command line') {
-            tasks += '-PdependencyResolutionVerifier.configurationsToExclude=specialConfig,otherSpecialConfig'
-        }
-        def results = runTasks(*tasks)
-
-        then:
-        assertNoResolutionFailureMessage(results.output)
-
-        where:
-        setupStyle << ['command line', 'properties file']
-    }
-
-    @Unroll
-    def 'displays error once with finalizers - #tasks'() {
-        given:
-        setupSingleProject()
-
-        buildFile << """
-            dependencies {
-                implementation 'not.available:a'
-            }
-            task myFinalizingTask {
-                println "Here's a great finalizing message"
-            }
-            task goodbye {
-                println "Goodbye!"
-            }
-            project.tasks.configureEach { Task task ->
-                if (task.name != 'myFinalizingTask' && task.name != 'clean') {
-                    task.finalizedBy project.tasks.named('myFinalizingTask')
-                }
-                if (task.name != 'myFinalizingTask' && task.name != 'goodbye' && task.name != 'clean') {
-                    task.finalizedBy project.tasks.named('goodbye')
-                }
-            }
-            """.stripIndent()
-
-        when:
-        def results = runTasksAndFail(*tasks)
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCacheStateCouldNotBeStored(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertFailureMessageIsDisplayedOnce(results.output, "not.available:a")
-
-        where:
-        tasks << [['build'], ['build', '--parallel']]
-    }
-
-    @Unroll
-    def 'handles task configuration issue due to #failureType'() {
-        given:
-        setupSingleProject()
-        setupTaskThatRequiresResolvedConfiguration(buildFile)
-
-        buildFile << """
-            dependencies {
-                implementation '$dependency'
-            }
-            """.stripIndent()
-
-        when:
-        def results = runTasksAndFail('build')
-
-        then:
-        assert results.output.contains('FAILURE')
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependency(results.output, actualMissingDep ?: dependency)
-
-        where:
-        failureType                | dependency                       | actualMissingDep
-        'missing version'          | 'not.available:a'                | null
-        'direct dep not found'     | 'not.available:a:1.0.0'          | null
-        'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
-    }
-
-    @Unroll
-    def 'handles task configuration issue due to #failureType - multiproject'() {
-        given:
-        setupMultiProject()
-
-        def sub1BuildFile = new File(projectDir, 'sub1/build.gradle')
-        def sub2BuildFile = new File(projectDir, 'sub2/build.gradle')
-
-        setupTaskThatRequiresResolvedConfiguration(sub1BuildFile)
-        setupTaskThatRequiresResolvedConfiguration(sub2BuildFile)
-
-        sub1BuildFile << """ \
-        dependencies {
-            implementation '$dependency'
-        }
-        """.stripIndent()
-
-        def sub2Dependency = dependency.replace(':a', ':b')
-        sub2BuildFile << """
-        dependencies {
-            implementation '$sub2Dependency'
-        }
-        """.stripIndent()
-
-        when:
-        def results = runTasksAndFail('build')
-
-        then:
-        assert results.output.contains('FAILURE')
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
-        assert !results.output.contains("for project 'sub2'")
-
-        where:
-        failureType                | dependency                       | actualMissingDep
-        'missing version'          | 'not.available:a'                | null
-        'direct dep not found'     | 'not.available:a:1.0.0'          | null
-        'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
-    }
-
-    @Unroll
-    def 'handles task configuration issue due to #failureType - multiproject and parallel'() {
-        given:
-        setupMultiProject()
-
-        def sub1BuildFile = new File(projectDir, 'sub1/build.gradle')
-        def sub2BuildFile = new File(projectDir, 'sub2/build.gradle')
-
-        setupTaskThatRequiresResolvedConfiguration(sub1BuildFile)
-        setupTaskThatRequiresResolvedConfiguration(sub2BuildFile)
-
-        sub1BuildFile << """
-        dependencies {
-            implementation '$dependency'
-        }
-        """.stripIndent()
-
-        def sub2Dependency = dependency.replace(':a', ':b')
-        sub2BuildFile << """
-        dependencies {
-            implementation '$sub2Dependency'
-        }
-        """.stripIndent()
-
-        when:
-        def results = runTasksAndFail('build')
-
-        then:
-        assert results.output.contains('FAILURE')
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
-        assert !results.output.contains("for project 'sub2'")
-
-        where:
-        failureType                | dependency                       | actualMissingDep
-        'missing version'          | 'not.available:a'                | null
-        'direct dep not found'     | 'not.available:a:1.0.0'          | null
-        'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
-    }
-
-    @Unroll
-    def 'uses extension for #description'() {
-        given:
-        setupSingleProject()
-
-        def configurationName = description == 'configurationsToExclude'
-                ? 'myConfig' : 'implementation'
-
-        buildFile << """
-            configurations { myConfig }
-            dependencies {
-                $configurationName 'not.available:a'
-            }
             import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
-            plugins.withId('com.netflix.nebula.dependency-lock') {
-                def extension = extensions.getByType(DependencyResolutionVerifierExtension.class)
-                def list = new ArrayList<>()
-                $extensionSetting
-            }
-            """.stripIndent()
-
-        when:
-        def results
-        if (willFail) {
-            results = runTasksAndFail('dependencies')
-        } else {
-            results = runTasks('dependencies')
-        }
-
-        then:
-        if (seeErrors) {
-            assertResolutionFailureMessage(results.output)
-            assertResolutionFailureForDependency(results.output, "not.available:a")
-            if (description == 'missingVersionsMessageAddition') {
-                assert results.output.contains('You can find additional help at...'),
-                        "Expected output to contain missingVersionsMessageAddition: 'You can find additional help at...'"
-            }
-        } else {
-            assertNoResolutionFailureMessage(results.output)
-        }
-
-        where:
-        extensionSetting                                                                  | description                      | willFail | seeErrors
-        'extension.missingVersionsMessageAddition = "You can find additional help at..."' | 'missingVersionsMessageAddition' | true     | true
-        'extension.shouldFailTheBuild = false'                                            | 'shouldFailTheBuild'             | false    | true
-        "list.addAll('myConfig')\n\textension.configurationsToExclude = list"             | 'configurationsToExclude'        | false    | false
-        "list.addAll('dependencies')\n\textension.tasksToExclude = list"                  | 'tasksToExclude'                 | false    | false
-    }
-
-    def 'unresolved dependencies output includes missingVersionsMessageAddition when some dependencies lack a version'() {
-        given:
-        setupSingleProject()
-        def customAddition = 'Custom help: http://example.com/dependency-help'
-        buildFile << """
-            dependencies {
-                implementation 'not.available:a'
-            }
-            dependencyResolutionVerifierExtension {
-                missingVersionsMessageAddition = '$customAddition'
-            }
-        """.stripIndent()
-
-        when:
-        def results = runTasksAndFail('dependencies')
-
-        then:
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependency(results.output, 'not.available:a')
-        assert results.output.contains(customAddition),
-                "Expected output to contain missingVersionsMessageAddition: ${customAddition}"
-    }
-
-    def 'verifier skips configurations in the skip list (e.g. configurationsToExclude)'() {
-        given:
-        setupSingleProject()
-        new File(projectDir, 'gradle.properties') << """
-            dependencyResolutionVerifier.configurationsToExclude=skipMe
-        """.stripIndent()
-        buildFile << """
-            configurations {
-                skipMe {
-                    canBeResolved = true
-                }
-            }
-            dependencies {
-                skipMe 'not.available:unresolvable:1.0.0'
-            }
-        """.stripIndent()
-
-        when:
-        def results = runTasks('dependencies', '--configuration', 'compileClasspath')
-
-        then:
-        assert !results.output.toString().contains('FAILURE'):
-                "Verifier should skip skipMe via configurationsToExclude; without skip we would resolve it and fail"
-        assertNoConfigurationCacheStoringIssues(results.output)
-    }
-
-    def 'strict platform constraint aligns versions and verifier does not fail on non-selected versions'() {
-        given:
-        setupSingleProject()
-        buildFile << """
-            repositories {
-                mavenCentral()
-            }
-            dependencies {
-                implementation 'org.springframework:spring-core:5.2.9.RELEASE'
-                implementation 'org.springframework:spring-core:5.2.12.RELEASE'
-                implementation platform('org.springframework:spring-framework-bom:5.2.14.RELEASE')
-                implementation 'org.springframework:spring-context'
-            }
-        """.stripIndent()
-
-        when:
-        def results = runTasks('dependencies', '--configuration', 'runtimeClasspath')
-
-        then: 'we do not see failures'
-        !results.output.contains('FAILURE')
-        !results.output.contains('verifyDependencyResolution FAILED')
-        !results.output.contains('Failed to resolve the following dependencies:')
-
-        and: 'we see conflict-resolved versions resolve to a single version'
-        results.output.contains('org.springframework:spring-core:5.2.9.RELEASE -> 5.2.14.RELEASE')
-        results.output.contains('org.springframework:spring-core:5.2.12.RELEASE -> 5.2.14.RELEASE')
-        results.output.contains('org.springframework:spring-core:5.2.14.RELEASE')
-
-        and: 'we do not see resolved final path at lower non-selected versions'
-        !results.output.contains('org.springframework:spring-core:5.2.9.RELEASE\n')
-        !results.output.contains('org.springframework:spring-core:5.2.12.RELEASE\n')
-
-        and: 'we see version provided by BOM successfully'
-        results.output.contains('org.springframework:spring-context -> 5.2.14.RELEASE\n')
-
-        and: 'we do not see issues about dependencies missing a version, which would be provided by the BOM'
-        !results.output.contains('The following dependencies are missing a version:')
-    }
-
-    def 'handles root and subproject of the same name'() {
-        given:
-        setupMultiProject()
-
-        def sub1BuildFile = new File(projectDir, 'sub1/build.gradle')
-        sub1BuildFile << """
-        dependencies {
-            implementation 'not.available:a:1.0.0' // dependency is not found
-        }
-        """.stripIndent()
-
-        settingsFile.createNewFile()
-        settingsFile.text = """
-            rootProject.name='sub1'
-            include "sub1"
-            include "sub2"
-            """.stripIndent()
-
-        when:
-        def results = runTasksAndFail('build')
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCacheStateCouldNotBeStored(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertFailureMessageIsDisplayedOnce(results.output, "not.available:a:1.0.0")
-        assertResolutionFailureForDependencyForProject(results.output, "not.available:a:1.0.0", "sub1")
-    }
-
-    def 'handles build failure from task configuration issue'() {
-        given:
-        setupSingleProject()
-        buildFile << """
-            dependencies {
-                implementation 'not.available:a:1.0.0' // dependency is not found
-            }
-            task goodbye {
-                println "Goodbye!"
-            }
-            build.finalizedBy project.tasks.named('goodbye') onlyIf {
-                project.configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.collect {it.name}.contains('bananan')
-            }
-            """.stripIndent()
-
-        when:
-        def results = runTasksAndFail('build')
-
-        then:
-        results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCacheStateCouldNotBeStored(results.output)
-        assertResolutionFailureMessage(results.output)
-        assertFailureMessageIsDisplayedOnce(results.output, "not.available:a:1.0.0")
-        assertResolutionFailureForDependency(results.output, "not.available:a:1.0.0")
-    }
-
-    def 'handles task that requires resolved configuration with no issues'() {
-        given:
-        setupSingleProject()
-
-        buildFile << """
-            ${taskThatRequiresConfigurationDependencies()}
-            """.stripIndent()
-
-        when:
-        def results = runTasks('build')
-
-        then:
-        assert !results.output.contains('FAILURE')
-        assertNoConfigurationCacheStoringIssues(results.output)
-    }
-
-    @Unroll
-    def 'handles task that requires resolved configuration with an issue due to #failureType'() {
-        given:
-        setupSingleProject()
-
-        buildFile << """
-            dependencies {
-                implementation '$dependency'
-            }
-            ${taskThatRequiresConfigurationDependencies()}
-            """.stripIndent()
-
-        when:
-        def results = runTasksAndFail('build')
-
-        then:
-        assert results.output.contains('FAILURE')
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependency(results.output, actualMissingDep ?: dependency)
-
-        where:
-        failureType                | dependency                       | actualMissingDep
-        'missing version'          | 'not.available:a'                | null
-        'direct dep not found'     | 'not.available:a:1.0.0'          | null
-        'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
-    }
-
-    @Unroll
-    def 'handles task that requires resolved configuration with an issue due to #failureType - multiproject'() {
-        given:
-        setupMultiProject()
-
-        def sub1BuildFile = new File(projectDir, 'sub1/build.gradle')
-        def sub2BuildFile = new File(projectDir, 'sub2/build.gradle')
-
-        sub1BuildFile << """ \
-        dependencies {
-            implementation '$dependency'
-        }
-        ${taskThatRequiresConfigurationDependencies()}
-        """.stripIndent()
-
-        def sub2Dependency = dependency.replace(':a', ':b')
-        sub2BuildFile << """
-        dependencies {
-            implementation '$sub2Dependency'
-        }
-        ${taskThatRequiresConfigurationDependencies()}
-        """.stripIndent()
-
-        when:
-        def results = runTasksAndFail('build')
-
-        then:
-        assert results.output.contains('FAILURE')
-        assertExecutionFailedForTask(results.output)
-        assertConfigurationCacheStateCouldNotBeStored(results.output)
-        assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
-        assert !results.output.contains("for project 'sub2'")
-
-        where:
-        failureType                | dependency                       | actualMissingDep
-        'missing version'          | 'not.available:a'                | null
-        'direct dep not found'     | 'not.available:a:1.0.0'          | null
-        'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
-    }
-
-    @Unroll
-    def 'handles task that requires resolved configuration with an issue due to #failureType - multiproject and parallel'() {
-        given:
-        setupMultiProject()
-
-        def sub1BuildFile = new File(projectDir, 'sub1/build.gradle')
-        def sub2BuildFile = new File(projectDir, 'sub2/build.gradle')
-
-        sub1BuildFile << """
-        dependencies {
-            implementation '$dependency'
-        }
-        ${taskThatRequiresConfigurationDependencies()}
-        """.stripIndent()
-
-        def sub2Dependency = dependency.replace(':a', ':b')
-        sub2BuildFile << """
-        dependencies {
-            implementation '$sub2Dependency'
-        }
-        ${taskThatRequiresConfigurationDependencies()}
-        """.stripIndent()
-
-        when:
-        def results = runTasksAndFail('build')
-
-        then:
-        assert results.output.contains('FAILURE')
-        assertResolutionFailureMessage(results.output)
-        assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
-        assert !results.output.contains("for project 'sub2'")
-
-        where:
-        failureType                | dependency                       | actualMissingDep
-        'missing version'          | 'not.available:a'                | null
-        'direct dep not found'     | 'not.available:a:1.0.0'          | null
-        'transitive dep not found' | 'has.missing.transitive:a:1.0.0' | 'transitive.not.available:a:1.0.0'
-    }
-
-    @Unroll
-    def 'resolved versions are not equal to locked versions because locked versions are not aligned - core alignment #coreAlignment - core locking #coreLocking'() {
-        given:
-        setupSingleProjectWithLockedVersionsThatAreNotAligned()
-
-        when:
-        def flags = ["-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
-        def insightResults = runTasksAndFail('dependencyInsight', '--dependency', 'test.nebula', *flags)
-        def results = runTasksAndFail('dependencies', '--configuration', 'compileClasspath', *flags)
-
-        then:
-        insightResults.output.contains('test.nebula:a:1.1.0 -> 1.2.0\n')
-        insightResults.output.contains('test.nebula:b:1.2.0\n')
-        insightResults.output.contains('test.nebula:c:1.1.0 -> 1.2.0\n')
-
-        insightResults.output.contains('FAILED')
-
-        insightResults.output.contains("Dependency lock state is out of date:")
-        insightResults.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project")
-        insightResults.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project")
-        insightResults.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project")
-        insightResults.output.contains('Please update your dependency locks or your build file constraints.')
-
-        results.output.contains('FAILED')
-
-        results.output.contains("Dependency lock state is out of date:")
-        results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project")
-        results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project")
-        results.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project")
-        results.output.contains('Please update your dependency locks or your build file constraints.')
-
-        where:
-        coreAlignment | coreLocking
-        true          | false
-    }
-
-    @Unroll
-    def 'resolved versions are not equal to locked versions - handles unlocked transitives - core alignment #coreAlignment - core locking #coreLocking'() {
-        given:
-        setupSingleProjectWithLockedVersionsThatAreNotAligned()
-
-        when:
-        def flags = ["-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
-        runTasks('generateLock', 'saveLock', *flags) // without locking transitives
-        def results = runTasks('dependencies', '--configuration', 'compileClasspath', *flags)
-
-        then:
-        results.output.contains('SUCCESS')
-
-        where:
-        coreAlignment | coreLocking
-        true          | false
-    }
-
-    @Unroll
-    def 'resolved versions are not equal to locked versions with override file - core alignment #coreAlignment - core locking #coreLocking'() {
-        given:
-        setupSingleProjectWithLockedVersionsThatAreNotAligned()
-
-        def graph = new DependencyGraphBuilder()
-                .addModule(new ModuleBuilder('test.nebula:a:1.3.0').addDependency('test.nebula:d:1.3.0').build())
-                .addModule('test.nebula:b:1.3.0')
-                .addModule('test.nebula:c:1.3.0')
-                .build()
-        def updatedmavenrepo = new GradleDependencyGenerator(graph, "$projectDir/testrepogen")
-        updatedmavenrepo.generateTestMavenRepo()
-
-        def dependenciesLockOverride = new File(projectDir, 'override.lock')
-        dependenciesLockOverride << '''
-            { "test.nebula:a": "1.3.0" }
-            '''.stripIndent()
-
-        when:
-        def flags = ['-PdependencyLock.overrideFile=override.lock', "-Dnebula.features.coreAlignmentSupport=${coreAlignment}", "-Dnebula.features.coreLockingSupport=${coreLocking}"]
-        def insightResults = runTasksAndFail('dependencyInsight', '--dependency', 'test.nebula', *flags)
-        def results = runTasksAndFail('dependencies', '--configuration', 'compileClasspath', *flags)
-
-        then:
-        insightResults.output.contains('using override file: override.lock')
-
-        insightResults.output.contains('test.nebula:a:1.1.0 -> 1.3.0\n')
-        insightResults.output.contains('test.nebula:b:1.3.0\n')
-        insightResults.output.contains('test.nebula:c:1.1.0 -> 1.3.0\n')
-        insightResults.output.contains('test.nebula:d:1.3.0\n')
-
-        insightResults.output.contains('FAILED')
-
-        insightResults.output.contains("Dependency lock state is out of date:")
-        !insightResults.output.contains("Resolved 'test.nebula:a:1.3.0' instead of locked version")
-        insightResults.output.contains("Resolved 'test.nebula:b:1.3.0' instead of locked version '1.2.0' for project")
-        insightResults.output.contains("Resolved 'test.nebula:c:1.3.0' instead of locked version '1.1.0' for project")
-        insightResults.output.contains("Resolved 'test.nebula:d:1.3.0' instead of locked version '1.1.0' for project")
-        insightResults.output.contains('Please update your dependency locks or your build file constraints.')
-
-        results.output.contains('FAILED')
-
-        results.output.contains("Dependency lock state is out of date:")
-        !results.output.contains("Resolved 'test.nebula:a:1.3.0' instead of locked version")
-        results.output.contains("Resolved 'test.nebula:b:1.3.0' instead of locked version '1.2.0' for project")
-        results.output.contains("Resolved 'test.nebula:c:1.3.0' instead of locked version '1.1.0' for project")
-        results.output.contains("Resolved 'test.nebula:d:1.3.0' instead of locked version '1.1.0' for project")
-        results.output.contains('Please update your dependency locks or your build file constraints.')
-
-        where:
-        coreAlignment | coreLocking
-        true          | false
-    }
-
-    @Unroll
-    def 'resolved versions are not equal to locked versions - can configure extension messaging - core alignment #coreAlignment - core locking #coreLocking'() {
-        given:
-        setupSingleProjectWithLockedVersionsThatAreNotAligned()
-        def extensionMessage = 'You may see this after changing from Nebula alignment to core Gradle alignment for the first time in this repository'
-        buildFile << """
             import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
+import nebula.plugin.BaseIntegrationTestKitSpec
+import nebula.plugin.VerifierOutputAssertionsBase
+import nebula.test.dependencies.DependencyGraphBuilder
+import nebula.test.dependencies.GradleDependencyGenerator
+import nebula.test.dependencies.ModuleBuilder
+import spock.lang.Ignore
+import spock.lang.Subject
+import spock.lang.Unroll
             plugins.withId('com.netflix.nebula.dependency-lock') {
                 def extension = extensions.getByType(DependencyResolutionVerifierExtension.class)
                 extension.resolvedVersionDoesNotEqualLockedVersionMessageAddition = '$extensionMessage'
@@ -1212,7 +71,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILED')
 
-        results.output.contains("Dependency lock state is out of date:")
+        results.output.contains('Dependency lock state is out of date:')
         results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
         results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
         results.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
@@ -1235,7 +94,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         then:
         results.output.contains('FAILED')
 
-        results.output.contains("Dependency lock state is out of date:")
+        results.output.contains('Dependency lock state is out of date:')
 
         results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
         results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
@@ -1324,13 +183,13 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         new File(projectDir, 'global.lock').text = globalLockText
 
         when:
-        def flags = ["-Dnebula.features.coreAlignmentSupport=true", "-Dnebula.features.coreLockingSupport=false"]
+        def flags = ['-Dnebula.features.coreAlignmentSupport=true', '-Dnebula.features.coreLockingSupport=false']
         def results = runTasksAndFail('dependenciesForAll', '--configuration', 'compileClasspath', *flags)
 
         then:
         results.output.contains('FAILED')
 
-        results.output.contains("Dependency lock state is out of date:")
+        results.output.contains('Dependency lock state is out of date:')
 
         results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
         results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
@@ -1461,9 +320,9 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
                 }
                 """.stripIndent()
 
-        def sub1Dir = new File(projectDir, "included-project/sub1")
+        def sub1Dir = new File(projectDir, 'included-project/sub1')
         sub1Dir.mkdirs()
-        def sub1BuildFile = new File(sub1Dir, "build.gradle")
+        def sub1BuildFile = new File(sub1Dir, 'build.gradle')
         sub1BuildFile << """
                 dependencies {
                     implementation 'not.available:b:1.0.0' // dependency is not found either
@@ -1475,7 +334,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         then:
         assert results.output.contains('> Task :included-project:sub1:dependencies')
-        assertResolutionFailureForDependencyForProject(results.output, "not.available:b:1.0.0", "sub1")
+        assertResolutionFailureForDependencyForProject(results.output, 'not.available:b:1.0.0', 'sub1')
         assert results.output.contains('FAIL')
     }
 
@@ -1498,7 +357,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
             !noIssuesResult.output.contains('FAILURE')
             !noIssuesResult.output.contains('verifyDependencyResolution FAILED')
 
-            !noIssuesResult.output.contains("Failed to resolve")
+            !noIssuesResult.output.contains('Failed to resolve')
         }
 
         and: 'in particular, the synthetic {strictly 2.0.0} constraint is not falsely reported as unresolved when looking at a different configuration altogether'
@@ -1510,8 +369,8 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
             conflictsResult.output.contains('verifyDependencyResolution FAILED')
 
             // different output depending on report task type; same effect
-            conflictsResult.output.contains("test.nebula:foo:{strictly 1.0.0} -> 1.0.0 FAILED") || conflictsResult.output.contains("test.nebula:foo:{strictly 1.0.0} FAILED")
-            conflictsResult.output.contains("test.nebula:foo:{strictly 2.0.0} -> 2.0.0 FAILED") || conflictsResult.output.contains("test.nebula:foo:{strictly 2.0.0} FAILED")
+            conflictsResult.output.contains('test.nebula:foo:{strictly 1.0.0} -> 1.0.0 FAILED') || conflictsResult.output.contains('test.nebula:foo:{strictly 1.0.0} FAILED')
+            conflictsResult.output.contains('test.nebula:foo:{strictly 2.0.0} -> 2.0.0 FAILED') || conflictsResult.output.contains('test.nebula:foo:{strictly 2.0.0} FAILED')
         }
 
         where:
@@ -1545,7 +404,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
                 > Failed to resolve the following dependencies:
                 1. $FAILED_RESOLVE_PREFIX '$dependency' for project
                 """.stripIndent()
-            String gradleExpectedText = "> " + COULD_NOT_FIND + dependency
+            String gradleExpectedText = '> ' + COULD_NOT_FIND + dependency
             int verifierCount = resultsOutput.findAll(verifierExpectedText).size()
             int gradleCount = resultsOutput.findAll(gradleExpectedText).size()
 
@@ -1578,6 +437,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         /** Value type pairing a dependency coordinate with a project name for assertResolutionFailureForDependencyForProjectOneOf. */
         private static final class DependencyProjectPair {
+
             final String dependency
             final String project
 
@@ -1585,12 +445,14 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
                 this.dependency = dependency
                 this.project = project
             }
+
         }
 
         /** Pairs a dependency coordinate with a project name for use in assertResolutionFailureForDependencyForProjectOneOf. */
         static DependencyProjectPair dependencyProjectPair(String dependency, String projectName) {
             return new DependencyProjectPair(dependency, projectName)
         }
+
     }
 
     private static String taskThatRequiresConfigurationDependencies() {
@@ -1624,7 +486,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
                 doLast {
                     def resolvedArtifacts = project.configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.collect { it.toString() }
                     task.dependenciesAsStrings = resolvedArtifacts
-                    
+
                     println("Resolved artifacts: \${resolvedArtifacts.join(', ')}")
                 }
             }
@@ -1674,8 +536,8 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
             }
             """.stripIndent()
 
-        addSubproject("sub1", subProjectBuildFileContent)
-        addSubproject("sub2", subProjectBuildFileContent)
+        addSubproject('sub1', subProjectBuildFileContent)
+        addSubproject('sub2', subProjectBuildFileContent)
 
         writeHelloWorld(new File(projectDir, 'sub1'))
         writeHelloWorld(new File(projectDir, 'sub2'))
@@ -1687,30 +549,30 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         setupSingleProject()
         settingsFile << "\nincludeBuild('included-project')"
 
-        def includedProjectDir = new File(projectDir, "included-project")
+        def includedProjectDir = new File(projectDir, 'included-project')
         includedProjectDir.mkdirs()
-        def includedProjectBuildFile = new File(includedProjectDir, "build.gradle")
+        def includedProjectBuildFile = new File(includedProjectDir, 'build.gradle')
         includedProjectBuildFile.createNewFile()
         includedProjectBuildFile.text = """
             plugins {
                 id 'java'
             }
             """.stripIndent()
-        def includedProjectSettingsFile = new File(includedProjectDir, "settings.gradle")
+        def includedProjectSettingsFile = new File(includedProjectDir, 'settings.gradle')
         includedProjectSettingsFile.createNewFile()
         includedProjectSettingsFile.text = """
             rootProject.name = 'included-project'
-            
+
             include "sub1"
             include "sub2"
             """.stripIndent()
-        def includedSub1Dir = new File(includedProjectDir, "sub1")
+        def includedSub1Dir = new File(includedProjectDir, 'sub1')
         includedSub1Dir.mkdirs()
-        def includedSub1BuildFiles = new File(includedSub1Dir, "build.gradle")
+        def includedSub1BuildFiles = new File(includedSub1Dir, 'build.gradle')
         includedSub1BuildFiles.text = buildFile.text
-        def includedSub2Dir = new File(includedProjectDir, "sub2")
+        def includedSub2Dir = new File(includedProjectDir, 'sub2')
         includedSub2Dir.mkdirs()
-        def includedSub2BuildFiles = new File(includedSub2Dir, "build.gradle")
+        def includedSub2BuildFiles = new File(includedSub2Dir, 'build.gradle')
         includedSub2BuildFiles.text = buildFile.text
     }
 
@@ -1776,7 +638,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
                     resolutionRules files('$rulesJsonFile')
                 }
             }
-      
+
             """.stripIndent()
 
         def subProject1BuildFileContent = """
@@ -1795,13 +657,13 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
             }
             """.stripIndent()
 
-        addSubproject("sub1", subProject1BuildFileContent)
-        addSubproject("sub2", subProject2BuildFileContent)
+        addSubproject('sub1', subProject1BuildFileContent)
+        addSubproject('sub2', subProject2BuildFileContent)
 
         def dependencyLock = new File(projectDir, 'dependencies.lock')
         def dependencyLockSubproject1 = new File(projectDir, 'sub1/dependencies.lock')
         def dependencyLockSubproject2 = new File(projectDir, 'sub2/dependencies.lock')
-        dependencyLock << "{ }"
+        dependencyLock << '{ }'
         dependencyLockSubproject1 << dependencyLockFileContents
 
         def dependencyLockFileContentsSubproject2 = '''\
@@ -1934,4 +796,5 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         !result.output.contains('verifyDependencyResolution was not registered')
         !result.output.contains('FAILURE')
     }
+
 }
