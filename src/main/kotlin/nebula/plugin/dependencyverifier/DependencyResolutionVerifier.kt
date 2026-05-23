@@ -113,9 +113,9 @@ class DependencyResolutionVerifier(
             task.parameters.projectKey.set(projectKey)
             task.parameters.projectName.set(projectName)
             task.parameters.shouldFailTheBuild.set(shouldFailTheBuild)
-            task.parameters.missingVersionsMessageAddition.set(extensionFromRoot.missingVersionsMessageAddition)
+            task.parameters.missingVersionsMessageAddition.set(extensionFromRoot.missingVersionsMessageAdditionProperty)
             task.parameters.resolvedVersionDoesNotEqualLockedVersionMessageAddition.set(
-                extensionFromRoot.resolvedVersionDoesNotEqualLockedVersionMessageAddition
+                extensionFromRoot.resolvedVersionDoesNotEqualLockedVersionMessageAdditionProperty
             )
             task.parameters.configurationsToExclude.set(configurationsToExclude)
             val ignoreLocks = try {
@@ -123,7 +123,7 @@ class DependencyResolutionVerifier(
             } catch (_: Exception) {
                 false
             }
-            val effectiveLockValidation = extensionFromRoot.enableLockFileValidation.get() && !ignoreLocks
+            val effectiveLockValidation = extensionFromRoot.enableLockFileValidationProperty.get() && !ignoreLocks
             task.parameters.enableLockFileValidation.set(effectiveLockValidation)
             task.parameters.taskNames.set(project.gradle.startParameter.taskNames.toList())
             task.parameters.coreAlignmentEnabled.set(System.getProperty("nebula.features.coreAlignmentSupport", "false").toBoolean())
@@ -167,7 +167,7 @@ class DependencyResolutionVerifier(
         }
 
     private fun getShouldFailTheBuild(project: Project): Boolean =
-        propertyOrExtension(project, UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD, extensionFromRoot.shouldFailTheBuild.get()) { it.toBoolean() }
+        propertyOrExtension(project, UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD, extensionFromRoot.shouldFailTheBuildProperty.get()) { it.toBoolean() }
 
     private fun uniqueProjectKey(project: Project): String {
         return "${project.name}-${if (project == project.rootProject) "rootproject" else "subproject"}"
@@ -285,14 +285,14 @@ class DependencyResolutionVerifier(
     private fun registerFlowActionStrategy(project: Project, projectKey: String) {
         val projectName = project.name
         val shouldFailTheBuild = getShouldFailTheBuild(project)
-        val lockMismatchMessage = extensionFromRoot.resolvedVersionDoesNotEqualLockedVersionMessageAddition.get()
+        val lockMismatchMessage = extensionFromRoot.resolvedVersionDoesNotEqualLockedVersionMessageAdditionProperty.get()
 
         flowScope.always(DependencyResolutionFlowAction::class.java) { spec ->
             spec.parameters.projectName.set(projectName)
             spec.parameters.projectKey.set(projectKey)
             spec.parameters.shouldFailTheBuild.set(shouldFailTheBuild)
             spec.parameters.lockMismatchMessage.set(lockMismatchMessage)
-            spec.parameters.missingVersionsMessageAddition.set(extensionFromRoot.missingVersionsMessageAddition.get())
+            spec.parameters.missingVersionsMessageAddition.set(extensionFromRoot.missingVersionsMessageAdditionProperty.get())
             spec.parameters.requestedTaskNames.set(project.gradle.startParameter.taskNames.toList())
             spec.parameters.buildResult.set(flowProviders.buildWorkResult)
             spec.parameters.verificationService.set(verificationService)

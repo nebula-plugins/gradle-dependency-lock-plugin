@@ -112,4 +112,116 @@ class DependencyResolutionVerifierExtensionPropertySpec extends BaseIntegrationT
         result.output.contains('isSetProperty: false')
     }
 
+    def 'shouldFailTheBuild getter returns Boolean not Property (backward compat)'() {
+        given:
+        buildFile << """
+            plugins { id 'com.netflix.nebula.dependency-lock' }
+            task checkType {
+                def ext = dependencyResolutionVerifierExtension
+                doLast {
+                    def value = ext.shouldFailTheBuild
+                    println "isBoolean: " + (value instanceof Boolean)
+                }
+            }
+        """
+        when:
+        def result = runTasks('checkType')
+        then:
+        result.output.contains('isBoolean: true')
+    }
+
+    def 'shouldFailTheBuild false assignment is respected (backward compat)'() {
+        given:
+        buildFile << """
+            plugins { id 'com.netflix.nebula.dependency-lock' }
+            dependencyResolutionVerifierExtension {
+                shouldFailTheBuild = false
+            }
+            task checkValue {
+                def ext = dependencyResolutionVerifierExtension
+                doLast {
+                    println "value: " + ext.shouldFailTheBuild
+                }
+            }
+        """
+        when:
+        def result = runTasks('checkValue')
+        then:
+        result.output.contains('value: false')
+    }
+
+    def 'enableLockFileValidation getter returns Boolean not Property (backward compat)'() {
+        given:
+        buildFile << """
+            plugins { id 'com.netflix.nebula.dependency-lock' }
+            task checkType {
+                def ext = dependencyResolutionVerifierExtension
+                doLast {
+                    def value = ext.enableLockFileValidation
+                    println "isBoolean: " + (value instanceof Boolean)
+                }
+            }
+        """
+        when:
+        def result = runTasks('checkType')
+        then:
+        result.output.contains('isBoolean: true')
+    }
+
+    def 'missingVersionsMessageAddition getter returns String not Property (backward compat)'() {
+        given:
+        buildFile << """
+            plugins { id 'com.netflix.nebula.dependency-lock' }
+            task checkType {
+                def ext = dependencyResolutionVerifierExtension
+                doLast {
+                    def value = ext.missingVersionsMessageAddition
+                    println "isString: " + (value instanceof String)
+                }
+            }
+        """
+        when:
+        def result = runTasks('checkType')
+        then:
+        result.output.contains('isString: true')
+    }
+
+    def 'missingVersionsMessageAddition assignment is reflected in getter (backward compat)'() {
+        given:
+        buildFile << """
+            plugins { id 'com.netflix.nebula.dependency-lock' }
+            dependencyResolutionVerifierExtension {
+                missingVersionsMessageAddition = 'See go/deps for help.'
+            }
+            task checkValue {
+                def ext = dependencyResolutionVerifierExtension
+                doLast {
+                    println "msg: " + ext.missingVersionsMessageAddition
+                }
+            }
+        """
+        when:
+        def result = runTasks('checkValue')
+        then:
+        result.output.contains('msg: See go/deps for help.')
+    }
+
+    def 'resolvedVersionDoesNotEqualLockedVersionMessageAddition getter returns String not Property (backward compat)'() {
+        given:
+        buildFile << """
+            plugins { id 'com.netflix.nebula.dependency-lock' }
+            task checkType {
+                def ext = dependencyResolutionVerifierExtension
+                doLast {
+                    def value = ext.resolvedVersionDoesNotEqualLockedVersionMessageAddition
+                    println "isString: " + (value instanceof String)
+                }
+            }
+        """
+        when:
+        def result = runTasks('checkType')
+        then:
+        result.output.contains('isString: true')
+    }
+
 }
