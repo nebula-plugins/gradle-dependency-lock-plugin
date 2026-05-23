@@ -302,16 +302,16 @@ abstract class DependencyLockExtension {
     DependencyLockExtension() {
         lockFileProperty.convention('dependencies.lock')
         globalLockFileProperty.convention('global.lock')
-        configurationNamesProperty.convention([] as Set)
-        skippedConfigurationNamesPrefixesProperty.convention([] as Set)
-        updateDependenciesProperty.convention([] as Set)
-        skippedDependenciesProperty.convention([] as Set)
+        configurationNamesProperty.convention([] as Set<String>)
+        skippedConfigurationNamesPrefixesProperty.convention([] as Set<String>)
+        updateDependenciesProperty.convention([] as Set<String>)
+        skippedDependenciesProperty.convention([] as Set<String>)
         includeTransitivesProperty.convention(false)
         lockAfterEvaluatingProperty.convention(true)
         updateDependenciesFailOnInvalidCoordinatesProperty.convention(true)
         updateDependenciesFailOnSimultaneousTaskUsageProperty.convention(true)
         updateDependenciesFailOnNonSpecifiedDependenciesToUpdateProperty.convention(true)
-        additionalConfigurationsToLockProperty.convention([] as Set)
+        additionalConfigurationsToLockProperty.convention([] as Set<String>)
     }
 
 }
