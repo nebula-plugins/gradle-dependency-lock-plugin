@@ -144,7 +144,7 @@ class DependencyLockTaskConfigurer {
                     it.mustRunAfter(globalSaveTask)
                 }
                 // Resolve at config time so the task holds plain values (no provider chains for config cache)
-                String msg = project.findProperty('commitDependencyLock.message')?
+                String msg = project.findProperty('commitDependencyLock.message') as String
                 if (msg == null) {
                     msg = commitExtension.message.getOrElse('Committing dependency lock files')
                 }
@@ -157,7 +157,7 @@ class DependencyLockTaskConfigurer {
                     createTag = commitExtension.shouldCreateTag.getOrElse(false)
                 }
                 shouldCreateTag.set(createTag)
-                String tagVal = project.findProperty('commitDependencyLock.tag')?
+                String tagVal = project.findProperty('commitDependencyLock.tag') as String
                 if (tagVal == null) {
                     tagVal = commitExtension.tag.getOrElse("LockCommit-${new Date().format('yyyyMMddHHmmss')}")
                 }
