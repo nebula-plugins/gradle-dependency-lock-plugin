@@ -22,6 +22,33 @@ import org.gradle.api.tasks.Internal
 /**
  * Extension for configuring the dependency lock plugin.
  * Uses Gradle's Property API for lazy configuration and configuration cache compatibility.
+ *
+ * <h3>SetProperty backward-compat bridge convention</h3>
+ *
+ * Every {@code SetProperty<String>} field follows a two-name convention to satisfy two
+ * incompatible requirements simultaneously:
+ *
+ * <ol>
+ *   <li><b>Config-cache safety / lazy task wiring</b> — Gradle requires a {@code SetProperty}
+ *       (not a plain {@code Set}) to wire values into task parameters without resolving them at
+ *       configuration time. The abstract getter named {@code getFooProperty()} is the Gradle-managed
+ *       backing store used by internal plugin code for this purpose.</li>
+ *   <li><b>Backward-compatible Groovy DSL</b> — Before the {@code cd58be4 "modernize project"}
+ *       commit, all these fields were plain {@code Set<String>} properties. Hundreds of downstream
+ *       build scripts and plugins relied on Groovy property-assignment syntax
+ *       ({@code extension.foo = ['a', 'b']}) and on the getter returning a {@code Set<String>}.
+ *       Switching to {@code SetProperty} broke that syntax because Gradle does not generate a
+ *       {@code void setFoo(Iterable<String>)} setter for {@code SetProperty} fields — it only
+ *       generates {@code SetProperty<String> getFoo()}.  The concrete {@code Set<String> getFoo()}
+ *       getter and {@code void setFoo(Iterable<String>)} setter restore the old public API.</li>
+ * </ol>
+ *
+ * <p><b>Do not merge these two into one.</b> Removing the {@code *Property} getter breaks
+ * config-cache-safe task wiring. Removing the {@code Set<String>} getter/setter pair breaks
+ * downstream Groovy build scripts. Both sides of the bridge must be kept.</p>
+ *
+ * <p>Internal plugin code (tasks, configurers, helpers) always calls {@code fooProperty} directly.
+ * External callers (build scripts, third-party plugins) see only {@code foo} as a {@code Set<String>}.</p>
  */
 abstract class DependencyLockExtension {
 

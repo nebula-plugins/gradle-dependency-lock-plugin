@@ -18,7 +18,18 @@ package nebula.plugin.dependencyverifier
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 
-/** Extension for dependency resolution verification (Property API, config-cache friendly). */
+/**
+ * Extension for dependency resolution verification (Property API, config-cache friendly).
+ *
+ * <h3>SetProperty backward-compat bridge convention</h3>
+ *
+ * Every {@code SetProperty<String>} field follows a two-name convention — see
+ * {@link nebula.plugin.dependencylock.DependencyLockExtension} for the full explanation.
+ * In short: {@code getFooProperty()} is the Gradle-managed backing store for internal
+ * config-cache-safe task wiring; {@code getFoo()} / {@code setFoo(Iterable<String>)} are the
+ * public backward-compatible API that downstream Groovy build scripts call via
+ * {@code extension.foo = [...]} assignment syntax. Both sides must be kept.
+ */
 abstract class DependencyResolutionVerifierExtension {
     /** Fail the build when verification finds issues. Default: true */
     abstract Property<Boolean> getShouldFailTheBuild()
