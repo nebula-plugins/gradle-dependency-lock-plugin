@@ -638,6 +638,101 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
         result.output.contains('lockAfterEvaluating: false')
     }
 
+    def 'updateDependenciesFailOnInvalidCoordinates getter returns Boolean not Property (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            task checkType {
+                def ext = dependencyLock
+                doLast {
+                    def value = ext.updateDependenciesFailOnInvalidCoordinates
+                    println "isBoolean: " + (value instanceof Boolean)
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkType')
+
+        then:
+        result.output.contains('isBoolean: true')
+    }
+
+    def 'updateDependenciesFailOnInvalidCoordinates false assignment is respected (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            dependencyLock {
+                updateDependenciesFailOnInvalidCoordinates = false
+            }
+
+            task checkConfig {
+                def ext = dependencyLock
+                doLast {
+                    println "value: " + ext.updateDependenciesFailOnInvalidCoordinates
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkConfig')
+
+        then:
+        result.output.contains('value: false')
+    }
+
+    def 'updateDependenciesFailOnSimultaneousTaskUsage getter returns Boolean not Property (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            task checkType {
+                def ext = dependencyLock
+                doLast {
+                    def value = ext.updateDependenciesFailOnSimultaneousTaskUsage
+                    println "isBoolean: " + (value instanceof Boolean)
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkType')
+
+        then:
+        result.output.contains('isBoolean: true')
+    }
+
+    def 'updateDependenciesFailOnNonSpecifiedDependenciesToUpdate getter returns Boolean not Property (backward compat)'() {
+        given:
+        buildFile << """
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            task checkType {
+                def ext = dependencyLock
+                doLast {
+                    def value = ext.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate
+                    println "isBoolean: " + (value instanceof Boolean)
+                }
+            }
+        """
+
+        when:
+        def result = runTasks('checkType')
+
+        then:
+        result.output.contains('isBoolean: true')
+    }
+
     def 'commit extension properties use default conventions'() {
         given:
         buildFile << """
