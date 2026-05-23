@@ -31,7 +31,6 @@ import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.
 import static nebula.plugin.dependencyverifier.DependencyResolutionVerifierTest.OutputAssertions.dependencyProjectPair
 
             import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
-            import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
 import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.plugin.VerifierOutputAssertionsBase
 import nebula.test.dependencies.DependencyGraphBuilder
@@ -795,6 +794,28 @@ import spock.lang.Unroll
         then:
         !result.output.contains('verifyDependencyResolution was not registered')
         !result.output.contains('FAILURE')
+    }
+
+    def 'coreAlignmentEnabled system property change invalidates configuration cache entry'() {
+        given:
+        setupSingleProject()
+        def gradleProps = new File(projectDir, 'gradle.properties')
+
+        when: 'first run with system property false'
+        gradleProps.text = 'org.gradle.configuration-cache=true\norg.gradle.warning.mode=fail\nsystemProp.nebula.features.coreAlignmentSupport=false'
+        def firstRun = runTasks('help')
+
+        then: 'configuration cache entry is stored'
+        firstRun.output.contains('Configuration cache entry stored') ||
+            firstRun.output.contains('configuration cache')
+
+        when: 'second run with system property changed to true'
+        gradleProps.text = 'org.gradle.configuration-cache=true\norg.gradle.warning.mode=fail\nsystemProp.nebula.features.coreAlignmentSupport=true'
+        def secondRun = runTasks('help')
+
+        then: 'configuration cache entry is NOT reused — system property change must invalidate cache'
+        !secondRun.output.contains('Reusing configuration cache') &&
+            !secondRun.output.contains('Configuration cache entry reused')
     }
 
 }

@@ -126,7 +126,9 @@ class DependencyResolutionVerifier(
             val effectiveLockValidation = extensionFromRoot.enableLockFileValidationProperty.get() && !ignoreLocks
             task.parameters.enableLockFileValidation.set(effectiveLockValidation)
             task.parameters.taskNames.set(project.gradle.startParameter.taskNames.toList())
-            task.parameters.coreAlignmentEnabled.set(System.getProperty("nebula.features.coreAlignmentSupport", "false").toBoolean())
+            task.parameters.coreAlignmentEnabled.set(
+                project.providers.systemProperty("nebula.features.coreAlignmentSupport").map { it.toBoolean() }.orElse(false)
+            )
             task.parameters.coreLockingEnabled.set(DependencyLockingFeatureFlags.isCoreLockingEnabled())
             task.parameters.reportingOnlyBuild.set(
                 ReportingTasks.isReportingTasksOnly(project.gradle.startParameter.taskNames.toList())
