@@ -15,12 +15,20 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
             }
 
             task checkDefaults {
-                def ext = dependencyLock  // Capture during configuration
+                def ext = dependencyLock
                 doLast {
                     println "lockFile: " + ext.lockFile
                     println "globalLockFile: " + ext.globalLockFile
+                    println "configurationNames: " + ext.configurationNames
+                    println "skippedConfigurationNamesPrefixes: " + ext.skippedConfigurationNamesPrefixes
+                    println "updateDependencies: " + ext.updateDependencies
+                    println "skippedDependencies: " + ext.skippedDependencies
                     println "includeTransitives: " + ext.includeTransitives
                     println "lockAfterEvaluating: " + ext.lockAfterEvaluating
+                    println "additionalConfigurationsToLock: " + ext.additionalConfigurationsToLock
+                    println "failOnInvalidCoordinates: " + ext.updateDependenciesFailOnInvalidCoordinates
+                    println "failOnSimultaneous: " + ext.updateDependenciesFailOnSimultaneousTaskUsage
+                    println "failOnNonSpecified: " + ext.updateDependenciesFailOnNonSpecifiedDependenciesToUpdate
                 }
             }
         """
@@ -31,8 +39,16 @@ class DependencyLockExtensionPropertySpec extends BaseIntegrationTestKitSpec {
         then:
         result.output.contains('lockFile: dependencies.lock')
         result.output.contains('globalLockFile: global.lock')
+        result.output.contains('configurationNames: []')
+        result.output.contains('skippedConfigurationNamesPrefixes: []')
+        result.output.contains('updateDependencies: []')
+        result.output.contains('skippedDependencies: []')
         result.output.contains('includeTransitives: false')
         result.output.contains('lockAfterEvaluating: true')
+        result.output.contains('additionalConfigurationsToLock: []')
+        result.output.contains('failOnInvalidCoordinates: true')
+        result.output.contains('failOnSimultaneous: true')
+        result.output.contains('failOnNonSpecified: true')
     }
 
     def 'extension properties can be configured via set()'() {
