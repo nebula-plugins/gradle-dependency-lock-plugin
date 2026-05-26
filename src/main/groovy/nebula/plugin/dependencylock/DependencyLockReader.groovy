@@ -106,8 +106,9 @@ class DependencyLockReader {
     }
 
     private static Map parseLockFile(File lock) {
+        Map result
         try {
-            def result = lock.withInputStream { inputStream ->
+            result = lock.withInputStream { inputStream ->
                 JsonReader reader = JsonReader.of(Okio.buffer(Okio.source(inputStream)))
                 try {
                     return jsonAdapter.fromJson(reader)
@@ -115,7 +116,6 @@ class DependencyLockReader {
                     reader.close()
                 }
             }
-            return result != null ? result : [:]
         } catch (ex) {
             if (logger.isDebugEnabled()) {
                 try {
@@ -127,6 +127,11 @@ class DependencyLockReader {
             logger.error("JSON unreadable: ${lock.absolutePath}")
             throw new GradleException("${lock.name} is unreadable or invalid json, terminating run", ex)
         }
+        if (result == null) {
+            logger.error("JSON unreadable: ${lock.absolutePath}")
+            throw new GradleException("${lock.name} is unreadable or invalid json, terminating run")
+        }
+        return result
     }
 
 }
