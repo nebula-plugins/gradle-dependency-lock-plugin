@@ -26,6 +26,7 @@ import org.gradle.api.BuildCancelledException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.result.DependencyResult
 import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
@@ -131,8 +132,7 @@ abstract class GenerateLockTask extends AbstractLockTask {
         } else if (resolutionResults.isPresent() && !resolutionResults.get().isEmpty()) {
             // NEW API: Configuration cache compatible!
             def resolutionMap = resolutionResults.get()
-            def peerCoordinates = peerProjectCoordinates.get()
-            dependencyMap = new GenerateLockFromConfigurations().lock(resolutionMap, peerCoordinates)
+            dependencyMap = new GenerateLockFromConfigurations().lock(resolutionMap)
         } else {
             // No configurations to lock - valid for projects without dependencies (e.g., root project in multiproject builds)
             dependencyMap = [:]
@@ -233,14 +233,10 @@ abstract class GenerateLockTask extends AbstractLockTask {
         /**
          * Generate lock file using Gradle's official Resolution API
          * @param resolutionMap Map of configuration name to Provider<ResolvedComponentResult>
-         * @param peerCoordinates List of peer project coordinates in "group:name" format
          * @return Map of LockKey to LockValue
          */
-        Map<LockKey, LockValue> lock(Map<String, Provider<ResolvedComponentResult>> resolutionMap, List<String> peerCoordinates) {
+        Map<LockKey, LockValue> lock(Map<String, Provider<ResolvedComponentResult>> resolutionMap) {
             Map<LockKey, LockValue> deps = [:].withDefault { new LockValue() }
-
-            // Convert peer coordinates to a Set for fast lookup
-            Set<String> peerSet = new HashSet<>(peerCoordinates.collect { it.toString() })
 
             resolutionMap.each { String configName, Provider<ResolvedComponentResult> rootProvider ->
                 ResolvedComponentResult root = rootProvider.get()
@@ -262,26 +258,24 @@ abstract class GenerateLockTask extends AbstractLockTask {
                         }
 
                         def key = new LockKey(group: moduleVersion.group, artifact: moduleVersion.name, configuration: configName)
-                        String coordinate = "${moduleVersion.group}:${moduleVersion.name}".toString()
 
-                        // Check if this is a peer project
-                        if (!peerSet.contains(coordinate)) {
-                            // Standard external dependency
-                            deps[key].locked = moduleVersion.version
-                        } else {
+                        if (component.id instanceof ProjectComponentIdentifier) {
                             // Project dependency
                             deps[key].project = true
 
                             // If we don't include transitives, handle project's first-level deps
                             if (!getIncludeTransitives().getOrElse(false)) {
-                                handleSiblingTransitivesNew(component, configName, deps, peerSet)
+                                handleSiblingTransitivesNew(component, configName, deps)
                             }
+                        } else {
+                            // Standard external dependency
+                            deps[key].locked = moduleVersion.version
                         }
 
                         // If requested, lock all transitive dependencies
                         if (getIncludeTransitives().getOrElse(false)) {
                             deps[key].childrenVisited = true
-                            handleTransitiveNew(component, configName, deps, peerSet, key)
+                            handleTransitiveNew(component, configName, deps, key)
                         }
                     }
                 }
@@ -304,7 +298,7 @@ abstract class GenerateLockTask extends AbstractLockTask {
          * Handle transitive dependencies of project dependencies (when includeTransitives is false).
          * Uses NEW Resolution API.
          */
-        private void handleSiblingTransitivesNew(ResolvedComponentResult sibling, String configName, Map<LockKey, LockValue> deps, Set<String> peerSet) {
+        private void handleSiblingTransitivesNew(ResolvedComponentResult sibling, String configName, Map<LockKey, LockValue> deps) {
             def moduleVersion = sibling.moduleVersion
             if (moduleVersion == null) return
 
@@ -317,18 +311,17 @@ abstract class GenerateLockTask extends AbstractLockTask {
                     if (childModuleVersion == null) return
 
                     def key = new LockKey(group: childModuleVersion.group, artifact: childModuleVersion.name, configuration: configName)
-                    String coordinate = "${childModuleVersion.group}:${childModuleVersion.name}".toString()
 
                     // Record where this dependency came from
                     deps[key].firstLevelTransitive << parent
 
-                    if (peerSet.contains(coordinate)) {
+                    if (component.id instanceof ProjectComponentIdentifier) {
                         // Another project dependency
                         deps[key].project = true
 
                         if (!deps[key].childrenVisited && component.dependencies.size() > 0) {
                             deps[key].childrenVisited = true
-                            handleSiblingTransitivesNew(component, configName, deps, peerSet)
+                            handleSiblingTransitivesNew(component, configName, deps)
                         }
                     } else {
                         // External dependency
@@ -342,7 +335,7 @@ abstract class GenerateLockTask extends AbstractLockTask {
          * Handle transitive dependencies recursively (when includeTransitives is true).
          * Uses NEW Resolution API.
          */
-        private void handleTransitiveNew(ResolvedComponentResult component, String configName, Map<LockKey, LockValue> deps, Set<String> peerSet, LockKey parent) {
+        private void handleTransitiveNew(ResolvedComponentResult component, String configName, Map<LockKey, LockValue> deps, LockKey parent) {
             component.dependencies.each { DependencyResult depResult ->
                 if (depResult instanceof ResolvedDependencyResult) {
                     def childComponent = ((ResolvedDependencyResult) depResult).selected
@@ -350,11 +343,10 @@ abstract class GenerateLockTask extends AbstractLockTask {
                     if (moduleVersion == null) return
 
                     def key = new LockKey(group: moduleVersion.group, artifact: moduleVersion.name, configuration: configName)
-                    String coordinate = "${moduleVersion.group}:${moduleVersion.name}".toString()
 
                     // Visit each dependency only once
                     if (!deps[key].childrenVisited) {
-                        if (peerSet.contains(coordinate)) {
+                        if (childComponent.id instanceof ProjectComponentIdentifier) {
                             deps[key].project = true
                         } else {
                             deps[key].locked = moduleVersion.version
@@ -362,7 +354,7 @@ abstract class GenerateLockTask extends AbstractLockTask {
 
                         if (childComponent.dependencies.size() > 0) {
                             deps[key].childrenVisited = true
-                            handleTransitiveNew(childComponent, configName, deps, peerSet, key)
+                            handleTransitiveNew(childComponent, configName, deps, key)
                         }
                     }
 
