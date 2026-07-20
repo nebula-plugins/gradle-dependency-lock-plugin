@@ -161,7 +161,9 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
                         "type" to if (diff.isNew) "NEW" else "UPDATED"
                 )
                 if (diff.isUpdated) {
-                    change["previousVersion"] = dependencyPathElement.getPreviousVersion()
+                    dependencyPathElement.getPreviousVersion()?.let {
+                        change["previousVersion"] = it
+                    }
                 }
                 result["change"] = change
             }
@@ -185,9 +187,8 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
             return dependencyDiff != null
         }
 
-        fun getPreviousVersion(): String {
-            return dependencyDiff?.diff?.values?.first()?.oldVersion
-                    ?: throw IllegalStateException("Dependency wasn't updated so it doesn't have previous version")
+        fun getPreviousVersion(): String? {
+            return dependencyDiff?.diff?.values?.firstOrNull()?.oldVersion
         }
 
 

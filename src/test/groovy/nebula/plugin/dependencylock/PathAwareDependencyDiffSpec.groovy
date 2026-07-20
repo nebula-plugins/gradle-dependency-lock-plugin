@@ -939,6 +939,56 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         foo.children[0].change.previousVersion == "1.0.0"
     }
 
+    def 'diff lock with paths handles local submodule whose existing lock has no version'() {
+        new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.pathAwareDependencyDiff=true"
+        buildFile << """\
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            allprojects {
+                apply plugin: 'java-library'
+                apply plugin: 'com.netflix.nebula.dependency-lock'
+
+                group = 'test'
+            }
+        """.stripIndent()
+
+        addSubproject("common", "")
+        addSubproject("app", """
+            dependencies {
+                implementation project(':common')
+            }
+        """)
+
+        def existingLock = new File(projectDir, 'app/dependencies.lock')
+        existingLock << LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
+                    "test:common": {
+                        "project": true
+                    }
+                '''.stripIndent())
+
+        def updatedLock = new File(projectDir, 'app/build/dependencies.lock')
+        updatedLock.parentFile.mkdirs()
+        updatedLock << LockGenerator.duplicateIntoConfigsWhenUsingImplementationConfigurationOnly('''\
+                    "test:common": {
+                        "locked": "1.0.0"
+                    }
+                '''.stripIndent())
+
+        when:
+        def result = runTasks(':app:diffLock')
+
+        then:
+        result.output.contains('BUILD SUCCESSFUL')
+        def lockdiff = new JsonSlurper().parse(new File(projectDir, 'app/build/dependency-lock/lockdiff.json'))
+        def directDependencies = lockdiff[0]["differentPaths"]
+        def common = directDependencies.find { it.dependency == "test:common" }
+        common.submodule == true
+        common.change.type == "UPDATED"
+        common.change.previousVersion == null
+    }
+
     def 'diff lock with new submodule dependency'() {
         new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.pathAwareDependencyDiff=true"
         buildFile << """\
