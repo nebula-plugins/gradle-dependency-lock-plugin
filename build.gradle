@@ -45,6 +45,9 @@ dependencies {
 
     testImplementation 'com.netflix.nebula:nebula-project-plugin:latest.release'
     testImplementation 'com.netflix.nebula:nebula-test:latest.release'
+    // nebula-test no longer exposes its Spock support as transitive API dependencies.
+    testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
+    testImplementation 'org.spockframework:spock-junit4:2.3-groovy-4.0'
     testImplementation gradleTestKit()
     testImplementation('org.ajoberstar.grgit:grgit-core:4.1.1') {
         exclude group: 'org.codehaus.groovy', module: 'groovy'
