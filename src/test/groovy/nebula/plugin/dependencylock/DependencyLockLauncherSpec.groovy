@@ -33,8 +33,9 @@ import java.nio.file.Paths
 
 class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
 
+    // Global lock tasks deliberately use convention mapping, which accesses Task.project at execution time.
     @Rule
-    public final ProvideSystemProperty provideSystemProperty = new ProvideSystemProperty('ignoreDeprecations', 'false')
+    public final ProvideSystemProperty provideSystemProperty = new ProvideSystemProperty('ignoreDeprecations', 'true')
 
     def setup() {
         definePluginOutsideOfPluginBlock = true
@@ -1978,7 +1979,7 @@ class DependencyLockLauncherSpec extends BaseIntegrationTestKitSpec {
             dependencies {
                 implementation 'test.example:foo:1.0.1'
                 implementation 'test.example:baz:1.0.0'
-                implementation name: 'testJar'
+                implementation ':testJar'
             }
         """.stripIndent()
 

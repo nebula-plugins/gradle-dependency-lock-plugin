@@ -939,6 +939,44 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         foo.children[0].change.previousVersion == "1.0.0"
     }
 
+    def 'generate lock preserves local submodules when their group is assigned after lock configuration'() {
+        buildFile << """\
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+            }
+
+            allprojects {
+                apply plugin: 'java-library'
+                apply plugin: 'com.netflix.nebula.dependency-lock'
+                tasks.named('generateLock').get()
+            }
+
+            gradle.projectsEvaluated {
+                allprojects {
+                    group = 'test'
+                    version = '1.0.0'
+                }
+            }
+        """.stripIndent()
+
+        addSubproject("common", "")
+        addSubproject("app", """
+            dependencies {
+                implementation project(':common')
+            }
+        """)
+
+        when:
+        def result = runTasks(':app:generateLock')
+
+        then:
+        result.output.contains('BUILD SUCCESSFUL')
+        def lock = new JsonSlurper().parse(new File(projectDir, 'app/build/dependencies.lock'))
+        def common = lock.compileClasspath['test:common']
+        common.project == true
+        common.locked == null
+    }
+
     def 'diff lock with new submodule dependency'() {
         new File("${projectDir}/gradle.properties").text = "systemProp.nebula.features.pathAwareDependencyDiff=true"
         buildFile << """\
