@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.gradle.util.GradleVersion
 
 plugins {
     id 'com.netflix.nebula.plugin-plugin'
-    id "org.jetbrains.kotlin.jvm" version "2.2.0"
+    id "org.jetbrains.kotlin.jvm" version "2.4.10"
     id 'java-gradle-plugin'
 }
 
@@ -43,18 +42,16 @@ dependencies {
 
     implementation platform("com.fasterxml.jackson:jackson-bom:2.14.2")
 
-    testImplementation 'com.netflix.nebula:nebula-project-plugin:latest.release'
     testImplementation 'com.netflix.nebula:nebula-test:latest.release'
     // nebula-test no longer exposes its Spock support as transitive API dependencies.
     testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
     testImplementation 'org.spockframework:spock-junit4:2.3-groovy-4.0'
     testImplementation gradleTestKit()
-    testImplementation('org.ajoberstar.grgit:grgit-core:4.1.1') {
-        exclude group: 'org.codehaus.groovy', module: 'groovy'
-    }
     testImplementation "com.github.tomakehurst:wiremock:2.17.0"
     testImplementation 'com.github.stefanbirkner:system-rules:1.19.0'
     testImplementation 'org.eclipse.jgit:org.eclipse.jgit:5.13.0.202109080827-r'
+    testImplementation("org.assertj:assertj-core:3.27.7")
+    testImplementation("org.eclipse.jgit:org.eclipse.jgit:7.+")
 }
 
 configurations.all {
@@ -91,24 +88,32 @@ test.dependsOn jar
 tasks.withType(Test).configureEach {
     // Ensure test failures fail the build (overrides any plugin that sets ignoreFailures)
     ignoreFailures = false
-    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
-    testLogging {
-        events "PASSED", "FAILED", "SKIPPED"
-        afterSuite { desc, result ->
-            if (!desc.parent) { // will match the outermost suite
-                def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} passed, ${result.failedTestCount} failed, ${result.skippedTestCount} skipped)"
-                def startItem = '|  ', endItem = '  |'
-                def repeatLength = startItem.length() + output.length() + endItem.length()
-                println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
-            }
-        }
-    }
     develocity.testRetry {
         maxRetries = 3
         maxFailures = 20
     }
 }
 
-tasks.withType(GenerateModuleMetadata).configureEach {
-    suppressedValidationErrors.add('enforced-platform')
+testing {
+    suites {
+        it.named("test", JvmTestSuite) {
+            it.useJUnitJupiter()
+            it.targets {
+                it.all {
+                    it.testTask.configure {
+                        maxParallelForks = 4
+                        testLogging {
+                            events "PASSED", "FAILED", "SKIPPED"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+tasks.wrapper {
+    distributionType = Wrapper.DistributionType.BIN
+    gradleVersion = "9.2.1"
+    distributionSha256Sum = "72f44c9f8ebcb1af43838f45ee5c4aa9c5444898b3468ab3f4af7b6076c5bc3f"
 }

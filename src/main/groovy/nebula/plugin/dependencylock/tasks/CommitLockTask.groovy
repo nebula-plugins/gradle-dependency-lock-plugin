@@ -58,7 +58,7 @@ abstract class CommitLockTask extends AbstractLockTask {
     @Internal
     abstract Property<String> getRootDirPath()
 
-    private final ExecOperations execOperations
+    protected final ExecOperations execOperations
 
     @Inject
     CommitLockTask(ExecOperations execOperations) {

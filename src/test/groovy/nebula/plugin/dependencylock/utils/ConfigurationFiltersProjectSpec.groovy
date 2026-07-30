@@ -18,7 +18,6 @@
 
 package nebula.plugin.dependencylock.utils
 
-import nebula.plugin.responsible.NebulaIntegTestPlugin
 import nebula.plugin.dependencylock.FreshProjectSpec
 import org.gradle.api.artifacts.Configuration
 
@@ -65,58 +64,6 @@ class ConfigurationFiltersProjectSpec extends FreshProjectSpec {
             assert configurationNames.contains('testCompile')
             assert configurationNames.contains('testCompileOnly')
             assert configurationNames.contains('testRuntime')
-        }
-    }
-
-    def "facets with similar configurations should not be resolved after Gradle 6.2"() {
-        given:
-        project.apply plugin: NebulaIntegTestPlugin.class
-        project.facets {
-            integTest {
-                parentSourceSet = 'test'
-            }
-        }
-
-        when:
-        def results = project
-                .configurations
-                .stream()
-                .filter {
-                    ConfigurationFilters.canSafelyBeResolved(it)
-                }
-                .filter {
-                    ConfigurationFilters.safelyHasAResolutionAlternative(it)
-                }
-                .collect()
-
-        then:
-        if (GradleVersionUtils.currentGradleVersionIsLessThan('6.0')) {
-            assert results.size() == 0
-        }  else if (GradleVersionUtils.currentGradleVersionIsLessThan('6.3')) {
-            assert results.size() == 9
-        } else if (GradleVersionUtils.currentGradleVersionIsGreaterOrEqualThan('7.0') && GradleVersionUtils.currentGradleVersionIsLessThan('8.0-rc-1')) {
-            assert results.size() == 2
-
-            Collection<String> configurationNames = results.collect { (it as Configuration).name }
-            assert configurationNames.contains('default')
-            assert configurationNames.contains('archives')
-        } else if (GradleVersionUtils.currentGradleVersionIsGreaterOrEqualThan('8.0-rc-1')) {
-            assert results.size() == 0
-        } else {
-            assert results.size() == 11
-
-            Collection<String> configurationNames = results.collect { (it as Configuration).name }
-            assert configurationNames.contains('default')
-            assert configurationNames.contains('archives')
-            assert configurationNames.contains('compile')
-            assert configurationNames.contains('compileOnly')
-            assert configurationNames.contains('runtime')
-            assert configurationNames.contains('testCompile')
-            assert configurationNames.contains('testCompileOnly')
-            assert configurationNames.contains('testRuntime')
-            assert configurationNames.contains('integTestCompile')
-            assert configurationNames.contains('integTestCompileOnly')
-            assert configurationNames.contains('integTestRuntime')
         }
     }
 
