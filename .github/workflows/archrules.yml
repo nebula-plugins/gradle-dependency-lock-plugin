@@ -1,0 +1,42 @@
+# action for evaluating archrules on a single project repo
+name: Nebula ArchRules
+on:
+    push:
+        branches:
+            - 'main'
+    pull_request:
+
+jobs:
+    buildmultijdk:
+        runs-on: ubuntu-latest
+        name: ArchRules
+        steps:
+            - uses: actions/checkout@v6
+            - name: Setup git user
+              run: |
+                  git config --global user.name "Nebula Plugin Maintainers"
+                  git config --global user.email "nebula-plugins-oss@netflix.com"
+            - name: Set up JDKs
+              uses: actions/setup-java@v5
+              with:
+                  distribution: 'zulu'
+                  java-version: |
+                    8
+                    21
+                  java-package: jdk
+            - name: Setup Gradle
+              uses: gradle/actions/setup-gradle@v5
+              with:
+                  cache-overwrite-existing: true
+                  build-scan-publish: true
+                  build-scan-terms-of-use-url: 'https://gradle.com/terms-of-service'
+                  build-scan-terms-of-use-agree: 'yes'
+            - name: Gradle run archrules
+              run: ./gradlew --stacktrace archRulesConsoleReport archRulesMarkdownReport
+            - name: Arch Rule Reports step summary
+              run: cat build/reports/archrules/report.md > $GITHUB_STEP_SUMMARY
+            - name: PR Comment
+              if: github.event_name == 'pull_request'
+              run: gh pr comment ${{ github.event.number }} --edit-last --create-if-none -b "[ArchRules report](${{ github.server.url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+              env:
+                  GH_TOKEN: ${{ github.token }}

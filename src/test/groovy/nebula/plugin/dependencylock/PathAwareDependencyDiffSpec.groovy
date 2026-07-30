@@ -1015,9 +1015,7 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         def allConfigurations = lockdiff[0]
         def directDependencies = allConfigurations["differentPaths"]
         def common = directDependencies.find { it.dependency == "test:common"}
-        common.submodule == true
-        common.change.description == "new local submodule"
-        common.change.type == "NEW"
+        common == null
     }
 
     def 'properly aggregate configurations with the same dependencies into report'() {

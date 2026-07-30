@@ -1,0 +1,40 @@
+name: Refresh Dependency Locks
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 1"
+
+jobs:
+  refresh-locks:
+    runs-on: ubuntu-latest
+    name: Refresh Dependency Locks
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup git user
+        run: |
+          git config --global user.name "Nebula Plugin Maintainers"
+          git config --global user.email "nebula-plugins-oss@netflix.com"
+      - name: Set up JDKs
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 21
+          java-package: jdk
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-overwrite-existing: true
+          build-scan-publish: true
+          build-scan-terms-of-use-url: 'https://gradle.com/terms-of-service'
+          build-scan-terms-of-use-agree: 'yes'
+      - name: Gradle build
+        run: ./gradlew resolve --write-locks --refresh-dependencies --stacktrace
+      - name: Commit
+        run: |
+          git checkout -b dependency-update
+          git commit -a -m "Update dependencies"
+          git push -u origin dependency-update
+      - name: Open PR
+        run: gh pr create -B main -H dependency-update --title 'Update dependencies' --body 'Created by Github action'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

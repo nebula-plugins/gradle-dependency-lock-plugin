@@ -1,5 +1,6 @@
 package nebula.plugin.dependencylock.tasks
 
+import com.netflix.nebula.dependencylocks.LockFileParser
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import nebula.dependencies.comparison.*
@@ -18,7 +19,6 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
-import org.gradle.internal.deprecation.DeprecationLogger
 import org.gradle.work.DisableCachingByDefault
 
 import java.nio.charset.StandardCharsets
@@ -55,8 +55,8 @@ abstract class DiffLockTask extends AbstractLockTask {
 
     @TaskAction
     def diffLocks() {
-        ConfigurationsSet existingLock = readLocks(existingLockFile.asFile.getOrNull())
-        ConfigurationsSet newLock = readLocks(updatedLockFile.asFile.get())
+        ConfigurationsSet existingLock = LockFileParser.readLocks(existingLockFile.asFile.getOrNull())
+        ConfigurationsSet newLock = LockFileParser.readLocks(updatedLockFile.asFile.get())
         
         if (DependencyLockingFeatureFlags.isPathAwareDependencyDiffEnabled()) {
             Map<String, List<DependencyDiff>> diffByConfiguration = new DependenciesComparison().performDiffByConfiguration(existingLock, newLock)
@@ -77,21 +77,6 @@ abstract class DiffLockTask extends AbstractLockTask {
                 writeDiff(diff)
             }
         }
-    }
-
-    ConfigurationsSet readLocks(File file) {
-        if (!file || !file.exists()) {
-            return new ConfigurationsSet([:])
-        }
-        def contents = new JsonSlurper().parse(file)
-
-        Map<String, Dependencies> lock = contents.collectEntries { configuration, dependencies ->
-            [(configuration): new Dependencies(dependencies.collectEntries { dependency, props ->
-                [(dependency): props.locked]
-            })]
-        }
-
-        return new ConfigurationsSet(lock)
     }
 
     void writeDiff(List<DependencyDiff> diff) {
