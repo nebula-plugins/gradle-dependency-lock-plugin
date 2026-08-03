@@ -78,13 +78,11 @@ class DependencyLockPlugin @Inject constructor(
 
     private val LOGGER: Logger = Logging.getLogger(DependencyLockPlugin::class.java)
 
-    lateinit var project: Project
     lateinit var lockReader: DependencyLockReader
     lateinit var lockUsed: String
     val reasons: MutableSet<String> = mutableSetOf()
 
     override fun apply(project: Project) {
-        this.project = project
         this.lockReader = DependencyLockReader(project)
 
         // Register BuildService ONCE for the entire build (shared across all projects)
@@ -144,10 +142,9 @@ class DependencyLockPlugin @Inject constructor(
 
             if (lockFile.exists()) {
                 if (startParameter.isWriteDependencyLocks) {
-                    rewriteLocksUsingCoreLocking(lockFile)
+                    rewriteLocksUsingCoreLocking(project, lockFile)
                 } else {
-                    val taskNames = startParameter.taskNames
-                    val hasMigrationTask = hasMigrationTask(taskNames)
+                    val hasMigrationTask = hasMigrationTask(project)
                     if (!hasMigrationTask) {
                         throw BuildCancelledException("Legacy locks are not supported with core locking.\n" +
                                 "If you wish to migrate with the current locked dependencies, please use `./gradlew $MIGRATE_TO_CORE_LOCK_TASK_NAME`\n" +
@@ -157,9 +154,8 @@ class DependencyLockPlugin @Inject constructor(
                 }
             }
 
-            val taskNames = startParameter.taskNames
-            val hasUpdateTask = hasUpdateTask(taskNames)
-            val hasGenerationTask = hasGenerationTask(taskNames)
+            val hasUpdateTask = hasUpdateTask(project)
+            val hasGenerationTask = hasGenerationTask(project)
             val globalLockFile = File(project.projectDir, extension.globalLockFileProperty.get())
 
             if (globalLockFile.exists() && !hasGenerationTask && !hasUpdateTask) {
@@ -181,9 +177,9 @@ class DependencyLockPlugin @Inject constructor(
             }
 
             // We do this twice to catch resolves that happen during build evaluation, and ensure that we clobber configurations made during evaluation
-            disableCachingForGenerateLock()
+            disableCachingForGenerateLock(project)
             project.gradle.taskGraph.whenReady {
-                disableCachingForGenerateLock()
+                disableCachingForGenerateLock(project)
             }
 
             // Use configureEach for lazy configuration (avoids configuring unused configurations)
@@ -191,18 +187,18 @@ class DependencyLockPlugin @Inject constructor(
                 if (lockAfterEvaluating) {
                     conf.incoming.beforeResolve {
                         if(conf.incoming == it) {
-                            maybeApplyLock(conf, extension, overrides, globalLockFilename, lockFilename)
+                            maybeApplyLock(project,conf, extension, overrides, globalLockFilename, lockFilename)
                         }
                     }
                 } else {
-                    maybeApplyLock(conf, extension, overrides, globalLockFilename, lockFilename)
+                    maybeApplyLock(project,conf, extension, overrides, globalLockFilename, lockFilename)
                 }
             }
         }
     }
 
-    private fun disableCachingForGenerateLock() {
-        if (hasGenerationTask(project.gradle.startParameter.taskNames)) {
+    private fun disableCachingForGenerateLock(project: Project) {
+        if (hasGenerationTask(project)) {
             // Use configureEach for lazy configuration (avoids configuring unused configurations)
             project.configurations.configureEach { configuration ->
                 if (configuration.state == Configuration.State.UNRESOLVED) {
@@ -215,7 +211,9 @@ class DependencyLockPlugin @Inject constructor(
         }
     }
 
-    private fun maybeApplyLock(conf: Configuration, extension: DependencyLockExtension, overrides: Map<*, *>, globalLockFileName: String?, lockFilename: String?) {
+    private fun maybeApplyLock(project: Project,
+                               conf: Configuration,
+                               extension: DependencyLockExtension, overrides: Map<*, *>, globalLockFileName: String?, lockFilename: String?) {
         val shouldIgnoreLock = (extension.skippedConfigurationNamesPrefixesProperty.get() + DependencyLockTaskConfigurer.configurationsToSkipForGlobalLockPrefixes).any {
             prefix -> conf.name.startsWith(prefix) && !conf.name.contains("resolutionRules")
         }
@@ -233,8 +231,7 @@ class DependencyLockPlugin @Inject constructor(
         reasons.add("com.netflix.nebula.dependency-lock locked with: $lockUsed")
 
         if (!DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
-            val taskNames = project.gradle.startParameter.taskNames
-            val hasUpdateTask = hasUpdateTask(taskNames)
+            val hasUpdateTask = hasUpdateTask(project)
 
             // Use provider to allow gradle property to override extension property
             val updates = project.providers.gradleProperty(UPDATE_DEPENDENCIES)
@@ -258,7 +255,7 @@ class DependencyLockPlugin @Inject constructor(
             
             UpdateDependenciesValidator.validate(
                 updates, overrides, hasUpdateTask,
-                hasTask(taskNames, GENERATION_TASK_NAMES - UPDATE_TASK_NAMES),
+                hasTask(project, GENERATION_TASK_NAMES - UPDATE_TASK_NAMES),
                 validateCoordinates,
                 validateSimultaneousTasks,
                 validateSpecifiedDependenciesToUpdate
@@ -268,40 +265,41 @@ class DependencyLockPlugin @Inject constructor(
                 throw DependencyLockException("Dependency locks cannot be updated. An update was requested for a project dependency ($projectCoord)")
             }
 
-            val hasGenerateTask = hasGenerationTask(taskNames)
+            val hasGenerateTask = hasGenerationTask(project)
             if (dependenciesLock.exists()) {
                 if (!hasGenerateTask) {
-                    applyLock(conf, dependenciesLock)
+                    applyLock(project,conf, dependenciesLock)
                 } else if (hasUpdateTask) {
-                    applyLock(conf, dependenciesLock, updates)
+                    applyLock(project, conf, dependenciesLock, updates)
                 }
             }
-            applyOverrides(conf, overrides)
+            applyOverrides(project,conf, overrides)
         }
     }
 
-    private fun hasGenerationTask(cliTasks: Collection<String>): Boolean =
-            hasTask(cliTasks, GENERATION_TASK_NAMES)
+    private fun hasGenerationTask(project: Project): Boolean =
+            hasTask(project, GENERATION_TASK_NAMES)
 
-    private fun hasUpdateTask(cliTasks: Collection<String>): Boolean =
-            hasTask(cliTasks, UPDATE_TASK_NAMES)
+    private fun hasUpdateTask(project: Project): Boolean =
+            hasTask(project, UPDATE_TASK_NAMES)
 
-    private fun hasMigrationTask(cliTasks: Collection<String>): Boolean =
-            hasTask(cliTasks, MIGRATION_TASK_NAMES)
+    private fun hasMigrationTask(project: Project): Boolean =
+            hasTask(project, MIGRATION_TASK_NAMES)
 
-    private fun hasTask(cliTasks: Collection<String>, taskNames: Collection<String>): Boolean {
+    private fun hasTask(project: Project,
+                        taskNames: Collection<String>): Boolean {
         val matcher = NameMatcher()
-        val found = cliTasks.find { cliTaskName ->
+        val found = project.gradle.startParameter.taskNames.find { cliTaskName ->
             val tokens = cliTaskName.split(":")
             val taskName = tokens.last()
             val generatesPresent = matcher.find(taskName, taskNames)
-            generatesPresent != null && taskRunOnThisProject(tokens)
+            generatesPresent != null && taskRunOnThisProject(project, tokens)
         }
 
         return found != null
     }
 
-    private fun taskRunOnThisProject(tokens: List<String>): Boolean {
+    private fun taskRunOnThisProject(project: Project, tokens: List<String>): Boolean {
         if (tokens.size == 1) { // task run globally
             return true
         } else if (tokens.size == 2 && tokens[0] == "") { // running fully qualified on root project
@@ -317,7 +315,10 @@ class DependencyLockPlugin @Inject constructor(
     private fun parseUpdates(updates: String): Set<String> =
             updates.split(",").filter {it.isNotEmpty()} .toSet()
 
-    private fun applyLock(conf: Configuration, dependenciesLock: File, updates: Set<String> = emptySet()) {
+    private fun applyLock(project: Project,
+                          conf: Configuration,
+                          dependenciesLock: File,
+                          updates: Set<String> = emptySet()) {
         LOGGER.info("Using ${dependenciesLock.name} to lock dependencies in $conf")
         // Capture the version of each dependency as requested for reference on which use version recommendations vs request a particular version
         val deps = mutableMapOf<LockKey, LockValue>().withDefault { LockValue() }
@@ -345,7 +346,7 @@ class DependencyLockPlugin @Inject constructor(
         }
     }
 
-    private fun applyOverrides(conf: Configuration, overrides: Map<*, *>) {
+    private fun applyOverrides(project: Project, conf: Configuration, overrides: Map<*, *>) {
         // Use providers to check for gradle properties
         val overrideFileProvider = project.providers.gradleProperty(OVERRIDE_FILE)
         if (overrideFileProvider.isPresent) {
@@ -409,7 +410,7 @@ class DependencyLockPlugin @Inject constructor(
         override fun toString(): String = "$group:$name:$version"
     }
 
-    private fun rewriteLocksUsingCoreLocking(lockFile: File) {
+    private fun rewriteLocksUsingCoreLocking(project: Project, lockFile: File) {
         val dependencyLockDirectory = File(project.projectDir, "/gradle/dependency-locks")
 
         LOGGER.warn("Removing legacy locks to use core Gradle locking. This will remove legacy locks." +

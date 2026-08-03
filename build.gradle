@@ -15,20 +15,19 @@
  */
 
 plugins {
-    id 'com.netflix.nebula.plugin-plugin'
-    id "org.jetbrains.kotlin.jvm" version "2.4.10"
-    id 'java-gradle-plugin'
+    id("com.netflix.nebula.plugin-plugin")
+    id("org.jetbrains.kotlin.jvm") version "2.4.10"
+    id("java-gradle-plugin")
 }
 
-description 'Gradle plugin to allow locking of dynamic dependency versions'
+description = "Gradle plugin to allow locking of dynamic dependency versions"
 
-
-group = 'com.netflix.nebula'
+group = "com.netflix.nebula"
 
 contacts {
-    'nebula-plugins-oss@netflix.com' {
-        moniker 'Nebula Plugins Maintainers'
-        github 'nebula-plugins'
+    addPerson("nebula-plugins-oss@netflix.com") {
+        moniker = "Nebula Plugins Maintainers"
+        github = "nebula-plugins"
     }
 }
 
@@ -48,17 +47,11 @@ dependencies {
     testImplementation 'org.spockframework:spock-junit4:2.3-groovy-4.0'
     testImplementation gradleTestKit()
     testImplementation "com.github.tomakehurst:wiremock:2.17.0"
-    testImplementation 'com.github.stefanbirkner:system-rules:1.19.0'
-    testImplementation 'org.eclipse.jgit:org.eclipse.jgit:5.13.0.202109080827-r'
+    testImplementation("com.github.stefanbirkner:system-rules:1.19.0")
     testImplementation("org.assertj:assertj-core:3.27.7")
     testImplementation("org.eclipse.jgit:org.eclipse.jgit:7.+")
 }
 
-configurations.all {
-    resolutionStrategy {
-        force 'org.eclipse.jgit:org.eclipse.jgit:5.13.0.202109080827-r'
-    }
-}
 gradlePlugin {
     plugins {
         dependencyLock {
@@ -67,7 +60,11 @@ gradlePlugin {
             implementationClass = 'nebula.plugin.dependencylock.DependencyLockPlugin'
             description = 'Plugin to lock dynamic dependencies'
             tags.set(['nebula', 'dependencies', 'lock'])
-
+            compatibility {
+                features {
+                    configurationCache = true
+                }
+            }
         }
     }
 }
