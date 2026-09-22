@@ -17,6 +17,7 @@ import org.gradle.internal.Describables
 import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier
 import org.gradle.internal.component.external.model.DefaultModuleComponentSelector
 import org.gradle.internal.component.external.model.ImmutableCapabilities
+import org.gradle.internal.impldep.com.google.common.collect.ImmutableList
 import org.gradle.util.Path
 import org.junit.jupiter.api.Test
 
@@ -71,19 +72,20 @@ internal class PathAwareDiffReportGeneratorTest {
             componentId,
             Describables.of("runtimeElements"),
             TestAttributeContainer(mutableMapOf(ProjectInternal.STATUS_ATTRIBUTE to "release")),
-            ImmutableCapabilities.EMPTY,
+            ImmutableList.of(),
             null
+        )
+        val component = TestResolvedComponentResult(
+            componentId, versionId,
+            variants = listOf(variant),
+            dependants = dependants
         )
         return DefaultResolvedDependencyResult(
             DefaultModuleComponentSelector.newSelector(moduleIdentifier, version),
             false,
-            TestResolvedComponentResult(
-                componentId, versionId,
-                variants = listOf(variant),
-                dependants = dependants
-            ),
-            variant,
-            from
+            from,
+            component,
+            variant
         )
     }
 }

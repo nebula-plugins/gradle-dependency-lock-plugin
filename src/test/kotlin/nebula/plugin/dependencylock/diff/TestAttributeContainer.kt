@@ -41,6 +41,10 @@ class TestAttributeContainer(val attributes: MutableMap<Attribute<*>, Any>) : At
         return attributes.containsKey(key)
     }
 
+    override fun <T : Named> named(type: Class<T>, name: String): T {
+        return attributes.get(Attribute.of(name, type))!! as T
+    }
+
     override fun getAttributes(): AttributeContainer {
         return this
     }
