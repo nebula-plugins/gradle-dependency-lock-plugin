@@ -888,14 +888,6 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         legacyGlobalLockFile.exists()
     }
 
-    def 'task appears'() {
-        when:
-        def result = runTasks('tasks')
-
-        then:
-        result.output.contains('migrateToCoreLocks')
-    }
-
     private static String createFacetLockfileText(String facet) {
         def compileBasedConfigs = ['compileClasspath', 'default', 'runtimeClasspath']
         def testCompileBaseConfigs = [

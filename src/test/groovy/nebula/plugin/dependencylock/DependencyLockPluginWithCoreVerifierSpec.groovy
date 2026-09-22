@@ -24,6 +24,16 @@ class DependencyLockPluginWithCoreVerifierSpec extends AbstractDependencyLockPlu
     private static final String BASELINE_LOCKFILE_CONTENTS = """# This is a Gradle generated file for dependency locking.
 # Manual edits can break the build and are not advised.
 # This file is expected to be part of source control.
+# To regenerate this file, run: ./gradlew :dependencies --write-locks
+test.nebula:a:1.1.0=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
+test.nebula:b:1.1.0=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
+empty=annotationProcessor,testAnnotationProcessor
+""".stripIndent()
+
+    private static final String BASELINE_LOCKFILE_CONTENTS_MULTIPROJECT = """# This is a Gradle generated file for dependency locking.
+# Manual edits can break the build and are not advised.
+# This file is expected to be part of source control.
+# To regenerate this file, run: ./gradlew :sub1:dependencies --write-locks
 test.nebula:a:1.1.0=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
 test.nebula:b:1.1.0=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
 empty=annotationProcessor,testAnnotationProcessor
@@ -511,7 +521,7 @@ empty=annotationProcessor,testAnnotationProcessor
         }
 
         def firstRunCompileLockfile = new File(projectDir, 'sub1/gradle.lockfile')
-        assert firstRunCompileLockfile.text == BASELINE_LOCKFILE_CONTENTS
+        assert firstRunCompileLockfile.text == BASELINE_LOCKFILE_CONTENTS_MULTIPROJECT
     }
 
     def createScalaSingleProjectBaseline(String conf) {
@@ -559,7 +569,7 @@ empty=annotationProcessor,testAnnotationProcessor
                 buildscript {
                     repositories { maven { url = "https://plugins.gradle.org/m2/" } }
                     dependencies {
-                        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20"
+                        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.10"
                     }
                 }
                 plugins {

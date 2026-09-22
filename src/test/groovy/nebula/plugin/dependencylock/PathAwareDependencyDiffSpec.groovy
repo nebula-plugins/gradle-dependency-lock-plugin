@@ -258,7 +258,7 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         buildFile << """\
             plugins {
                 id 'com.netflix.nebula.dependency-lock'
-                id 'com.netflix.nebula.dependency-recommender' version '12.0.0'
+                id 'com.netflix.nebula.dependency-recommender' version 'latest.release'
             }
         
             apply plugin: 'java'
@@ -483,7 +483,7 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         consumer1.change.previousVersion == "1.0.0"
         consumer1.children[0].dependency == "test.example.alignment:core-library"
         consumer1.children[0].version == "2.0.0"
-        consumer1.children[0].change.description == "requested; belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
+        consumer1.children[0].change.description == "requested; the parent brought the winner of conflict resolution; belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-without-clear-conflict-resolution-winner-0-for-test.example.alignment:2.0.0"
         consumer1.children[0].change.type == "UPDATED"
         consumer1.children[0].change.previousVersion == "1.0.0"
         def alignedConsumer2 = directDependencies.find { it.dependency == "test.example:consumer-of-aligned-dependency2"}
@@ -594,7 +594,8 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         def consumer1 = alignedConsumer1.children.find { it.dependency == "test.example.alignment:consumer1-library"}
         consumer1.requestedVersion == "1.0.0"
         consumer1.version == "2.0.0"
-        consumer1.selectionReasonDescriptions["CONSTRAINT"] == ["belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-and-constraint-to-have-multiple-descriptions-of-the-same-cause-0-for-test.example.alignment:2.0.0", "constraint"]
+        consumer1.selectionReasonDescriptions["CONSTRAINT"] == ["constraint", "belongs to platform aligned-platform:diff-lock-with-paths-with-alignment-and-constraint-to-have-multiple-descriptions-of-the-same-cause-0-for-test.example.alignment:2.0.0"]
+        consumer1.selectionReasonDescriptions["CONFLICT_RESOLUTION"] == ["between versions 2.0.0 and 1.0.0"]
         consumer1.change.type == "UPDATED"
         consumer1.change.previousVersion == "1.0.0"
         def alignedConsumer2 = directDependencies.find { it.dependency == "test.example:consumer-of-aligned-dependency2"}

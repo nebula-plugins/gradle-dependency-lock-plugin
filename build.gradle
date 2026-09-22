@@ -16,7 +16,7 @@
 
 plugins {
     id("com.netflix.nebula.plugin-plugin")
-    id("org.jetbrains.kotlin.jvm") version "2.4.10"
+    id("org.jetbrains.kotlin.jvm")
     id("java-gradle-plugin")
 }
 
@@ -39,22 +39,23 @@ dependencies {
         exclude module: 'groovy-all'
     }
 
-    implementation platform("com.fasterxml.jackson:jackson-bom:2.14.2")
-
-    testImplementation 'com.netflix.nebula:nebula-test:latest.release'
     // nebula-test no longer exposes its Spock support as transitive API dependencies.
-    testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
-    testImplementation 'org.spockframework:spock-junit4:2.3-groovy-4.0'
+    testImplementation 'org.spockframework:spock-core:2.4-groovy-4.0'
+    testImplementation 'org.spockframework:spock-junit4:2.4-groovy-4.0'
     testImplementation gradleTestKit()
     testImplementation "com.github.tomakehurst:wiremock:2.17.0"
     testImplementation("com.github.stefanbirkner:system-rules:1.19.0")
     testImplementation("org.assertj:assertj-core:3.27.7")
     testImplementation("org.eclipse.jgit:org.eclipse.jgit:7.+")
+    testImplementation("net.javacrumbs.json-unit:json-unit-assertj:6.+")
+    testImplementation("com.fasterxml.jackson.core:jackson-databind:2.22.1") {
+        because("needed by json-unit-assertj")
+    }
 }
 
 gradlePlugin {
     plugins {
-        dependencyLock {
+        create("com.netflix.nebula.dependency-lock") {
             id = 'com.netflix.nebula.dependency-lock'
             displayName = 'Nebula Dependency Lock plugin'
             implementationClass = 'nebula.plugin.dependencylock.DependencyLockPlugin'
@@ -110,7 +111,7 @@ testing {
 }
 
 tasks.wrapper {
-    distributionType = Wrapper.DistributionType.BIN
-    gradleVersion = "9.2.1"
-    distributionSha256Sum = "72f44c9f8ebcb1af43838f45ee5c4aa9c5444898b3468ab3f4af7b6076c5bc3f"
+    distributionType = Wrapper.DistributionType.ALL
+    gradleVersion = "9.7.1"
+    distributionSha256Sum = "92c1a136d76b5017732a66d2e0a648ebff00dd3687d8bff0d0047a1bd904fdf2"
 }
