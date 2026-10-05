@@ -47,11 +47,12 @@ gradle.properties"""
                     repositories {
                         mavenCentral()
                     }
-                    dependencies("""implementation("org.slf4j:slf4j-api:1.6.+")""")
+                    dependencies { implementation("org.slf4j:slf4j-api:1.6.+") }
                 }
             }
             local.commit().setMessage("initial").call()
-            runner.run("generateLock", "saveLock", "commitLock")
+            val result = runner.run("generateLock", "saveLock", "commitLock")
+            assertThat(result).hasNoDeprecationWarnings()
 
             assertThat(File(projectDir, "dependencies.lock")).exists()
                 .content()
