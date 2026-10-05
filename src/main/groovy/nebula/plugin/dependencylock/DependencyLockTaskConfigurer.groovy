@@ -140,7 +140,7 @@ class DependencyLockTaskConfigurer {
             TaskProvider<CommitLockTask> commitTask = project.rootProject.tasks.register(COMMIT_LOCK_TASK_NAME, CommitLockTask)
             commitTask.configure {
                 it.mustRunAfter(saveTask)
-                if (globalSaveTask) {
+                if (globalSaveTask != null) {
                     it.mustRunAfter(globalSaveTask)
                 }
                 // Resolve at config time so the task holds plain values (no provider chains for config cache)
