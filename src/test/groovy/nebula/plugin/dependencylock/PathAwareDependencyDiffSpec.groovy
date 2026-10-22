@@ -180,6 +180,8 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         def allConfigurations = lockdiff[0]
         allConfigurations["configurations"].containsAll(["compileClasspath", "runtimeClasspath", "testCompileClasspath", "testRuntimeClasspath"])
         allConfigurations["removed"].contains("test.example:removed-dependency")
+        allConfigurations.changes.find { it.coordinate == 'test.example:direct-dependency-updating-transitive' } ==
+                [coordinate: 'test.example:direct-dependency-updating-transitive', oldVersion: '2.0.0', newVersion: '2.2.0', status: 'UPDATED']
         def directDependencies = allConfigurations["differentPaths"]
         def directTransitive = directDependencies.find { it.dependency == "test.example:direct-dependency-updating-transitive"}
         directTransitive.version == "2.2.0"
@@ -1211,5 +1213,8 @@ class PathAwareDependencyDiffSpec extends BaseIntegrationTestKitSpec {
         def lockdiff = new JsonSlurper().parse(new File(projectDir, 'build/dependency-lock/lockdiff.json'))
         def allConfigurations = lockdiff[0]
         ! allConfigurations["differentPaths"].isEmpty()
+        def obsolete = lockdiff.find { it.configurations.contains('notUsedConfigurationAnymore') }
+        obsolete.differentPaths == []
+        obsolete.changes == [[coordinate: 'test.example:qux', oldVersion: '1.0.0', newVersion: null, status: 'REMOVED']]
     }
 }

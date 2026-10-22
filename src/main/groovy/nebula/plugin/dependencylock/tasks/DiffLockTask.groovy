@@ -6,6 +6,7 @@ import groovy.json.JsonSlurper
 import nebula.dependencies.comparison.*
 import nebula.plugin.dependencylock.diff.DiffReportGenerator
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
+import org.gradle.api.GradleException
 import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -55,6 +56,9 @@ abstract class DiffLockTask extends AbstractLockTask {
 
     @TaskAction
     def diffLocks() {
+        if (isCoreLockfile(existingLockFile.asFile.getOrNull()) || isCoreLockfile(updatedLockFile.asFile.get())) {
+            throw new GradleException('diffLock does not support Gradle core lockfiles; use legacy Nebula JSON locks')
+        }
         ConfigurationsSet existingLock = LockFileParser.readLocks(existingLockFile.asFile.getOrNull())
         ConfigurationsSet newLock = LockFileParser.readLocks(updatedLockFile.asFile.get())
         
@@ -77,6 +81,13 @@ abstract class DiffLockTask extends AbstractLockTask {
                 writeDiff(diff)
             }
         }
+    }
+
+    private static boolean isCoreLockfile(File file) {
+        file != null && (file.name.endsWith('.lockfile') ||
+                file.exists() && file.withReader(StandardCharsets.UTF_8.displayName()) {
+                    it.readLine()?.startsWith('# This is a Gradle generated file for dependency locking.')
+                })
     }
 
     void writeDiff(List<DependencyDiff> diff) {

@@ -20,8 +20,52 @@ import org.gradle.internal.component.external.model.ImmutableCapabilities
 import org.gradle.internal.impldep.com.google.common.collect.ImmutableList
 import org.gradle.util.Path
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Assertions.assertEquals
 
 internal class PathAwareDiffReportGeneratorTest {
+    @Test
+    fun `reports a changed configuration without a resolution result`() {
+        val oldLocks = ConfigurationsSet(mapOf("runtimeClasspath" to Dependencies(mapOf("group:artifact" to "1.0"))))
+        val newLocks = ConfigurationsSet(mapOf("runtimeClasspath" to Dependencies(mapOf("group:artifact" to "2.0"))))
+        val diffs = DependenciesComparison.performDiffByConfiguration(oldLocks, newLocks)
+
+        val report = PathAwareDiffReportGenerator().generateDiffReport(emptyMap(), diffs)
+
+        assertEquals(1, report.size)
+        assertEquals(listOf("runtimeClasspath"), report.single()["configurations"])
+        assertEquals(emptyList<Any>(), report.single()["differentPaths"])
+        assertEquals(listOf(mapOf(
+            "coordinate" to "group:artifact",
+            "oldVersion" to "1.0",
+            "newVersion" to "2.0",
+            "status" to "UPDATED"
+        )), report.single()["changes"])
+    }
+
+    @Test
+    fun `reports a coordinate moved between configurations`() {
+        val oldLocks = ConfigurationsSet(mapOf("compileClasspath" to Dependencies(mapOf("group:artifact" to "1.0"))))
+        val newLocks = ConfigurationsSet(mapOf("runtimeClasspath" to Dependencies(mapOf("group:artifact" to "1.0"))))
+        val diffs = DependenciesComparison.performDiffByConfiguration(oldLocks, newLocks)
+
+        val report = PathAwareDiffReportGenerator().generateDiffReport(emptyMap(), diffs)
+        val byConfiguration = report.associateBy { (it["configurations"] as List<*>).single() }
+
+        assertEquals(setOf("compileClasspath", "runtimeClasspath"), byConfiguration.keys)
+        assertEquals(listOf(mapOf(
+            "coordinate" to "group:artifact",
+            "oldVersion" to "1.0",
+            "newVersion" to null,
+            "status" to "REMOVED"
+        )), byConfiguration["compileClasspath"]?.get("changes"))
+        assertEquals(listOf(mapOf(
+            "coordinate" to "group:artifact",
+            "oldVersion" to null,
+            "newVersion" to "1.0",
+            "status" to "ADDED"
+        )), byConfiguration["runtimeClasspath"]?.get("changes"))
+    }
+
     @Test
     fun `test project to external`() {
         val oldLocks = ConfigurationsSet(

@@ -19,6 +19,11 @@ Inspired by [Bundler](http://bundler.io)
 
 Refer to the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/nebula.dependency-lock) for instructions on how to apply the plugin.
 
+When path aware dependency diff is enabled, `diffLock` writes `build/dependency-lock/lockdiff.json` for legacy Nebula JSON locks.
+Each report entry lists its configurations, dependency paths when resolution data exists and `changes` with each coordinate, old version, new version and added, removed or updated status.
+Configurations without resolution data still appear with an empty `differentPaths` list and their complete coordinate changes.
+`diffLock` rejects Gradle core lockfiles with an explicit error because its parser supports only legacy Nebula JSON locks.
+
 # Documentation
 
 The project wiki contains the [full documentation](https://github.com/nebula-plugins/gradle-dependency-lock-plugin/wiki) for the plugin.

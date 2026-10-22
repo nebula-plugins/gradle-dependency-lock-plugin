@@ -2,9 +2,29 @@ package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.util.LockGenerator
 import nebula.plugin.dependencylock.FreshProjectSpec
+import org.gradle.api.GradleException
 import spock.lang.Unroll
 
 class DiffLockTaskSpec extends FreshProjectSpec {
+    def 'rejects Gradle core lockfiles with an explicit error'() {
+        given:
+        def updatedLock = new File(projectDir, 'gradle.lockfile')
+        updatedLock.text = '# This is a Gradle generated file for dependency locking.\nexample:dependency:1.0=compileClasspath\n'
+        def task = project.tasks.register('diffLock', DiffLockTask)
+        task.configure {
+            it.updatedLockFile.set(updatedLock)
+            it.outputDir.set(project.layout.buildDirectory.dir('dependency-lock'))
+            it.diffFile.set(it.outputDir.file('lockdiff.txt'))
+        }
+
+        when:
+        task.get().diffLocks()
+
+        then:
+        def failure = thrown(GradleException)
+        failure.message == 'diffLock does not support Gradle core lockfiles; use legacy Nebula JSON locks'
+    }
+
     def 'should diff single project no skew between configurations'() {
         given:
         def existingLock = new File(projectDir, 'dependencies.lock')
