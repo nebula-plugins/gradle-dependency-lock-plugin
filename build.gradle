@@ -15,19 +15,19 @@
  */
 
 plugins {
-    id("com.netflix.nebula.plugin-plugin")
-    id("org.jetbrains.kotlin.jvm")
-    id("java-gradle-plugin")
+    id('com.netflix.nebula.plugin-plugin')
+    id('org.jetbrains.kotlin.jvm')
+    id('java-gradle-plugin')
 }
 
-description = "Gradle plugin to allow locking of dynamic dependency versions"
+description = 'Gradle plugin to allow locking of dynamic dependency versions'
 
-group = "com.netflix.nebula"
+group = 'com.netflix.nebula'
 
 contacts {
-    addPerson("nebula-plugins-oss@netflix.com") {
-        moniker = "Nebula Plugins Maintainers"
-        github = "nebula-plugins"
+    addPerson('nebula-plugins-oss@netflix.com') {
+        moniker = 'Nebula Plugins Maintainers'
+        github = 'nebula-plugins'
     }
 }
 
@@ -43,19 +43,19 @@ dependencies {
     testImplementation 'org.spockframework:spock-core:2.4-groovy-4.0'
     testImplementation 'org.spockframework:spock-junit4:2.4-groovy-4.0'
     testImplementation gradleTestKit()
-    testImplementation "com.github.tomakehurst:wiremock:2.17.0"
-    testImplementation("com.github.stefanbirkner:system-rules:1.19.0")
-    testImplementation("org.assertj:assertj-core:3.27.7")
-    testImplementation("org.eclipse.jgit:org.eclipse.jgit:7.+")
-    testImplementation("net.javacrumbs.json-unit:json-unit-assertj:6.+")
-    testImplementation("com.fasterxml.jackson.core:jackson-databind:2.22.1") {
-        because("needed by json-unit-assertj")
+    testImplementation 'com.github.tomakehurst:wiremock:2.17.0'
+    testImplementation('com.github.stefanbirkner:system-rules:1.19.0')
+    testImplementation('org.assertj:assertj-core:3.27.7')
+    testImplementation('org.eclipse.jgit:org.eclipse.jgit:7.+')
+    testImplementation('net.javacrumbs.json-unit:json-unit-assertj:6.+')
+    testImplementation('com.fasterxml.jackson.core:jackson-databind:2.22.1') {
+        because('needed by json-unit-assertj')
     }
 }
 
 gradlePlugin {
     plugins {
-        create("com.netflix.nebula.dependency-lock") {
+        create('com.netflix.nebula.dependency-lock') {
             id = 'com.netflix.nebula.dependency-lock'
             displayName = 'Nebula Dependency Lock plugin'
             implementationClass = 'nebula.plugin.dependencylock.DependencyLockPlugin'
@@ -94,14 +94,14 @@ tasks.withType(Test).configureEach {
 
 testing {
     suites {
-        it.named("test", JvmTestSuite) {
+        it.named('test', JvmTestSuite) {
             it.useJUnitJupiter()
             it.targets {
                 it.all {
                     it.testTask.configure {
                         maxParallelForks = 4
                         testLogging {
-                            events "PASSED", "FAILED", "SKIPPED"
+                            events 'PASSED', 'FAILED', 'SKIPPED'
                         }
                     }
                 }
@@ -112,6 +112,6 @@ testing {
 
 tasks.wrapper {
     distributionType = Wrapper.DistributionType.ALL
-    gradleVersion = "9.7.1"
-    distributionSha256Sum = "92c1a136d76b5017732a66d2e0a648ebff00dd3687d8bff0d0047a1bd904fdf2"
+    gradleVersion = '9.7.1'
+    distributionSha256Sum = '92c1a136d76b5017732a66d2e0a648ebff00dd3687d8bff0d0047a1bd904fdf2'
 }
