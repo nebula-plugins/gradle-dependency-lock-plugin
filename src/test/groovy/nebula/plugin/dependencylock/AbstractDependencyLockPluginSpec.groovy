@@ -4,6 +4,8 @@ import nebula.plugin.BaseIntegrationTestKitSpec
 import nebula.test.dependencies.DependencyGraphBuilder
 import nebula.test.dependencies.GradleDependencyGenerator
 import nebula.test.dependencies.ModuleBuilder
+import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.UnexpectedBuildFailure
 class AbstractDependencyLockPluginSpec extends BaseIntegrationTestKitSpec {
     def expectedLocks = [
             'annotationProcessor',
@@ -69,7 +71,23 @@ class AbstractDependencyLockPluginSpec extends BaseIntegrationTestKitSpec {
             throw new IllegalStateException(
                     "Generated test repo is missing ${fileName}. dir=${repoDir} exists=${repoDir.exists()} " +
                             "files=${files.collect { it.name }} " +
-                            "java=${System.getProperty('java.version')} os=${System.getProperty('os.name')}")
+                            "java=${System.getProperty('java.version')} os=${System.getProperty('os.name')}\n" +
+                            "repeatedGeneratorBuildOutput:\n${repeatGeneratorBuild()}")
+        }
+    }
+
+    /**
+     * Runs the generator's publish task again with {@code --info} so the failure message carries the output
+     * that {@code generateTestMavenRepo()} discards.
+     */
+    private String repeatGeneratorBuild() {
+        def runner = GradleRunner.create()
+                .withProjectDir(mavenrepo.gradleRoot)
+                .withArguments('publishMavenPublicationToMavenRepository', '--info', '--stacktrace')
+        try {
+            runner.build().output
+        } catch (UnexpectedBuildFailure e) {
+            e.buildResult.output
         }
     }
 
