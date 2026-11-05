@@ -102,6 +102,9 @@ testing {
                         maxParallelForks = 4
                         testLogging {
                             events 'PASSED', 'FAILED', 'SKIPPED'
+                            exceptionFormat = 'full'
+                            showCauses = true
+                            showStackTraces = true
                         }
                     }
                 }
