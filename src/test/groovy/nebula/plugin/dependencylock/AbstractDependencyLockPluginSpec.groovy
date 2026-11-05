@@ -40,6 +40,7 @@ class AbstractDependencyLockPluginSpec extends BaseIntegrationTestKitSpec {
                 .build()
         mavenrepo = new GradleDependencyGenerator(graph, "${projectDir}/testrepogen")
         mavenrepo.generateTestMavenRepo()
+        assertGeneratedRepoContains('a-1.1.0.pom')
 
         buildFile << """\
             plugins {
@@ -54,6 +55,30 @@ class AbstractDependencyLockPluginSpec extends BaseIntegrationTestKitSpec {
                 implementation 'test.nebula:b:1.+'
             }
         """.stripIndent()
+    }
+
+    /**
+     * Fails fast, with a listing of what was generated, when {@code generateTestMavenRepo()} silently produced
+     * an empty or incomplete repository. Without it the symptom is a misleading "Failed to resolve test.nebula:a"
+     * from whichever Gradle build first uses the repository.
+     */
+    private void assertGeneratedRepoContains(String fileName) {
+        def repoDir = new File(projectDir, 'testrepogen')
+        def files = generatedFiles(repoDir)
+        if (!files.any { it.name == fileName }) {
+            throw new IllegalStateException(
+                    "Generated test repo is missing ${fileName}. dir=${repoDir} exists=${repoDir.exists()} " +
+                            "files=${files.collect { it.name }} " +
+                            "java=${System.getProperty('java.version')} os=${System.getProperty('os.name')}")
+        }
+    }
+
+    private static List<File> generatedFiles(File dir) {
+        def files = []
+        if (dir.exists()) {
+            dir.eachFileRecurse(groovy.io.FileType.FILES) { files << it }
+        }
+        files
     }
 
     def setupScalaProject(String conf) {
