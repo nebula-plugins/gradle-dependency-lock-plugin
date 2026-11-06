@@ -90,7 +90,18 @@ class DependencyResolutionVerifier(
         // reportingOnlyBuild — avoids calling extractDependencyReportTaskConfigurationNames() twice.
         val scopedConfNames = extractDependencyReportTaskConfigurationNames(project)
 
+        // Core lock writes only verify lock-enabled configurations; see LockWriteVerification.
+        val coreLockWrite = DependencyLockingFeatureFlags.isCoreLockingEnabled() &&
+            LockWriteVerification.isWritingOrUpdatingLocks(project)
+
         fun getScopedEffectiveInfo(): Pair<Map<String, Provider<ResolvedComponentResult>>, List<String>> {
+            if (coreLockWrite) {
+                // Evaluated when the task is configured, after plugins have activated locking.
+                val lockedConfNames = resolvableConfigurations
+                    .filter { LockWriteVerification.isDependencyLockingEnabled(it) }
+                    .map { it.name }
+                return Pair(resolutionResultsMap.filterKeys { it in lockedConfNames }, lockedConfNames)
+            }
             // When running `dependencyInsight --configuration X` or `dependencies --configuration X`,
             // scope the verifier to only the queried configuration.
             // This prevents false failures from configurations that were never resolved by the task
@@ -160,16 +171,11 @@ class DependencyResolutionVerifier(
         registerFlowActionStrategy(project, projectKey)
     }
 
-    private fun <T> propertyOrExtension(project: Project, propName: String, default: T, parse: (String) -> T): T =
-        project.findProperty(propName)?.let { parse(it.toString()) } ?: default
-
     private fun getConfigurationsToExclude(project: Project): Set<String> =
-        propertyOrExtension(project, CONFIGURATIONS_TO_EXCLUDE, extensionFromRoot.configurationsToExcludeProperty.get()) { str ->
-            str.split(",").map { it.trim() }.toSet()
-        }
+        LockWriteVerification.configurationsToExclude(project).get()
 
     private fun getShouldFailTheBuild(project: Project): Boolean =
-        propertyOrExtension(project, UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD, extensionFromRoot.shouldFailTheBuildProperty.get()) { it.toBoolean() }
+        LockWriteVerification.shouldFailTheBuild(project).get()
 
     private fun uniqueProjectKey(project: Project): String {
         return "${project.name}-${if (project == project.rootProject) "rootproject" else "subproject"}"
@@ -241,7 +247,8 @@ class DependencyResolutionVerifier(
      */
     private fun extractDependencyReportTaskConfigurationNames(project: Project): Set<String> {
         val startParam = project.gradle.startParameter
-        // Lock-generation builds must validate ALL configurations — never scope them.
+        // Lock-generation builds are never scoped to a --configuration: core lock writes verify every lock-enabled
+        // configuration (see LockWriteVerification) and Nebula lock tasks verify every configuration.
         if (startParam.isWriteDependencyLocks || startParam.lockedDependenciesToUpdate.isNotEmpty()) {
             return emptySet()
         }
