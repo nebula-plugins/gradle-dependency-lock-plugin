@@ -116,7 +116,8 @@ class DependencyLockPlugin @Inject constructor(
                 verificationService,
                 dependencyResolutionVerifierExtension,
                 flowScope,
-                flowProviders
+                flowProviders,
+                isolatedProjectsSupportEnabled
             )
             // Register the task stub eagerly so downstream plugins that walk the task container
             // (even inside afterEvaluate) don't hit an "immutable container" error.
@@ -133,10 +134,10 @@ class DependencyLockPlugin @Inject constructor(
         if (commitExtension == null) {
             commitExtension = project.rootProject.extensions.create(COMMIT_EXTENSION_NAME, DependencyLockCommitExtension::class.java)
         }
-        val overrides = lockReader.readOverrides()
-        val globalLockFilename = project.findStringProperty(GLOBAL_LOCK_FILE)
-        val lockFilename = project.findStringProperty(LOCK_FILE)
-        DependencyLockTaskConfigurer(project).configureTasks(globalLockFilename, lockFilename, extension, commitExtension, overrides)
+        val overrides = lockReader.readOverrides(isolatedProjectsSupportEnabled)
+        val globalLockFilename = project.findStringProperty(GLOBAL_LOCK_FILE, isolatedProjectsSupportEnabled)
+        val lockFilename = project.findStringProperty(LOCK_FILE, isolatedProjectsSupportEnabled)
+        DependencyLockTaskConfigurer(project, isolatedProjectsSupportEnabled).configureTasks(globalLockFilename, lockFilename, extension, commitExtension, overrides)
         if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
             LOGGER.info("${project.name}: coreLockingSupport feature enabled")
             val coreLockingHelper = CoreLockingHelper(project)
@@ -194,11 +195,11 @@ class DependencyLockPlugin @Inject constructor(
                 if (lockAfterEvaluating) {
                     conf.incoming.beforeResolve {
                         if(conf.incoming == it) {
-                            maybeApplyLock(project,conf, extension, overrides, globalLockFilename, lockFilename)
+                            maybeApplyLock(project,conf, extension, overrides, globalLockFilename, lockFilename, isolatedProjectsSupportEnabled)
                         }
                     }
                 } else {
-                    maybeApplyLock(project,conf, extension, overrides, globalLockFilename, lockFilename)
+                    maybeApplyLock(project,conf, extension, overrides, globalLockFilename, lockFilename, isolatedProjectsSupportEnabled)
                 }
             }
         }
@@ -220,7 +221,8 @@ class DependencyLockPlugin @Inject constructor(
 
     private fun maybeApplyLock(project: Project,
                                conf: Configuration,
-                               extension: DependencyLockExtension, overrides: Map<*, *>, globalLockFileName: String?, lockFilename: String?) {
+                               extension: DependencyLockExtension, overrides: Map<*, *>, globalLockFileName: String?, lockFilename: String?,
+                               isolatedProjectsSupportEnabled: Boolean) {
         val shouldIgnoreLock = (extension.skippedConfigurationNamesPrefixesProperty.get() + DependencyLockTaskConfigurer.configurationsToSkipForGlobalLockPrefixes).any {
             prefix -> conf.name.startsWith(prefix) && !conf.name.contains("resolutionRules")
         }
@@ -237,7 +239,7 @@ class DependencyLockPlugin @Inject constructor(
         lockUsed = dependenciesLock.name
         reasons.add("com.netflix.nebula.dependency-lock locked with: $lockUsed")
 
-        if (!DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)) {
+        if (!DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project, isolatedProjectsSupportEnabled)) {
             val hasUpdateTask = hasUpdateTask(project)
 
             // Use provider to allow gradle property to override extension property

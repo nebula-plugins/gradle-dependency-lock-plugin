@@ -73,13 +73,13 @@ helpers are unchanged. This chunk does not establish multi-project compatibility
 
 ## 2. Make property and override lookup project-local
 
-- [ ] Characterize local-extra/Gradle-property precedence and type/empty handling.
-- [ ] Add internal enabled-mode lookup; keep parent-searching legacy entry points.
-- [ ] Wire lock/override filenames, overrides, ignore settings, generation,
+- [x] Characterize local-extra/Gradle-property precedence and type/empty handling.
+- [x] Add internal enabled-mode lookup; keep parent-searching legacy entry points.
+- [x] Wire lock/override filenames, overrides, ignore settings, generation,
   verifier, and commit options through the appropriate mode-aware path.
-- [ ] Preserve file path bases; explicitly reconcile reader/verifier override-file
+- [x] Preserve file path bases; explicitly reconcile reader/verifier override-file
   interpretation in enabled mode using a child-project fixture.
-- [ ] Track relevant file contents and absence/presence during configuration.
+- [x] Track relevant file contents and absence/presence during configuration.
 
 Validation: missing optional properties never search parents; local extras and
 `-P` values retain characterized precedence. Verify override file/CLI priority,
@@ -87,6 +87,19 @@ relative paths, changes/removal, and cache invalidation. Verify flag-off inherit
 extras still work. Do not convert all property lookups repository-wide.
 
 Depends on: 1.
+
+Completed implementation: enabled lookup preserves local-extra precedence and
+types, tracks Gradle properties, and excludes parent extras. Compatible overloads
+keep existing entry points on legacy lookup. Enabled resolution and verification
+share the existing root-relative override parser, including deprecated files and
+inline overrides; flag-off verifier file interpretation is unchanged.
+
+Validation covers both Gradle versions on JDK 21: 31 focused tests plus 24
+assessment cases and the existing verifier override-file regression. New tests
+exercise strict-isolation lookup, inherited/local settings, verifier policy,
+cache reuse and property invalidation, override edits/deletion/restoration, and
+inline-over-file precedence. Full plugin multi-project isolation remains blocked
+by root ownership and peer-coordinate scanning until the next chunks.
 
 ## 3. Isolate plugin application and reject excluded workflows
 
@@ -284,7 +297,7 @@ the specification's compatibility requirements:
 
 | Decision | Chunk | Required outcome |
 | --- | --- | --- |
-| Local extras versus Gradle-property precedence and override-file base | 2 | Characterized precedence; one explicit enabled-mode file interpretation |
+| Local extras versus Gradle-property precedence and override-file base | 2 (resolved) | Local extras retain precedence and types; enabled reader and verifier use root-relative override files |
 | 9.2.1-compatible immutable root directory and save presence input | 4 | Strict IP success and conflict correctness across reuse |
 | Public static-map downstream adoption | 5 | APIs retained; enabled execution does not communicate through static maps |
 | Qualified/abbreviated task scope | 6 | Correct participant, including nested duplicate names, without foreign mutable reads |

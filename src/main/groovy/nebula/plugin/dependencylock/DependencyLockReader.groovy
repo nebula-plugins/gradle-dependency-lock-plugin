@@ -9,6 +9,7 @@ import com.squareup.moshi.Moshi
 import groovy.transform.TupleConstructor
 import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
+import nebula.plugin.dependencylock.utils.DependencyLockingPropertyLookup
 import okio.Okio
 import org.gradle.api.GradleException
 import org.gradle.api.Project
@@ -68,12 +69,15 @@ class DependencyLockReader {
     }
 
     Map readOverrides() {
+        readOverrides(false)
+    }
+
+    Map readOverrides(boolean isolatedProjectsSupportEnabled) {
         // Overrides are dependencies that trump the lock file.
         Map overrides = [:]
 
         // Load overrides from a file if the user has specified one via a property.
-        // Use findProperty() to check both gradle properties (-P) and project extras (ext)
-        def overrideFile = project.findProperty(OVERRIDE_FILE)
+        def overrideFile = DependencyLockingPropertyLookup.findProperty(project, OVERRIDE_FILE, isolatedProjectsSupportEnabled)
         if (overrideFile) {
             File dependenciesLock = new File(project.rootDir, overrideFile as String)
             def lockOverride = parseLockFile(dependenciesLock)
@@ -87,8 +91,7 @@ class DependencyLockReader {
         }
 
         // Allow the user to specify overrides via a property as well.
-        // Use findProperty() to check both gradle properties (-P) and project extras (ext)
-        def override = project.findProperty('dependencyLock.override')
+        def override = DependencyLockingPropertyLookup.findProperty(project, 'dependencyLock.override', isolatedProjectsSupportEnabled)
         if (override) {
             override.toString().tokenize(',').each {
                 def parts = it.tokenize(':')
