@@ -15,6 +15,7 @@
  */
 package nebula.plugin.dependencylock
 
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Internal
 
@@ -47,6 +48,12 @@ abstract class DependencyLockCommitExtension {
      * Default: 3
      */
     abstract Property<Integer> getRemoteRetries()
+
+    /**
+     * Absolute child save-task paths to order before the root commit in isolated-projects mode.
+     * Ordering does not request these tasks; consumers still select saves explicitly.
+     */
+    abstract ListProperty<String> getSaveTaskPaths()
     
     /**
      * Legacy Closure-based tag generator.
@@ -67,5 +74,6 @@ abstract class DependencyLockCommitExtension {
         // Set default tag with timestamp evaluated at construction time
         tag.convention("LockCommit-${new Date().format('yyyyMMddHHmmss')}")
         remoteRetries.convention(3)
+        saveTaskPaths.convention([])
     }
 }

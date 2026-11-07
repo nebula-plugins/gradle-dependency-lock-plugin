@@ -171,9 +171,14 @@ class DependencyLockTaskConfigurer {
             LOGGER.debug("Task $COMMIT_LOCK_TASK_NAME is not in the root project.", ute.getMessage())
         }
         if (!hasCommitLockTask) {
+            final boolean isolatedSupport = isolatedProjectsSupportEnabled
             TaskProvider<CommitLockTask> commitTask = commitProject.tasks.register(COMMIT_LOCK_TASK_NAME, CommitLockTask)
             commitTask.configure {
                 it.mustRunAfter(saveTask)
+                if (isolatedSupport) {
+                    it.isolatedProjectsSupportEnabled.set(true)
+                    it.mustRunAfter(commitExtension.saveTaskPaths.get())
+                }
                 if (globalSaveTask != null) {
                     it.mustRunAfter(globalSaveTask)
                 }
@@ -204,7 +209,9 @@ class DependencyLockTaskConfigurer {
     private List<String> getPatternsToCommit(String clLockFileName, String globalLockFileName, DependencyLockExtension lockExtension) {
         List<String> patterns = []
         patterns.add(clLockFileName ?: lockExtension.lockFileProperty.get())
-        patterns.add(globalLockFileName ?: lockExtension.globalLockFileProperty.get())
+        if (!isolatedProjectsSupportEnabled) {
+            patterns.add(globalLockFileName ?: lockExtension.globalLockFileProperty.get())
+        }
         return patterns
     }
 
