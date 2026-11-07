@@ -47,12 +47,12 @@ Six cases deliberately assert existing isolation failures; these remain blockers
 
 ## 1. Add the opt-in flag and internal mode plumbing
 
-- [ ] Extend `DependencyLockingFeatureFlags` with the spec's constant and additive
+- [x] Extend `DependencyLockingFeatureFlags` with the spec's constant and additive
   project-aware helper. Read the system property with Gradle providers.
-- [ ] Resolve the mode at the start of `apply`; pass it through internal/additive
+- [x] Resolve the mode at the start of `apply`; pass it through internal/additive
   paths before incompatible operations. Do not initialize it statically.
-- [ ] Keep absent/false on the legacy path. Leave existing flag helpers unchanged.
-- [ ] Introduce the opt-in path with explicit remaining limitations; do not claim
+- [x] Keep absent/false on the legacy path. Leave existing flag helpers unchanged.
+- [x] Introduce the opt-in path with explicit remaining limitations; do not claim
   compatibility until subsequent chunks complete.
 
 Validation: absence/false/true parsing, a single-project enabled fixture, and
@@ -61,6 +61,15 @@ Verify existing core/path-aware flags remain independent. The enabled path may
 still hit characterized blockers at this stage; do not hide them.
 
 Depends on: 0.
+
+Completed validation: the six parameterized `DependencyLockingFeatureFlagsTest`
+cases passed on JDK 21 with Gradle 9.2.1 and 9.7.1. They cover default/false/true
+and other values, same-daemon off/on/off invalidation and reuse, unchanged generated
+locks, and root `gradle.properties` opt-in with strict single-project isolation.
+The combined baseline and flag suite passed all 43 tests. The mode is read once
+and passed to the private application entry point; root access and other legacy
+wiring remain unchanged until subsequent chunks. Existing core/path-aware flag
+helpers are unchanged. This chunk does not establish multi-project compatibility.
 
 ## 2. Make property and override lookup project-local
 
