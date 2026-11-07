@@ -19,6 +19,11 @@ import org.gradle.api.GradleException
 
 /** Guards for workflows outside the opt-in per-project locking contract. */
 class IsolatedProjectsSupport {
+    static GradleException unsupportedCustomization(String option, String guidance) {
+        new GradleException("$option is not supported when " +
+            "${DependencyLockingFeatureFlags.ISOLATED_PROJECTS_SUPPORT}=true. $guidance")
+    }
+
     static GradleException unsupportedWorkflow(String workflow) {
         new GradleException("$workflow is not supported when " +
             "${DependencyLockingFeatureFlags.ISOLATED_PROJECTS_SUPPORT}=true. " +

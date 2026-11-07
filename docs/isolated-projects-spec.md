@@ -285,10 +285,17 @@ files. Do not silently drop a filter or relax strict cache checks. Recommend
 `skippedDependencies` only when it expresses equivalent behavior. Preserve legacy
 callback behavior and API with the flag off.
 
+Enabled tasks retain serializable customization markers instead of unsupported
+callbacks. Filter validation runs before Gradle cleans stale task outputs, so a
+rejected request preserves both generated and saved files. Extension changes made
+after task realization remain visible through the managed markers. Unrelated
+`help` requests remain usable and can reuse configuration.
+
 The existing `tagClosure` is retained but not invoked by current task wiring. This
 migration must not start invoking it or claim callback compatibility. Reject an
 explicit unsupported callback for an enabled commit workflow before Git side
 effects; retain explicit `tag` Property support.
+Both rejection paths retain their messages and failure status on cache reuse.
 
 ## Validation and release criteria
 

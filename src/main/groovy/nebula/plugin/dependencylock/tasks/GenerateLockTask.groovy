@@ -22,6 +22,7 @@ import nebula.plugin.dependencylock.model.LockKey
 import nebula.plugin.dependencylock.model.LockValue
 import nebula.plugin.dependencylock.utils.ConfigurationFilters
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
+import nebula.plugin.dependencylock.utils.IsolatedProjectsSupport
 import org.gradle.api.BuildCancelledException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -62,8 +63,46 @@ abstract class GenerateLockTask extends AbstractLockTask {
     @Internal
     abstract SetProperty<String> getSkippedConfigurationNames()
 
+    private final Closure defaultFilter = { group, name, version -> true }
+
     @Internal
-    Closure filter = { group, name, version -> true }
+    Closure filter = defaultFilter
+
+    @Input
+    abstract Property<Boolean> getIsolatedProjectsSupportEnabled()
+
+    @Input
+    abstract Property<Boolean> getUnsupportedExtensionFilter()
+
+    @Input
+    abstract Property<Boolean> getUnsupportedTaskFilter()
+
+    GenerateLockTask() {
+        isolatedProjectsSupportEnabled.convention(false)
+        unsupportedExtensionFilter.convention(false)
+        unsupportedTaskFilter.convention(false)
+        // Reject before Gradle cleans stale output files, as well as before our writer runs.
+        onlyIf('supported dependency filter customization') { GenerateLockTask task ->
+            task.validateSupportedCustomizations()
+            true
+        }
+    }
+
+    /** Retain the Closure setter API, but keep unsupported callbacks out of enabled task state. */
+    void setFilter(Closure callback) {
+        if (isolatedProjectsSupportEnabled.getOrElse(false)) {
+            unsupportedTaskFilter.set(!defaultFilter.is(callback))
+            this.filter = defaultFilter
+        } else {
+            this.filter = callback
+        }
+    }
+
+    void enableIsolatedProjectsSupport() {
+        unsupportedTaskFilter.set(!defaultFilter.is(filter))
+        this.filter = defaultFilter
+        isolatedProjectsSupportEnabled.set(true)
+    }
 
     @Input
     @Optional
@@ -97,6 +136,7 @@ abstract class GenerateLockTask extends AbstractLockTask {
 
     @TaskAction
     void lock() {
+        validateSupportedCustomizations()
         final String WRITE_CORE_LOCK_TASK_TO_RUN = "`./gradlew dependencies --write-locks`"
         final String MIGRATE_TO_CORE_LOCK_TASK_NAME = "migrateToCoreLocks"
         
@@ -139,6 +179,19 @@ abstract class GenerateLockTask extends AbstractLockTask {
         }
         
         new DependencyLockWriter(getDependenciesLock().get().asFile, getSkippedDependencies().getOrElse([] as Set)).writeLock(dependencyMap)
+    }
+
+    void validateSupportedCustomizations() {
+        if (isolatedProjectsSupportEnabled.get()) {
+            if (unsupportedExtensionFilter.get()) {
+                throw IsolatedProjectsSupport.unsupportedCustomization('dependencyLock.dependencyFilter',
+                    'Use skippedDependencies for equivalent dependency exclusions, or disable the feature flag for callback filtering.')
+            }
+            if (unsupportedTaskFilter.get()) {
+                throw IsolatedProjectsSupport.unsupportedCustomization('GenerateLockTask.filter',
+                    'Use skippedDependencies for equivalent dependency exclusions, or disable the feature flag for callback filtering.')
+            }
+        }
     }
 
     static Collection<Configuration> lockableConfigurations(Project taskProject, Project project, Set<String> configurationNames, Set<String> skippedConfigurationNamesPrefixes = []) {

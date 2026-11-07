@@ -55,6 +55,8 @@ abstract class DependencyLockCommitExtension {
      */
     abstract ListProperty<String> getSaveTaskPaths()
     
+    private final Closure<String> defaultTagClosure = { "LockCommit-${new Date().format('yyyyMMddHHmmss')}".toString() }
+
     /**
      * Legacy Closure-based tag generator.
      * Kept for backward compatibility but marked as @Internal since Closures are not configuration cache compatible.
@@ -63,12 +65,22 @@ abstract class DependencyLockCommitExtension {
      */
     @Internal
     @Deprecated
-    Closure<String> tagClosure = { "LockCommit-${new Date().format('yyyyMMddHHmmss')}".toString() }
+    Closure<String> tagClosure = defaultTagClosure
+
+    /** Internal serializable customization marker; the callback is never invoked by commit tasks. */
+    @Internal
+    abstract Property<Boolean> getTagClosureCustomized()
+
+    void setTagClosure(Closure<String> callback) {
+        this.tagClosure = callback
+        tagClosureCustomized.set(!defaultTagClosure.is(callback))
+    }
     
     /**
      * Constructor sets default conventions for all properties.
      */
     DependencyLockCommitExtension() {
+        tagClosureCustomized.convention(false)
         message.convention('Committing dependency lock files')
         shouldCreateTag.convention(false)
         // Set default tag with timestamp evaluated at construction time

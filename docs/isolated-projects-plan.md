@@ -323,11 +323,11 @@ operations or working-repository commits occur in fixtures.
 
 ## 9. Make unsupported customizations explicit
 
-- [ ] Reject unsupported nondefault extension/task filter closures in enabled
+- [x] Reject unsupported nondefault extension/task filter closures in enabled
   generation before lock writes; default and declarative behavior still work.
-- [ ] Reject explicit unsupported `tagClosure` usage for enabled commits before
+- [x] Reject explicit unsupported `tagClosure` usage for enabled commits before
   Git side effects; preserve explicit tag Property behavior.
-- [ ] Keep flag-off API/behavior and actionable migration guidance; do not add an
+- [x] Keep flag-off API/behavior and actionable migration guidance; do not add an
   unrelated callback DSL or silently substitute nonequivalent filtering.
 
 Validation: default/custom filters, raw task customization, declarative exclusions,
@@ -337,6 +337,26 @@ Add Groovy/Kotlin DSL checks for bridge accessors touched by the migration.
 
 Depends on: 4, 8. This guard may land earlier if customization testing exposes a
 silent-correctness problem before those chunks complete.
+
+Completed implementation: compatible Closure setters update managed customization
+markers. Enabled generation never retains a custom extension/task callback, and
+the markers reject unsupported generation/update requests on first and cached
+builds. An execution predicate rejects filters before Gradle's stale-output
+cleanup; task actions also guard direct calls. Commit rejects an explicit custom
+tag callback before staging or other Git operations. Default callbacks and
+declarative exclusions work; explicit tag properties remain supported. Legacy
+callback behavior and public getter/setter signatures are retained.
+
+Validation: 66 tests passed together on JDK 21 with no failures/retries: ten new
+customization cases, six commit cases, four generation cases, 13 legacy
+configuration-avoidance cases, and all 33 extension-property regressions. Both
+Gradle versions store/reuse strict IP entries for rejected requests with unchanged
+output files/Git state. Tests cover extension changes after task realization,
+raw task callbacks configured before/after plugin application, generation and
+selective updates, usable help, Groovy/Kotlin bridge getters/setters and supported
+exclusions, and callback filtering/API access with the flag off. Callback bodies
+are not invoked by enabled workflows; explicit tag support remains covered by
+the commit suite.
 
 ## 10. Run the complete matrix and document rollout
 
@@ -409,4 +429,4 @@ the specification's compatibility requirements:
 | Public static-map downstream adoption | 5 (resolved) | APIs retained; enabled execution does not communicate through static maps; bounded indexed search found no downstream consumers |
 | Qualified/abbreviated task scope | 6 (resolved) | Immutable project hierarchy and invocation-directory scope plus local registered task names; no foreign mutable reads |
 | Root commit ordering mechanism | 8 (resolved) | Root save plus additive explicit child `saveTaskPaths`; no foreign task inspection or forced generation |
-| Detecting direct task filter/tag callback customization | 9 | Clear rejection before side effects; no silent cache-hit behavior change |
+| Detecting direct task filter/tag callback customization | 9 (resolved) | Compatible setters carry managed markers; filter predicate runs before output cleanup and commit guard runs before Git |
