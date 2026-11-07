@@ -177,6 +177,7 @@ class DependencyLockTaskConfigurer {
                 it.mustRunAfter(saveTask)
                 if (isolatedSupport) {
                     it.isolatedProjectsSupportEnabled.set(true)
+                    it.unsupportedTagClosure.set(commitExtension.tagClosureCustomized)
                     it.mustRunAfter(commitExtension.saveTaskPaths.get())
                 }
                 if (globalSaveTask != null) {
@@ -302,6 +303,7 @@ class DependencyLockTaskConfigurer {
     }
 
     private void setupLockProperties(TaskProvider<GenerateLockTask> task, DependencyLockExtension extension, Map overrideMap) {
+        final boolean isolatedSupport = isolatedProjectsSupportEnabled
         task.configure { generateTask ->
             // Set skipped dependencies
             generateTask.skippedDependencies.set(extension.skippedDependenciesProperty)
@@ -314,8 +316,13 @@ class DependencyLockTaskConfigurer {
             }
             generateTask.includeTransitives.set(includeTransitives)
 
-            // Set filter (kept as Closure for backward compatibility)
-            generateTask.filter = extension.dependencyFilter
+            if (isolatedSupport) {
+                generateTask.enableIsolatedProjectsSupport()
+                generateTask.unsupportedExtensionFilter.set(extension.dependencyFilterCustomized)
+            } else {
+                // Kept as Closure for backward compatibility on the legacy path.
+                generateTask.filter = extension.dependencyFilter
+            }
 
             // Set overrides
             generateTask.overrides.set(overrideMap)
@@ -323,7 +330,7 @@ class DependencyLockTaskConfigurer {
             // Wire properties for configuration cache compatibility (resolve at config time, no project-capturing providers)
             generateTask.projectDirectory.set(project.layout.projectDirectory)
             generateTask.globalLockFileName.set(extension.globalLockFileProperty)
-            generateTask.dependencyLockIgnored.set(shouldIgnoreDependencyLock(project, isolatedProjectsSupportEnabled))
+            generateTask.dependencyLockIgnored.set(shouldIgnoreDependencyLock(project, isolatedSupport))
 
             // Build resolution map at config time so the task does not hold provider chains that capture project.
             // Intentionally resolve configurationNames and skippedConfigurationNamesPrefixes here (not lazy) for config-cache compatibility.
@@ -335,7 +342,7 @@ class DependencyLockTaskConfigurer {
             }
             generateTask.resolutionResults.set(resolutionMap)
 
-            if (isolatedProjectsSupportEnabled) {
+            if (isolatedSupport) {
                 // ResolutionResult identifies project components directly; no peer scan is needed.
                 generateTask.peerProjectCoordinates.convention([])
             } else {

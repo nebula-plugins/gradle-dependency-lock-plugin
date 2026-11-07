@@ -17,6 +17,7 @@ package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
 import nebula.plugin.dependencylock.utils.IsolatedLockFileCommitter
+import nebula.plugin.dependencylock.utils.IsolatedProjectsSupport
 import org.gradle.api.GradleException
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -59,6 +60,9 @@ abstract class CommitLockTask extends AbstractLockTask {
     @Input
     abstract Property<Boolean> getIsolatedProjectsSupportEnabled()
 
+    @Input
+    abstract Property<Boolean> getUnsupportedTagClosure()
+
     @Internal
     abstract Property<String> getRootDirPath()
 
@@ -68,10 +72,15 @@ abstract class CommitLockTask extends AbstractLockTask {
     CommitLockTask(ExecOperations execOperations) {
         this.execOperations = execOperations
         isolatedProjectsSupportEnabled.convention(false)
+        unsupportedTagClosure.convention(false)
     }
 
     @TaskAction
     void commit() {
+        if (isolatedProjectsSupportEnabled.get() && unsupportedTagClosure.get()) {
+            throw IsolatedProjectsSupport.unsupportedCustomization('commitDependencyLock.tagClosure',
+                'Set commitDependencyLock.tag explicitly instead. The legacy callback is not invoked.')
+        }
         if(!commitMessage.isPresent() || !patternsToCommit.isPresent()) {
             //Not enough info to run this task
             return

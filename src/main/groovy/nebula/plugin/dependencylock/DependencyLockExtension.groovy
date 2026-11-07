@@ -128,18 +128,26 @@ abstract class DependencyLockExtension {
         skippedConfigurationNamesPrefixesProperty.set(values)
     }
 
+    private final Closure defaultDependencyFilter = { String group, String name, String version -> true }
+
     /**
      * Filter closure for dependencies.
      *
-     * @deprecated Closures are not configuration-cache serializable. With CC enabled this field
+     * @deprecated Closures are not configuration-cache serializable. On the legacy path with CC this field
      * is silently dropped on a cache hit, reverting to the always-pass default and ignoring any
      * custom filter you set. There is no CC-safe replacement yet; track
      * https://github.com/nebula-plugins/gradle-dependency-lock-plugin/issues for updates.
-     * Marked @Internal so it does not affect task input fingerprints.
+     * Isolated-projects support rejects a custom callback before generation; use
+     * skippedDependencies when it expresses equivalent exclusions.
+     * Marked @Internal so the callback itself is not a task input.
      */
     @Deprecated
     @Internal
-    Closure dependencyFilter = { String group, String name, String version -> true }
+    Closure dependencyFilter = defaultDependencyFilter
+
+    /** Internal serializable customization marker; enabled tasks never retain the callback. */
+    @Internal
+    abstract Property<Boolean> getDependencyFilterCustomized()
 
     @SuppressWarnings('GrDeprecatedAPIUsage')
     void setDependencyFilter(Closure filter) {
@@ -148,6 +156,7 @@ abstract class DependencyLockExtension {
             'and will be silently ignored on a cache hit. See the plugin README for alternatives.'
         )
         this.dependencyFilter = filter
+        dependencyFilterCustomized.set(!defaultDependencyFilter.is(filter))
     }
 
     /**
@@ -300,6 +309,7 @@ abstract class DependencyLockExtension {
      * Constructor sets default conventions for all properties.
      */
     DependencyLockExtension() {
+        dependencyFilterCustomized.convention(false)
         lockFileProperty.convention('dependencies.lock')
         globalLockFileProperty.convention('global.lock')
         configurationNamesProperty.convention([] as Set<String>)
