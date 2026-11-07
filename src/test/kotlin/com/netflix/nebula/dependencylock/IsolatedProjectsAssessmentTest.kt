@@ -20,14 +20,15 @@ internal class IsolatedProjectsAssessmentTest {
 
     private var invocation = 0
 
-    data class Mode(val version: String, val isolated: Boolean) {
-        override fun toString() = "Gradle $version / ${if (isolated) "isolated" else "ordinary CC"}"
+    data class Mode(val version: String, val isolated: Boolean, val support: Boolean) {
+        override fun toString() = "Gradle $version / ${if (isolated) "isolated" else "ordinary CC"} / support=$support"
 
         fun arguments(): List<String> = buildList {
             addAll(listOf("--configuration-cache", "--configuration-cache-problems=fail", "--stacktrace", "--console=plain"))
             // TestKit edits files outside the daemon. Force fresh snapshots on all tested versions.
             add("--no-watch-fs")
             add("-Dnebula.features.coreLockingSupport=false")
+            add("-Dnebula.dependency-lock.isolatedProjectsSupport=$support")
             if (isolated) {
                 // The stable option was introduced in 9.7; 9.2 requires the experimental property.
                 add(if (GradleVersion.version(version) >= GradleVersion.version("9.7"))
@@ -39,7 +40,9 @@ internal class IsolatedProjectsAssessmentTest {
     companion object {
         @JvmStatic
         fun modes() = listOf("9.2.1", GradleVersion.current().version).distinct().flatMap { version ->
-            listOf(Mode(version, false), Mode(version, true))
+            listOf(false, true).flatMap { isolated ->
+                listOf(false, true).map { support -> Mode(version, isolated, support) }
+            }
         }
     }
 
@@ -113,7 +116,7 @@ internal class IsolatedProjectsAssessmentTest {
             write("${path.replace(':', '/')}/build.gradle", localBuild(dependencies, "fixture.${path.substringBefore(':')}"))
         }
         val tasks = arrayOf(":$app:generateLock", ":$app:saveLock")
-        if (mode.isolated) {
+        if (mode.isolated && !mode.support) {
             // Characterization ONLY: this must fail, and can never establish compatibility.
             val failure = run(mode, *tasks, expectFailure = true)
             assertThat(failure.output).contains("cannot access", "extension", "another project ':'")
@@ -148,7 +151,7 @@ internal class IsolatedProjectsAssessmentTest {
         write("build.gradle", localBuild("implementation 'fixture:widget:1.0'"))
         // No lock plugin on the child: root-only application does not opt children into locking.
         write("lib/build.gradle", "plugins { id 'java-library' }\ngroup = 'fixture.child'\n")
-        if (mode.isolated) {
+        if (mode.isolated && !mode.support) {
             val failure = run(mode, "generateLock", expectFailure = true)
             assertThat(failure.output).contains("cannot access 'Project.group'", "via 'allprojects'")
             assertThat(failure.output).doesNotContain("Configuration cache entry stored", "Configuration cache entry reused")

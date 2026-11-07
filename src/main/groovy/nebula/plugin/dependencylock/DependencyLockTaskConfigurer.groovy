@@ -36,6 +36,7 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.deprecation.DeprecationLogger
 
@@ -95,7 +96,7 @@ class DependencyLockTaskConfigurer {
         TaskProvider<UpdateLockTask> updateLockTask = project.tasks.register(UPDATE_LOCK_TASK_NAME, UpdateLockTask)
         configureGenerateLockTask(updateLockTask, lockFilename, extension, overrides)
 
-        TaskProvider<SaveLockTask> saveTask = configureSaveTask(lockFilename, genLockTask, updateLockTask, extension)
+        TaskProvider<SaveLockTask> saveTask = configureSaveTask(lockFilename, globalLockFilename, genLockTask, updateLockTask, extension)
         createDeleteLock(saveTask)
 
         if (isolatedProjectsSupportEnabled) {
@@ -207,9 +208,10 @@ class DependencyLockTaskConfigurer {
         return patterns
     }
 
-    private TaskProvider<SaveLockTask> configureSaveTask(String lockFilename, TaskProvider<GenerateLockTask> lockTask,
+    private TaskProvider<SaveLockTask> configureSaveTask(String lockFilename, String globalLockFilename, TaskProvider<GenerateLockTask> lockTask,
                                                          TaskProvider<UpdateLockTask> updateTask, DependencyLockExtension extension) {
         TaskProvider<SaveLockTask> saveLockTask = project.tasks.register(SAVE_LOCK_TASK_NAME, SaveLockTask)
+        final boolean isolatedSupport = isolatedProjectsSupportEnabled
 
         saveLockTask.configure { saveTask ->
             // Set input and output files using Property API
@@ -217,7 +219,14 @@ class DependencyLockTaskConfigurer {
             saveTask.outputLock.set(project.layout.projectDirectory.file(lockFilename ?: extension.lockFileProperty.get()))
 
             // Configuration cache compatible: Capture global lock file path to check at execution time
-            if (!isGlobalLockDisabled()) {
+            if (isolatedSupport) {
+                saveTask.isolatedProjectsSupportEnabled.set(true)
+                saveTask.globalLockFile.set(new File(project.rootDir, globalLockFilename ?: extension.globalLockFileProperty.get()))
+                // InputFiles supports an absent conflict file and notices it appearing on a cache hit.
+                saveTask.inputs.files(saveTask.globalLockFile)
+                    .withPropertyName('globalLockConflict')
+                    .withPathSensitivity(PathSensitivity.NONE)
+            } else if (!isGlobalLockDisabled()) {
                 saveTask.globalLockFile.set(
                     project.rootProject.layout.projectDirectory.file(extension.globalLockFileProperty)
                 )
@@ -319,12 +328,17 @@ class DependencyLockTaskConfigurer {
             }
             generateTask.resolutionResults.set(resolutionMap)
 
-            def peerCoords = project.rootProject.allprojects.collect { p ->
-                String group = p.group?.toString() ?: ''
-                String name = p.name
-                "${group}:${name}".toString()
+            if (isolatedProjectsSupportEnabled) {
+                // ResolutionResult identifies project components directly; no peer scan is needed.
+                generateTask.peerProjectCoordinates.convention([])
+            } else {
+                def peerCoords = project.rootProject.allprojects.collect { p ->
+                    String group = p.group?.toString() ?: ''
+                    String name = p.name
+                    "${group}:${name}".toString()
+                }
+                generateTask.peerProjectCoordinates.set(peerCoords)
             }
-            generateTask.peerProjectCoordinates.set(peerCoords)
         }
     }
 
