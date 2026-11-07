@@ -26,6 +26,7 @@ import nebula.plugin.dependencylock.utils.ConfigurationFilters
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencylock.utils.DependencyLockingPropertyLookup
 import nebula.plugin.dependencylock.utils.IsolatedProjectsSupport
+import nebula.plugin.dependencylock.utils.LockingTaskSelector
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
@@ -70,6 +71,8 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
         val enabledRequestedTasks = if (isolatedProjectsSupportEnabled)
             ReportingTasks.withoutReportOptions(project.gradle.startParameter.taskNames) else null
         val requestedTasks = enabledRequestedTasks ?: project.gradle.startParameter.taskNames
+        val lockGenerationRequested = isolatedProjectsSupportEnabled && LockingTaskSelector(project)
+            .hasTask(DependencyLockPlugin.GENERATION_TASK_NAMES, project.tasks.names)
         val allTasksExcluded = requestedTasks.isNotEmpty() && requestedTasks.all { taskName ->
             val simpleTaskName = taskName.substringAfterLast(':')
             tasksToExclude.contains(simpleTaskName) || tasksToExclude.contains(taskName)
@@ -121,6 +124,7 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
             task.usesService(verificationService)
             task.parameters.projectKey.set(projectKey)
             task.parameters.isolatedProjectsSupportEnabled.set(isolatedProjectsSupportEnabled)
+            task.parameters.lockGenerationRequested.set(lockGenerationRequested)
             task.parameters.projectName.set(projectName)
             task.parameters.shouldFailTheBuild.set(shouldFailTheBuild)
             task.parameters.missingVersionsMessageAddition.set(extensionFromRoot.missingVersionsMessageAdditionProperty)

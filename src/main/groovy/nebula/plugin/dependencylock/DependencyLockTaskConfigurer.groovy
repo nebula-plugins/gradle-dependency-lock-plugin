@@ -495,21 +495,38 @@ class DependencyLockTaskConfigurer {
                 diffTask.existingLockFile.set(project.layout.projectDirectory.file(lockFileProvider))
             }
             diffTask.updatedLockFile.set(project.layout.buildDirectory.file(lockFileProvider))
+            if (isolatedProjectsSupportEnabled) {
+                diffTask.inputs.files(diffTask.updatedLockFile)
+                    .withPropertyName('updatedLockContents')
+                    .withPathSensitivity(PathSensitivity.NONE)
+            }
 
             // Set output properties
             diffTask.outputDir.set(project.layout.buildDirectory.dir('dependency-lock'))
             diffTask.diffFile.set(diffTask.outputDir.file("lockdiff.${diffTask.diffFileExtension()}"))
 
             // Wire resolution results for path-aware diff (configuration cache compatible!)
-            diffTask.resolutionResults.set(
-                extension.configurationNamesProperty.zip(extension.skippedConfigurationNamesPrefixesProperty) { configNames, skippedNames ->
-                    def lockableConfs = GenerateLockTask.lockableConfigurations(project, project, configNames, skippedNames)
-
-                    lockableConfs.collectEntries { conf ->
-                        [(conf.name): conf.incoming.resolutionResult.rootComponent]
-                    }
+            if (isolatedProjectsSupportEnabled) {
+                def lockableConfs = GenerateLockTask.lockableConfigurations(project, project,
+                    extension.configurationNamesProperty.get(), extension.skippedConfigurationNamesPrefixesProperty.get())
+                diffTask.resolutionResults.set(lockableConfs.collectEntries { conf ->
+                    [(conf.name): conf.incoming.resolutionResult.rootComponent]
+                })
+                if (nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags.isPathAwareDependencyDiffEnabled()) {
+                    // Path-aware reports also depend on resolution graph paths beyond the lock bytes.
+                    diffTask.outputs.upToDateWhen { false }
                 }
-            )
+            } else {
+                diffTask.resolutionResults.set(
+                    extension.configurationNamesProperty.zip(extension.skippedConfigurationNamesPrefixesProperty) { configNames, skippedNames ->
+                        def lockableConfs = GenerateLockTask.lockableConfigurations(project, project, configNames, skippedNames)
+
+                        lockableConfs.collectEntries { conf ->
+                            [(conf.name): conf.incoming.resolutionResult.rootComponent]
+                        }
+                    }
+                )
+            }
         }
 
         project.tasks.named(SAVE_LOCK_TASK_NAME).configure { save ->

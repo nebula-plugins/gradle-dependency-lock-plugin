@@ -64,10 +64,13 @@ abstract class DependencyVerificationTask : DefaultTask() {
             }
         }
 
+        val lockGenerationRequested = if (parameters.isolatedProjectsSupportEnabled.get())
+            parameters.lockGenerationRequested.get()
+        else parameters.taskNames.get().any { it.contains("updateLock") || it.contains("generateLock") }
         val lockValidationEnabled = parameters.enableLockFileValidation.get() &&
             parameters.coreAlignmentEnabled.get() &&
             !parameters.coreLockingEnabled.get() &&
-            !parameters.taskNames.get().any { it.contains("updateLock") || it.contains("generateLock") }
+            !lockGenerationRequested
         val lockedDepsMap = parameters.lockedDependenciesPerConfiguration.get()
         val overrideDepsMap = parameters.overrideDependenciesPerConfiguration.get()
 
