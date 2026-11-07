@@ -172,13 +172,13 @@ after an up-to-date save. A Groovy task-delegate property collision exposed by
 
 ## 5. Isolate verification state and preserve failures
 
-- [ ] Stop enabled-mode initialization/writes/reads of static lock/override maps;
+- [x] Stop enabled-mode initialization/writes/reads of static lock/override maps;
   retain their signatures and legacy behavior.
-- [ ] Use full project paths for enabled build-service keys and immutable local
+- [x] Use full project paths for enabled build-service keys and immutable local
   lock/override parameters.
-- [ ] Move service initialization into owning task execution; keep FlowAction
+- [x] Move service initialization into owning task execution; keep FlowAction
   state/service wiring valid on cache reuse.
-- [ ] Preserve compile/lifecycle/report finalizers, report scoping, exclusions,
+- [x] Preserve compile/lifecycle/report finalizers, report scoping, exclusions,
   custom messages, and failure policy.
 
 Validation: distinct `:libraries:lib` and `:tools:lib` outcomes, parallel projects,
@@ -189,6 +189,33 @@ repeat execution. Audit downstream map usage before promising opt-in semantics
 to consumers that directly read those public maps.
 
 Depends on: 3, 4.
+
+Completed implementation: enabled participants do not reset, populate, or read
+the public legacy maps. The verifier uses full project paths, local immutable
+lock/override snapshots, and task-time service initialization. Enabled snapshots
+also honor filenames configured through the local extension. Legacy map APIs,
+keys, and configuration-time service initialization remain unchanged with the
+flag off.
+
+Reporting tests exposed Gradle's mutation of requested-task arguments while it
+selects tasks. Enabled verification now captures task intent once, stripping
+built-in report options, and shares it with the task and FlowAction. This keeps
+reporting failures and warning-only policies consistent on cache misses and hits.
+Inline `--configuration=` options also scope enabled verification correctly.
+
+Validation: 43 tests passed together on JDK 21, covering both Gradle versions:
+12 new verification cases, eight local-property cases, 22 legacy plugin cases,
+and one legacy override/mismatch regression. New cases exercise duplicate leaf
+names with parallel reporting, ordinary CC and strict IP, consecutive failing /
+warning-only / corrected builds in the same daemon, aligned lock mismatches,
+custom filenames/messages, overrides, report scoping, exclusions, compile and
+lifecycle finalizers, and unchanged pre-seeded legacy map entries only when
+enabled. Expected reporting failures store/reuse the cache and fail through the
+FlowAction; direct verifier requests retain task failures.
+
+An indexed downstream search for both public map names found no consumers outside
+this repository. This is bounded search evidence, not a guarantee about external
+consumers. Enabled mode does not publish verification data through those maps.
 
 ## 6. Complete update, diff, delete, and task-selection behavior
 
@@ -328,7 +355,7 @@ the specification's compatibility requirements:
 | --- | --- | --- |
 | Local extras versus Gradle-property precedence and override-file base | 2 (resolved) | Local extras retain precedence and types; enabled reader and verifier use root-relative override files |
 | 9.2.1-compatible immutable root directory and save presence input | 4 (resolved) | `project.rootDir` plus an enabled-only `InputFiles` conflict input; strict IP success and conflict correctness across reuse |
-| Public static-map downstream adoption | 5 | APIs retained; enabled execution does not communicate through static maps |
+| Public static-map downstream adoption | 5 (resolved) | APIs retained; enabled execution does not communicate through static maps; bounded indexed search found no downstream consumers |
 | Qualified/abbreviated task scope | 6 | Correct participant, including nested duplicate names, without foreign mutable reads |
 | Root commit ordering mechanism | 8 | Selected saves finish first; no foreign task inspection or forced generation |
 | Detecting direct task filter/tag callback customization | 9 | Clear rejection before side effects; no silent cache-hit behavior change |

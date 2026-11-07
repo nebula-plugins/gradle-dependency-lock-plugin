@@ -28,6 +28,12 @@ import org.gradle.api.tasks.Internal
 
 /** All inputs to the verification task (project identity, behavior options, lock data, resolution results). */
 abstract class VerifierParameters {
+    init {
+        isolatedProjectsSupportEnabled.convention(false)
+    }
+
+    @get:Input
+    abstract val isolatedProjectsSupportEnabled: Property<Boolean>
 
     @get:Input
     abstract val projectKey: Property<String>

@@ -103,8 +103,10 @@ class DependencyLockPlugin @Inject constructor(
         val verifierOwner = if (isolatedProjectsSupportEnabled) project else project.rootProject
         val dependencyResolutionVerifierExtension = verifierOwner.extensions.findByType(DependencyResolutionVerifierExtension::class.java)
             ?: verifierOwner.extensions.create(DEPENDENCY_RESOLUTION_VERIFIER_EXTENSION, DependencyResolutionVerifierExtension::class.java)
-        lockedDepsPerProjectForConfigurations[uniqueProjectKey(project)] = mutableMapOf()
-        overrideDepsPerProjectForConfigurations[uniqueProjectKey(project)] = mutableMapOf()
+        if (!isolatedProjectsSupportEnabled) {
+            lockedDepsPerProjectForConfigurations[uniqueProjectKey(project)] = mutableMapOf()
+            overrideDepsPerProjectForConfigurations[uniqueProjectKey(project)] = mutableMapOf()
+        }
 
         val startParameter = project.gradle.startParameter as StartParameterInternal
         val isMigratingToCoreLocks = startParameter.taskNames.contains(DependencyLockTaskConfigurer.MIGRATE_TO_CORE_LOCKS_TASK_NAME)
@@ -285,12 +287,12 @@ class DependencyLockPlugin @Inject constructor(
             val hasGenerateTask = hasGenerationTask(project)
             if (dependenciesLock.exists()) {
                 if (!hasGenerateTask) {
-                    applyLock(project,conf, dependenciesLock)
+                    applyLock(project, conf, dependenciesLock, isolatedProjectsSupportEnabled)
                 } else if (hasUpdateTask) {
-                    applyLock(project, conf, dependenciesLock, updates)
+                    applyLock(project, conf, dependenciesLock, isolatedProjectsSupportEnabled, updates)
                 }
             }
-            applyOverrides(project,conf, overrides)
+            applyOverrides(project, conf, overrides, isolatedProjectsSupportEnabled)
         }
     }
 
@@ -335,6 +337,7 @@ class DependencyLockPlugin @Inject constructor(
     private fun applyLock(project: Project,
                           conf: Configuration,
                           dependenciesLock: File,
+                          isolatedProjectsSupportEnabled: Boolean,
                           updates: Set<String> = emptySet()) {
         LOGGER.info("Using ${dependenciesLock.name} to lock dependencies in $conf")
         // Capture the version of each dependency as requested for reference on which use version recommendations vs request a particular version
@@ -358,12 +361,14 @@ class DependencyLockPlugin @Inject constructor(
             }
             LOGGER.debug("locked: {}", locked)
             lockConfiguration(conf, locked)
-            val lockedDepsByConf = lockedDepsPerProjectForConfigurations[uniqueProjectKey(project)]
-            lockedDepsByConf!![conf.name] = locked
+            if (!isolatedProjectsSupportEnabled) {
+                val lockedDepsByConf = lockedDepsPerProjectForConfigurations[uniqueProjectKey(project)]
+                lockedDepsByConf!![conf.name] = locked
+            }
         }
     }
 
-    private fun applyOverrides(project: Project, conf: Configuration, overrides: Map<*, *>) {
+    private fun applyOverrides(project: Project, conf: Configuration, overrides: Map<*, *>, isolatedProjectsSupportEnabled: Boolean) {
         // Use providers to check for gradle properties
         val overrideFileProvider = project.providers.gradleProperty(OVERRIDE_FILE)
         if (overrideFileProvider.isPresent) {
@@ -384,8 +389,10 @@ class DependencyLockPlugin @Inject constructor(
         }
         LOGGER.debug("overrides: {}", overrideDeps)
         lockConfiguration(conf, overrideDeps)
-        val overrideDepsByConf = overrideDepsPerProjectForConfigurations[uniqueProjectKey(project)]
-        overrideDepsByConf!![conf.name] = overrideDeps
+        if (!isolatedProjectsSupportEnabled) {
+            val overrideDepsByConf = overrideDepsPerProjectForConfigurations[uniqueProjectKey(project)]
+            overrideDepsByConf!![conf.name] = overrideDeps
+        }
     }
 
     private fun lockConfiguration(conf: Configuration, selectorKeys: List<ModuleVersionSelectorKey>) {

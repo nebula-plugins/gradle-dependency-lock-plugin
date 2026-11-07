@@ -33,6 +33,20 @@ import org.gradle.api.tasks.diagnostics.DependencyReportTask
  */
 object ReportingTasks {
 
+    /** Strip built-in dependency report options before classifying requested task names. */
+    internal fun withoutReportOptions(arguments: List<String>): List<String> = buildList {
+        val iter = arguments.iterator()
+        while (iter.hasNext()) {
+            val argument = iter.next()
+            when {
+                argument == "--configuration" || argument == "--dependency" -> if (iter.hasNext()) iter.next()
+                argument.startsWith("--configuration=") || argument.startsWith("--dependency=") -> Unit
+                argument == "--single-path" || argument == "--all-variants" -> Unit
+                else -> add(argument)
+            }
+        }
+    }
+
     /**
      * Task names treated as reporting-only by the name-based overload.
      * Align with Gradle's default names: `dependencies`, `dependencyInsight`, and the common `dependenciesForAll` convention.
