@@ -23,6 +23,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.io.File
+import java.util.jar.JarOutputStream
 
 internal class IsolatedProjectsApplicationTest {
     @TempDir
@@ -128,16 +129,87 @@ internal class IsolatedProjectsApplicationTest {
 
     @ParameterizedTest
     @EnumSource(SupportedGradleVersion::class)
-    fun `automatic core migration is rejected before legacy files are rewritten`(gradle: SupportedGradleVersion) {
+    fun `core locking is rejected before requested tasks can modify lock files`(gradle: SupportedGradleVersion) {
         fixture(emptyList(), rootPlugin = true)
-        val legacy = projectDir.resolve("dependencies.lock").apply { writeText("legacy marker") }
-        val core = projectDir.resolve("gradle.lockfile").apply { writeText("core marker") }
-        val failure = run(
-            gradle, listOf("dependencies", "--write-locks"), core = true, expectFailure = true
+        val locks = mapOf(
+            "dependencies.lock" to "legacy marker",
+            "global.lock" to "global marker",
+            "gradle.lockfile" to "core marker",
+            "build/dependencies.lock" to "generated marker"
         )
-        assertThat(failure.output).contains("Automatic migration of legacy locks", "is not supported when")
-        assertThat(legacy.readText()).isEqualTo("legacy marker")
-        assertThat(core.readText()).isEqualTo("core marker")
+        locks.forEach { (path, contents) ->
+            projectDir.resolve(path).apply { parentFile.mkdirs(); writeText(contents) }
+        }
+        val requests = listOf(
+            listOf("help"),
+            listOf("dependencies", "--write-locks"),
+            listOf("dependencies", "--update-locks", "fixture:widget"),
+            listOf("generateLock", "saveLock")
+        )
+        for (isolated in listOf(false, true)) {
+            for (arguments in requests) {
+                val failure = run(gradle, arguments, isolated = isolated, core = true, expectFailure = true)
+                rejectedCore(failure)
+                assertThat(failure.tasks).isEmpty()
+                locks.forEach { (path, contents) ->
+                    assertThat(projectDir.resolve(path).readText()).isEqualTo(contents)
+                }
+            }
+        }
+        locks.keys.forEach { projectDir.resolve(it).delete() }
+        rejectedCore(run(gradle, listOf("dependencies", "--write-locks"), core = true, expectFailure = true))
+        locks.keys.forEach { assertThat(projectDir.resolve(it)).doesNotExist() }
+    }
+
+    @ParameterizedTest
+    @EnumSource(SupportedGradleVersion::class)
+    fun `core rejection invalidates cached child configuration and allows JSON rollback`(gradle: SupportedGradleVersion) {
+        fixture(listOf("child"))
+        val arguments = listOf(":child:help")
+        for (isolated in listOf(false, true)) {
+            stored(run(gradle, arguments, isolated = isolated))
+            reused(run(gradle, arguments, isolated = isolated))
+            repeat(2) {
+                rejectedCore(run(gradle, arguments, isolated = isolated, core = true, expectFailure = true))
+            }
+            run(gradle, arguments, isolated = isolated)
+            reused(run(gradle, arguments, isolated = isolated))
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(SupportedGradleVersion::class)
+    fun `native locking remains available with experimental flag absent or false`(gradle: SupportedGradleVersion) {
+        fixture(emptyList(), rootPlugin = true)
+        val module = projectDir.resolve("repo/fixture/widget/1.0").apply { mkdirs() }
+        module.resolve("widget-1.0.pom").writeText(
+            "<project><modelVersion>4.0.0</modelVersion><groupId>fixture</groupId><artifactId>widget</artifactId><version>1.0</version></project>"
+        )
+        JarOutputStream(module.resolve("widget-1.0.jar").outputStream()).use { }
+        projectDir.resolve("build.gradle").appendText("""
+
+            repositories { maven { url = uri('repo') } }
+            dependencies { implementation 'fixture:widget:1.0' }
+        """.trimIndent())
+        val report = listOf("dependencies", "--configuration", "runtimeClasspath")
+        for (enabled in listOf(null, false)) {
+            for (arguments in listOf(report + "--write-locks", report + listOf("--update-locks", "fixture:widget"), report)) {
+                val result = run(gradle, arguments, enabled = enabled, isolated = false, core = true, configurationCache = false)
+                assertThat(result.output).contains("BUILD SUCCESSFUL", "fixture:widget:1.0")
+                    .doesNotContain("is not supported when")
+                assertThat(projectDir.resolve("gradle.lockfile").readText()).contains("fixture:widget:1.0=")
+                assertThat(projectDir.resolve("dependencies.lock")).doesNotExist()
+            }
+        }
+    }
+
+    private fun rejectedCore(result: BuildResult) {
+        assertThat(result.output).contains(
+            "nebula.features.coreLockingSupport=true is not supported when",
+            "nebula.dependency-lock.isolatedProjectsSupport=true",
+            "per-project JSON lock files only",
+            "Disable nebula.dependency-lock.isolatedProjectsSupport to continue using native Gradle locking"
+        ).doesNotContain("Generation task was unexpectedly configured", "Configuration cache problems found")
     }
 
     private fun fixture(children: List<String>, rootPlugin: Boolean = false) {
@@ -166,16 +238,19 @@ internal class IsolatedProjectsApplicationTest {
     private fun run(
         gradle: SupportedGradleVersion,
         arguments: List<String>,
-        enabled: Boolean = true,
+        enabled: Boolean? = true,
         isolated: Boolean = true,
         core: Boolean = false,
+        configurationCache: Boolean = true,
         expectFailure: Boolean = false
     ): BuildResult {
         val version = if (gradle == SupportedGradleVersion.GRADLE_9_2) "9.2.1" else GradleVersion.current().version
         val options = mutableListOf(
-            "--configuration-cache", "--configuration-cache-problems=fail", "--no-watch-fs", "--stacktrace", "--console=plain",
-            "-Dnebula.dependency-lock.isolatedProjectsSupport=$enabled", "-Dnebula.features.coreLockingSupport=$core"
+            if (configurationCache) "--configuration-cache" else "--no-configuration-cache",
+            "--configuration-cache-problems=fail", "--no-watch-fs", "--stacktrace", "--console=plain",
+            "-Dnebula.features.coreLockingSupport=$core"
         )
+        if (enabled != null) options.add("-Dnebula.dependency-lock.isolatedProjectsSupport=$enabled")
         if (isolated) options.add(
             if (GradleVersion.version(version) >= GradleVersion.version("9.7")) "--isolated-projects"
             else "-Dorg.gradle.unsafe.isolated-projects=true"

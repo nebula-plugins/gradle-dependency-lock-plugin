@@ -91,6 +91,13 @@ class DependencyLockPlugin @Inject constructor(
 
     private fun applyToProject(project: Project, isolatedProjectsSupportEnabled: Boolean) {
         if (isolatedProjectsSupportEnabled) {
+            if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
+                throw IsolatedProjectsSupport.unsupportedCustomization(
+                    "nebula.features.coreLockingSupport=true",
+                    "This experimental mode supports per-project JSON lock files only. " +
+                        "Disable nebula.dependency-lock.isolatedProjectsSupport to continue using native Gradle locking."
+                )
+            }
             LOGGER.info("${project.path}: isolatedProjectsSupport feature enabled (experimental)")
         }
         this.lockReader = DependencyLockReader(project)
@@ -158,9 +165,6 @@ class DependencyLockPlugin @Inject constructor(
 
             if (lockFile.exists()) {
                 if (startParameter.isWriteDependencyLocks) {
-                    if (isolatedProjectsSupportEnabled) {
-                        throw IsolatedProjectsSupport.unsupportedWorkflow("Automatic migration of legacy locks (${lockFile.absolutePath})")
-                    }
                     rewriteLocksUsingCoreLocking(project, lockFile)
                 } else {
                     val hasMigrationTask = hasMigrationTask(project)
