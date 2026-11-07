@@ -24,6 +24,7 @@ import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
 import nebula.plugin.dependencylock.utils.ConfigurationFilters
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencylock.utils.DependencyLockingPropertyLookup
+import nebula.plugin.dependencylock.utils.IsolatedProjectsSupport
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
@@ -213,7 +214,10 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
         val lockFilename = DependencyLockingPropertyLookup.findProperty(project, DependencyLockPlugin.LOCK_FILE, isolatedProjectsSupportEnabled)?.toString() ?: "dependencies.lock"
         val globalLockFilename =
             DependencyLockingPropertyLookup.findProperty(project, DependencyLockPlugin.GLOBAL_LOCK_FILE, isolatedProjectsSupportEnabled)?.toString() ?: "global.lock"
-        val lockFile = if (File(project.rootProject.projectDir, globalLockFilename).exists()) File(project.rootProject.projectDir, globalLockFilename) else File(project.projectDir, lockFilename)
+        val rootDirectory = if (isolatedProjectsSupportEnabled) project.rootDir else project.rootProject.projectDir
+        val globalLockFile = File(rootDirectory, globalLockFilename)
+        if (isolatedProjectsSupportEnabled) IsolatedProjectsSupport.requireNoGlobalLock(globalLockFile)
+        val lockFile = if (globalLockFile.exists()) globalLockFile else File(project.projectDir, lockFilename)
         val lockData = readJsonMap(lockFile) ?: return emptyMap()
         return configurations.associate { conf ->
             val confLocks = lockData[conf.name] as? Map<*, *>
