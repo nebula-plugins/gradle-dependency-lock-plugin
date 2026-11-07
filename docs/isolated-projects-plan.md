@@ -281,12 +281,12 @@ Depends on: 3, 5, 6.
 
 ## 8. Finish root commit coordination for normal locks
 
-- [ ] Complete root-owned configuration through existing properties/ExecOperations.
-- [ ] Preserve ordering after selected participant saves using immutable identities
+- [x] Complete root-owned configuration through existing properties/ExecOperations.
+- [x] Preserve ordering after selected participant saves using immutable identities
   or explicit task paths; verify the chosen API on 9.2.1 before extending the DSL.
-- [ ] Preserve recursive normal-lock staging; document root patterns for custom
+- [x] Preserve recursive normal-lock staging; document root patterns for custom
   child filenames without reading child extensions.
-- [ ] Preserve explicit message/tag/retry settings and consumer task integrations.
+- [x] Preserve explicit message/tag/retry settings and consumer task integrations.
 
 Validation: disposable local Git repositories prove actual staged files, commit
 contents, explicit tags, and ordering in combined save/commit invocations. Child
@@ -296,6 +296,30 @@ representative local publication/lifecycle integration, and existing flag-off
 commit behavior. No Git side effects in the working repository or external hosts.
 
 Depends on: 3, 5, 6.
+
+Completed implementation: root's additive `commitDependencyLock.saveTaskPaths`
+list declares child save paths for ordering, without inspecting foreign tasks or
+selecting saves. Root save ordering remains automatic. Enabled default staging
+patterns contain only the normal-lock basename. Custom child basenames use the
+existing root task `patternsToCommit` property. A task-time Git helper uses
+`ExecOperations`, Git ignore rules, and exit status; it avoids private Groovy task
+dispatch and ignored generated files under build directories. Explicit annotated
+tags need no editor. No staged changes creates no commit; duplicate tags and
+commit failures remain failures. Flag-off execution is unchanged.
+
+Validation: 32 tests passed together on JDK 21 with no failures/retries: six new
+commit cases, ten application cases, 13 legacy configuration-avoidance cases,
+two commit-extension regressions, and the legacy commit test. Disposable local Git
+repositories on both Gradle versions prove selected nested child saves finish
+before root commit, actual committed files/bytes, custom recursive patterns,
+message/tag precedence, annotated tags, repeat/cache-hit behavior, duplicate-tag
+failures, additions/changes/deletions, ignored build files, successful hook stderr,
+and failing-hook exit status. Ordinary CC and strict IP both store/reuse.
+Local Maven publication retains consumer `dependsOn` integration. Standalone
+commit requests do not run saves/generation, even with declared child paths;
+selective participation excludes a project without the plugin. Child-only root
+ownership and lazy help remain covered by application tests. No remote Git
+operations or working-repository commits occur in fixtures.
 
 ## 9. Make unsupported customizations explicit
 
@@ -384,5 +408,5 @@ the specification's compatibility requirements:
 | 9.2.1-compatible immutable root directory and save presence input | 4 (resolved) | `project.rootDir` plus an enabled-only `InputFiles` conflict input; strict IP success and conflict correctness across reuse |
 | Public static-map downstream adoption | 5 (resolved) | APIs retained; enabled execution does not communicate through static maps; bounded indexed search found no downstream consumers |
 | Qualified/abbreviated task scope | 6 (resolved) | Immutable project hierarchy and invocation-directory scope plus local registered task names; no foreign mutable reads |
-| Root commit ordering mechanism | 8 | Selected saves finish first; no foreign task inspection or forced generation |
+| Root commit ordering mechanism | 8 (resolved) | Root save plus additive explicit child `saveTaskPaths`; no foreign task inspection or forced generation |
 | Detecting direct task filter/tag callback customization | 9 | Clear rejection before side effects; no silent cache-hit behavior change |

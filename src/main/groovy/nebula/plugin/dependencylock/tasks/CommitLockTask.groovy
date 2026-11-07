@@ -16,6 +16,7 @@
 package nebula.plugin.dependencylock.tasks
 
 import nebula.plugin.dependencylock.exceptions.DependencyLockException
+import nebula.plugin.dependencylock.utils.IsolatedLockFileCommitter
 import org.gradle.api.GradleException
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -55,6 +56,9 @@ abstract class CommitLockTask extends AbstractLockTask {
     @Optional
     abstract Property<Integer> getRemoteRetries()
 
+    @Input
+    abstract Property<Boolean> getIsolatedProjectsSupportEnabled()
+
     @Internal
     abstract Property<String> getRootDirPath()
 
@@ -63,12 +67,20 @@ abstract class CommitLockTask extends AbstractLockTask {
     @Inject
     CommitLockTask(ExecOperations execOperations) {
         this.execOperations = execOperations
+        isolatedProjectsSupportEnabled.convention(false)
     }
 
     @TaskAction
     void commit() {
         if(!commitMessage.isPresent() || !patternsToCommit.isPresent()) {
             //Not enough info to run this task
+            return
+        }
+        if (isolatedProjectsSupportEnabled.get()) {
+            if (remoteRetries.get() < 1) throw new DependencyLockException('Cannot commit locks: remoteRetries must be positive')
+            def committer = new IsolatedLockFileCommitter(execOperations, rootDirPath.get())
+            committer.commit(commitMessage.get(), patternsToCommit.get())
+            if (shouldCreateTag.getOrElse(false) && tag.isPresent()) committer.createTag(tag.get())
             return
         }
         commitLocks(commitMessage.get(), patternsToCommit.get())
@@ -138,6 +150,7 @@ abstract class CommitLockTask extends AbstractLockTask {
     void pull() {
         executeGitCommand( "pull")
     }
+
     private String executeGitCommand(Object... args) {
         ByteArrayOutputStream output = new ByteArrayOutputStream()
         ByteArrayOutputStream error = new ByteArrayOutputStream()

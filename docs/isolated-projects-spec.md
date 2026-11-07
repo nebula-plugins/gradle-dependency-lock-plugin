@@ -245,12 +245,33 @@ root patterns come from root configuration; custom child basenames require an
 explicit root `patternsToCommit` list or a shared filename convention. Root must
 not inspect child extensions to discover filenames.
 
-Express ordering against selected participant save tasks through supported task
-paths/immutable identities, without reading foreign task containers. If an explicit
-root task-path list is needed, document it and make it additive. Validate this
-approach on 9.2.1 before finalizing it. Commit must run after selected saves without
-implicitly requesting generation or saving. Preserve user-supplied local
+Root always orders its own save before commit. Configure absolute child save-task
+paths through the additive root `commitDependencyLock.saveTaskPaths` list when
+combining child saves with commit. Every listed task must exist; omit projects
+without the plugin. Gradle resolves these ordering paths without plugin access to
+foreign task containers. The list defaults to empty and does not select tasks.
+Commit must run after the declared saves when selected, without implicitly
+requesting generation or saving. Preserve user-supplied local
 `dependsOn`/`finalizedBy` integrations, including consumer publication wiring.
+
+```groovy
+// Root build.gradle, with the plugin applied to root and these participants.
+commitDependencyLock {
+    saveTaskPaths = [':libraries:lib:saveLock', ':tools:lib:saveLock']
+    message = 'Update dependency locks'
+}
+tasks.named('commitLock') {
+    // Basenames are matched recursively. Needed for custom child filenames.
+    patternsToCommit = ['dependencies.lock', 'custom.lock']
+}
+```
+
+The enabled Git implementation respects ignore rules while staging tracked and
+untracked normal locks recursively, including tracked deletions. No staged changes
+means no new commit. Explicit tags are annotated without invoking an editor;
+duplicate tags and Git failures remain build failures. Message/tag CLI precedence
+and the task's retry property remain available; local commits do not pull or push.
+Flag-off Git execution is unchanged.
 
 Tests use disposable local Git repositories and local remotes where necessary;
 they must not commit, tag, pull, or push the working repository.
