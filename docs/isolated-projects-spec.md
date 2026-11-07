@@ -216,6 +216,8 @@ remove them solely because they are callbacks. Avoid introducing eager resolutio
 Enabled mode must not initialize, read, or write the public static lock/override
 maps. Retain those maps and legacy behavior for flag-off consumers. Use local
 immutable lock/override snapshots as task parameters.
+Integrations that directly consume the legacy maps must keep the flag off until
+they adapt; enabled mode does not publish state through them.
 
 Use full project paths for state identities within the build-scoped verification
 service. If a future design shares state across builds, include build identity.

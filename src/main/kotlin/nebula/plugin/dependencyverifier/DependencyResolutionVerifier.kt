@@ -18,6 +18,7 @@
 
 package nebula.plugin.dependencyverifier
 
+import nebula.plugin.dependencylock.DependencyLockExtension
 import nebula.plugin.dependencylock.DependencyLockPlugin
 import nebula.plugin.dependencylock.DependencyLockReader
 import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
@@ -58,13 +59,17 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
         project.tasks.register("verifyDependencyResolution", DependencyVerificationTask::class.java)
 
     fun verifySuccessfulResolution(project: Project, verificationTask: TaskProvider<DependencyVerificationTask>) {
-        val projectKey = uniqueProjectKey(project)
+        val projectKey = if (isolatedProjectsSupportEnabled) project.path else uniqueProjectKey(project)
         val projectName = project.name
-        verificationService.get().initializeProject(projectKey)
+        if (!isolatedProjectsSupportEnabled) verificationService.get().initializeProject(projectKey)
         val configurationsToExclude = getConfigurationsToExclude(project)
         val shouldFailTheBuild = getShouldFailTheBuild(project)
         val tasksToExclude = extensionFromRoot.tasksToExcludeProperty.get()
-        val requestedTasks = project.gradle.startParameter.taskNames
+        // Gradle removes task options as it selects tasks. Capture one consistent intent before
+        // that mutation, shared by the task and FlowAction on both cache misses and hits.
+        val enabledRequestedTasks = if (isolatedProjectsSupportEnabled)
+            ReportingTasks.withoutReportOptions(project.gradle.startParameter.taskNames) else null
+        val requestedTasks = enabledRequestedTasks ?: project.gradle.startParameter.taskNames
         val allTasksExcluded = requestedTasks.isNotEmpty() && requestedTasks.all { taskName ->
             val simpleTaskName = taskName.substringAfterLast(':')
             tasksToExclude.contains(simpleTaskName) || tasksToExclude.contains(taskName)
@@ -115,6 +120,7 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
         verificationTask.configure { task ->
             task.usesService(verificationService)
             task.parameters.projectKey.set(projectKey)
+            task.parameters.isolatedProjectsSupportEnabled.set(isolatedProjectsSupportEnabled)
             task.parameters.projectName.set(projectName)
             task.parameters.shouldFailTheBuild.set(shouldFailTheBuild)
             task.parameters.missingVersionsMessageAddition.set(extensionFromRoot.missingVersionsMessageAdditionProperty)
@@ -129,13 +135,13 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
             }
             val effectiveLockValidation = extensionFromRoot.enableLockFileValidationProperty.get() && !ignoreLocks
             task.parameters.enableLockFileValidation.set(effectiveLockValidation)
-            task.parameters.taskNames.set(project.gradle.startParameter.taskNames.toList())
+            task.parameters.taskNames.set(enabledRequestedTasks ?: project.gradle.startParameter.taskNames.toList())
             task.parameters.coreAlignmentEnabled.set(
                 project.providers.systemProperty("nebula.features.coreAlignmentSupport").map { it.toBoolean() }.orElse(false)
             )
             task.parameters.coreLockingEnabled.set(DependencyLockingFeatureFlags.isCoreLockingEnabled())
             task.parameters.reportingOnlyBuild.set(
-                ReportingTasks.isReportingTasksOnly(project.gradle.startParameter.taskNames.toList())
+                ReportingTasks.isReportingTasksOnly(enabledRequestedTasks ?: project.gradle.startParameter.taskNames.toList())
             )
 
             val lockedDepsMap = readLockFileForConfigurations(project, resolvableConfigurations)
@@ -161,7 +167,7 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
             if (t.name in lifecycleNames) t.finalizedBy(verificationTask)
         }
 
-        registerFlowActionStrategy(project, projectKey)
+        registerFlowActionStrategy(project, projectKey, enabledRequestedTasks)
     }
 
     private fun <T> propertyOrExtension(project: Project, propName: String, default: T, parse: (String) -> T): T =
@@ -211,9 +217,13 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
         project: Project,
         configurations: List<Configuration>
     ): Map<String, Map<String, String>> {
-        val lockFilename = DependencyLockingPropertyLookup.findProperty(project, DependencyLockPlugin.LOCK_FILE, isolatedProjectsSupportEnabled)?.toString() ?: "dependencies.lock"
+        val localExtension = if (isolatedProjectsSupportEnabled)
+            project.extensions.getByType(DependencyLockExtension::class.java) else null
+        val lockFilename = DependencyLockingPropertyLookup.findProperty(project, DependencyLockPlugin.LOCK_FILE, isolatedProjectsSupportEnabled)?.toString()
+            ?: localExtension?.lockFileProperty?.get() ?: "dependencies.lock"
         val globalLockFilename =
-            DependencyLockingPropertyLookup.findProperty(project, DependencyLockPlugin.GLOBAL_LOCK_FILE, isolatedProjectsSupportEnabled)?.toString() ?: "global.lock"
+            DependencyLockingPropertyLookup.findProperty(project, DependencyLockPlugin.GLOBAL_LOCK_FILE, isolatedProjectsSupportEnabled)?.toString()
+                ?: localExtension?.globalLockFileProperty?.get() ?: "global.lock"
         val rootDirectory = if (isolatedProjectsSupportEnabled) project.rootDir else project.rootProject.projectDir
         val globalLockFile = File(rootDirectory, globalLockFilename)
         if (isolatedProjectsSupportEnabled) IsolatedProjectsSupport.requireNoGlobalLock(globalLockFile)
@@ -281,6 +291,8 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
             val arg = iter.next()
             if (arg == "--configuration" && iter.hasNext()) {
                 confNames.add(iter.next())
+            } else if (isolatedProjectsSupportEnabled && arg.startsWith("--configuration=")) {
+                confNames.add(arg.substringAfter('='))
             }
         }
         // dependencyInsight defaults to compileClasspath when no --configuration is given;
@@ -298,7 +310,7 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
      * Used only for reporting-only builds (e.g. dependencies, dependencyInsight): the task defers
      * reporting (throwOnFailures = false), and this FlowAction reads BuildService and fails or logs at the end.
      */
-    private fun registerFlowActionStrategy(project: Project, projectKey: String) {
+    private fun registerFlowActionStrategy(project: Project, projectKey: String, requestedTaskNames: List<String>?) {
         val projectName = project.name
         val shouldFailTheBuild = getShouldFailTheBuild(project)
         val lockMismatchMessage = extensionFromRoot.resolvedVersionDoesNotEqualLockedVersionMessageAdditionProperty.get()
@@ -309,7 +321,7 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
             spec.parameters.shouldFailTheBuild.set(shouldFailTheBuild)
             spec.parameters.lockMismatchMessage.set(lockMismatchMessage)
             spec.parameters.missingVersionsMessageAddition.set(extensionFromRoot.missingVersionsMessageAdditionProperty.get())
-            spec.parameters.requestedTaskNames.set(project.gradle.startParameter.taskNames.toList())
+            spec.parameters.requestedTaskNames.set(requestedTaskNames ?: project.gradle.startParameter.taskNames.toList())
             spec.parameters.buildResult.set(flowProviders.buildWorkResult)
             spec.parameters.verificationService.set(verificationService)
         }

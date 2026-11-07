@@ -27,8 +27,9 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Tracks verification state across projects; config-cache compatible, thread-safe.
- * State is cleared per project at the start of each build when [initializeProject] is called,
- * so the service does not leak stale failures across builds in the same daemon.
+ * State is cleared per project when [initializeProject] is called: at task execution in the
+ * opt-in isolated mode, or during configuration on the legacy path. Full project paths keep
+ * enabled participants independent, including projects with identical leaf names.
  * Uses only Java collection types for per-dependency sets (Collections.synchronizedSet(HashSet()), not
  * ConcurrentHashMap.newKeySet()) so the service is safe in Gradle workers (no kotlin.collections export).
  */

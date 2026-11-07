@@ -48,6 +48,9 @@ abstract class DependencyVerificationTask : DefaultTask() {
     fun verify() {
         val projName = parameters.projectName.get()
         val projKey = parameters.projectKey.get()
+        if (parameters.isolatedProjectsSupportEnabled.get()) {
+            verificationService.get().initializeProject(projKey)
+        }
         val resolutionResultsMap = parameters.resolutionResults.get()
         if (resolutionResultsMap.isEmpty()) return
 
