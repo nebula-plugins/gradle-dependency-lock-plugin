@@ -21,6 +21,7 @@ import nebula.plugin.dependencylock.model.LockValue
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencylock.utils.NameMatcher
+import nebula.plugin.dependencylock.utils.IsolatedProjectsSupport
 import nebula.plugin.dependencylock.validation.UpdateDependenciesValidator
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifier
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifierExtension
@@ -99,10 +100,9 @@ class DependencyLockPlugin @Inject constructor(
             DependencyVerificationBuildService::class.java
         ) {}
 
-        var dependencyResolutionVerifierExtension = project.rootProject.extensions.findByType(DependencyResolutionVerifierExtension::class.java)
-        if (dependencyResolutionVerifierExtension == null) {
-            dependencyResolutionVerifierExtension = project.rootProject.extensions.create(DEPENDENCY_RESOLUTION_VERIFIER_EXTENSION, DependencyResolutionVerifierExtension::class.java)
-        }
+        val verifierOwner = if (isolatedProjectsSupportEnabled) project else project.rootProject
+        val dependencyResolutionVerifierExtension = verifierOwner.extensions.findByType(DependencyResolutionVerifierExtension::class.java)
+            ?: verifierOwner.extensions.create(DEPENDENCY_RESOLUTION_VERIFIER_EXTENSION, DependencyResolutionVerifierExtension::class.java)
         lockedDepsPerProjectForConfigurations[uniqueProjectKey(project)] = mutableMapOf()
         overrideDepsPerProjectForConfigurations[uniqueProjectKey(project)] = mutableMapOf()
 
@@ -130,9 +130,12 @@ class DependencyLockPlugin @Inject constructor(
         }
 
         val extension = project.extensions.create(EXTENSION_NAME, DependencyLockExtension::class.java)
-        var commitExtension = project.rootProject.extensions.findByType(DependencyLockCommitExtension::class.java)
-        if (commitExtension == null) {
-            commitExtension = project.rootProject.extensions.create(COMMIT_EXTENSION_NAME, DependencyLockCommitExtension::class.java)
+        val commitExtension = if (isolatedProjectsSupportEnabled && project.path != ":") {
+            null
+        } else {
+            val commitOwner = if (isolatedProjectsSupportEnabled) project else project.rootProject
+            commitOwner.extensions.findByType(DependencyLockCommitExtension::class.java)
+                ?: commitOwner.extensions.create(COMMIT_EXTENSION_NAME, DependencyLockCommitExtension::class.java)
         }
         val overrides = lockReader.readOverrides(isolatedProjectsSupportEnabled)
         val globalLockFilename = project.findStringProperty(GLOBAL_LOCK_FILE, isolatedProjectsSupportEnabled)
@@ -150,6 +153,9 @@ class DependencyLockPlugin @Inject constructor(
 
             if (lockFile.exists()) {
                 if (startParameter.isWriteDependencyLocks) {
+                    if (isolatedProjectsSupportEnabled) {
+                        throw IsolatedProjectsSupport.unsupportedWorkflow("Automatic migration of legacy locks (${lockFile.absolutePath})")
+                    }
                     rewriteLocksUsingCoreLocking(project, lockFile)
                 } else {
                     val hasMigrationTask = hasMigrationTask(project)
@@ -229,7 +235,9 @@ class DependencyLockPlugin @Inject constructor(
         if(shouldIgnoreLock) {
             return
         }
-        val globalLock = File(project.rootProject.projectDir, globalLockFileName ?: extension.globalLockFileProperty.get())
+        val rootDirectory = if (isolatedProjectsSupportEnabled) project.rootDir else project.rootProject.projectDir
+        val globalLock = File(rootDirectory, globalLockFileName ?: extension.globalLockFileProperty.get())
+        if (isolatedProjectsSupportEnabled) IsolatedProjectsSupport.requireNoGlobalLock(globalLock)
         val dependenciesLock = if (globalLock.exists()) {
             globalLock
         } else {

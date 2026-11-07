@@ -26,6 +26,7 @@ import nebula.plugin.dependencylock.tasks.MigrateLockedDepsToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.plugin.dependencylock.tasks.UpdateLockTask
+import nebula.plugin.dependencylock.tasks.UnsupportedIsolatedLockingTask
 import nebula.plugin.dependencylock.utils.DependencyLockingPropertyLookup
 import org.gradle.api.GradleException
 import org.gradle.api.Project
@@ -97,7 +98,12 @@ class DependencyLockTaskConfigurer {
         TaskProvider<SaveLockTask> saveTask = configureSaveTask(lockFilename, genLockTask, updateLockTask, extension)
         createDeleteLock(saveTask)
 
-        configureMigrateToCoreLocksTask(extension)
+        if (isolatedProjectsSupportEnabled) {
+            registerUnsupportedTask(MIGRATE_TO_CORE_LOCKS_TASK_NAME)
+            registerUnsupportedTask(MIGRATE_LOCKED_DEPS_TO_CORE_LOCKS_TASK_NAME)
+        } else {
+            configureMigrateToCoreLocksTask(extension)
+        }
 
         TaskProvider<DiffLockTask> diffLockTask = configureDiffLockTask(lockFilename, extension)
 
@@ -105,21 +111,36 @@ class DependencyLockTaskConfigurer {
         TaskProvider<SaveLockTask> globalSave = null
         TaskProvider<GenerateLockTask> globalLockTask
         TaskProvider<UpdateLockTask> globalUpdateLock
-        if (project == project.rootProject && !isGlobalLockDisabled()) {
-            globalLockTask = project.tasks.register(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateLockTask)
-            configureGlobalLockTask(globalLockTask, globalLockFilename, extension, overrides)
+        boolean isRootProject = isolatedProjectsSupportEnabled ? project.path == ':' : project == project.rootProject
+        if (isRootProject && !isGlobalLockDisabled()) {
+            if (isolatedProjectsSupportEnabled) {
+                [GENERATE_GLOBAL_LOCK_TASK_NAME, UPDATE_GLOBAL_LOCK_TASK_NAME, SAVE_GLOBAL_LOCK_TASK_NAME, 'deleteGlobalLock'].each {
+                    registerUnsupportedTask(it)
+                }
+            } else {
+                globalLockTask = project.tasks.register(GENERATE_GLOBAL_LOCK_TASK_NAME, GenerateLockTask)
+                configureGlobalLockTask(globalLockTask, globalLockFilename, extension, overrides)
 
-            globalUpdateLock = project.tasks.register(UPDATE_GLOBAL_LOCK_TASK_NAME, UpdateLockTask)
-            configureGlobalLockTask(globalUpdateLock, globalLockFilename, extension, overrides)
+                globalUpdateLock = project.tasks.register(UPDATE_GLOBAL_LOCK_TASK_NAME, UpdateLockTask)
+                configureGlobalLockTask(globalUpdateLock, globalLockFilename, extension, overrides)
 
-            globalSave = configureGlobalSaveTask(globalLockFilename, globalLockTask, globalUpdateLock, extension)
+                globalSave = configureGlobalSaveTask(globalLockFilename, globalLockTask, globalUpdateLock, extension)
 
-            createDeleteGlobalLock(globalSave)
+                createDeleteGlobalLock(globalSave)
+            }
         }
 
-        configureCommitTask(lockFilename, globalLockFilename, saveTask, extension, commitExtension, globalSave)
+        if (!isolatedProjectsSupportEnabled || isRootProject) {
+            configureCommitTask(lockFilename, globalLockFilename, saveTask, extension, commitExtension, globalSave)
+        }
 
         lockFilename
+    }
+
+    private void registerUnsupportedTask(String taskName) {
+        project.tasks.register(taskName, UnsupportedIsolatedLockingTask) {
+            it.unsupportedWorkflow.set(taskName)
+        }
     }
 
     private File getProjectDirLockFile(String lockFilename, DependencyLockExtension extension) {
@@ -141,14 +162,15 @@ class DependencyLockTaskConfigurer {
     private void configureCommitTask(String clLockFileName, String globalLockFileName, TaskProvider<SaveLockTask> saveTask, DependencyLockExtension lockExtension,
                                      DependencyLockCommitExtension commitExtension, TaskProvider<SaveLockTask> globalSaveTask = null) {
         def hasCommitLockTask = false
+        def commitProject = isolatedProjectsSupportEnabled ? project : project.rootProject
         try {
-            project.rootProject.tasks.named(COMMIT_LOCK_TASK_NAME)
+            commitProject.tasks.named(COMMIT_LOCK_TASK_NAME)
             hasCommitLockTask = true // if there is not an exception, then the task exists
         } catch (UnknownTaskException ute) {
             LOGGER.debug("Task $COMMIT_LOCK_TASK_NAME is not in the root project.", ute.getMessage())
         }
         if (!hasCommitLockTask) {
-            TaskProvider<CommitLockTask> commitTask = project.rootProject.tasks.register(COMMIT_LOCK_TASK_NAME, CommitLockTask)
+            TaskProvider<CommitLockTask> commitTask = commitProject.tasks.register(COMMIT_LOCK_TASK_NAME, CommitLockTask)
             commitTask.configure {
                 it.mustRunAfter(saveTask)
                 if (globalSaveTask != null) {
@@ -173,7 +195,7 @@ class DependencyLockTaskConfigurer {
                     tagVal = commitExtension.tag.getOrElse("LockCommit-${new Date().format('yyyyMMddHHmmss')}")
                 }
                 tag.set(tagVal)
-                rootDirPath.set(project.rootProject.projectDir.absolutePath)
+                rootDirPath.set(commitProject.projectDir.absolutePath)
             }
         }
                                      }

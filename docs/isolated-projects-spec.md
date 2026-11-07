@@ -110,6 +110,10 @@ ordinary tasks and `help` still work. Preserve their public names and task types
 where possible without wiring the legacy implementation. Preserve existing names
 and behavior unchanged when the flag is off.
 
+Enabled excluded-task names use `UnsupportedIsolatedLockingTask`, whose sole action
+reports the unsupported workflow. Their legacy task types are retained with the
+flag off; configuring those legacy types is outside the enabled contract.
+
 If resolution would otherwise consume a global lock file, enabled mode must stop
 with a message identifying the file and explaining that the rollout supports
 per-project locks. Do not silently prefer individual locks. File presence checks

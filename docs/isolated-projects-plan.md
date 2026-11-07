@@ -103,14 +103,14 @@ by root ownership and peer-coordinate scanning until the next chunks.
 
 ## 3. Isolate plugin application and reject excluded workflows
 
-- [ ] Create a verifier extension in each enabled participant.
-- [ ] Give root sole ownership of commit extension/task registration; child
+- [x] Create a verifier extension in each enabled participant.
+- [x] Give root sole ownership of commit extension/task registration; child
   application never reads/writes root extensions or task containers.
-- [ ] Bypass legacy global/migration setup in enabled mode. Register lazy rejecting
+- [x] Bypass legacy global/migration setup in enabled mode. Register lazy rejecting
   task paths with actionable messages and preserve names/types where feasible.
-- [ ] Reject global-lock consumption and automatic legacy-to-core rewriting before
+- [x] Reject global-lock consumption and automatic legacy-to-core rewriting before
   changing resolution/files. Keep the flag-off engines intact.
-- [ ] Preserve lazy `help` and late plugin application behavior.
+- [x] Preserve lazy `help` and late plugin application behavior.
 
 Validation: enabled child-only and flat/nested application succeeds under strict
 IP, root stays untouched, and root-only application does not enroll children.
@@ -120,6 +120,18 @@ migration tests still pass with the flag off. Generation may still hit its
 separate peer-scan blocker until chunk 4.
 
 Depends on: 1, 2.
+
+Completed implementation: enabled participants own their verifier extensions;
+only root installs commit configuration. Excluded names use a serializable
+rejection task instead of instantiating the incompatible legacy task engines.
+Global consumption and automatic core rewrites fail before modifying files.
+
+Validation: 31 tests passed on JDK 21 across Gradle 9.2.1 and 9.7.1, including ten
+new application cases, eight property integration cases, and 13 legacy
+configuration-avoidance cases. New checks prove child-only root ownership, local
+verifier policy, flat/nested application, lazy generation, strict cache reuse,
+actionable excluded-task failures on cache hits, and unchanged marker files.
+Normal multi-project generation still needs chunk 4's peer-scan/save changes.
 
 ## 4. Make normal generation and saving isolated
 
