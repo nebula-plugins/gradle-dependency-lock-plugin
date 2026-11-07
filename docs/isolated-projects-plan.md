@@ -219,12 +219,12 @@ consumers. Enabled mode does not publish verification data through those maps.
 
 ## 6. Complete update, diff, delete, and task-selection behavior
 
-- [ ] Replace enabled-mode task-graph cache mutation with local rules that preserve
+- [x] Replace enabled-mode task-graph cache mutation with local rules that preserve
   changing/dynamic dependency freshness for generate/update.
-- [ ] Fix enabled requested-task scope using full project paths; preserve Gradle
+- [x] Fix enabled requested-task scope using full project paths; preserve Gradle
   selection semantics for simple, qualified, relative, and abbreviated selectors.
-- [ ] Validate update selection, overrides, diff output/options, and delete inputs.
-- [ ] Preserve generate/update-before-diff-before-save ordering without new implicit
+- [x] Validate update selection, overrides, diff output/options, and delete inputs.
+- [x] Preserve generate/update-before-diff-before-save ordering without new implicit
   generation dependencies.
 
 Validation: local-repository version changes prove update freshness; nested
@@ -234,6 +234,33 @@ flag off/on, and repeated delete workflows. Verify late configurations and plugi
 order without eager resolution or generation-task realization on `help`.
 
 Depends on: 4, 5.
+
+Completed implementation: enabled selection captures command-line intent and
+immutable project paths/directories, resolves project abbreviations against the
+hierarchy, and matches tasks against the owning project's registered names. It
+does not inspect foreign task containers or extensions. Generation and verification
+use the same project scope, including abbreviated generation requests. Enabled
+freshness rules run locally before resolution instead of mutating the task graph;
+they override consumer cache durations for generation/update and cover late
+configurations. Flag-off selection and task-graph behavior are unchanged.
+
+Enabled diff tracks generated lock contents as an input and wires resolution
+providers without capturing the project in a provider transform. Path-aware diff
+always reruns because graph paths can change independently of lock bytes. Normal
+diff can remain up to date; generation/update-before-diff-before-save ordering
+adds no task dependencies. Existing delete wiring passed without modification.
+
+Validation: 76 tests passed together on JDK 21: 14 new lock-task cases, 12 enabled
+verification cases, 13 legacy configuration-avoidance cases, ten update-validation
+cases, and 27 name-matching cases. Integration cases cover both Gradle versions
+with strict IP and cache storage/reuse. They prove dynamic generation and update
+freshness, changing-module refresh even after a consumer sets 24-hour caches,
+nested duplicate names, absolute/relative/abbreviated selectors and `-p`, mixed
+update/generate requests, scoped verification with abbreviated generation,
+selective updates/overrides, both diff modes and ordering, changed generated input
+on a cache hit, repeated custom-file deletion without generation, plugin order,
+late configurations, and help without resolution or lock task realization.
+Save-without-generation and conflict behavior remain covered by chunk 4.
 
 ## 7. Verify coexistence with normal core Gradle locking
 
@@ -356,6 +383,6 @@ the specification's compatibility requirements:
 | Local extras versus Gradle-property precedence and override-file base | 2 (resolved) | Local extras retain precedence and types; enabled reader and verifier use root-relative override files |
 | 9.2.1-compatible immutable root directory and save presence input | 4 (resolved) | `project.rootDir` plus an enabled-only `InputFiles` conflict input; strict IP success and conflict correctness across reuse |
 | Public static-map downstream adoption | 5 (resolved) | APIs retained; enabled execution does not communicate through static maps; bounded indexed search found no downstream consumers |
-| Qualified/abbreviated task scope | 6 | Correct participant, including nested duplicate names, without foreign mutable reads |
+| Qualified/abbreviated task scope | 6 (resolved) | Immutable project hierarchy and invocation-directory scope plus local registered task names; no foreign mutable reads |
 | Root commit ordering mechanism | 8 | Selected saves finish first; no foreign task inspection or forced generation |
 | Detecting direct task filter/tag callback customization | 9 | Clear rejection before side effects; no silent cache-hit behavior change |

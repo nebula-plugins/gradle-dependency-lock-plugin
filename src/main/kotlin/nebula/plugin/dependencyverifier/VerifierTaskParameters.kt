@@ -30,10 +30,14 @@ import org.gradle.api.tasks.Internal
 abstract class VerifierParameters {
     init {
         isolatedProjectsSupportEnabled.convention(false)
+        lockGenerationRequested.convention(false)
     }
 
     @get:Input
     abstract val isolatedProjectsSupportEnabled: Property<Boolean>
+
+    @get:Input
+    abstract val lockGenerationRequested: Property<Boolean>
 
     @get:Input
     abstract val projectKey: Property<String>

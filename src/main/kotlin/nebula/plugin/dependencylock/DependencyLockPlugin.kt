@@ -21,6 +21,7 @@ import nebula.plugin.dependencylock.model.LockValue
 import nebula.plugin.dependencylock.utils.CoreLockingHelper
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
 import nebula.plugin.dependencylock.utils.NameMatcher
+import nebula.plugin.dependencylock.utils.LockingTaskSelector
 import nebula.plugin.dependencylock.utils.IsolatedProjectsSupport
 import nebula.plugin.dependencylock.validation.UpdateDependenciesValidator
 import nebula.plugin.dependencyverifier.DependencyResolutionVerifier
@@ -82,6 +83,7 @@ class DependencyLockPlugin @Inject constructor(
     lateinit var lockReader: DependencyLockReader
     lateinit var lockUsed: String
     val reasons: MutableSet<String> = mutableSetOf()
+    private var enabledTaskSelector: LockingTaskSelector? = null
 
     override fun apply(project: Project) {
         applyToProject(project, DependencyLockingFeatureFlags.isIsolatedProjectsSupportEnabled(project))
@@ -143,6 +145,7 @@ class DependencyLockPlugin @Inject constructor(
         val globalLockFilename = project.findStringProperty(GLOBAL_LOCK_FILE, isolatedProjectsSupportEnabled)
         val lockFilename = project.findStringProperty(LOCK_FILE, isolatedProjectsSupportEnabled)
         DependencyLockTaskConfigurer(project, isolatedProjectsSupportEnabled).configureTasks(globalLockFilename, lockFilename, extension, commitExtension, overrides)
+        if (isolatedProjectsSupportEnabled) enabledTaskSelector = LockingTaskSelector(project)
         if (DependencyLockingFeatureFlags.isCoreLockingEnabled()) {
             LOGGER.info("${project.name}: coreLockingSupport feature enabled")
             val coreLockingHelper = CoreLockingHelper(project)
@@ -192,14 +195,26 @@ class DependencyLockPlugin @Inject constructor(
                 LOGGER.info("Applying dependency lock during plugin apply ($LOCK_AFTER_EVALUATING set to false)")
             }
 
-            // We do this twice to catch resolves that happen during build evaluation, and ensure that we clobber configurations made during evaluation
+            // Catch early resolution. Legacy mode also reapplies this after task graph selection.
             disableCachingForGenerateLock(project)
-            project.gradle.taskGraph.whenReady {
-                disableCachingForGenerateLock(project)
+            if (!isolatedProjectsSupportEnabled) {
+                project.gradle.taskGraph.whenReady {
+                    disableCachingForGenerateLock(project)
+                }
             }
 
             // Use configureEach for lazy configuration (avoids configuring unused configurations)
             project.configurations.configureEach { conf ->
+                if (isolatedProjectsSupportEnabled) {
+                    // Reapply locally just before resolution, after consumer cache policies and late
+                    // configuration. The rule is part of the configuration-cache resolution model.
+                    conf.incoming.beforeResolve {
+                        if (hasGenerationTask(project) && conf.state == Configuration.State.UNRESOLVED) {
+                            conf.resolutionStrategy.cacheDynamicVersionsFor(0, "seconds")
+                            conf.resolutionStrategy.cacheChangingModulesFor(0, "seconds")
+                        }
+                    }
+                }
                 if (lockAfterEvaluating) {
                     conf.incoming.beforeResolve {
                         if(conf.incoming == it) {
@@ -307,6 +322,7 @@ class DependencyLockPlugin @Inject constructor(
 
     private fun hasTask(project: Project,
                         taskNames: Collection<String>): Boolean {
+        enabledTaskSelector?.let { return it.hasTask(taskNames, project.tasks.names) }
         val matcher = NameMatcher()
         val found = project.gradle.startParameter.taskNames.find { cliTaskName ->
             val tokens = cliTaskName.split(":")
