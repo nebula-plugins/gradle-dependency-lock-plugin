@@ -26,7 +26,9 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
+          # Legacy test repositories publish artifacts with a Java 8 toolchain.
           java-version: |
+            8
             17
             21
             ${{ matrix.java }}
