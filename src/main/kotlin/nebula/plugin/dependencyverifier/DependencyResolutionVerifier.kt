@@ -19,9 +19,11 @@
 package nebula.plugin.dependencyverifier
 
 import nebula.plugin.dependencylock.DependencyLockPlugin
+import nebula.plugin.dependencylock.DependencyLockReader
 import nebula.plugin.dependencylock.DependencyLockTaskConfigurer
 import nebula.plugin.dependencylock.utils.ConfigurationFilters
 import nebula.plugin.dependencylock.utils.DependencyLockingFeatureFlags
+import nebula.plugin.dependencylock.utils.DependencyLockingPropertyLookup
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
@@ -41,11 +43,12 @@ const val UNRESOLVED_DEPENDENCIES_FAIL_THE_BUILD: String = "dependencyResolution
 const val CONFIGURATIONS_TO_EXCLUDE: String = "dependencyResolutionVerifier.configurationsToExclude"
 
 /** Verifies dependency resolution and lock file consistency; task + FlowAction for reporting-only builds; config-cache compatible. */
-class DependencyResolutionVerifier(
+class DependencyResolutionVerifier @JvmOverloads constructor(
     private val verificationService: Provider<DependencyVerificationBuildService>,
     private val extensionFromRoot: DependencyResolutionVerifierExtension,
     private val flowScope: FlowScope,
-    private val flowProviders: FlowProviders
+    private val flowProviders: FlowProviders,
+    private val isolatedProjectsSupportEnabled: Boolean = false
 ) {
 
     private val logger = Logging.getLogger(DependencyResolutionVerifier::class.java)
@@ -119,7 +122,7 @@ class DependencyResolutionVerifier(
             )
             task.parameters.configurationsToExclude.set(configurationsToExclude)
             val ignoreLocks = try {
-                DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project)
+                DependencyLockTaskConfigurer.shouldIgnoreDependencyLock(project, isolatedProjectsSupportEnabled)
             } catch (_: Exception) {
                 false
             }
@@ -161,7 +164,8 @@ class DependencyResolutionVerifier(
     }
 
     private fun <T> propertyOrExtension(project: Project, propName: String, default: T, parse: (String) -> T): T =
-        project.findProperty(propName)?.let { parse(it.toString()) } ?: default
+        DependencyLockingPropertyLookup.findProperty(project, propName, isolatedProjectsSupportEnabled)
+            ?.let { parse(it.toString()) } ?: default
 
     private fun getConfigurationsToExclude(project: Project): Set<String> =
         propertyOrExtension(project, CONFIGURATIONS_TO_EXCLUDE, extensionFromRoot.configurationsToExcludeProperty.get()) { str ->
@@ -206,9 +210,9 @@ class DependencyResolutionVerifier(
         project: Project,
         configurations: List<Configuration>
     ): Map<String, Map<String, String>> {
-        val lockFilename = project.findProperty(DependencyLockPlugin.LOCK_FILE)?.toString() ?: "dependencies.lock"
+        val lockFilename = DependencyLockingPropertyLookup.findProperty(project, DependencyLockPlugin.LOCK_FILE, isolatedProjectsSupportEnabled)?.toString() ?: "dependencies.lock"
         val globalLockFilename =
-            project.findProperty(DependencyLockPlugin.GLOBAL_LOCK_FILE)?.toString() ?: "global.lock"
+            DependencyLockingPropertyLookup.findProperty(project, DependencyLockPlugin.GLOBAL_LOCK_FILE, isolatedProjectsSupportEnabled)?.toString() ?: "global.lock"
         val lockFile = if (File(project.rootProject.projectDir, globalLockFilename).exists()) File(project.rootProject.projectDir, globalLockFilename) else File(project.projectDir, lockFilename)
         val lockData = readJsonMap(lockFile) ?: return emptyMap()
         return configurations.associate { conf ->
@@ -222,6 +226,12 @@ class DependencyResolutionVerifier(
         project: Project,
         configurations: List<Configuration>
     ): Map<String, Map<String, String>> {
+        if (isolatedProjectsSupportEnabled) {
+            // Match resolution's root-relative file, deprecated-format handling, and CLI overrides.
+            val overrides = DependencyLockReader(project).readOverrides(true)
+                .mapKeys { it.key.toString() }.mapValues { it.value.toString() }
+            return configurations.associate { it.name to overrides }
+        }
         val overridePath = project.findProperty(DependencyLockPlugin.OVERRIDE_FILE)?.toString() ?: return emptyMap()
         val overrideMap = readJsonMap(File(project.projectDir, overridePath))?.mapKeys { it.key.toString() }?.mapValues { it.value.toString() } ?: return emptyMap()
         return configurations.associate { conf -> conf.name to overrideMap }

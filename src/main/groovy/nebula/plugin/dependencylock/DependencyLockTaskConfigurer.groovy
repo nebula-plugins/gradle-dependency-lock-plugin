@@ -26,6 +26,7 @@ import nebula.plugin.dependencylock.tasks.MigrateLockedDepsToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.MigrateToCoreLocksTask
 import nebula.plugin.dependencylock.tasks.SaveLockTask
 import nebula.plugin.dependencylock.tasks.UpdateLockTask
+import nebula.plugin.dependencylock.utils.DependencyLockingPropertyLookup
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.UnknownTaskException
@@ -65,9 +66,19 @@ class DependencyLockTaskConfigurer {
     public static final Set<String> configurationsToSkipForGlobalLockPrefixes = ['checkstyle', 'findbugs', 'findbugsPlugins', 'jacocoAgent', 'jacocoAnt', 'spotbugs', 'spotbugsPlugins', 'zinc', 'pmd', 'resolutionRules', 'spotless', 'scalaToolchain']
 
     Project project
+    private final boolean isolatedProjectsSupportEnabled
 
     DependencyLockTaskConfigurer(Project project) {
+        this(project, false)
+    }
+
+    DependencyLockTaskConfigurer(Project project, boolean isolatedProjectsSupportEnabled) {
         this.project = project
+        this.isolatedProjectsSupportEnabled = isolatedProjectsSupportEnabled
+    }
+
+    private Object findLockProperty(String name) {
+        DependencyLockingPropertyLookup.findProperty(project, name, isolatedProjectsSupportEnabled)
     }
 
     private boolean isGlobalLockDisabled() {
@@ -144,7 +155,7 @@ class DependencyLockTaskConfigurer {
                     it.mustRunAfter(globalSaveTask)
                 }
                 // Resolve at config time so the task holds plain values (no provider chains for config cache)
-                String msg = project.findProperty('commitDependencyLock.message') as String
+                String msg = findLockProperty('commitDependencyLock.message') as String
                 if (msg == null) {
                     msg = commitExtension.message.getOrElse('Committing dependency lock files')
                 }
@@ -152,12 +163,12 @@ class DependencyLockTaskConfigurer {
                 patternsToCommit.set(getPatternsToCommit(clLockFileName, globalLockFileName, lockExtension))
                 remoteRetries.set(commitExtension.remoteRetries.get())
 
-                boolean createTag = project.findProperty('commitDependencyLock.tag') != null
+                boolean createTag = findLockProperty('commitDependencyLock.tag') != null
                 if (!createTag) {
                     createTag = commitExtension.shouldCreateTag.getOrElse(false)
                 }
                 shouldCreateTag.set(createTag)
-                String tagVal = project.findProperty('commitDependencyLock.tag') as String
+                String tagVal = findLockProperty('commitDependencyLock.tag') as String
                 if (tagVal == null) {
                     tagVal = commitExtension.tag.getOrElse("LockCommit-${new Date().format('yyyyMMddHHmmss')}")
                 }
@@ -259,7 +270,7 @@ class DependencyLockTaskConfigurer {
 
             // Set includeTransitives: gradle property overrides extension. Resolve at config time so the
             // task holds a plain value (no provider chain with non-serializable lambdas for config cache).
-            Boolean includeTransitives = project.findProperty('dependencyLock.includeTransitives')?.toString()?.toBoolean()
+            Boolean includeTransitives = findLockProperty('dependencyLock.includeTransitives')?.toString()?.toBoolean()
             if (includeTransitives == null) {
                 includeTransitives = extension.includeTransitivesProperty.getOrElse(false)
             }
@@ -274,7 +285,7 @@ class DependencyLockTaskConfigurer {
             // Wire properties for configuration cache compatibility (resolve at config time, no project-capturing providers)
             generateTask.projectDirectory.set(project.layout.projectDirectory)
             generateTask.globalLockFileName.set(extension.globalLockFileProperty)
-            generateTask.dependencyLockIgnored.set(shouldIgnoreDependencyLock(project))
+            generateTask.dependencyLockIgnored.set(shouldIgnoreDependencyLock(project, isolatedProjectsSupportEnabled))
 
             // Build resolution map at config time so the task does not hold provider chains that capture project.
             // Intentionally resolve configurationNames and skippedConfigurationNamesPrefixes here (not lazy) for config-cache compatibility.
@@ -419,10 +430,14 @@ class DependencyLockTaskConfigurer {
     }
 
     public static boolean shouldIgnoreDependencyLock(Project project) {
+        shouldIgnoreDependencyLock(project, false)
+    }
+
+    public static boolean shouldIgnoreDependencyLock(Project project, boolean isolatedProjectsSupportEnabled) {
         // Use provider that checks both gradle properties (-P) and project extras (ext)
         // This maintains backward compatibility with existing usage
         return project.providers.provider {
-            def prop = project.findProperty('dependencyLock.ignore')
+            def prop = DependencyLockingPropertyLookup.findProperty(project, 'dependencyLock.ignore', isolatedProjectsSupportEnabled)
             if (prop != null) {
                 // Handle both String and other types (Boolean, Integer, etc.)
                 return (prop instanceof String) ? prop.toBoolean() : prop.asBoolean()

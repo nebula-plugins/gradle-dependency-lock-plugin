@@ -171,11 +171,11 @@ from enabled mode; common settings must be supplied explicitly.
 
 Apply the lookup consistently to lock filenames, overrides, ignore settings,
 generation options, verifier settings, and commit settings. Preserve each setting's
-current path base, default, and extension precedence. In particular, characterize
-the reader's root-relative override-file interpretation and the verifier's current
-project-relative interpretation; resolve inconsistent paths explicitly and test
-that resolution and verification use the same intended override file in enabled
-mode. Do not change the legacy interpretation while doing so.
+current default and extension precedence. In enabled mode, resolve override files
+relative to the build root for both resolution and verification, matching the
+existing lock reader. Use the same parser and file-then-inline override precedence
+for both. Preserve the legacy verifier's project-relative interpretation when
+the flag is off.
 
 Track configuration-time file reads/presence through supported Gradle mechanisms.
 Wire execution-time inputs through task properties. Lock and override edits,
