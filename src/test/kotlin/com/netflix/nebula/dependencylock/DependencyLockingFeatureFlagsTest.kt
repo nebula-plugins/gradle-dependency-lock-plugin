@@ -87,6 +87,39 @@ internal class DependencyLockingFeatureFlagsTest {
         assertThat(projectDir.resolve("build/dependencies.lock").readText()).isEqualTo(lock)
     }
 
+    @ParameterizedTest
+    @EnumSource(SupportedGradleVersion::class)
+    fun `multi project rollout and rollback preserve locks with default filesystem watching`(gradle: SupportedGradleVersion) {
+        fixture()
+        projectDir.resolve("settings.gradle").appendText("include ':libraries:lib', ':tools:lib'\n")
+        for (path in listOf("libraries/lib", "tools/lib")) {
+            projectDir.resolve("$path/build.gradle").apply {
+                parentFile.mkdirs()
+                writeText("""
+                    plugins { id 'java-library'; id 'com.netflix.nebula.dependency-lock' }
+                    repositories { maven { url = uri('${projectDir.resolve("repo").toURI()}') } }
+                    dependencies { implementation 'fixture:widget:1.0' }
+                """.trimIndent())
+            }
+        }
+        var reference: Map<String, String>? = null
+        for ((value, isolated) in listOf("false" to false, "true" to false, "true" to true, "false" to false)) {
+            fun execute() = run(gradle, "saveLock", value, isolated,
+                additionalTasks = listOf("generateLock", "--parallel"), defaultWatching = true)
+            execute()
+            execute() // Saved-file presence may invalidate the entry created before the first save.
+            val cached = execute()
+            assertThat(cached.output).contains("Reusing configuration cache", "Configuration cache entry reused")
+            val saved = listOf("dependencies.lock", "libraries/lib/dependencies.lock", "tools/lib/dependencies.lock")
+                .associateWith { projectDir.resolve(it).readText() }
+            if (reference == null) reference = saved
+            assertThat(saved).isEqualTo(reference)
+            for (path in saved.keys) {
+                assertThat(ObjectMapper().readTree(saved.getValue(path))["runtimeClasspath"]["fixture:widget"]["locked"].asText()).isEqualTo("1.0")
+            }
+        }
+    }
+
     private fun fixture() {
         projectDir.resolve("settings.gradle").writeText("rootProject.name = 'flag-fixture'\n")
         projectDir.resolve("gradle.properties").writeText(
@@ -114,17 +147,20 @@ internal class DependencyLockingFeatureFlagsTest {
         gradle: SupportedGradleVersion,
         task: String,
         value: String? = null,
-        isolated: Boolean = false
+        isolated: Boolean = false,
+        additionalTasks: List<String> = emptyList(),
+        defaultWatching: Boolean = false
     ): BuildResult {
         val version = when (gradle) {
             SupportedGradleVersion.GRADLE_9_2 -> "9.2.1"
             SupportedGradleVersion.CURRENT -> GradleVersion.current().version
         }
-        val arguments = mutableListOf(
-            task, "--configuration-cache", "--configuration-cache-problems=fail",
-            "--no-watch-fs", "--console=plain", "--stacktrace", "--info",
+        val arguments = (listOf(task) + additionalTasks + listOf(
+            "--configuration-cache", "--configuration-cache-problems=fail",
+            "--console=plain", "--stacktrace", "--info",
             "-Dnebula.features.coreLockingSupport=false"
-        )
+        )).toMutableList()
+        if (!defaultWatching) arguments.add("--no-watch-fs")
         if (value != null) arguments.add("-Dnebula.dependency-lock.isolatedProjectsSupport=$value")
         if (isolated) arguments.add(
             if (GradleVersion.version(version) >= GradleVersion.version("9.7")) "--isolated-projects"

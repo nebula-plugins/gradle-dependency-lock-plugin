@@ -2,8 +2,9 @@
 
 Contract: [Specification](isolated-projects-spec.md).
 
-Status: implementation in progress. Baseline coverage is established; the new
-mode remains experimental while isolation changes are implemented. Each numbered
+Status: chunks 0–6, 8, and 9 are implemented. Core coexistence (7) and final
+release validation (10) remain incomplete. The new mode stays experimental and
+off by default. Each numbered
 chunk is intended as one small PR or reviewable commit. Split a chunk further
 when it changes unrelated behavior.
 Dependencies below determine order; independent chunks may be reordered without
@@ -279,6 +280,16 @@ for this chunk.
 
 Depends on: 3, 5, 6.
 
+Investigation status: single-project native consume/write/selective-update checks
+pass, but parallel native writes intermittently omit a participant lock file on
+both versions, including in a fixture without this plugin. The
+[standalone reproducer](reproducers/native-lock-writes/README.md) records the
+observation without claiming an exact cause. Local configuration timing changes
+did not eliminate it. Chunk 7 and native release acceptance remain incomplete;
+successful retries must not be counted as persistence compatibility.
+The timing proposal and exploratory TestKit probes are saved separately from the
+normal-lock implementation; they are not shipped as acceptance tests.
+
 ## 8. Finish root commit coordination for normal locks
 
 - [x] Complete root-owned configuration through existing properties/ExecOperations.
@@ -362,12 +373,12 @@ the commit suite.
 
 - [ ] Run all enabled normal-lock/core/commit acceptance cases on 9.2.1 and the
   wrapper, with ordinary CC and strict IP.
-- [ ] Run absent/false regression coverage and repeat off/on/off transitions after
+- [x] Run absent/false regression coverage and repeat off/on/off transitions after
   the full wiring exists; compare deterministic output bytes and failures.
-- [ ] Exercise default filesystem watching, supported JDK selection, DSL variants,
+- [x] Exercise default filesystem watching, supported JDK selection, DSL variants,
   parallel configuration, and repeated same-daemon builds.
 - [ ] Run the full repository suite/check tasks and existing CI JDK matrix.
-- [ ] Add README/wiki-facing opt-in, local-convention, root-commit, exclusion, and
+- [x] Add README/wiki-facing opt-in, local-convention, root-commit, exclusion, and
   rollback guidance. No format conversion or default-on change.
 - [ ] Replace only resolved blocker characterizations; retain explicit rejection
   tests for global/migration/customization boundaries.
@@ -380,6 +391,29 @@ Run the full suite once per final candidate, repeating only for new changes or
 failures. Release is gated on this chunk, with the flag still off by default.
 
 Depends on: 0–9.
+
+Partial final validation: the full JDK 21 workspace build passed plugin validation,
+architecture checks, and 565 tests, with seven pre-existing skips and no failures
+or retries. That workspace also included six exploratory core cases, which passed
+in this run but are not landed as reliable acceptance coverage. The independent
+standalone Gradle 9.7.1 reproducer then omitted `tools/lib/gradle.lockfile` on its
+first run despite a successful build, without this plugin applied. Core remains
+an open release gate.
+
+The normal-lock acceptance matrix passed all 120 selected cases separately on
+JDK 17 and JDK 25, with zero failures, skips, or retries. The same cases pass in the
+JDK 21 build. Six assessment cases deliberately characterize legacy flag-off
+isolation blockers; they do not establish compatibility. Enabled cases cover
+both target Gradle versions, ordinary CC/strict IP as described in each chunk,
+parallel duplicate project names, Groovy/Kotlin DSL, and same-daemon flag changes.
+The added multi-project rollout test uses default filesystem-watching settings,
+checks cache reuse after inputs stabilize in each mode, and compares saved bytes
+through false → true/ordinary CC → true/strict IP → false transitions.
+
+The full repository suite has not been run on JDK 17 or 25, and the complete native
+coexistence/ordinary-CC acceptance gate is still open. The adoption guide describes
+these limits. No release/default-on decision is made by the passing normal-lock
+matrix.
 
 ## Commands and evidence
 
@@ -408,6 +442,23 @@ Add `--isolated-projects` on 9.7.1, or
 set `-Dnebula.features.coreLockingSupport=true` instead. Put the new flag in root
 fixture `gradle.properties` for persistent-adoption tests and use `-D` for toggle
 tests. Include flag-off controls; no extra property alias is implied.
+
+Normal-lock acceptance matrix (run separately with `JDK_VERSION_FOR_TESTS=17`
+and `JDK_VERSION_FOR_TESTS=25` using the existing test-launcher convention):
+
+```shell
+./gradlew test \
+  --tests '*DependencyLockingFeatureFlagsTest' \
+  --tests '*ProjectLocalLockingPropertiesTest' \
+  --tests '*IsolatedProjectsApplicationTest' \
+  --tests '*IsolatedProjectsAssessmentTest' \
+  --tests '*IsolatedProjectsGenerationTest' \
+  --tests '*IsolatedProjectsVerificationTest' \
+  --tests '*IsolatedProjectsLockTasksTest' \
+  --tests '*IsolatedProjectsCommitTest' \
+  --tests '*IsolatedProjectsCustomizationTest' \
+  --console=plain
+```
 
 Record the tested revision, Gradle/JDK versions, assertions exercised, store/reuse
 results, changed-input results, and remaining exclusions in each PR. Final checks:
