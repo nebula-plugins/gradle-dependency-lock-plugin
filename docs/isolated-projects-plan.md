@@ -135,13 +135,13 @@ Normal multi-project generation still needs chunk 4's peer-scan/save changes.
 
 ## 4. Make normal generation and saving isolated
 
-- [ ] Omit peer-coordinate scanning on the enabled ResolutionResult path; keep a
+- [x] Omit peer-coordinate scanning on the enabled ResolutionResult path; keep a
   safe convention for the public property and retain legacy configuration callers.
-- [ ] Replace normal save/global-conflict path wiring with immutable root-directory
+- [x] Replace normal save/global-conflict path wiring with immutable root-directory
   identity supported on both target Gradle versions.
-- [ ] Preserve project-dependency/transitive metadata, configuration selection,
+- [x] Preserve project-dependency/transitive metadata, configuration selection,
   output locations, current generation rerun behavior, and explicit save ordering.
-- [ ] Make conflict-file presence affect save correctness even when normal outputs
+- [x] Make conflict-file presence affect save correctness even when normal outputs
   would otherwise be up to date.
 
 Validation: root-only, child-only, flat and nested generate/save workflows store
@@ -152,6 +152,23 @@ hits. Convert the corresponding assessment blockers to positive enabled cases;
 retain disabled-mode characterization separately.
 
 Depends on: 2, 3.
+
+Completed implementation: enabled generation leaves the unused peer-coordinate
+property at an empty convention. Normal save uses `project.rootDir` plus the
+configured global filename and tracks the possibly absent conflict file with an
+`InputFiles` collection. It rejects conflicts even when global tasks are disabled,
+with guidance appropriate to the enabled mode. Flag-off wiring is unchanged.
+
+Validation: 68 distinct tests passed on JDK 21 across Gradle 9.2.1 and 9.7.1,
+in sequential runs: 48 assessment cases, four generation/save cases, 13 legacy
+configuration-avoidance cases, and three legacy save regressions. The expanded
+assessment has 42 positive cases and six deliberate flag-off isolation blockers.
+Enabled root-only, child-only, flat and nested generation/save store and reuse;
+sibling changes invalidate resolution and change saved locks. Focused tests prove
+custom filenames, selected configurations, transitive/override metadata, explicit
+save ordering without generation dependencies, and conflict creation/deletion
+after an up-to-date save. A Groovy task-delegate property collision exposed by
+9.7.1 is avoided by capturing the mode before configuring the save task.
 
 ## 5. Isolate verification state and preserve failures
 
@@ -310,7 +327,7 @@ the specification's compatibility requirements:
 | Decision | Chunk | Required outcome |
 | --- | --- | --- |
 | Local extras versus Gradle-property precedence and override-file base | 2 (resolved) | Local extras retain precedence and types; enabled reader and verifier use root-relative override files |
-| 9.2.1-compatible immutable root directory and save presence input | 4 | Strict IP success and conflict correctness across reuse |
+| 9.2.1-compatible immutable root directory and save presence input | 4 (resolved) | `project.rootDir` plus an enabled-only `InputFiles` conflict input; strict IP success and conflict correctness across reuse |
 | Public static-map downstream adoption | 5 | APIs retained; enabled execution does not communicate through static maps |
 | Qualified/abbreviated task scope | 6 | Correct participant, including nested duplicate names, without foreign mutable reads |
 | Root commit ordering mechanism | 8 | Selected saves finish first; no foreign task inspection or forced generation |
