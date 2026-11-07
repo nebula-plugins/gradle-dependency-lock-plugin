@@ -83,6 +83,13 @@ class DependencyLockPlugin @Inject constructor(
     val reasons: MutableSet<String> = mutableSetOf()
 
     override fun apply(project: Project) {
+        applyToProject(project, DependencyLockingFeatureFlags.isIsolatedProjectsSupportEnabled(project))
+    }
+
+    private fun applyToProject(project: Project, isolatedProjectsSupportEnabled: Boolean) {
+        if (isolatedProjectsSupportEnabled) {
+            LOGGER.info("${project.path}: isolatedProjectsSupport feature enabled (experimental)")
+        }
         this.lockReader = DependencyLockReader(project)
 
         // Register BuildService ONCE for the entire build (shared across all projects)
