@@ -4,7 +4,9 @@ Status: unresolved compatibility blocker, observed on Gradle 9.2.1 and 9.7.1
 with JDK 21. A successful isolated parallel build intermittently leaves one
 project's `gradle.lockfile` absent. The same symptom occurs without applying this
 plugin. This is evidence of a native Gradle interaction; its exact cause and an
-upstream fix have not been established.
+upstream fix have not been established. This investigation belongs to a native
+core-locking follow-up. The current experimental JSON-locking increment rejects
+the combination of its feature flag with `nebula.features.coreLockingSupport=true`.
 
 This fixture uses only the Java plugin, native dependency locking, and a generated
 local Maven repository. It does not apply or load this project's plugin.
@@ -45,12 +47,13 @@ should be inferred from the overall build exit status.
 
 The standalone command above reproduced this on 9.7.1 / JDK 21 on its first run:
 only `libraries/lib/gradle.lockfile` existed after `BUILD SUCCESSFUL`, while the
-tools report also resolved both modules. In contrast, all six exploratory
-TestKit core cases passed without retries in the latest full build. Both results
-are retained: one passing suite does not close this intermittent persistence gate.
+tools report also resolved both modules. An earlier full workspace build included
+six exploratory TestKit core cases that passed without retries. Those cases are
+not part of the current JSON-locking acceptance suite. Both observations are
+retained: one passing suite does not close this intermittent persistence gate.
 
 The project-local core configuration timing adjustment did not eliminate this
 symptom. Do not work around it with eager resolution, internal Gradle APIs,
 manual native-file writing, or relaxed isolation/cache settings. Native write
-compatibility remains a release gate in the specification until resolved or
-explicitly moved to a separate scope.
+compatibility is a gate for the native core-locking follow-up, outside the
+current JSON-locking increment.

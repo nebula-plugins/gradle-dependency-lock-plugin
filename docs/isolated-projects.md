@@ -1,11 +1,9 @@
 # Experimental Isolated Projects support
 
-The opt-in implementation is under development. Normal per-project JSON lock
-workflows have focused coverage on Gradle 9.2.1 and 9.7.1 with JDK 17, 21, and 25.
-Full release validation remains incomplete, including native Gradle lock-write
-compatibility and full-suite CI runs on JDK 17 and 25. See the
-[implementation plan](isolated-projects-plan.md)
-for the current evidence and remaining gates.
+This experimental increment supports normal per-project JSON lock workflows on
+Gradle 9.2.1 and 9.7.1. Full repository CI suites have passed on JDK 17, 21, and 25;
+the [implementation plan](isolated-projects-plan.md) records the validation for
+each candidate. Native core-locking coexistence is a separate follow-up.
 
 ## Enable the implementation
 
@@ -34,11 +32,14 @@ plugin's normal JSON locks, a strict 9.7.1 invocation is:
   --isolated-projects --configuration-cache --configuration-cache-problems=fail
 ```
 
-Continue using `nebula.features.coreLockingSupport` to select native Gradle
-locking where already configured. Parallel native writes currently have an
-[unresolved persistence blocker](reproducers/native-lock-writes/README.md), also
-reproduced without this plugin. Native compatibility is not established by the
-normal JSON-lock test results.
+Builds using `nebula.features.coreLockingSupport=true` must keep the new
+`nebula.dependency-lock.isolatedProjectsSupport` flag absent or false. Setting
+both to true fails during plugin application, including for `help`, before any
+lock files are read, written, or deleted. To keep using native Gradle locking,
+disable the new flag; this mode does not switch engines or convert formats.
+Native coexistence and the independent
+[parallel-write investigation](reproducers/native-lock-writes/README.md) are
+tracked separately from this JSON-locking increment.
 
 ## Configure participants locally
 
@@ -97,6 +98,8 @@ Global locks are not recommended. Enabled mode rejects global locking and
 migration tasks, global-lock consumption, and automatic JSON-to-native rewrites.
 Remove or migrate such usage through the existing implementation before opting
 in. The new mode does not convert lock formats.
+The combination with `nebula.features.coreLockingSupport=true` is rejected for
+all task requests. Native locking requires leaving the new flag off.
 
 Custom `dependencyFilter` and raw generation-task `filter` callbacks are rejected
 before changing lock outputs, including on cache reuse. Use `skippedDependencies`

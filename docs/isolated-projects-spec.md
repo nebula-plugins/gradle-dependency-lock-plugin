@@ -1,7 +1,7 @@
 # Opt-in Isolated Projects support
 
-Status: implementation in progress. See the implementation plan for completed
-chunks and remaining compatibility work.
+Status: experimental per-project JSON-locking increment. Native core-locking
+coexistence is a separate follow-up. See the implementation plan for validation.
 
 Source baseline: `6e103615c61def10d0fa116c4c67cdd76fd79be5`.
 
@@ -16,6 +16,9 @@ disabling the flag.
 
 Global locks are not recommended and are outside this migration. Root ownership
 of `commitLock` remains in scope because it commits ordinary per-project locks.
+This first increment supports the plugin's per-project JSON lock format. Native
+Gradle locking remains available through the existing implementation with the
+new flag disabled.
 
 ## Feature flag contract
 
@@ -72,6 +75,13 @@ property key. Existing feature-flag helpers and signatures remain intact.
 The flag stays disabled by default throughout the implementation sequence and
 release. Changing the default is a separate decision.
 
+When `nebula.features.coreLockingSupport=true` is also set, plugin application
+must fail immediately, before installing extensions, services, tasks, or locking
+rules. This applies to all requests, including `help`, with ordinary configuration
+caching or strict isolation. The error must explain the JSON-only scope and tell
+native-locking users to disable `nebula.dependency-lock.isolatedProjectsSupport`.
+Do not turn off their existing core-lock flag or convert/delete lock files.
+
 ## Supported workflows and boundaries
 
 The enabled mode targets the existing plugin ID,
@@ -86,14 +96,15 @@ In scope:
   handling through the existing FlowAction.
 - Root-owned `commitLock` for normal lock files, including existing message,
   explicit tag, retry, file-pattern, and ordering behavior.
-- Coexistence with existing per-project core Gradle locking: consume, write, and
-  update `gradle.lockfile` when `nebula.features.coreLockingSupport` is enabled.
-  The new flag must not switch locking engines or turn off that existing flag.
+- Explicit rejection of native core locking when both feature flags are enabled,
+  preserving native consume/write/update behavior when the new flag is off.
 - Property precedence, custom lock filenames, configuration selection, skipped
   dependencies, transitive handling, late configurations, and lazy task wiring.
 
 Out of scope:
 
+- Enabled-mode native `gradle.lockfile` consumption, writing, and updating;
+  coexistence with `nebula.features.coreLockingSupport` belongs to a follow-up.
 - Global-lock generation, update, save, deletion, and consumption.
 - `migrateToCoreLocks` and the existing `migrateLockeDepsToCoreLocks` task, including
   automatic rewriting/deletion of legacy files during migration.
@@ -121,10 +132,13 @@ must not read foreign mutable project state. Disabling the new flag restores the
 existing workflows for migration/removal. `dependencyLock.disableGlobalLock` must
 not be used to silently disregard an existing global lock during resolution.
 
-Core-lock coexistence is a release gate, not an assumption established by the
-existing assessment. Explicit migration requests and automatic legacy-lock
-rewrites remain rejected in enabled mode; existing diagnostics for conflicting
-legacy/core files must remain meaningful.
+The native boundary is a release gate for this increment: both flags enabled
+must fail before side effects, including after a cached JSON build. Disabling
+the core flag must restore the JSON path and its cache reuse; disabling the new
+flag must retain native locking. Native coexistence and the independent
+[parallel-write investigation](reproducers/native-lock-writes/README.md) are
+deferred together. Explicit migration requests remain rejected in enabled mode;
+existing flag-off diagnostics for conflicting legacy/core files stay intact.
 
 ## Project ownership and consumer adoption
 
@@ -312,7 +326,7 @@ positive compatibility tests establish support.
 | Projects | Single, root-only, child-only, selective participation, flat and nested duplicate leaf names |
 | Normal locks | Consume/generate/update/save/diff/delete, overrides, custom filenames/configurations, project transitives |
 | Verification | Success, missing module, lock mismatch, exclusions, warning-only policy, report/build/compile finalizers |
-| Core coexistence | Existing per-project consume/write/update with core flag on; existing errors for invalid combinations |
+| Native boundary | Both flags enabled reject before reading/changing locks or executing tasks; cached JSON builds cannot bypass rejection; absent/false experimental flag preserves native consume/write/update |
 | Commit | Root ownership, selected-save ordering, patterns, explicit tag, local Git behavior, consumer task wiring |
 | Inputs | File edits/create/delete, relevant properties, extension values, dependency scripts, configuration selection |
 | Lifecycle | Plugin order, late configurations, help laziness, qualified/abbreviated selectors, parallel projects |

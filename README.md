@@ -23,9 +23,9 @@ Refer to the [Gradle Plugin Portal](https://plugins.gradle.org/plugin/nebula.dep
 
 The project wiki contains the [full documentation](https://github.com/nebula-plugins/gradle-dependency-lock-plugin/wiki) for the plugin.
 
-Experimental opt-in work for Gradle Isolated Projects is described in the
-[adoption guide](docs/isolated-projects.md), with its current limitations and
-remaining release checks.
+Experimental opt-in Gradle Isolated Projects support for per-project JSON locks
+is described in the [adoption guide](docs/isolated-projects.md). Native core
+locking requires leaving this feature flag off.
 
 LICENSE
 =======

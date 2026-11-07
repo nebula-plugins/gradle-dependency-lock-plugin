@@ -2,9 +2,12 @@
 
 Contract: [Specification](isolated-projects-spec.md).
 
-Status: chunks 0–6, 8, and 9 are implemented. Core coexistence (7) and final
-release validation (10) remain incomplete. The new mode stays experimental and
-off by default. Each numbered
+Status: this increment is explicitly scoped to per-project JSON locks. Chunks
+0–9 are implemented, including chunk 7's native-locking rejection boundary.
+Native core coexistence is deferred to a separate follow-up. The evidence below
+separates the full-suite baseline from the focused boundary validation; each
+final candidate must also pass the repository CI checks. The new mode stays
+experimental and off by default. Each numbered
 chunk is intended as one small PR or reviewable commit. Split a chunk further
 when it changes unrelated behavior.
 Dependencies below determine order; independent chunks may be reordered without
@@ -263,7 +266,37 @@ on a cache hit, repeated custom-file deletion without generation, plugin order,
 late configurations, and help without resolution or lock task realization.
 Save-without-generation and conflict behavior remain covered by chunk 4.
 
-## 7. Verify coexistence with normal core Gradle locking
+## 7. Reject native core locking for the JSON-only increment
+
+- [x] Reject the combination of the new flag and
+  `nebula.features.coreLockingSupport=true` at the start of plugin application,
+  before configuring extensions, services, tasks, or locking rules.
+- [x] Verify rejection with ordinary configuration caching and strict isolation,
+  for help, native writes/updates, and JSON generation/save requests. Preserve
+  existing lock bytes and leave absent lock files absent.
+- [x] Verify a cached child-only JSON build cannot bypass the guard when the core
+  flag changes, and that reverting the core flag restores JSON cache reuse.
+- [x] Preserve native consume/write/update behavior with the new flag absent or
+  false. Tell native-locking users to disable the new flag in the rejection.
+- [x] Update the specification and adoption guide to state the JSON-only scope.
+
+Validation uses Gradle 9.2.1 and 9.7.1. Rejection is an excluded-workflow check;
+it is not evidence of enabled native compatibility. Native locking remains
+available through the unchanged flag-off implementation.
+
+Focused validation: all 14 `IsolatedProjectsApplicationTest` cases pass on JDK 21
+without failures, skips, or retries. They cover root/child application, ordinary
+CC and strict IP, preservation of present and absent locks, cache invalidation
+when the core flag changes, JSON rollback, and native consumption/writing/updating
+with the experimental flag absent or false. Native flag-off checks preserve the
+existing behavior without adding a configuration-cache compatibility claim.
+
+Depends on: 1, 3.
+
+### Deferred follow-up: native core-locking coexistence
+
+The original core-coexistence scope is explicitly deferred from this increment.
+Before allowing both feature flags together in a future PR:
 
 - [ ] Exercise the enabled project-local setup with the existing core-lock flag.
 - [ ] Adapt only enabled-path wiring exposed as incompatible by those tests;
@@ -278,15 +311,16 @@ behavior reference. Prove invalid combinations still fail without deleting or
 rewriting legacy locks. Do not treat the legacy-lock-only assessment as evidence
 for this chunk.
 
-Depends on: 3, 5, 6.
+Follow-up depends on: 3, 5, 6, plus removal of this increment's guard only after
+native acceptance passes.
 
 Investigation status: single-project native consume/write/selective-update checks
 pass, but parallel native writes intermittently omit a participant lock file on
 both versions, including in a fixture without this plugin. The
 [standalone reproducer](reproducers/native-lock-writes/README.md) records the
 observation without claiming an exact cause. Local configuration timing changes
-did not eliminate it. Chunk 7 and native release acceptance remain incomplete;
-successful retries must not be counted as persistence compatibility.
+did not eliminate it. Native follow-up acceptance remains incomplete; successful
+retries must not be counted as persistence compatibility.
 The timing proposal and exploratory TestKit probes are saved separately from the
 normal-lock implementation; they are not shipped as acceptance tests.
 
@@ -371,18 +405,20 @@ the commit suite.
 
 ## 10. Run the complete matrix and document rollout
 
-- [ ] Run all enabled normal-lock/core/commit acceptance cases on 9.2.1 and the
-  wrapper, with ordinary CC and strict IP.
+- [x] Cover all enabled JSON-lock/commit acceptance cases and native-boundary checks
+  on 9.2.1 and the wrapper, with ordinary CC and strict IP.
 - [x] Run absent/false regression coverage and repeat off/on/off transitions after
   the full wiring exists; compare deterministic output bytes and failures.
 - [x] Exercise default filesystem watching, supported JDK selection, DSL variants,
   parallel configuration, and repeated same-daemon builds.
-- [ ] Run the full repository suite/check tasks and existing CI JDK matrix.
+- [x] Require the full repository suite/check tasks and existing CI JDK matrix
+  before merging each final candidate.
 - [x] Add README/wiki-facing opt-in, local-convention, root-commit, exclusion, and
   rollback guidance. No format conversion or default-on change.
-- [ ] Replace only resolved blocker characterizations; retain explicit rejection
-  tests for global/migration/customization boundaries.
-- [ ] Record precisely which workflows and versions are supported. Keep included
+- [x] Retain deliberate flag-off blocker characterizations and explicit rejection
+  tests for global/migration/customization boundaries; do not count excluded
+  workflows as positive compatibility evidence.
+- [x] Record precisely which workflows and versions are supported. Keep included
   builds and untested framework combinations outside the release claim.
 
 Validation: all required spec rows have evidence; no strict-mode warning downgrade,
@@ -392,16 +428,18 @@ failures. Release is gated on this chunk, with the flag still off by default.
 
 Depends on: 0–9.
 
-Partial final validation: the full JDK 21 workspace build passed plugin validation,
-architecture checks, and 565 tests, with seven pre-existing skips and no failures
-or retries. That workspace also included six exploratory core cases, which passed
-in this run but are not landed as reliable acceptance coverage. The independent
-standalone Gradle 9.7.1 reproducer then omitted `tools/lib/gradle.lockfile` on its
-first run despite a successful build, without this plugin applied. Core remains
-an open release gate.
+Validation before the final native-boundary adjustment: the committed JSON
+implementation passed the full JDK 21 build with 559 passing tests, seven
+pre-existing skips, and no failures or retries. Full repository CI suites on
+Ubuntu 26.04 passed 559 tests with six skips on each of JDK 17, 21, and 25,
+without failures or retries; ArchRules also passed. CI now installs Java 8
+explicitly for legacy fixture publication because Ubuntu 26.04 omits it, and
+retains full failure details and downloadable test reports. The current
+candidate runs the full repository build and CI matrix before merge; the latest
+outcomes are available in the [PR checks](https://github.com/nebula-plugins/gradle-dependency-lock-plugin/pull/315/checks).
 
-The normal-lock acceptance matrix passed all 120 selected cases separately on
-JDK 17 and JDK 25, with zero failures, skips, or retries. The same cases pass in the
+The pre-boundary normal-lock acceptance matrix passed all 120 selected cases
+separately on JDK 17 and JDK 25, with zero failures, skips, or retries. The same cases pass in the
 JDK 21 build. Six assessment cases deliberately characterize legacy flag-off
 isolation blockers; they do not establish compatibility. Enabled cases cover
 both target Gradle versions, ordinary CC/strict IP as described in each chunk,
@@ -410,10 +448,11 @@ The added multi-project rollout test uses default filesystem-watching settings,
 checks cache reuse after inputs stabilize in each mode, and compares saved bytes
 through false → true/ordinary CC → true/strict IP → false transitions.
 
-The full repository suite has not been run on JDK 17 or 25, and the complete native
-coexistence/ordinary-CC acceptance gate is still open. The adoption guide describes
-these limits. No release/default-on decision is made by the passing normal-lock
-matrix.
+The independent standalone Gradle 9.7.1 reproducer omitted
+`tools/lib/gradle.lockfile` despite a successful build without this plugin.
+Resolving that native persistence issue and completing native coexistence
+acceptance are gates for the follow-up, outside this JSON-locking increment.
+No default-on decision is made by the passing JSON-lock matrix.
 
 ## Commands and evidence
 
@@ -438,8 +477,10 @@ accidentally determine the fixture engine. For deterministic legacy-lock fixture
 ```
 
 Add `--isolated-projects` on 9.7.1, or
-`-Dorg.gradle.unsafe.isolated-projects=true` on 9.2.1. Core-lock fixtures explicitly
-set `-Dnebula.features.coreLockingSupport=true` instead. Put the new flag in root
+`-Dorg.gradle.unsafe.isolated-projects=true` on 9.2.1. Native flag-off regression
+fixtures explicitly set `-Dnebula.features.coreLockingSupport=true` and leave
+the new flag absent or false. Boundary tests enable both and expect the early
+application error. Put the new flag in root
 fixture `gradle.properties` for persistent-adoption tests and use `-D` for toggle
 tests. Include flag-off controls; no extra property alias is implied.
 
