@@ -317,9 +317,12 @@ native acceptance passes.
 Investigation status: single-project native consume/write/selective-update checks
 pass, but parallel native writes intermittently omit a participant lock file on
 both versions, including in a fixture without this plugin. The
-[standalone reproducer](reproducers/native-lock-writes/README.md) records the
-observation without claiming an exact cause. Local configuration timing changes
-did not eliminate it. Native follow-up acceptance remains incomplete; successful
+[standalone investigation](reproducers/native-lock-writes/investigation.md) now
+traces a Gradle listener-registration race to missing native persistence
+callbacks, with a deterministic probe, queue trace, and candidate Gradle-side
+patch experiment. A reviewed upstream fix and a released supported baseline
+remain pending. Local configuration timing changes did not eliminate the
+symptom. Native follow-up acceptance remains incomplete; successful
 retries must not be counted as persistence compatibility.
 The timing proposal and exploratory TestKit probes are saved separately from the
 normal-lock implementation; they are not shipped as acceptance tests.

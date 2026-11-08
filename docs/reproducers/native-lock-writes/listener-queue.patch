@@ -1,0 +1,46 @@
+--- a/platforms/core-runtime/messaging/src/main/java/org/gradle/internal/event/DefaultListenerManager.java
++++ b/platforms/core-runtime/messaging/src/main/java/org/gradle/internal/event/DefaultListenerManager.java
+@@ -475,6 +475,10 @@
+             }
+
+             broadcasterLock.lock();
++
++            // A registration can queue while another registration owns the lock.
++            // Apply completed registrations before taking the dispatch snapshot.
++            applyQueuedOperations();
+
+             // Ensure we retrieve listeners while holding lock.
+             return getListeners(includeLogger);
+@@ -483,19 +487,24 @@
+         @Override
+         protected void endDispatch() {
+             try {
+-                synchronized (queuedOperations) {
+-                    if (!queuedOperations.isEmpty()) {
+-                        for (Runnable queuedOperation : queuedOperations) {
+-                            queuedOperation.run();
+-                        }
+-                        initLoggers();
+-                    }
+-                }
++                applyQueuedOperations();
+             } finally {
+                 broadcasterLock.unlock();
+             }
+         }
+
++        private void applyQueuedOperations() {
++            synchronized (queuedOperations) {
++                if (!queuedOperations.isEmpty()) {
++                    for (Runnable queuedOperation : queuedOperations) {
++                        queuedOperation.run();
++                    }
++                    queuedOperations.clear();
++                    initLoggers();
++                }
++            }
++        }
++
+         @Override
+         protected void assertMutable(String operation) {
+             // Since we perform locking when operating on listeners,

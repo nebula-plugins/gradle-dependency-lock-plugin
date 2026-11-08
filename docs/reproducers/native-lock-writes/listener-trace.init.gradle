@@ -1,0 +1,46 @@
+// Diagnostic only for Gradle 9.2.1/9.7.1: observes internal listener queues without changing them.
+import org.gradle.api.internal.GradleInternal
+import org.gradle.internal.build.BuildModelLifecycleListener
+import org.gradle.internal.event.ListenerManager
+
+class LockListenerTrace implements BuildModelLifecycleListener {
+    final Object manager
+
+    LockListenerTrace(Object manager) { this.manager = manager }
+
+    static Object value(Object target, String name) {
+        Class type = target.class
+        while (type != null) {
+            try {
+                def field = type.getDeclaredField(name)
+                field.accessible = true
+                return field.get(target)
+            } catch (NoSuchFieldException ignored) {
+                type = type.superclass
+            }
+        }
+        throw new IllegalArgumentException("No field $name on ${target.class.name}")
+    }
+
+    static String nativeIdentity(Object details) {
+        Object listener = value(details, 'listener')
+        def field = listener.class.declaredFields.find { it.type.name.endsWith('DependencyLockingProvider') }
+        if (field == null) return null
+        field.accessible = true
+        def provider = field.get(listener)
+        String identity = value(provider, 'context').toString()
+        return identity.startsWith("project '") ? identity : null
+    }
+
+    @Override
+    void beforeModelDiscarded(GradleInternal model, boolean failed) {
+        def broadcast = value(manager, 'broadcasters')[BuildModelLifecycleListener]
+        def all = value(manager, 'allListeners').values().collect { nativeIdentity(it) }.findAll { it }.sort()
+        def active = value(broadcast, 'listeners').collect { nativeIdentity(it) }.findAll { it }.sort()
+        def pending = value(broadcast, 'queuedOperations')
+        println "NATIVE_LISTENER_TRACE all=$all active=$active queued=${pending.size()} deferred=${all - active}"
+    }
+}
+
+def manager = gradle.services.get(ListenerManager)
+manager.addListener(new LockListenerTrace(manager))
