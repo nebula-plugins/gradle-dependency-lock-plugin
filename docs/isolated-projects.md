@@ -111,8 +111,30 @@ Compilation consumes the substituted project artifacts.
 Included projects have independent verifier policies even when their local paths
 are identical. Parallel dependency reports, failures, warnings, repairs, and lock
 updates are checked with strict isolation and configuration-cache reuse. The
-coverage does not establish cross-build commit ordering or included build-logic
-convention-plugin support.
+coverage does not establish cross-build commit ordering.
+
+## Included build-logic conventions
+
+With the feature flag enabled, an included `build-logic` build can supply the
+locally applied convention plugin through `pluginManagement { includeBuild(...) }`.
+Coverage on Gradle 9.2.1 and 9.7.1 includes Java binary convention plugins and
+precompiled Groovy and Kotlin script plugins. The convention applies the Java and
+dependency-lock plugins and configures their extensions on each consumer project.
+
+Declare the dependency-lock implementation as an `implementation` dependency of
+`build-logic`, so its plugin ID and extension types are available when compiling
+and applying the convention. Each participating project applies the convention
+explicitly. Root, projects without the convention, and the build-logic build
+itself are not enrolled automatically. Configure the feature flag for the
+invocation; the convention does not enable it implicitly.
+
+The tests cover conventional lock filenames with project-local overrides,
+generation/save, selective updates/diff, project dependencies and compilation,
+and verifier failures and repair. Editing and recompiling the convention
+invalidates cached consumers and updates their verifier guidance. These workflows
+run in parallel with strict isolation and configuration-cache reuse. The fixture
+uses an explicit build-logic dependency and disables TestKit plugin injection,
+exercising the convention's compilation and runtime classpath.
 
 ## Coordinate commits from root
 

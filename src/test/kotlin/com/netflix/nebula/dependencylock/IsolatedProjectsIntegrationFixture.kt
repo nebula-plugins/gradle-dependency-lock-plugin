@@ -18,7 +18,10 @@ import java.io.File
 import java.util.jar.JarOutputStream
 
 /** Real Gradle builds; external framework versions are pinned and changing test modules stay local. */
-internal class IsolatedProjectsIntegrationFixture(val directory: File) {
+internal class IsolatedProjectsIntegrationFixture(
+    val directory: File,
+    private val injectPluginClasspath: Boolean = true
+) {
     val repository: String = directory.resolve("repo").toURI().toString()
 
     init {
@@ -63,8 +66,9 @@ internal class IsolatedProjectsIntegrationFixture(val directory: File) {
         )
         if (isolated) options.add(if (GradleVersion.version(version) >= GradleVersion.version("9.7"))
             "--isolated-projects" else "-Dorg.gradle.unsafe.isolated-projects=true")
-        val runner = GradleRunner.create().withProjectDir(directory).withPluginClasspath()
+        val runner = GradleRunner.create().withProjectDir(directory)
             .withGradleVersion(version).withArguments(tasks + options)
+        if (injectPluginClasspath) runner.withPluginClasspath()
         return if (expectFailure) runner.buildAndFail() else runner.build()
     }
 
