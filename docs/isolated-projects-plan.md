@@ -5,6 +5,7 @@ Contract: [Specification](isolated-projects-spec.md).
 Status: this increment is explicitly scoped to per-project JSON locks. Chunks
 0–10 establish the initial rollout, including chunk 7's native-locking rejection
 boundary. Chunks 11–12 add framework integration coverage and composite support.
+Chunk 13 validates locally applied conventions supplied by included build-logic.
 Native core coexistence is deferred to a separate follow-up. The evidence below
 separates the full-suite baseline from the focused boundary validation; each
 final candidate must also pass the repository CI checks. The new mode stays
@@ -498,8 +499,37 @@ ArchRules, and `git diff --check` also passed. The full run checks the existing
 single-build selector, native rejection boundary, and flag-off regressions.
 The existing CI JDK 17/21/25 matrix remains a merge gate.
 
-This follow-up does not expand native/global locking or claim cross-build commit
-ordering or build-logic convention-plugin support.
+This composite increment did not expand native/global locking or cross-build
+commit ordering. Build-logic convention coverage follows separately in chunk 13.
+
+## 13. Test included build-logic convention plugins
+
+- [x] Compile and apply a Java binary convention plugin and precompiled Groovy
+  and Kotlin script plugins from `pluginManagement.includeBuild('build-logic')`.
+- [x] Declare the implementation under test as an explicit build-logic dependency
+  and disable TestKit plugin injection for the consumer.
+- [x] Apply Java and locking locally, configure managed lock/verifier properties,
+  override a conventional filename in one project, and retain an unenrolled
+  root/project/build-logic build.
+- [x] Exercise generation/save, selected configurations, project metadata and
+  compilation, abbreviated selective updates/diff, metadata freshness after
+  cache reuse, and unchanged sibling and unselected lock entries.
+- [x] Verify cached missing-version failures, convention-source recompilation and
+  changed guidance, repaired reports, and unchanged saved lock bytes.
+- [x] Pass all six convention/Gradle cases with parallel strict isolation and
+  cache reuse on each of JDK 17, 21, and 25, Gradle 9.2.1 and 9.7.1, with retries
+  disabled.
+- [x] Run the final repository build, including existing fixture regressions.
+
+Final repository validation on JDK 21: 589 tests passed, seven pre-existing
+skips, and no failures with retries disabled. Plugin validation, ArchRules, and
+`git diff --check` passed. All six new convention cases also passed separately on
+JDK 17 and JDK 25, without failures, skips, or retries.
+
+The focused cases required no production changes. The shared integration runner
+keeps TestKit injection enabled by default for existing tests; only this fixture
+opts out. Cross-build commit ordering and native/global locking remain outside
+this increment. The existing CI JDK matrix remains a merge gate.
 
 ## Commands and evidence
 

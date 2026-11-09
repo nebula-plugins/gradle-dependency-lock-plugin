@@ -172,8 +172,28 @@ execution, strict isolation, and cache reuse. Verify changed repository metadata
 custom lock filenames, exact/abbreviated task names, and substitution's
 `project: true` metadata. Their verifier policies, failures, warnings, and repairs
 must remain independent across cached dependency reports. Existing single-build
-and flag-off behavior must remain intact. Cross-build commit ordering and
-included build-logic convention plugins remain outside this coverage.
+and flag-off behavior must remain intact. Cross-build commit ordering remains
+outside this coverage.
+
+## Included build-logic convention coverage
+
+An included `build-logic` build supplies a convention through
+`pluginManagement.includeBuild`. Exercise a Java binary plugin, a precompiled
+Groovy script, and a precompiled Kotlin script on both target Gradle versions.
+Each convention must apply Java and dependency locking locally and configure
+managed lock/verifier properties. Compile it against an explicit dependency-lock
+implementation dependency, with TestKit plugin injection disabled in the consumer.
+
+Verify generation/save, conventional and locally overridden filenames,
+configuration selection, project-dependency metadata and compilation, selective
+updates/diff, and unchanged sibling lock bytes. Repeat writes and verification
+under parallel strict isolation with configuration-cache reuse. Missing-version
+reports must fail with convention-provided guidance on first and cached runs;
+changing the convention source must recompile it, invalidate cached consumers,
+and change that guidance. Removing the broken dependency must restore cached
+success without modifying lock files. Root, unenrolled projects, and build-logic
+itself must not gain lock tasks automatically. The feature flag stays explicit
+and off by default; this increment adds coverage without changing production APIs.
 
 ## Project ownership and consumer adoption
 
