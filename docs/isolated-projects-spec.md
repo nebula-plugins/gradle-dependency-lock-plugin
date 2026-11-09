@@ -140,6 +140,21 @@ flag must retain native locking. Native coexistence and the independent
 deferred together. Explicit migration requests remain rejected in enabled mode;
 existing flag-off diagnostics for conflicting legacy/core files stay intact.
 
+## Framework integration coverage
+
+Spring Boot 4.0.9 acceptance uses a real application and Java library with locally
+applied conventions. Native Gradle BOM locking, selective updates, diff/save, and
+dependency reports must store/reuse strict isolation entries. Executable JAR
+packaging and tests must pass with ordinary CC across flag-off/on/off transitions
+without rewriting saved lock files. Spring dependency-management 1.1.7 BOM imports
+are covered with ordinary CC.
+
+Do not claim strict isolation for Boot packaging/application tests or the Spring
+dependency-management plugin. Boot's cross-project coordinate reads are reproduced
+without this plugin; dependency-management also reads foreign mutable state.
+Retain strict error handling for supported workflows and document these external
+limits in the [adoption guide](isolated-projects.md#spring-boot-integration).
+
 ## Project ownership and consumer adoption
 
 Each participant applies the same plugin locally, directly or through a convention
