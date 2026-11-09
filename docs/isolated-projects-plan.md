@@ -454,6 +454,25 @@ Resolving that native persistence issue and completing native coexistence
 acceptance are gates for the follow-up, outside this JSON-locking increment.
 No default-on decision is made by the passing JSON-lock matrix.
 
+## 11. Exercise Spring Boot integration
+
+- [x] Use a real Boot application, a Java library project, and locally applied
+  conventions; resolve a pinned Boot 4.0.9 BOM and real test dependencies.
+- [x] Generate JSON locks, selectively update a local dynamic module, run diff
+  and save, and preserve project/transitive metadata and the sibling's locks.
+- [x] Store/reuse strict isolation entries for native-BOM locking and dependency
+  reporting, including unresolved dependency failure and repair.
+- [x] Package an executable JAR and run application tests with ordinary CC;
+  verify flag-off/on/off rollback preserves saved lock bytes.
+- [x] Exercise Spring dependency-management 1.1.7 BOM imports with ordinary CC.
+- [x] Reproduce Boot's packaging isolation violation without this plugin and
+  document that external boundary without weakening strict cache checks.
+
+Focused validation: six parameterized cases passed on JDK 21, across Gradle
+9.2.1 and 9.7.1. Two deliberately characterize Boot's independent isolation
+failure; they are not positive packaging-isolation evidence. Final repository
+regression validation is required alongside the composite follow-up.
+
 ## Commands and evidence
 
 Initial baseline, from the repository root:

@@ -61,6 +61,28 @@ requests: save does not generate locks automatically. Enabled verification does
 not publish state through the legacy public static lock/override maps; consumers
 that read those maps must adapt before adopting this mode.
 
+## Spring Boot integration
+
+Spring Boot 4.0.9 is exercised with a multi-project application and library on
+both target Gradle versions. With Gradle's native BOM support (`platform`), JSON
+generation, selective updates, diff/save, and dependency reports store and reuse
+strict Isolated Projects configuration-cache entries. Project dependencies keep
+their `project: true` metadata; external dependencies retain version locks.
+
+Executable `bootJar` packaging and application tests are covered with ordinary
+configuration caching, including switching the plugin flag off/on/off without
+rewriting saved locks. Strict isolation for those tasks is blocked by Spring
+Boot 4.0.9: its `BootJar` constructor reads other projects' group/version. A test
+reproduces that failure without the dependency-lock plugin applied. Task
+dependencies can realize `bootJar` even when requesting application tests.
+
+The `io.spring.dependency-management` 1.1.7 integration uses Boot's BOM import and
+is covered with ordinary configuration caching. That plugin also reads other
+projects' mutable state and parent properties, so strict isolation is not a
+supported combination. Prefer Gradle's native BOM support when adopting
+Isolated Projects, and keep isolation off for workflows blocked by the Spring
+plugins. These checks do not establish support for other framework versions.
+
 ## Coordinate commits from root
 
 Apply the plugin to root to get `commitDependencyLock` and `commitLock`. Child
