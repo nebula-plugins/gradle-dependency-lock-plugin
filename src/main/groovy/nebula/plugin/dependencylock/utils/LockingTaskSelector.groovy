@@ -16,6 +16,7 @@
 package nebula.plugin.dependencylock.utils
 
 import org.gradle.api.Project
+import org.gradle.StartParameter
 
 /** Immutable project identities and command-line intent; never reads foreign tasks or extensions. */
 class LockingTaskSelector {
@@ -25,14 +26,23 @@ class LockingTaskSelector {
     private final List<String> requestedTasks
 
     LockingTaskSelector(Project project) {
-        projectPath = project.path
-        requestedTasks = new ArrayList<>(project.gradle.startParameter.taskNames).asImmutable()
-        def directories = project.rootProject.allprojects.collectEntries { [(it.path): it.projectDir] }
+        // Command-line paths include the build identity for composite participants.
+        projectPath = project.buildTreePath
+        def invocation = invocationParameters(project)
+        requestedTasks = new ArrayList<>(invocation.taskNames).asImmutable()
+        def directories = project.rootProject.allprojects.collectEntries { [(it.buildTreePath): it.projectDir] }
         projectPaths = new LinkedHashSet<>(directories.keySet()).asImmutable()
-        def invocationDirectory = project.gradle.startParameter.currentDir.canonicalFile.toPath()
+        def invocationDirectory = invocation.currentDir.canonicalFile.toPath()
         invocationPath = directories.findAll { path, directory ->
             invocationDirectory.startsWith(directory.canonicalFile.toPath())
         }.max { it.value.canonicalFile.toPath().nameCount }?.key ?: ':'
+    }
+
+    /** Included builds have empty local task requests; read the immutable top-level CLI inputs. */
+    static StartParameter invocationParameters(Project project) {
+        def invocation = project.gradle
+        while (invocation.parent != null) invocation = invocation.parent
+        invocation.startParameter
     }
 
     boolean hasTask(Collection<String> taskNames, Collection<String> localTaskNames) {
@@ -41,7 +51,8 @@ class LockingTaskSelector {
             String taskName = new NameMatcher().find(tokens.last(), localTaskNames)
             if (taskName == null || !taskNames.contains(taskName)) return false
             if (tokens.size() == 1) {
-                return invocationPath == ':' || projectPath == invocationPath || projectPath.startsWith(invocationPath + ':')
+                return (invocationPath == ':' && projectPaths.contains(':')) ||
+                    projectPath == invocationPath || projectPath.startsWith(invocationPath + ':')
             }
             String selected = requested.startsWith(':') ? ':' : invocationPath
             for (String pattern : tokens.subList(requested.startsWith(':') ? 1 : 0, tokens.size() - 1)) {

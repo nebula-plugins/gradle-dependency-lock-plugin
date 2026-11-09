@@ -1,9 +1,10 @@
 # Experimental Isolated Projects support
 
 This experimental increment supports normal per-project JSON lock workflows on
-Gradle 9.2.1 and 9.7.1. Full repository CI suites have passed on JDK 17, 21, and 25;
-the [implementation plan](isolated-projects-plan.md) records the validation for
-each candidate. Native core-locking coexistence is a separate follow-up.
+Gradle 9.2.1 and 9.7.1. The initial JSON-locking release passed full repository CI
+on JDK 17, 21, and 25; the [implementation plan](isolated-projects-plan.md) records
+validation for each follow-up candidate. Native core-locking coexistence is a
+separate follow-up.
 
 ## Enable the implementation
 
@@ -45,8 +46,9 @@ tracked separately from this JSON-locking increment.
 
 Apply `com.netflix.nebula.dependency-lock` explicitly to each participating
 project, directly or through a convention plugin applied there. Applying it to
-root does not enroll children. Included builds must configure their own plugin
-application and flags; composite-build compatibility is outside this rollout.
+root does not enroll children. Participating projects in included builds must
+also configure their plugin application and flag explicitly; see the composite
+workflows below.
 
 Configure each project's lock and verifier extensions locally. Enabled lookup
 uses local extra properties before Gradle properties and does not inherit parent
@@ -82,6 +84,35 @@ projects' mutable state and parent properties, so strict isolation is not a
 supported combination. Prefer Gradle's native BOM support when adopting
 Isolated Projects, and keep isolation off for workflows blocked by the Spring
 plugins. These checks do not establish support for other framework versions.
+
+## Composite builds
+
+Normal JSON locking is covered with two included Java builds, each containing a
+`:lib` project, on Gradle 9.2.1 and 9.7.1. Apply the plugin and configure the lock
+filename, selected configurations, and verifier policy locally in each project.
+Main-build generation does not generate or update included-build locks.
+
+Request included-build lock tasks using their build-qualified paths, for example:
+
+```shell
+./gradlew :first-build:lib:updateLock :first-build:lib:diffLock :first-build:lib:saveLock \
+  -PdependencyLock.updateDependencies=example:library \
+  -Dnebula.features.coreLockingSupport=false \
+  -Dnebula.dependency-lock.isolatedProjectsSupport=true \
+  --isolated-projects --configuration-cache --configuration-cache-problems=fail
+```
+
+Exact task names and unambiguous task abbreviations are covered, including
+selective updates that preserve the other build's saved bytes and unselected
+dependency versions. Dependency substitution records included projects as
+`project: true`, while their external dependencies retain normal version locks.
+Compilation consumes the substituted project artifacts.
+
+Included projects have independent verifier policies even when their local paths
+are identical. Parallel dependency reports, failures, warnings, repairs, and lock
+updates are checked with strict isolation and configuration-cache reuse. The
+coverage does not establish cross-build commit ordering or included build-logic
+convention-plugin support.
 
 ## Coordinate commits from root
 
