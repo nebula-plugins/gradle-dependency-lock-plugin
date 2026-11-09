@@ -3,7 +3,8 @@
 Contract: [Specification](isolated-projects-spec.md).
 
 Status: this increment is explicitly scoped to per-project JSON locks. Chunks
-0–9 are implemented, including chunk 7's native-locking rejection boundary.
+0–10 establish the initial rollout, including chunk 7's native-locking rejection
+boundary. Chunks 11–12 add framework integration coverage and composite support.
 Native core coexistence is deferred to a separate follow-up. The evidence below
 separates the full-suite baseline from the focused boundary validation; each
 final candidate must also pass the repository CI checks. The new mode stays
@@ -471,7 +472,34 @@ No default-on decision is made by the passing JSON-lock matrix.
 Focused validation: six parameterized cases passed on JDK 21, across Gradle
 9.2.1 and 9.7.1. Two deliberately characterize Boot's independent isolation
 failure; they are not positive packaging-isolation evidence. Final repository
-regression validation is required alongside the composite follow-up.
+regression results are recorded with the composite follow-up below.
+
+## 12. Handle explicitly configured composite participants
+
+- [x] Reproduce included-build updates silently retaining the previous version:
+  the included build's local `StartParameter` has no requested tasks.
+- [x] Read top-level invocation inputs during configuration and match immutable
+  build-qualified project identities; leave the flag-off selector unchanged.
+- [x] Use the same invocation inputs for enabled reporting classification and
+  configuration scoping, preserving existing task/FlowAction behavior.
+- [x] Exercise two included Java builds with duplicate local `:lib` paths, custom
+  filenames, project substitution, and actual compilation of substituted APIs.
+- [x] Verify exact regeneration and abbreviated selective updates, changed
+  metadata after cache reuse, and unchanged unselected dependencies/builds.
+- [x] Verify independent report policies, warnings, strict failures, corrections,
+  and configuration-cache reuse under parallel strict isolation.
+- [x] Complete the full repository regression build for the final candidate.
+
+Final validation: the full `build` passed on JDK 21 with 583 passing tests,
+seven pre-existing skips, and no failures. A temporary init script disabled test
+retries. All ten new integration cases passed across Gradle 9.2.1 and 9.7.1;
+two characterize Boot's independent isolation failure. Plugin validation,
+ArchRules, and `git diff --check` also passed. The full run checks the existing
+single-build selector, native rejection boundary, and flag-off regressions.
+The existing CI JDK 17/21/25 matrix remains a merge gate.
+
+This follow-up does not expand native/global locking or claim cross-build commit
+ordering or build-logic convention-plugin support.
 
 ## Commands and evidence
 

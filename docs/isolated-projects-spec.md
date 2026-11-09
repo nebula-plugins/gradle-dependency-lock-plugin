@@ -60,8 +60,9 @@ property key. Existing feature-flag helpers and signatures remain intact.
   entry produced for a different effective mode. Reuse is allowed within one mode.
 - The system property selects one mode for participants within a build. Do not
   provide a project-extension override or promise mixed modes within that build.
-- Included builds must configure the flag and apply the plugin explicitly; do not
-  promise automatic propagation or composite-build support in this release.
+- Included builds must configure the flag and apply the plugin explicitly. The
+  composite follow-up covers qualified normal JSON locking and verification;
+  it does not enroll participants automatically.
 - This flag selects the plugin implementation; it does not enable Gradle Isolated
   Projects. Do not automatically opt in when Gradle isolation is enabled.
 
@@ -100,6 +101,8 @@ In scope:
   preserving native consume/write/update behavior when the new flag is off.
 - Property precedence, custom lock filenames, configuration selection, skipped
   dependencies, transitive handling, late configurations, and lazy task wiring.
+- Composite Java builds with explicitly configured participants, build-qualified
+  lock tasks, dependency substitution, and independent verifier policies.
 
 Out of scope:
 
@@ -154,6 +157,23 @@ dependency-management plugin. Boot's cross-project coordinate reads are reproduc
 without this plugin; dependency-management also reads foreign mutable state.
 Retain strict error handling for supported workflows and document these external
 limits in the [adoption guide](isolated-projects.md#spring-boot-integration).
+
+## Composite integration coverage
+
+Read the top-level invocation inputs during configuration: included builds have
+empty local task requests. Match requested lock tasks against immutable project
+paths that include the build identity. An included update/regeneration must
+release the selected constraints and preserve unselected dependencies and builds;
+main-build lock requests must not select included-build lock tasks.
+
+Two included Java builds with identical local `:lib` paths must generate,
+selectively update, diff, save, and consume their own JSON locks with parallel
+execution, strict isolation, and cache reuse. Verify changed repository metadata,
+custom lock filenames, exact/abbreviated task names, and substitution's
+`project: true` metadata. Their verifier policies, failures, warnings, and repairs
+must remain independent across cached dependency reports. Existing single-build
+and flag-off behavior must remain intact. Cross-build commit ordering and
+included build-logic convention plugins remain outside this coverage.
 
 ## Project ownership and consumer adoption
 

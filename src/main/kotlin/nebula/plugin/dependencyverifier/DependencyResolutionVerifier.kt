@@ -69,7 +69,7 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
         // Gradle removes task options as it selects tasks. Capture one consistent intent before
         // that mutation, shared by the task and FlowAction on both cache misses and hits.
         val enabledRequestedTasks = if (isolatedProjectsSupportEnabled)
-            ReportingTasks.withoutReportOptions(project.gradle.startParameter.taskNames) else null
+            ReportingTasks.withoutReportOptions(LockingTaskSelector.invocationParameters(project).taskNames) else null
         val requestedTasks = enabledRequestedTasks ?: project.gradle.startParameter.taskNames
         val lockGenerationRequested = isolatedProjectsSupportEnabled && LockingTaskSelector(project)
             .hasTask(DependencyLockPlugin.GENERATION_TASK_NAMES, project.tasks.names)
@@ -273,7 +273,8 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
      * time. No task objects, configuration objects, or execution-time state are captured.
      */
     private fun extractDependencyReportTaskConfigurationNames(project: Project): Set<String> {
-        val startParam = project.gradle.startParameter
+        val startParam = if (isolatedProjectsSupportEnabled) LockingTaskSelector.invocationParameters(project)
+            else project.gradle.startParameter
         // Lock-generation builds are never scoped to a --configuration: core lock writes verify every lock-enabled
         // configuration (see LockWriteVerification) and Nebula lock tasks verify every configuration.
         if (startParam.isWriteDependencyLocks || startParam.lockedDependenciesToUpdate.isNotEmpty()) {
