@@ -26,3 +26,11 @@ interface VerificationSink {
     fun recordFailedDependency(projectKey: String, dependency: String, configurationName: String)
     fun recordMismatchedVersion(projectKey: String, key: String, configurationName: String)
 }
+
+/**
+ * A [VerificationSink] that also receives the first line of Gradle's failure message for an unresolved dependency.
+ * Separate from [VerificationSink] so sinks compiled against earlier versions keep working.
+ */
+interface FailureCauseSink : VerificationSink {
+    fun recordFailureCause(projectKey: String, dependency: String, cause: String)
+}

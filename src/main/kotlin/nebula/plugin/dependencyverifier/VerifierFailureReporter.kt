@@ -27,9 +27,12 @@ import org.gradle.api.logging.Logger
  *
  * @param throwOnFailures When true, throw or log for both resolution failures and lock mismatches.
  * When false (e.g. task in reporting-only build), do nothing so [DependencyResolutionFlowAction] can report later.
+ * @param failureCauses Gradle's failure message per unresolved dependency, shown under each failure.
+ * @param lockStateKept True during a core lock write, to note that the failed configurations kept their lock state.
  */
 object VerifierFailureReporter {
 
+    @JvmOverloads
     fun reportFailuresAndMismatches(
         failures: Map<String, Set<String>>,
         mismatches: Map<String, Set<String>>,
@@ -38,13 +41,17 @@ object VerifierFailureReporter {
         lockMismatchMessage: String,
         shouldFailTheBuild: Boolean,
         throwOnFailures: Boolean,
-        logger: Logger
+        logger: Logger,
+        failureCauses: Map<String, String> = emptyMap(),
+        lockStateKept: Boolean = false
     ) {
         if (failures.isNotEmpty() && throwOnFailures) {
             val msg = DependencyResolutionErrorFormatter.formatUnresolvedDependencies(
-                failures.keys,
+                failures,
                 projectName,
-                missingVersionsAddition
+                missingVersionsAddition,
+                failureCauses,
+                lockStateKept
             )
             if (shouldFailTheBuild) {
                 throw DependencyResolutionException(msg)

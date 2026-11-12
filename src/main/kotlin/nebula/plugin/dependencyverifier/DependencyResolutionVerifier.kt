@@ -61,7 +61,7 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
 
     fun verifySuccessfulResolution(project: Project, verificationTask: TaskProvider<DependencyVerificationTask>) {
         val projectKey = if (isolatedProjectsSupportEnabled) project.path else uniqueProjectKey(project)
-        val projectName = project.name
+        val projectName = LockWriteVerification.projectName(project)
         if (!isolatedProjectsSupportEnabled) verificationService.get().initializeProject(projectKey)
         val configurationsToExclude = getConfigurationsToExclude(project)
         val shouldFailTheBuild = getShouldFailTheBuild(project)
@@ -136,6 +136,7 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
             task.parameters.projectKey.set(projectKey)
             task.parameters.isolatedProjectsSupportEnabled.set(isolatedProjectsSupportEnabled)
             task.parameters.lockGenerationRequested.set(lockGenerationRequested)
+            task.parameters.coreLockWrite.set(coreLockWrite)
             task.parameters.projectName.set(projectName)
             task.parameters.shouldFailTheBuild.set(shouldFailTheBuild)
             task.parameters.missingVersionsMessageAddition.set(extensionFromRoot.missingVersionsMessageAdditionProperty)
@@ -182,7 +183,7 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
             if (t.name in lifecycleNames) t.finalizedBy(verificationTask)
         }
 
-        registerFlowActionStrategy(project, projectKey, enabledRequestedTasks)
+        registerFlowActionStrategy(project, projectKey, enabledRequestedTasks, coreLockWrite)
     }
 
     private fun getConfigurationsToExclude(project: Project): Set<String> =
@@ -321,8 +322,8 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
      * Used only for reporting-only builds (e.g. dependencies, dependencyInsight): the task defers
      * reporting (throwOnFailures = false), and this FlowAction reads BuildService and fails or logs at the end.
      */
-    private fun registerFlowActionStrategy(project: Project, projectKey: String, requestedTaskNames: List<String>?) {
-        val projectName = project.name
+    private fun registerFlowActionStrategy(project: Project, projectKey: String, requestedTaskNames: List<String>?, coreLockWrite: Boolean) {
+        val projectName = LockWriteVerification.projectName(project)
         val shouldFailTheBuild = getShouldFailTheBuild(project)
         val lockMismatchMessage = extensionFromRoot.resolvedVersionDoesNotEqualLockedVersionMessageAdditionProperty.get()
 
@@ -330,6 +331,7 @@ class DependencyResolutionVerifier @JvmOverloads constructor(
             spec.parameters.projectName.set(projectName)
             spec.parameters.projectKey.set(projectKey)
             spec.parameters.shouldFailTheBuild.set(shouldFailTheBuild)
+            spec.parameters.coreLockWrite.set(coreLockWrite)
             spec.parameters.lockMismatchMessage.set(lockMismatchMessage)
             spec.parameters.missingVersionsMessageAddition.set(extensionFromRoot.missingVersionsMessageAdditionProperty.get())
             spec.parameters.requestedTaskNames.set(requestedTaskNames ?: project.gradle.startParameter.taskNames.toList())

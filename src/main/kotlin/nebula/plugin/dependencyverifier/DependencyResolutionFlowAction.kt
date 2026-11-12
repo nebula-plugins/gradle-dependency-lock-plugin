@@ -52,6 +52,18 @@ abstract class DependencyResolutionFlowAction : FlowAction<DependencyResolutionF
         val projectName: Property<String>
         @get:Input
         val shouldFailTheBuild: Property<Boolean>
+        /**
+         * Whether this build is a core lock write (`--write-locks` or `--update-locks`).
+         * Gradle only rewrites lock entries for configurations it resolves, so a configuration that fails to resolve
+         * keeps its old entries. When true, the failure message adds a note saying so,
+         * so that stale locks are not mistaken for fresh ones.
+         * In other builds, such as a normal build or a `dependencies` report, nothing is written to the locks,
+         * and the note would be misleading.
+         * The flow action cannot inspect the build itself, so [DependencyResolutionVerifier] decides this
+         * and passes it down to [VerifierFailureReporter], which hands it to [DependencyResolutionErrorFormatter].
+         */
+        @get:Input
+        val coreLockWrite: Property<Boolean>
         @get:Input
         val lockMismatchMessage: Property<String>
         @get:Input
@@ -82,7 +94,9 @@ abstract class DependencyResolutionFlowAction : FlowAction<DependencyResolutionF
             parameters.lockMismatchMessage.get(),
             failBuild,
             throwOnFailures = true,
-            logger
+            logger,
+            service.getFailureCausesForProject(projKey),
+            parameters.coreLockWrite.get()
         )
     }
 }

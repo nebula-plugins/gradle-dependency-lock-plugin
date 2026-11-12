@@ -99,10 +99,37 @@ class LockWriteVerificationSpec extends AbstractDependencyLockPluginSpec {
 
         then:
         result.output.contains('Failed to resolve the following dependencies')
-        result.output.contains('not.available:a:1.0.0')
+        result.output.contains("Failed to resolve 'not.available:a:1.0.0' for project '${moduleName}' in configuration(s): " +
+                'compileClasspath, runtimeClasspath, testCompileClasspath, testRuntimeClasspath')
+        result.output.contains('Cause: Could not find not.available:a:1.0.0.')
+        result.output.contains('Gradle did not write lock state for these configurations')
 
         where:
         lockArgs << [['--write-locks'], ['--update-locks', 'not.available:a']]
+    }
+
+    def 'verifyResolution reports unresolved dependencies like the verifier'() {
+        given:
+        buildFile << """
+            dependencies {
+                implementation 'not.available:a:1.0.0'
+            }
+            def results = [compileClasspath: configurations.compileClasspath.incoming.resolutionResult.rootComponent]
+            def name = nebula.plugin.dependencyverifier.LockWriteVerification.projectName(project)
+            tasks.register('resolveLocked') {
+                doLast {
+                    nebula.plugin.dependencyverifier.LockWriteVerification.verifyResolution(results, name, true, logger)
+                }
+            }
+            """.stripIndent()
+
+        when:
+        def result = runTasksAndFail('resolveLocked', '-x', 'verifyDependencyResolution', '--no-configuration-cache')
+
+        then:
+        result.output.contains("Failed to resolve 'not.available:a:1.0.0' for project '${moduleName}' in configuration(s): compileClasspath")
+        result.output.contains('Cause: Could not find not.available:a:1.0.0.')
+        result.output.contains('Gradle did not write lock state for these configurations')
     }
 
     def 'lock writes skip excluded locked configurations'() {

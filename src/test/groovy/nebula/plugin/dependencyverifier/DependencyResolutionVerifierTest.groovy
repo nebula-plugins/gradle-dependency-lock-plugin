@@ -701,7 +701,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         assert results.output.contains('FAILURE')
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
-        assert !results.output.contains("for project 'sub2'")
+        assert !results.output.contains("for project ':sub2'")
 
         where:
         failureType                | dependency                       | actualMissingDep
@@ -741,7 +741,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         assert results.output.contains('FAILURE')
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
-        assert !results.output.contains("for project 'sub2'")
+        assert !results.output.contains("for project ':sub2'")
 
         where:
         failureType                | dependency                       | actualMissingDep
@@ -1018,7 +1018,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         assertExecutionFailedForTask(results.output)
         assertConfigurationCacheStateCouldNotBeStored(results.output)
         assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
-        assert !results.output.contains("for project 'sub2'")
+        assert !results.output.contains("for project ':sub2'")
 
         where:
         failureType                | dependency                       | actualMissingDep
@@ -1057,7 +1057,7 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         assert results.output.contains('FAILURE')
         assertResolutionFailureMessage(results.output)
         assertResolutionFailureForDependencyForProject(results.output, actualMissingDep ?: dependency, "sub1")
-        assert !results.output.contains("for project 'sub2'")
+        assert !results.output.contains("for project ':sub2'")
 
         where:
         failureType                | dependency                       | actualMissingDep
@@ -1213,9 +1213,9 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
         results.output.contains('FAILED')
 
         results.output.contains("Dependency lock state is out of date:")
-        results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
-        results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
-        results.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+        results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project ':sub1'")
+        results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project ':sub1'")
+        results.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project ':sub1'")
         results.output.contains('Please update your dependency locks or your build file constraints.')
 
         where:
@@ -1237,13 +1237,13 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         results.output.contains("Dependency lock state is out of date:")
 
-        results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
-        results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
-        results.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+        results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project ':sub1'")
+        results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project ':sub1'")
+        results.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project ':sub1'")
 
-        results.output.contains("Resolved 'test.nebula:e:3.2.0' instead of locked version '3.1.0' for project 'sub2'")
-        results.output.contains("Resolved 'test.nebula:g:3.2.0' instead of locked version '3.1.0' for project 'sub2'")
-        results.output.contains("Resolved 'test.nebula:h:3.2.0' instead of locked version '3.1.0' for project 'sub2'")
+        results.output.contains("Resolved 'test.nebula:e:3.2.0' instead of locked version '3.1.0' for project ':sub2'")
+        results.output.contains("Resolved 'test.nebula:g:3.2.0' instead of locked version '3.1.0' for project ':sub2'")
+        results.output.contains("Resolved 'test.nebula:h:3.2.0' instead of locked version '3.1.0' for project ':sub2'")
 
         results.output.contains('Please update your dependency locks or your build file constraints.')
 
@@ -1332,9 +1332,9 @@ class DependencyResolutionVerifierTest extends BaseIntegrationTestKitSpec {
 
         results.output.contains("Dependency lock state is out of date:")
 
-        results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
-        results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
-        results.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project 'sub1'")
+        results.output.contains("Resolved 'test.nebula:a:1.2.0' instead of locked version '1.1.0' for project ':sub1'")
+        results.output.contains("Resolved 'test.nebula:c:1.2.0' instead of locked version '1.1.0' for project ':sub1'")
+        results.output.contains("Resolved 'test.nebula:d:1.2.0' instead of locked version '1.1.0' for project ':sub1'")
 
         results.output.contains('Please update your dependency locks or your build file constraints.')
 
