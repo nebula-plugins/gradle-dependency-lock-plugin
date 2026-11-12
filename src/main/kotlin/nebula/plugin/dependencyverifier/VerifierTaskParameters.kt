@@ -31,6 +31,7 @@ abstract class VerifierParameters {
     init {
         isolatedProjectsSupportEnabled.convention(false)
         lockGenerationRequested.convention(false)
+        coreLockWrite.convention(false)
     }
 
     @get:Input
@@ -38,6 +39,9 @@ abstract class VerifierParameters {
 
     @get:Input
     abstract val lockGenerationRequested: Property<Boolean>
+
+    @get:Input
+    abstract val coreLockWrite: Property<Boolean>
 
     @get:Input
     abstract val projectKey: Property<String>

@@ -26,18 +26,34 @@ object DependencyResolutionErrorFormatter {
     private const val LOCK_UPDATE_HINT = "Please update your dependency locks or your build file constraints."
     private const val MISSING_VERSION_PREFIX = "The following dependencies are missing a version: "
     private const val MISSING_VERSION_BOM_HINT = "Please add a version to fix this. If you have been using a BOM, perhaps these dependencies are no longer managed."
+    private const val LOCK_STATE_KEPT_NOTE = "Gradle did not write lock state for these configurations, so their existing lock entries were kept and may be stale."
 
     /** Format unresolved dependency coordinates (e.g. from BuildService failure map keys) into a numbered message. */
     fun formatUnresolvedDependencies(
         deps: Collection<String>,
         projectName: String,
         missingVersionsAddition: String = ""
+    ): String = formatUnresolvedDependencies(deps.associateWith { emptySet<String>() }, projectName, missingVersionsAddition)
+
+    /**
+     * Format unresolved dependencies (dependency -> configurations) into a numbered message, with each failure's
+     * [causes] entry when present. [lockStateKept] adds a note that Gradle kept the lock state of these configurations.
+     */
+    fun formatUnresolvedDependencies(
+        failures: Map<String, Set<String>>,
+        projectName: String,
+        missingVersionsAddition: String = "",
+        causes: Map<String, String> = emptyMap(),
+        lockStateKept: Boolean = false
     ): String {
-        val sorted = deps.sorted()
-        val main = formatUnresolvedDepsList(sorted, projectName)
-        val missingVersion = sorted.filter { it.split(':').size < 3 }
-        if (missingVersion.isEmpty()) return main
-        val sb = StringBuilder(main)
+        val sorted = failures.toSortedMap()
+        val sb = StringBuilder(formatUnresolvedDepsList(sorted, projectName, causes))
+        if (lockStateKept) {
+            sb.append("\n\n")
+            sb.append(LOCK_STATE_KEPT_NOTE)
+        }
+        val missingVersion = sorted.keys.filter { it.split(':').size < 3 }
+        if (missingVersion.isEmpty()) return sb.toString()
         sb.append("\n\n")
         sb.append(MISSING_VERSION_PREFIX)
         sb.append(missingVersion.joinToString(", "))
@@ -81,10 +97,16 @@ object DependencyResolutionErrorFormatter {
         return dependencies
     }
 
-    private fun formatUnresolvedDepsList(deps: List<String>, projectName: String): String {
+    private fun formatUnresolvedDepsList(
+        failures: Map<String, Set<String>>,
+        projectName: String,
+        causes: Map<String, String>
+    ): String {
         val lines = mutableListOf(UNRESOLVED_HEADER)
-        deps.forEachIndexed { index, dep ->
-            lines.add("  ${index + 1}. Failed to resolve '$dep' for project '$projectName'")
+        failures.entries.forEachIndexed { index, (dep, configurations) ->
+            val inConfigurations = if (configurations.isEmpty()) "" else " in configuration(s): ${configurations.sorted().joinToString(", ")}"
+            lines.add("  ${index + 1}. Failed to resolve '$dep' for project '$projectName'$inConfigurations")
+            causes[dep]?.let { lines.add("     Cause: $it") }
         }
         return lines.joinToString("\n")
     }

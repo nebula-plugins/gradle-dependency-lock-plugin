@@ -33,24 +33,32 @@ import java.util.concurrent.ConcurrentHashMap
  * Uses only Java collection types for per-dependency sets (Collections.synchronizedSet(HashSet()), not
  * ConcurrentHashMap.newKeySet()) so the service is safe in Gradle workers (no kotlin.collections export).
  */
-abstract class DependencyVerificationBuildService : BuildService<DependencyVerificationBuildService.Params> {
+abstract class DependencyVerificationBuildService : BuildService<DependencyVerificationBuildService.Params>, FailureCauseSink {
 
     interface Params : BuildServiceParameters
 
     val failedDepsPerProject: ConcurrentHashMap<String, ConcurrentHashMap<String, MutableSet<String>>> = ConcurrentHashMap()
     val depsWhereResolvedVersionIsNotLockedVersion: ConcurrentHashMap<String, ConcurrentHashMap<String, MutableSet<String>>> = ConcurrentHashMap()
+    val failureCausesPerProject: ConcurrentHashMap<String, ConcurrentHashMap<String, String>> = ConcurrentHashMap()
 
-    fun recordFailedDependency(projectKey: String, dependency: String, configurationName: String) {
+    override fun recordFailedDependency(projectKey: String, dependency: String, configurationName: String) {
         failedDepsPerProject.computeIfAbsent(projectKey) { ConcurrentHashMap() }
             .computeIfAbsent(dependency) { Collections.synchronizedSet(HashSet()) }
             .add(configurationName)
     }
 
-    fun recordMismatchedVersion(projectKey: String, key: String, configurationName: String) {
+    override fun recordMismatchedVersion(projectKey: String, key: String, configurationName: String) {
         depsWhereResolvedVersionIsNotLockedVersion.computeIfAbsent(projectKey) { ConcurrentHashMap() }
             .computeIfAbsent(key) { Collections.synchronizedSet(HashSet()) }
             .add(configurationName)
     }
+
+    override fun recordFailureCause(projectKey: String, dependency: String, cause: String) {
+        failureCausesPerProject.computeIfAbsent(projectKey) { ConcurrentHashMap() }.putIfAbsent(dependency, cause)
+    }
+
+    fun getFailureCausesForProject(projectKey: String): Map<String, String> =
+        failureCausesPerProject[projectKey]?.toMap().orEmpty()
 
     fun getFailuresForProject(projectKey: String): Map<String, Set<String>> {
         val map = failedDepsPerProject[projectKey] ?: return emptyMap()
@@ -69,6 +77,7 @@ abstract class DependencyVerificationBuildService : BuildService<DependencyVerif
     fun clearProject(projectKey: String) {
         failedDepsPerProject.remove(projectKey)
         depsWhereResolvedVersionIsNotLockedVersion.remove(projectKey)
+        failureCausesPerProject.remove(projectKey)
     }
 
     /** Clears any existing state for this project and prepares fresh state for the current build. */

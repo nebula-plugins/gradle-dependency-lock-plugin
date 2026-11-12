@@ -21,7 +21,9 @@ package nebula.plugin.dependencyverifier
 import nebula.plugin.dependencylock.utils.DependencyLockingPropertyLookup
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.internal.artifacts.configurations.ResolutionStrategyInternal
+import org.gradle.api.logging.Logger
 import org.gradle.api.provider.Provider
 
 /**
@@ -34,9 +36,9 @@ import org.gradle.api.provider.Provider
  * verified in normal builds.
  *
  * `verifyDependencyResolution` uses this policy. It's public so that other tasks that resolve configurations
- * during a lock write, such as a build's own `resolve` task, can apply the same rules and honor the same
- * `dependencyResolutionVerifier` settings. Requires this plugin to be applied, because it registers
- * `dependencyResolutionVerifierExtension` on the root project.
+ * during a lock write, such as a build's own `resolve` task, can apply the same rules, honor the same
+ * `dependencyResolutionVerifier` settings, and report failures with [verifyResolution]. Requires this plugin to be
+ * applied, because it registers `dependencyResolutionVerifierExtension` on the root project.
  */
 object LockWriteVerification {
 
@@ -99,6 +101,54 @@ object LockWriteVerification {
                 .map { it.name }
                 .toSortedSet()
         }
+    }
+
+    /** How failure messages name [project]: its path, or its name for a root project. */
+    @JvmStatic
+    fun projectName(project: Project): String = if (project.path == ":") project.name else project.path
+
+    /**
+     * Checks [results] (configuration name -> resolution result) of a lock write and reports unresolved dependencies
+     * with the same message as `verifyDependencyResolution`. Throws when [shouldFailTheBuild], otherwise logs a warning.
+     * Call it at execution time, with [projectName] from [projectName] and [shouldFailTheBuild] from [shouldFailTheBuild].
+     * [lockStateKept] adds the note that Gradle kept the lock state of the failed configurations.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun verifyResolution(
+        results: Map<String, Provider<ResolvedComponentResult>>,
+        projectName: String,
+        shouldFailTheBuild: Boolean,
+        logger: Logger,
+        missingVersionsMessageAddition: String = "",
+        lockStateKept: Boolean = true
+    ) {
+        val failures = linkedMapOf<String, MutableSet<String>>()
+        val causes = linkedMapOf<String, String>()
+        val sink = object : FailureCauseSink {
+            override fun recordFailedDependency(projectKey: String, dependency: String, configurationName: String) {
+                failures.getOrPut(dependency) { linkedSetOf() }.add(configurationName)
+            }
+
+            override fun recordMismatchedVersion(projectKey: String, key: String, configurationName: String) = Unit
+
+            override fun recordFailureCause(projectKey: String, dependency: String, cause: String) {
+                causes.putIfAbsent(dependency, cause)
+            }
+        }
+        VerificationEngine.run(results, sink, projectName, false, emptyMap(), emptyMap())
+        VerifierFailureReporter.reportFailuresAndMismatches(
+            failures,
+            emptyMap(),
+            projectName,
+            missingVersionsMessageAddition,
+            "",
+            shouldFailTheBuild,
+            throwOnFailures = true,
+            logger,
+            causes,
+            lockStateKept = lockStateKept
+        )
     }
 
     private fun findProperty(project: Project, name: String, isolatedProjectsSupportEnabled: Boolean): String? =

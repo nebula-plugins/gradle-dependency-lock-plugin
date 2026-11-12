@@ -55,14 +55,7 @@ abstract class DependencyVerificationTask : DefaultTask() {
         if (resolutionResultsMap.isEmpty()) return
 
         val service = verificationService.get()
-        val sink = object : VerificationSink {
-            override fun recordFailedDependency(projectKey: String, dependency: String, configurationName: String) {
-                service.recordFailedDependency(projectKey, dependency, configurationName)
-            }
-            override fun recordMismatchedVersion(projectKey: String, key: String, configurationName: String) {
-                service.recordMismatchedVersion(projectKey, key, configurationName)
-            }
-        }
+        val sink: FailureCauseSink = service
 
         val lockGenerationRequested = if (parameters.isolatedProjectsSupportEnabled.get())
             parameters.lockGenerationRequested.get()
@@ -96,7 +89,9 @@ abstract class DependencyVerificationTask : DefaultTask() {
             parameters.resolvedVersionDoesNotEqualLockedVersionMessageAddition.get(),
             shouldFail,
             throwOnFailures,
-            logger
+            logger,
+            service.getFailureCausesForProject(projKey),
+            parameters.coreLockWrite.get()
         )
     }
 }

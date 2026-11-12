@@ -53,16 +53,15 @@ object VerificationEngine {
         for ((confName, rootProvider) in resolutionResultsMap) {
             try {
                 val root = rootProvider.get()
-                val unresolved = mutableSetOf<String>()
+                val unresolved = mutableMapOf<String, String?>()
                 val resolved = mutableListOf<ResolvedArtifactData>()
                 traverse(root, mutableSetOf(), unresolved, resolved)
-                unresolved.forEach { sink.recordFailedDependency(projectKey, it, confName) }
+                unresolved.forEach { (dep, cause) -> record(sink, projectKey, dep, confName, cause) }
                 resolvedPerConf[confName] = resolved
             } catch (e: ResolveException) {
                 logger.debug("Resolution failed for configuration '$confName': ${e.message}", e)
                 val messages = collectMessagesFromCauses(e.causes)
-                val deps = DependencyResolutionErrorFormatter.extractUnresolvedDependenciesFromException(messages.joinToString(" | "))
-                deps.forEach { sink.recordFailedDependency(projectKey, it, confName) }
+                recordUnresolvedFromMessages(sink, projectKey, confName, messages)
             } catch (e: Exception) {
                 logger.debug("Resolution failed for configuration '$confName': ${e.message}", e)
                 val messages = mutableListOf<String>()
@@ -71,8 +70,7 @@ object VerificationEngine {
                     t.message?.let { messages.add(it) }
                     t = t.cause
                 }
-                val deps = DependencyResolutionErrorFormatter.extractUnresolvedDependenciesFromException(messages.joinToString(" | "))
-                deps.forEach { sink.recordFailedDependency(projectKey, it, confName) }
+                recordUnresolvedFromMessages(sink, projectKey, confName, messages)
             }
         }
         if (!lockValidationEnabled || lockedDepsMap.isEmpty()) return
@@ -91,6 +89,17 @@ object VerificationEngine {
         }
     }
 
+    private fun recordUnresolvedFromMessages(sink: VerificationSink, projectKey: String, configurationName: String, messages: List<String>) {
+        DependencyResolutionErrorFormatter.extractUnresolvedDependenciesFromException(messages.joinToString(" | "))
+            .forEach { dep -> record(sink, projectKey, dep, configurationName, messages.firstOrNull { it.contains(dep) }) }
+    }
+
+    private fun record(sink: VerificationSink, projectKey: String, dependency: String, configurationName: String, cause: String?) {
+        sink.recordFailedDependency(projectKey, dependency, configurationName)
+        cause?.lineSequence()?.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+            ?.let { (sink as? FailureCauseSink)?.recordFailureCause(projectKey, dependency, it) }
+    }
+
     /** Collects exception messages from ResolveException.getCauses() and each cause's chain. */
     private fun collectMessagesFromCauses(causes: Iterable<Throwable>): List<String> {
         val messages = mutableListOf<String>()
@@ -107,7 +116,7 @@ object VerificationEngine {
     private fun traverse(
         component: ResolvedComponentResult,
         visited: MutableSet<ComponentIdentifier>,
-        unresolved: MutableSet<String>,
+        unresolved: MutableMap<String, String?>,
         resolved: MutableList<ResolvedArtifactData>
     ) {
         if (!visited.add(component.id)) return
@@ -136,10 +145,10 @@ object VerificationEngine {
                                 it.version != requested.version
                         }
                         if (!resolvedToDifferentVersion) {
-                            unresolved.add(dep.requested.displayName)
+                            unresolved.putIfAbsent(dep.requested.displayName, dep.failure.message)
                         }
                     } else {
-                        unresolved.add(dep.requested.displayName)
+                        unresolved.putIfAbsent(dep.requested.displayName, dep.failure.message)
                     }
                 }
                 is ResolvedDependencyResult ->
