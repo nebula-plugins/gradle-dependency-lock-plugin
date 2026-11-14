@@ -59,7 +59,7 @@ class CoreLockingHelper {
             }
         } else {
             def closureToLockConfigurations = {
-                if (!it instanceof Configuration) {
+                if (!(it instanceof Configuration)) {
                     throw new BuildCancelledException("There is an issue with the configuration to lock '${it.toString()}'")
                 }
                 if (!configsWithActivatedDependencyLocking.contains(it) && !configsNotGettingLocked.contains(it)) {
