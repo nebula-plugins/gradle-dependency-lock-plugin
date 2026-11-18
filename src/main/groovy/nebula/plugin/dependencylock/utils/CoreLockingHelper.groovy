@@ -105,7 +105,7 @@ class CoreLockingHelper {
         }
     }
 
-    private void runClosureOnConfigurations(Set<String> configurationNames, Closure closure, Collection<String> additionalBaseConfigurationsToLock) {
+    protected void runClosureOnConfigurations(Set<String> configurationNames, Closure closure, Collection<String> additionalBaseConfigurationsToLock) {
         Set<Configuration> configurationsToLock
         if (shouldLockAllConfigurations) {
             configurationsToLock = GenerateLockTask.lockableConfigurations(project, project, configurationNames)
@@ -118,7 +118,7 @@ class CoreLockingHelper {
         }
     }
 
-    private Set<Configuration> findConfigurationsToLock(Set<String> configurationNames, Collection<String> additionalBaseConfigurationsToLock) {
+    protected Set<Configuration> findConfigurationsToLock(Set<String> configurationNames, Collection<String> additionalBaseConfigurationsToLock) {
         def lockableConfigurationNames = new ConfigurationsToLockFinder(project).findConfigurationsToLock(configurationNames, additionalBaseConfigurationsToLock)
 
         def lockableConfigurations = new HashSet()
