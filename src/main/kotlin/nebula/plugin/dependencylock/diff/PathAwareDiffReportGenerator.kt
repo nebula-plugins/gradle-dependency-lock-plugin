@@ -26,23 +26,16 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
         diffsByConfiguration: Map<String, List<DependencyDiff>>
     ): List<Map<String, Any>> {
         val pathsPerConfiguration: List<ConfigurationPaths> = diffsByConfiguration
-            .filterKeys { name ->
-                // Only process configurations that have resolution results available
-                resolutionResults.containsKey(name)
-            }
             .map { (configurationName: String, differences: List<DependencyDiff>) ->
-            val completeDependencyTree: AnnotatedDependencyTree = constructPathsToAllDependencies(
-                differences, 
-                resolutionResults[configurationName]!!,
-                configurationName
-            )
-            val removedInsignificantChanges: AnnotatedDependencyTree = filterPathsWithSignificantChanges(completeDependencyTree)
-            val removeAlreadyVisited: AnnotatedDependencyTree = filterPathsWithDuplicatedElements(removedInsignificantChanges)
-            val removedInsignificantChangesAfterRemovingAlreadyVisited: AnnotatedDependencyTree = filterPathsWithSignificantChanges(removeAlreadyVisited)
+            val changedPaths = resolutionResults[configurationName]?.let { rootComponent ->
+                val completeDependencyTree = constructPathsToAllDependencies(differences, rootComponent, configurationName)
+                val significantPaths = filterPathsWithSignificantChanges(completeDependencyTree)
+                filterPathsWithSignificantChanges(filterPathsWithDuplicatedElements(significantPaths))
+            }
 
             val removed: List<String> = differences.filter { it.isRemoved }.map { it.dependency }
 
-            ConfigurationPaths(configurationName, Differences(removedInsignificantChangesAfterRemovingAlreadyVisited, removed))
+            ConfigurationPaths(configurationName, Differences(changedPaths, removed, coordinateChanges(differences)))
         }
 
         val groupedDiffs: Map<Differences, List<String>> = groupConfigurationsWithSameChanges(pathsPerConfiguration)
@@ -50,11 +43,34 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
         return groupedDiffs.map { (differences: Differences, configurations: List<String>) ->
             mapOf<String, Any>(
                     "configurations" to configurations,
-                    "differentPaths" to createDiffTree(differences.newAndUpdated.root),
-                    "removed" to differences.removed
+                    "differentPaths" to (differences.newAndUpdated?.let { createDiffTree(it.root) } ?: emptyList()),
+                    "removed" to differences.removed,
+                    "changes" to differences.coordinateChanges
             )
         }
     }
+
+    private fun coordinateChanges(differences: List<DependencyDiff>): List<Map<String, Any?>> =
+        differences.sortedBy { it.dependency }.flatMap { dependencyDiff ->
+            dependencyDiff.diff.values
+                .sortedWith(compareBy({ it.oldVersion ?: "" }, { it.updatedVersion ?: "" }))
+                .map { versionDiff ->
+                    val oldVersion = versionDiff.oldVersion?.takeIf { it.isNotEmpty() }
+                    val newVersion = versionDiff.updatedVersion?.takeIf { it.isNotEmpty() }
+                    val status = when {
+                        oldVersion == null && newVersion != null -> "ADDED"
+                        oldVersion != null && newVersion == null -> "REMOVED"
+                        oldVersion != null && newVersion != null -> "UPDATED"
+                        else -> "UNKNOWN"
+                    }
+                    mapOf(
+                        "coordinate" to dependencyDiff.dependency,
+                        "oldVersion" to oldVersion,
+                        "newVersion" to newVersion,
+                        "status" to status
+                    )
+                }
+        }
 
     //this method constructs paths to all unique dependencies from module root within a configuration
     private fun constructPathsToAllDependencies(
@@ -171,7 +187,11 @@ class PathAwareDiffReportGenerator : DiffReportGenerator {
 
     class ConfigurationPaths(val configurationName: String, val paths: Differences)
 
-    data class Differences(val newAndUpdated: AnnotatedDependencyTree, val removed: List<String>)
+    data class Differences(
+        val newAndUpdated: AnnotatedDependencyTree?,
+        val removed: List<String>,
+        val coordinateChanges: List<Map<String, Any?>>
+    )
 
     data class AnnotatedDependencyTree(val root: DependencyPathElement)
 
