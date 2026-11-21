@@ -519,6 +519,41 @@ class MigrateToCoreLocksTaskSpec extends AbstractDependencyLockPluginSpec {
         !sub2LegacyLockFile.exists()
     }
 
+    def 'migration adds configurations to an already locked dependency'() {
+        given:
+        buildFile.text = """\
+            plugins {
+                id 'com.netflix.nebula.dependency-lock'
+                id 'java'
+            }
+            repositories {
+                ${mavenrepo.mavenRepositoryBlock}
+            }
+            dependencies {
+                implementation 'test.nebula:a:1.0.0'
+            }
+            """.stripIndent()
+
+        // the legacy lock only covers the main classpaths, so the test classpaths
+        // resolve the same a:1.0.0 without being locked
+        def legacyLockFile = new File(projectDir, 'dependencies.lock')
+        legacyLockFile.text = LockGenerator.duplicateIntoConfigs(
+                '''\
+                "test.nebula:a": {
+                    "locked": "1.0.0"
+                }'''.stripIndent(),
+                ['compileClasspath', 'runtimeClasspath'])
+
+        when:
+        def result = runTasks('migrateToCoreLocks')
+
+        then:
+        !result.output.contains('Failed to update the core lock file')
+
+        def lockFile = coreLockContent(new File(projectDir, 'gradle.lockfile'))
+        lockFile.get('test.nebula:a:1.0.0') == "compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath"
+    }
+
     def 'previously partial lockfiles must include all dependencies'() {
         given:
         def legacyLockFile = new File(projectDir, 'dependencies.lock')

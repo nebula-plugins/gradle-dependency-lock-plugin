@@ -98,8 +98,8 @@ abstract class MigrateToCoreLocksTask extends AbstractMigrateToCoreLocksTask {
 
     static private Map<String, List<String>> coreLockContent(File lockFile) {
         lockFile.readLines().findAll {!it.startsWith("#")}.collectEntries {
-            it.split('=').toList()
-        }.collectEntries {[it.key ,it.value.split(',')]}
+            it.split('=', 2).toList()
+        }.collectEntries {[it.key ,it.value.tokenize(',')]}
     }
 
     private static Set<String> findUnlockedDependencies(Configuration conf) {
